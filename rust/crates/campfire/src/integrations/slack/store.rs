@@ -5,6 +5,7 @@ use super::runner::{
 use super::{conversations, users, writer};
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Database, Error, Result, Room, Timestamp, Tx};
+use indexmap::{IndexMap, IndexSet};
 use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 use std::collections::HashSet;
@@ -190,10 +191,7 @@ fn alive_room(tx: &Tx<'_>, id: i64) -> Result<Room> {
         .filter(|r| !r.deleted())
         .ok_or(Error::RecordNotFound("Room"))
 }
-fn convo_users(
-    tx: &mut Tx<'_>,
-    p: &Progress,
-) -> Result<std::collections::HashMap<String, campfire_db::User>> {
+fn convo_users(tx: &mut Tx<'_>, p: &Progress) -> Result<IndexMap<String, campfire_db::User>> {
     let ids = array(&p.state["convo"]["member_ids"]);
     let mut users = users::users_for(tx.conn(), &p.run, ids)?;
     for id in ids {
@@ -357,7 +355,8 @@ fn catchup_oldest(tx: &Tx<'_>, run: &SlackImport, conversation: &str) -> Result<
     Ok(latest.map(|v| v - CATCHUP_LOOKBACK as f64))
 }
 fn finish_rooms(tx: &mut Tx<'_>, p: &Progress) -> Result<()> {
-    let mut ids: HashSet<_> = array(&p.state["written_conversation_ids"])
+    // Runner#finish_rooms concatenates written ids and mapping rows, then uniqs.
+    let mut ids: IndexSet<_> = array(&p.state["written_conversation_ids"])
         .iter()
         .map(string)
         .collect();

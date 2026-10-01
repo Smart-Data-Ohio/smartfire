@@ -5,6 +5,91 @@ use super::*;
 use crate::integrations::test_support::Route;
 use std::time::Duration;
 
+#[tokio::test]
+async fn slack_ordering_missing_authors_append_after_rails_mapping_order() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/ordering.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        for (key, name) in oracle["keys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(oracle["names"].as_array().unwrap())
+            .rev()
+        {
+            let user = campfire_db::User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: name.as_str().unwrap().into(),
+                    ..Default::default()
+                },
+            )?;
+            users::record(
+                tx,
+                &run,
+                "user",
+                key.as_str().unwrap(),
+                "User",
+                user.id,
+                true,
+            )?;
+        }
+        let mut progress = Progress::new(run);
+        progress.state["convo"] = json!({"id":"GMAPPED","member_ids":oracle["missing_ids"]});
+        let mapped = convo_users(tx, &progress)?;
+        assert_eq!(
+            json!(mapped.keys().collect::<Vec<_>>()),
+            oracle["ensured_keys"]
+        );
+        Ok(())
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn slack_ordering_finishing_keeps_written_then_record_order_50_times() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/ordering.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        tx.conn().execute_batch("CREATE TABLE finish_order (room_id INTEGER); CREATE TRIGGER record_finish_order AFTER UPDATE OF updated_at ON rooms BEGIN INSERT INTO finish_order VALUES (NEW.id); END;")?;
+        let mut room_ids = Vec::new();
+        // The Rails oracle inserted conversation mappings in this order.
+        for conversation in ["GDIRECT", "GMAPPED", "CALIAS"] {
+            let room = Room::create(tx, campfire_db::RoomType::Closed, Some(conversation), 1)?;
+            users::record(tx, &run, "conversation", conversation, "Room", room.id, true)?;
+            tx.conn().execute("INSERT INTO messages(room_id,creator_id,client_message_id,created_at,updated_at) VALUES(?,1,?,?,?)", params![room.id,conversation,tx.now(),tx.now()])?;
+            let message_id = tx.conn().last_insert_rowid();
+            users::record(tx, &run, "message", &format!("{conversation}:1"), "Message", message_id, true)?;
+            room_ids.push((room.id, conversation));
+        }
+        let mut progress = Progress::new(run);
+        progress.state["written_conversation_ids"] = oracle["written_ids"].clone();
+        let mut mismatches = 0;
+        for _ in 0..50 {
+            tx.conn().execute("DELETE FROM finish_order", [])?;
+            finish_rooms(tx, &progress)?;
+            let mut stmt = tx.conn().prepare("SELECT room_id FROM finish_order ORDER BY rowid")?;
+            let ids = stmt.query_map([], |r| r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            let finished: Vec<_> = ids.iter().map(|id| room_ids.iter().find(|r| r.0 == *id).unwrap().1).collect();
+            mismatches += usize::from(json!(finished) != oracle["finished_ids"]);
+        }
+        println!("Slack finishing-order probe: 50 repetitions; {mismatches} order mismatches");
+        assert_eq!(mismatches, 0);
+        Ok(())
+    }).await.unwrap();
+}
+
 pub(crate) fn routes(personal: bool) -> Vec<Route> {
     let route = |path: &str, body: &str| {
         Route::new("GET", "slack.com", path, 200).body(body.as_bytes().to_vec())

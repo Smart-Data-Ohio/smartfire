@@ -7,9 +7,10 @@ use campfire_db::{
     ThreadMembership, Timestamp, Tx, User,
 };
 use campfire_richtext::markdown::{Icon, IconResolver};
+use indexmap::{IndexMap, IndexSet};
 use rusqlite::params;
 use serde_json::{Value, json};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 const SKIPPED: &[&str] = &[
     "channel_join",
@@ -109,11 +110,11 @@ fn enrich(
     tx: &Tx<'_>,
     run: &SlackImport,
     messages: &[Value],
-    users: &mut HashMap<String, User>,
+    users: &mut IndexMap<String, User>,
 ) -> Result<()> {
     static MENTIONS: std::sync::LazyLock<regex::Regex> =
         std::sync::LazyLock::new(|| regex::Regex::new(r"<@([A-Z0-9]+)(?:\|[^>]+)?>").unwrap());
-    let mut ids = HashSet::new();
+    let mut ids = IndexSet::new();
     for original in messages {
         let message = unwrap(original);
         let mut parts = vec![string(&message["text"])];
@@ -123,13 +124,12 @@ fn enrich(
             }
         }
         for capture in MENTIONS.captures_iter(&parts.join("\n")) {
-            ids.insert(json!(capture[1].to_owned()).to_string());
+            if !users.contains_key(&capture[1]) {
+                ids.insert(capture[1].to_owned());
+            }
         }
     }
-    let ids: Vec<Value> = ids
-        .into_iter()
-        .map(|s| serde_json::from_str(&s).expect("encoded mention"))
-        .collect();
+    let ids: Vec<Value> = ids.into_iter().map(Value::String).collect();
     users.extend(users::users_for(tx.conn(), run, &ids)?);
     Ok(())
 }
@@ -152,7 +152,7 @@ fn prepare(
     tx: &mut Tx<'_>,
     run: &SlackImport,
     original: &Value,
-    users: &mut HashMap<String, User>,
+    users: &mut IndexMap<String, User>,
     counts: &mut Value,
     scope: PageScope<'_>,
 ) -> Result<Option<Planned>> {
@@ -268,7 +268,7 @@ fn leaves(
     room: &Room,
     conversation: &str,
     written: (&Message, &Planned),
-    users: &mut HashMap<String, User>,
+    users: &mut IndexMap<String, User>,
     counts: &mut Value,
 ) -> Result<()> {
     let (message, planned) = written;
@@ -384,7 +384,7 @@ pub fn history(
     conversation: &str,
     messages: &[Value],
     bounds: Bounds,
-    users: &mut HashMap<String, User>,
+    users: &mut IndexMap<String, User>,
 ) -> Result<History> {
     let mut counts = counts();
     let mut parents = Vec::new();
@@ -528,7 +528,7 @@ pub fn replies(
     run: &SlackImport,
     room: &Room,
     page: Replies<'_>,
-    users: &mut HashMap<String, User>,
+    users: &mut IndexMap<String, User>,
 ) -> Result<Value> {
     let mut counts = counts();
     enrich(tx, run, page.messages, users)?;
@@ -646,7 +646,7 @@ pub fn dry_history(
 ) -> Result<History> {
     let mut counts = counts();
     let mut samples = Vec::new();
-    let mut users = HashMap::new();
+    let mut users = IndexMap::new();
     enrich(tx, run, messages, &mut users)?;
     let names = users
         .iter()

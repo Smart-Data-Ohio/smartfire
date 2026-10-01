@@ -3,6 +3,101 @@ use super::*;
 use serde_json::json;
 
 #[tokio::test]
+async fn slack_ordering_tied_group_names_repeat_rails_order_50_times() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/ordering.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        let mut original = Vec::new();
+        for (key, name) in oracle["keys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(oracle["names"].as_array().unwrap())
+        {
+            let user = User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: name.as_str().unwrap().into(),
+                    ..Default::default()
+                },
+            )?;
+            original.push((key.as_str().unwrap().to_owned(), user));
+        }
+        // Rails' mapping query order differs from both insertion and member order.
+        for (key, user) in original.iter().rev() {
+            users::record(tx, &run, "user", key, "User", user.id, true)?;
+        }
+        let mut mismatches = Vec::new();
+        for iteration in 0..50 {
+            let direct = original.iter().cloned().collect();
+            let mapped =
+                users::users_for(tx.conn(), &run, oracle["member_ids"].as_array().unwrap())?;
+            let keys: Vec<_> = mapped.keys().cloned().collect();
+            if json!(keys) != oracle["mapped_keys"] {
+                mismatches.push(format!("{iteration}: mapped keys {keys:?}"));
+            }
+            for (label, map, members, expected) in [
+                ("direct", direct, &oracle["keys"], &oracle["direct_name"]),
+                (
+                    "mapped",
+                    mapped,
+                    &oracle["member_ids"],
+                    &oracle["mapped_name"],
+                ),
+            ] {
+                let result = resolve(
+                    tx,
+                    &run,
+                    &json!({"id":format!("G{label}{iteration}"),"is_mpim":true}),
+                    members.as_array().unwrap(),
+                    &map,
+                    false,
+                )?;
+                let actual = result.room.unwrap().name;
+                if json!(actual) != *expected {
+                    mismatches.push(format!("{iteration}: {label} name {actual:?}"));
+                }
+            }
+        }
+        println!(
+            "Slack tied-name probe: 50 repetitions; 100 group resolutions; {} order mismatches",
+            mismatches.len()
+        );
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+        Ok(())
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn slack_ordering_membership_alias_uses_last_rails_hash_entry() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/ordering.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        let alice = User::create(tx, campfire_db::NewUser { name: "Alice".into(), ..Default::default() })?;
+        let other = User::create(tx, campfire_db::NewUser { name: "alice".into(), ..Default::default() })?;
+        let users = [("UZ".to_owned(), alice.clone()), ("UA".to_owned(), alice), ("UB".to_owned(), other)].into_iter().collect();
+        resolve(tx, &run, &json!({"id":"CALIAS","name":"alias","is_private":true}),
+            oracle["alias_keys"].as_array().unwrap(), &users, false)?;
+        let mut stmt = tx.conn().prepare("SELECT slack_key FROM slack_import_records WHERE slack_kind='membership' ORDER BY slack_key")?;
+        let keys = stmt.query_map([], |r| r.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        assert_eq!(json!(keys), oracle["membership_keys"]);
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
 async fn slack_conversations_only_public_workspace_channels_auto_merge() {
     let (db, _, _dir) = setup().await;
     let id = start(&db).await;
@@ -15,7 +110,7 @@ async fn slack_conversations_only_public_workspace_channels_auto_merge() {
             &run,
             &json!({"id":"CPUB","name":"general"}),
             &[],
-            &HashMap::new(),
+            &IndexMap::new(),
             false,
         )?;
         assert_eq!(public.action, "merge");
@@ -25,7 +120,7 @@ async fn slack_conversations_only_public_workspace_channels_auto_merge() {
             &run,
             &json!({"id":"CPRIV","name":"secret","is_private":true}),
             &[],
-            &HashMap::new(),
+            &IndexMap::new(),
             false,
         )?;
         assert_eq!(closed.action, "create");
@@ -39,7 +134,7 @@ async fn slack_conversations_only_public_workspace_channels_auto_merge() {
                 &personal,
                 &json!({"id":"PERSONAL","name":"general"}),
                 &[],
-                &HashMap::new(),
+                &IndexMap::new(),
                 false
             )?
             .action,
@@ -66,7 +161,7 @@ async fn slack_conversations_archive_and_open_nonmembers_are_invisible_and_recor
             None,
             false,
         )?;
-        let users: HashMap<_, _> = [("UMEMBER".into(), member.clone())].into();
+        let users: IndexMap<_, _> = [("UMEMBER".into(), member.clone())].into();
         let channel = json!({"id":"COPEN","name":"open"});
         let room = resolve(tx, &run, &channel, &[json!("UMEMBER")], &users, false)?
             .room
@@ -139,7 +234,7 @@ async fn slack_conversations_explicit_merge_leaves_memberships_and_invalid_targe
                 &run,
                 &json!({"id":"CBAD","name":"missing"}),
                 &[],
-                &HashMap::new(),
+                &IndexMap::new(),
                 false
             )?
             .reason,
@@ -172,7 +267,7 @@ async fn slack_conversations_directs_reuse_member_sets_skip_self_and_slackbot() 
             },
         )?;
         let owner = User::find(tx.conn(), 1)?;
-        let users: HashMap<_, _> = [("UOWNER".into(), owner), ("UPEER".into(), peer)].into();
+        let users: IndexMap<_, _> = [("UOWNER".into(), owner), ("UPEER".into(), peer)].into();
         let members = vec![json!("UOWNER"), json!("UPEER")];
         let first = resolve(
             tx,
@@ -272,9 +367,9 @@ async fn slack_review_room_matching_uses_rails_sqlite_lower() {
             tx.conn().execute("INSERT INTO rooms(id,name,type,creator_id,created_at,updated_at) VALUES(861,?,'Rooms::Open',1,?,?)",rusqlite::params![case["existing"].as_str().unwrap(),tx.now(),tx.now()])?;
             Room::find(tx.conn(), 861)?.grant_to(tx, &[1])?;
             let conversation = json!({"id":"CREVIEW", "name":case["incoming"]});
-            let preview = resolve(tx, &run, &conversation, &[], &HashMap::new(), true)?;
+            let preview = resolve(tx, &run, &conversation, &[], &IndexMap::new(), true)?;
             assert_eq!(json!({"action":preview.action,"room_id":preview.room.map(|r|r.id)}),case["preview"],"{} into {} preview",case["incoming"],case["existing"]);
-            let result = resolve(tx, &run, &conversation, &[], &HashMap::new(), false)?;
+            let result = resolve(tx, &run, &conversation, &[], &IndexMap::new(), false)?;
             let room = result.room.unwrap();
             let created: bool = tx.conn().query_row("SELECT created_record FROM slack_import_records WHERE slack_kind='conversation'",[],|r|r.get(0))?;
             let actual = json!({"action":result.action,"room_id":room.id,"name":room.name,"created":created,"memberships":room.memberships(tx.conn())?.len()});
@@ -295,7 +390,7 @@ async fn slack_review_group_name_keeps_ruby_unicode_downcase_order() {
     let id = start(&db).await;
     let run = run(&db, id).await;
     db.write(move |tx| {
-        let mut users = HashMap::new();
+        let mut users = IndexMap::new();
         let mut members = Vec::new();
         for (i, name) in vectors["group"]["names"]
             .as_array()

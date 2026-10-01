@@ -5,6 +5,7 @@ use super::runner::{present, string, truthy};
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Connection, NewUser, Result, Tx, User};
+use indexmap::IndexMap;
 use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 
@@ -31,16 +32,33 @@ pub fn users_for(
     conn: &Connection,
     run: &SlackImport,
     ids: &[Value],
-) -> Result<HashMap<String, User>> {
-    let mut users = HashMap::new();
-    for id in ids {
-        let key = string(id);
-        if key.trim().is_empty() || users.contains_key(&key) {
-            continue;
-        }
-        if let Some(id) = mapped_id(conn, run.slack_workspace_id, "user", &key)?
-            && let Some(user) = User::find_by_id(conn, id)?
-        {
+) -> Result<IndexMap<String, User>> {
+    let ids: Vec<_> = ids
+        .iter()
+        .map(string)
+        .filter(|id| !id.trim().is_empty())
+        .collect();
+    let mut users = IndexMap::new();
+    if ids.is_empty() {
+        return Ok(users);
+    }
+    // Keep UserMapper#users_for's pluck order from the same SQLite mapping query.
+    // Ruby Hash preserves it through missing-author appends and stable name sorting.
+    let placeholders = std::iter::repeat_n("?", ids.len())
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut bindings = vec![rusqlite::types::Value::Integer(run.slack_workspace_id)];
+    bindings.extend(ids.into_iter().map(rusqlite::types::Value::Text));
+    let mut statement = conn.prepare(&format!(
+        "SELECT slack_key,record_id FROM slack_import_records WHERE slack_workspace_id=? AND slack_kind='user' AND slack_key IN ({placeholders})"
+    ))?;
+    let mappings = statement
+        .query_map(rusqlite::params_from_iter(bindings), |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    for (key, id) in mappings {
+        if let Some(user) = User::find_by_id(conn, id)? {
             users.insert(key, user);
         }
     }

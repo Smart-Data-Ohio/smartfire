@@ -1,0 +1,125 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "names": [
+    "Alice",
+    "alice",
+    "ALICE",
+    "Z0",
+    "Z1",
+    "Z2",
+    "Z3",
+    "Z4",
+    "Z5",
+    "Z6",
+    "Z7"
+  ],
+  "keys": [
+    "U00",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
+    "U09",
+    "U10"
+  ],
+  "member_ids": [
+    "U10",
+    "U09",
+    "U08",
+    "U07",
+    "U06",
+    "U05",
+    "U04",
+    "U03",
+    "U02",
+    "U01",
+    "U00",
+    "U00",
+    "",
+    null
+  ],
+  "direct_name": "Alice, alice, ALICE +8",
+  "mapped_keys": [
+    "U00",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
+    "U09",
+    "U10"
+  ],
+  "mapped_name": "Alice, alice, ALICE +8",
+  "missing_ids": [
+    "UMISSING-Z",
+    "U10",
+    "U09",
+    "U08",
+    "U07",
+    "U06",
+    "U05",
+    "U04",
+    "U03",
+    "U02",
+    "U01",
+    "U00",
+    "UMISSING-A"
+  ],
+  "ensured_keys": [
+    "U00",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
+    "U09",
+    "U10",
+    "UMISSING-Z",
+    "UMISSING-A"
+  ],
+  "messages": [
+    {
+      "text": "<@U02> <@U00> <@U02>",
+      "attachments": [
+        {
+          "text": "<@U01>"
+        }
+      ]
+    }
+  ],
+  "mention_keys": [
+    "U10",
+    "U00",
+    "U01",
+    "U02"
+  ],
+  "alias_keys": [
+    "UZ",
+    "UA",
+    "UB"
+  ],
+  "membership_keys": [
+    "CALIAS:UA",
+    "CALIAS:UB"
+  ],
+  "written_ids": [
+    "GMAPPED",
+    "GDIRECT",
+    "GMAPPED"
+  ],
+  "finished_ids": [
+    "GMAPPED",
+    "GDIRECT",
+    "CALIAS"
+  ]
+}

@@ -3,6 +3,57 @@ use super::*;
 use campfire_jobs::inspect;
 
 #[tokio::test]
+async fn slack_ordering_mentions_keep_existing_then_rails_mapping_order() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/ordering.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        for (key, name) in oracle["keys"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(oracle["names"].as_array().unwrap())
+            .rev()
+        {
+            let user = User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: name.as_str().unwrap().into(),
+                    ..Default::default()
+                },
+            )?;
+            users::record(
+                tx,
+                &run,
+                "user",
+                key.as_str().unwrap(),
+                "User",
+                user.id,
+                true,
+            )?;
+        }
+        let mut mapped = users::users_for(tx.conn(), &run, &[json!("U10")])?;
+        enrich(
+            tx,
+            &run,
+            oracle["messages"].as_array().unwrap(),
+            &mut mapped,
+        )?;
+        assert_eq!(
+            json!(mapped.keys().collect::<Vec<_>>()),
+            oracle["mention_keys"]
+        );
+        Ok(())
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
 async fn slack_converter_real_saves_match_rails_bodies_and_mentionees() {
     let oracle: Value = serde_json::from_str(include_str!(
         "../../../../../../vectors/slack/rendering.json"
@@ -79,7 +130,7 @@ async fn slack_writer_mapped_nonmember_mentions_render_tokens_and_unknown_labels
         let jane=User::create_slack_placeholder(tx,campfire_db::NewUser{name:"Robin Returner".into(),..Default::default()},false,None,false)?;
         users::record(tx,&run,"user","URET","User",jane.id,true)?;
         let room=Room::create_for(tx,campfire_db::RoomType::Closed,Some("secret"),1,&[1])?;
-        let mut mapped=HashMap::new();
+        let mut mapped=IndexMap::new();
         history(tx,&run,&room,"CPRIV",&[json!({"type":"message","user":"UOWNER","text":"hi <@URET|robin> and <@U999|ghost>","ts":"1700000031.000031"})],Bounds::default(),&mut mapped)?;
         let message=Message::for_room(tx.conn(),room.id)?.pop().unwrap();
         assert_eq!(message.markdown_source.as_deref(),Some("hi @[Robin Returner] and @ghost"));
@@ -226,7 +277,7 @@ async fn slack_writer_direct_replies_flatten_and_deleted_parent_skips_channel_th
             },
         )?;
         let room = Room::create_for(tx, campfire_db::RoomType::Direct, None, 1, &[1, peer.id])?;
-        let mut mapped: HashMap<_, _> = [
+        let mut mapped: IndexMap<_, _> = [
             ("UONE".into(), User::find(tx.conn(), 1)?),
             ("UTWO".into(), peer),
         ]

@@ -4,6 +4,7 @@ use super::users::{self, SLACKBOT_ID};
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Result, Room, RoomType, Tx, User};
+use indexmap::IndexMap;
 use rusqlite::OptionalExtension;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -105,7 +106,7 @@ fn merge_room(tx: &Tx<'_>, run: &SlackImport, c: &Value, target: &Choice) -> Res
     ).optional()?;
     id.map(|id| Room::find(tx.conn(), id)).transpose()
 }
-fn mapped_members(member_ids: &[Value], users: &HashMap<String, User>) -> Vec<i64> {
+fn mapped_members(member_ids: &[Value], users: &IndexMap<String, User>) -> Vec<i64> {
     let mut result = Vec::new();
     for key in member_ids {
         if let Some(user) = users.get(&string(key))
@@ -121,14 +122,13 @@ fn record_memberships(
     run: &SlackImport,
     c: &Value,
     room: &Room,
-    users: &HashMap<String, User>,
+    users: &IndexMap<String, User>,
     member_ids: &[Value],
     channel: bool,
 ) -> Result<()> {
     let members: HashSet<_> = member_ids.iter().map(string).collect();
-    let mut keys: Vec<_> = users.keys().collect();
-    keys.sort();
-    let slack_by_user: HashMap<_, _> = keys.into_iter().map(|key| (users[key].id, key)).collect();
+    // Ruby Hash#invert keeps the last alias in the map's insertion order.
+    let slack_by_user: HashMap<_, _> = users.iter().map(|(key, user)| (user.id, key)).collect();
     // Match Rails pluck(:id, :user_id): its covering room/user index orders the
     // mapping rows, including inactive Slack members appended after the active grant.
     let mut q = tx
@@ -223,7 +223,7 @@ pub fn resolve(
     run: &SlackImport,
     c: &Value,
     member_ids: &[Value],
-    users: &HashMap<String, User>,
+    users: &IndexMap<String, User>,
     dry: bool,
 ) -> Result<Target> {
     let normalized = super::payload::fields(
@@ -434,7 +434,7 @@ fn direct(
     run: &SlackImport,
     c: &Value,
     members: &[i64],
-    users: &HashMap<String, User>,
+    users: &IndexMap<String, User>,
     member_ids: &[Value],
     dry: bool,
 ) -> Result<Target> {
@@ -473,7 +473,7 @@ pub fn dry_users(
     tx: &Tx<'_>,
     run: &SlackImport,
     member_ids: &[Value],
-) -> Result<HashMap<String, User>> {
+) -> Result<IndexMap<String, User>> {
     let owner = User::find(tx.conn(), run.user_id)?;
     Ok(member_ids
         .iter()
