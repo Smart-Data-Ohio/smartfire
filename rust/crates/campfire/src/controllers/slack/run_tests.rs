@@ -141,7 +141,16 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
     use rusqlite::params;
     let cases: Value =
         serde_json::from_str(include_str!("../../../../../vectors/slack/runs_http.json")).unwrap();
+    let selected = std::env::var("WS16_RUN_HTTP_CASE").ok();
+    let mut checked = 0;
     for case in cases.as_array().unwrap() {
+        if selected
+            .as_ref()
+            .is_some_and(|name| case["name"].as_str() != Some(name))
+        {
+            continue;
+        }
+        checked += 1;
         let f = Fresh::new(case["role"].as_i64().unwrap_or(1), vec![]).await;
         let input = case.clone();
         let crypto = rails_compat::ar_encryption::ArEncryption::new(&f.app.secrets);
@@ -230,8 +239,9 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
     }
     println!(
         "Slack run HTTP parity: {} Rails action cases matched sessions, CSRF, redirects, flashes, rows, audits and durable jobs",
-        cases.as_array().unwrap().len()
+        checked
     );
+    assert!(checked > 0, "no selected Rails HTTP cases");
 }
 
 /// Real TCP HTTP, through the actual session/forgery middleware and routed controller.
@@ -568,4 +578,70 @@ async fn slack_run_index_orders_all_owners_and_http_show_paginates_issues() {
             assert!(!html.contains("row-49"));
         }
     }
+}
+
+#[tokio::test]
+async fn slack_personal_show_reads_later_stats_once_for_both_undo_controls() {
+    use rusqlite::trace::{TraceEvent, TraceEventCodes};
+    use std::cell::Cell;
+    thread_local! {static SCANS:Cell<usize>=const {Cell::new(0)};}
+    fn trace(event: TraceEvent<'_>) {
+        if let TraceEvent::Stmt(_, sql) = event
+            && sql.contains("slack_imports")
+            && sql.contains("ORDER BY started_at DESC, id DESC")
+        {
+            SCANS.with(|count| count.set(count.get() + 1));
+        }
+    }
+    let f = Fresh::new(0, vec![]).await;
+    f.workspace().await;
+    f.app.db.write(|tx| {
+        let workspace=campfire_db::models::slack::SlackWorkspace::current(tx.conn())?.unwrap();
+        for id in 853..=856 {
+            let stats=json!({"conversations":[{"id":format!("D{id}"),"target":{"action":"create"}}]});
+            let at=if id==853 {tx.now().ago(jiff::SignedDuration::from_secs(7200))} else {tx.now().ago(jiff::SignedDuration::from_secs(3600))};
+            tx.conn().execute("INSERT INTO slack_imports(id,slack_workspace_id,user_id,kind,mode,status,stats,started_at,created_at,updated_at) VALUES(?, ?,811,'personal','import','completed',?,?,?,?)",rusqlite::params![id,workspace.id,stats.to_string(),at,at,at])?;
+        }
+        Ok(())
+    }).await.unwrap();
+    let (data, count) = f
+        .app
+        .db
+        .read(|conn| {
+            let run = campfire_db::models::slack_import::SlackImport::find(conn, 853)?.unwrap();
+            conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace));
+            SCANS.with(|count| count.set(0));
+            let result = super::super::runs::data(
+                conn,
+                run,
+                campfire_db::Timestamp::parse_db("2026-01-01 12:00:00").unwrap(),
+            );
+            conn.trace_v2(TraceEventCodes::empty(), None);
+            result.map(|data| (data, SCANS.with(Cell::get)))
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+    assert!(data.undo_reason.is_none());
+    use askama::Template;
+    let html = crate::controllers::presenters::page::render_detached_at(
+        &f.app,
+        None,
+        "http://example.org",
+        |ctx| {
+            campfire_views::slack::RunPage {
+                ctx,
+                data: &data,
+                admin: false,
+            }
+            .as_content()
+            .render()
+            .unwrap()
+        },
+    );
+    assert!(html.contains("Undo import"));
+    assert!(!html.contains("A later import"));
+    let (status, _, html) = wire_request(&f, "GET", "/slack/imports/853", Value::Null, false).await;
+    assert_eq!(status, 200);
+    assert!(html.contains("Undo import"));
 }

@@ -5,7 +5,11 @@ cases = []
   *%w[invalid_auth token_revoked account_inactive not_authed ratelimited channel_not_found].map { |e| { 'ok' => false, 'error' => e } },
   { 'ok' => false, 'error' => 'missing_scope', 'needed' => 'channels:history', 'provided' => 'channels:read' },
   { 'ok' => false, 'error' => 'missing_scope', 'needed' => ['a', 'b'], 'provided' => [] },
-  { 'ok' => false, 'error' => 'missing_scope' }
+  { 'ok' => false, 'error' => 'missing_scope' },
+  *[0, 42, false, true, [], [1, 'x'], {}, {'a'=>1}].map { |error| {'ok'=>false, 'error'=>error} },
+  *[0, false, true, [1, false, nil], [['a','b'],'c'], {'a'=>1,'b'=>false}, [{'a'=>1}]].map { |needed| {'ok'=>false, 'error'=>'missing_scope', 'needed'=>needed, 'provided'=>{'raw'=>true}} },
+  *['', [], {}].map { |ok| {'ok'=>ok} },
+  {'ok'=>false,'error'=>"\u00a0"}, {'ok'=>false,'error'=>"\u0000"}
 ].each do |payload|
   entry = { 'payload' => payload }
   begin

@@ -327,27 +327,29 @@ fn check_ok(payload: Value, method: &str) -> Result<Value, Error> {
     if !payload["ok"].is_null() && payload["ok"] != false {
         return Ok(payload);
     }
-    let code = payload["error"].as_str().unwrap_or("");
-    let mut error = match code {
+    let code = campfire_richtext::ruby::json_value_to_s(&payload["error"]);
+    let mut error = match code.as_str() {
         "invalid_auth" | "token_revoked" | "account_inactive" | "not_authed" => Error::new(
             ErrorKind::Auth,
             format!("Slack authentication failed for {method} ({code})"),
         ),
         "missing_scope" => {
+            // Array(hash) yields pairs; Array#join recursively flattens nested arrays.
             let needed = match &payload["needed"] {
-                Value::Array(a) => a
-                    .iter()
-                    .map(|v| v.as_str().unwrap_or(""))
-                    .collect::<Vec<_>>()
-                    .join(","),
-                Value::String(s) => s.clone(),
-                _ => String::new(),
+                Value::Null => String::new(),
+                Value::Array(a) => ruby_join(a),
+                Value::Object(o) => ruby_join(
+                    &o.iter()
+                        .map(|(k, v)| serde_json::json!([k, v]))
+                        .collect::<Vec<_>>(),
+                ),
+                value => campfire_richtext::ruby::json_value_to_s(value),
             };
             Error::new(
                 ErrorKind::Scope,
                 format!(
                     "Slack token is missing a required scope for {method} (needed: {})",
-                    if needed.trim().is_empty() {
+                    if campfire_richtext::ruby::is_blank(&needed) {
                         "unknown"
                     } else {
                         &needed
@@ -363,10 +365,10 @@ fn check_ok(payload: Value, method: &str) -> Result<Value, Error> {
             ErrorKind::Request,
             format!(
                 "Slack error for {method}: {}",
-                if code.trim().is_empty() {
+                if campfire_richtext::ruby::is_blank(&code) {
                     "unknown"
                 } else {
-                    code
+                    &code
                 }
             ),
         ),
@@ -376,6 +378,16 @@ fn check_ok(payload: Value, method: &str) -> Result<Value, Error> {
         error.provided = Box::new(payload["provided"].clone());
     }
     Err(error)
+}
+fn ruby_join(values: &[Value]) -> String {
+    values
+        .iter()
+        .map(|value| match value {
+            Value::Array(values) => ruby_join(values),
+            value => campfire_richtext::ruby::json_value_to_s(value),
+        })
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 #[cfg(test)]

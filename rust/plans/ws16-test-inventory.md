@@ -2,7 +2,7 @@
 
 Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.
 
-Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. All fifteen admin/personal run actions have real HTTP session/CSRF/row/audit/queue comparisons and 83 complete template body goldens. The combined setup/sudo/preview/plan/import/progress/undo interaction also executes over HTTP. Remaining fault/large-history cases are listed below.
+Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. All fifteen admin/personal run actions have real HTTP session/CSRF/row/audit/queue comparisons and 83 complete template body goldens. The combined setup/sudo/preview/plan/import/progress/undo interaction also executes over HTTP. Eleven retained-undo variants now also compare all 89 tables, huddle destruction matches six Rails affected tables, and actual TLS catch-up/multi-year/finishing cases execute. Remaining fault/large-group and lifecycle cases are listed below.
 
 ## test/controllers/accounts/slack_import_runs_controller_test.rb
 
@@ -90,7 +90,7 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | members can cancel and undo their own runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
 | undo is blocked with a reason while another run is active | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
 | undo is blocked with a reason while a later import covers the same conversations | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
-| run page loads later runs' stats once across the undo checks | partial | One blocked-reason scan feeds the view; the original SQL-count regression still needs instrumentation. |
+| run page loads later runs' stats once across the undo checks | covered | slack_personal_show_reads_later_stats_once_for_both_undo_controls: native SQLite trace asserts one later-stats query across both controls and actual HTTP response. |
 | personal run page shows the plan with skip checkboxes | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
 
 ## test/controllers/slack/oauth_controller_test.rb
@@ -162,34 +162,34 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | workspace import creates rooms, memberships, messages, threads, boosts and pins | covered | slack_sequence_matches_rails_import_undo_reimport_database_rows: every field in 89 tables |
 | tiny step budget spans several steps for one conversation | covered | slack_runner_zero_budget_stops_after_page_and_preserves_reply_cursor plus actual fixture completion |
 | a second import creates zero duplicates | covered | slack_undo_actual_overlapping_imports_require_lifo_and_name_later_importer |
-| catch-up picks up a new message and a late reply | deferred | WS16 continuation: implement and exercise the original behavior. |
-| catch-up skips a thread whose mapped thread was deleted | deferred | WS16 continuation: implement and exercise the original behavior. |
+| catch-up picks up a new message and a late reply | covered | slack_catchup_new_message_late_reply_and_deleted_mapped_thread_match_rails: actual local TLS history/replies, 30-day oldest and native thread counts/activity. |
+| catch-up skips a thread whose mapped thread was deleted | covered | slack_catchup_new_message_late_reply_and_deleted_mapped_thread_match_rails: deleted ghost mapping remains, issue recorded and no recreated thread/reply. |
 | import skips a thread whose parent message was deleted mid-run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a multi-year conversation spanning several steps imports everything | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a full import after a date-bounded test import imports everything older too | deferred | WS16 continuation: implement and exercise the original behavior. |
-| catch-up after a kept test import and a full import re-reads only 30 days | deferred | WS16 continuation: implement and exercise the original behavior. |
+| a multi-year conversation spanning several steps imports everything | covered | slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward_unread_pointers: three pages across three years, zero step budget. |
+| a full import after a date-bounded test import imports everything older too | covered | slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward_unread_pointers: bounded middle year followed by unbounded full history. |
+| catch-up after a kept test import and a full import re-reads only 30 days | covered | slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward_unread_pointers: exact oldest request in subsequent catch-up. |
 | undo is last-in, first-out per conversation | covered | slack_undo_actual_overlapping_imports_require_lifo_and_name_later_importer |
-| a full import's coverage ends when an earlier run under it is undone | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a full import finishes rooms an earlier test import created | deferred | WS16 continuation: implement and exercise the original behavior. |
-| finishing never moves an earlier membership's read pointer backwards | deferred | WS16 continuation: implement and exercise the original behavior. |
-| per-conversation record lookups seek the identity index | deferred | WS16 continuation: implement and exercise the original behavior. |
-| finishing refreshes the heartbeat while looping over rooms | deferred | WS16 continuation: implement and exercise the original behavior. |
+| a full import's coverage ends when an earlier run under it is undone | covered | slack_catchup_coverage_is_invalidated_by_undoing_an_earlier_bounded_run: native undo invalidates coverage and unbounded history restores middle-year row. |
+| a full import finishes rooms an earlier test import created | covered | slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward_unread_pointers: native room timestamp and every membership checked. |
+| finishing never moves an earlier membership's read pointer backwards | covered | slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward_unread_pointers: newer live pointer and unread membership preserved. |
+| per-conversation record lookups seek the identity index | covered | slack_finishing_per_conversation_seeks_identity_index_and_renews_heartbeat_lease: SQLite EXPLAIN range seeks identity index. |
+| finishing refreshes the heartbeat while looping over rooms | covered | slack_finishing_per_conversation_seeks_identity_index_and_renews_heartbeat_lease: native multi-conversation finish advances stale heartbeat and keeps lease. |
 | completing a run kicks the next queued run | deferred | WS16 continuation: implement and exercise the original behavior. |
 | undoing a run kicks the next queued run | deferred | WS16 continuation: implement and exercise the original behavior. |
 | undo is blocked while another run is queued | covered | 109 real Rails HTTP actions compare blocking reason and unchanged DB/queue. |
 | message timestamps keep exact microseconds | covered | slack_writer_timestamp_microseconds_do_not_round_through_float plus full Rails row differential |
 | truncated reaction lists import the listed users with one issue per message | deferred | WS16 continuation: implement and exercise the original behavior. |
 | undo removes exactly what the run created and leaves the rest | covered | slack_undo_deletes_data_search_and_mappings_then_reimports_fixture plus kept-content tests and Rails differential |
-| undo keeps mappings for kept placeholders, so re-import creates no duplicates | partial | Claimed-user mapping and kept-root reimport covered; all original session/Google/authorship variants remain. |
+| undo keeps mappings for kept placeholders, so re-import creates no duplicates | covered | Eleven retained Rails differentials, including sessions, Google account/identity, password and placeholder authorship; 89 tables after import, undo and reimport. |
 | undo keeps a created room that gained foreign messages and records an issue | covered | slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies |
-| undo keeps a created room that holds an event and a scheduled message | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo keeps a created room that holds an event and a scheduled message | covered | sequence_keep_room_event_schedule.json: all 89 Rails tables match three phases. |
 | undo keeps threads and rooms with real activity, with members and mappings | covered | slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies |
-| undo keeps the parent of a thread holding a saved reply | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo keeps an imported message someone started a thread on | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo keeps the parent of a thread holding a saved reply | covered | sequence_keep_saved_reply.json: all 89 Rails tables match three phases. |
+| undo keeps an imported message someone started a thread on | covered | sequence_keep_foreign_thread.json: all 89 Rails tables match three phases. |
 | undo keeps imported messages holding a poll, a saved item or someone else's pin | covered | slack_undo_keeps_poll_saved_item_foreign_pin_and_pending_root_reply |
-| undo keeps a thread whose reply holds a poll | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo keeps a thread whose reply holds a poll | covered | sequence_keep_poll_reply.json: all 89 Rails tables match three phases. |
 | undo keeps a thread with a pending scheduled reply, and the message it quotes | covered | slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies |
-| undo removes a thread whose scheduled replies were all sent | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo removes a thread whose scheduled replies were all sent | covered | sequence_keep_sent_reply.json: all 89 Rails tables match three phases. |
 | import stays silent: no foreign jobs, broadcasts, unread or inbox items | covered | slack_writer_history_replies_pins_reactions_are_quiet_and_keep_microseconds; rejecting broadcast sink and real job queue |
 | imported messages are searchable | covered | slack_writer_history_replies_pins_reactions_are_quiet_and_keep_microseconds; message_search_index included in both Rails differentials |
 
@@ -203,17 +203,17 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | conversations.list sends types and keeps archived channels | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | conversations.members sends the channel | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | conversations.history sends channel, bounds, cursor and limit 200 | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
-| history fixtures arrive newest-first like conversations.history | partial | Fixture byte identity is covered; explicit ordering assertion still needed. |
+| history fixtures arrive newest-first like conversations.history | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | conversations.replies sends channel and parent ts | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | HTTP 429 raises a rate-limit error carrying Retry-After | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | HTTP 429 without Retry-After defaults to 60 seconds | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | 5xx responses retry with backoff then raise | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | network errors retry then raise | partial | Exact Ruby transport exception class/message remains unported; retry count and final RequestError are covered. |
-| a 5xx that recovers returns the payload | partial | Fixture server sequence recovery still needed. |
+| a 5xx that recovers returns the payload | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | ok:false auth errors raise AuthError | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | ok:false missing_scope raises ScopeError with the needed scope | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | other ok:false errors raise RequestError without retrying | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
-| on_request fires once per attempt for api call counts | partial | Callback counts tested for failed retries; recovery sequence still needed. |
+| on_request fires once per attempt for api call counts | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 | pacing sleeps between rapid Tier 2 calls when enabled | covered | Local TLS fixture requests, Rails error vectors, retry and pacing tests. |
 
 ## test/models/slack/markdown_converter_test.rb
@@ -268,9 +268,9 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | a second acquire fails while a fresh lease is held | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | a stale lease can be taken over without losing saved progress | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | releasing with the wrong token keeps the lease | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
-| a step that raises still releases its lease | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a continuing step releases its lease before enqueueing the next job | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a continuing undo releases its lease before enqueueing the next job | deferred | WS16 continuation: implement and exercise the original behavior. |
+| a step that raises still releases its lease | covered | slack_job_cancel_during_auth_error_preserves_cancel_and_disconnects plus retry-after tests assert no retained lease after errors. |
+| a continuing step releases its lease before enqueueing the next job | covered | slack_job_releases_before_durable_continuation_and_uses_serial_queue: rejecting SQL trigger prevents publishing while busy. |
+| a continuing undo releases its lease before enqueueing the next job | covered | slack_job_undo_releases_before_continuation: native row lease removal and serial durable undo job. |
 | refresh_step_lease! renews a held lease without touching other state | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | refresh_step_lease! refuses a token that no longer holds the lease | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | a runner step refreshes its lease wherever it refreshes the heartbeat | deferred | WS16 continuation: implement and exercise the original behavior. |
@@ -280,7 +280,7 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | a lease-looking state on a completed run does not block claims | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | step lease stamps are written in UTC even under a user time zone | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | fresh leases block and stale leases pass under user time zones | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
-| a step job that cannot claim its queued run exits without re-enqueueing | deferred | WS16 continuation: implement and exercise the original behavior. |
+| a step job that cannot claim its queued run exits without re-enqueueing | covered | slack_job_live_lease_and_lost_run_claim_never_execute_callback: loser callback rejects execution and enqueued stamp clears. |
 | undo! refuses with no status change while another run is queued, running or undoing | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | the undo claim itself refuses a queued run that slips in after the pre-check | deferred | WS16 continuation: implement and exercise the original behavior. |
 | the undo claim itself refuses a fresh lease held outside an active status | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
@@ -305,4 +305,4 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 ## Totals
 
-190 covered, 9 partial, 45 deferred; 244 Rails tests inventoried.
+214 covered, 4 partial, 26 deferred; 244 Rails tests inventoried.

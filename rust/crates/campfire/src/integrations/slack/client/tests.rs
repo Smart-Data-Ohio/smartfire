@@ -9,6 +9,10 @@ use crate::integrations::net::tls_config;
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route};
 
 pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
+    let (mut servers, network) = fake_responses(vec![routes]).await;
+    (servers.remove(0), network)
+}
+async fn fake_responses(responses: Vec<Vec<Route>>) -> (Vec<FakeServer>, Network) {
     use rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
     let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(vec![HOST.to_owned()]).unwrap();
@@ -25,30 +29,57 @@ pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
         PrivateKeyDer::from(PrivatePkcs8KeyDer::from(signing_key.serialize_der())),
     )
     .unwrap();
-    let mut listener = None;
-    for port in 53300..=53399 {
-        if let Ok(bound) = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, port)).await {
-            listener = Some(bound);
-            break;
+    let config = Arc::new(config);
+    let mut servers = Vec::new();
+    for routes in responses {
+        let mut listener = None;
+        for port in 53300..=53399 {
+            if let Ok(bound) = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, port)).await {
+                listener = Some(bound);
+                break;
+            }
+        }
+        servers.push(
+            FakeServer::on_listener(
+                routes,
+                Some(tokio_rustls::TlsAcceptor::from(config.clone())),
+                listener.expect("WS16 ports exhausted"),
+            )
+            .await,
+        );
+    }
+    struct Responses {
+        addresses: Vec<std::net::SocketAddr>,
+        next: AtomicUsize,
+    }
+    impl crate::integrations::net::Dialer for Responses {
+        fn connect(
+            &self,
+            addr: std::net::SocketAddr,
+        ) -> crate::integrations::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
+        {
+            assert_eq!(
+                addr.ip(),
+                "203.0.113.16".parse::<std::net::IpAddr>().unwrap()
+            );
+            let index = self
+                .next
+                .fetch_add(1, Ordering::SeqCst)
+                .min(self.addresses.len() - 1);
+            Box::pin(tokio::net::TcpStream::connect(self.addresses[index]))
         }
     }
-    let server = FakeServer::on_listener(
-        routes,
-        Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))),
-        listener.expect("WS16 ports exhausted"),
-    )
-    .await;
     let network = Network {
         resolver: Arc::new(FakeResolver::new([(HOST, vec!["203.0.113.16"])])),
-        dialer: Arc::new(MappingDialer {
-            public: ["203.0.113.16".parse().unwrap()].into(),
-            to: server.addr,
-            dialed: Default::default(),
+        dialer: Arc::new(Responses {
+            addresses: servers.iter().map(|server| server.addr).collect(),
+            next: AtomicUsize::new(0),
         }),
         tls: tls_config(roots),
     };
-    (server, network)
+    (servers, network)
 }
+
 fn route(path: &str, status: u16, body: &str) -> Route {
     Route::new("GET", HOST, path, status).body(body.to_owned())
 }
@@ -302,4 +333,134 @@ async fn slack_client_network_failure_retries_four_times_then_maps_to_request_er
     assert_eq!(error.kind, ErrorKind::Request);
     assert_eq!(dialer.dialed.lock().unwrap().len(), 4);
     assert!(server.received().is_empty());
+}
+
+#[tokio::test]
+async fn slack_client_recovering_5xx_counts_each_attempt_and_returns_payload() {
+    let (servers, network) = fake_responses(vec![
+        vec![route(
+            "/api/users.list?limit=200",
+            503,
+            "temporarily unavailable",
+        )],
+        vec![route(
+            "/api/users.list?limit=200",
+            502,
+            "gateway unavailable",
+        )],
+        vec![route(
+            "/api/users.list?limit=200",
+            200,
+            r#"{"ok":true,"members":[{"id":"URECOVERED"}]}"#,
+        )],
+    ])
+    .await;
+    let calls = Arc::new(AtomicUsize::new(0));
+    let observed = calls.clone();
+    let mut client = Client::with_network(
+        "fixture-recovery-grant".into(),
+        Some(Arc::new(move |method| {
+            assert_eq!(method, "users.list");
+            observed.fetch_add(1, Ordering::SeqCst);
+        })),
+        false,
+        network,
+    );
+    assert_eq!(
+        client.users_list(None, 200).await.unwrap()["members"][0]["id"],
+        "URECOVERED"
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 3);
+    assert_eq!(client.request_count(), 3);
+    assert!(servers.iter().all(|server| server.received().len() == 1));
+}
+#[tokio::test]
+async fn slack_client_recovering_network_counts_failed_dials_and_success_once() {
+    struct RetryDialer {
+        inner: Arc<dyn crate::integrations::net::Dialer>,
+        count: AtomicUsize,
+    }
+    impl crate::integrations::net::Dialer for RetryDialer {
+        fn connect(
+            &self,
+            addr: std::net::SocketAddr,
+        ) -> crate::integrations::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
+        {
+            if self.count.fetch_add(1, Ordering::SeqCst) < 2 {
+                Box::pin(async {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::Interrupted,
+                        "fixture retry",
+                    ))
+                })
+            } else {
+                self.inner.connect(addr)
+            }
+        }
+    }
+    let (server, mut network) = fake(vec![route(
+        "/api/team.info?",
+        200,
+        r#"{"ok":true,"team":{"name":"Recovered"}}"#,
+    )])
+    .await;
+    let dialer = Arc::new(RetryDialer {
+        inner: network.dialer.clone(),
+        count: AtomicUsize::new(0),
+    });
+    network.dialer = dialer.clone();
+    let calls = Arc::new(AtomicUsize::new(0));
+    let observed = calls.clone();
+    let mut client = Client::with_network(
+        "fixture-recovery-grant".into(),
+        Some(Arc::new(move |method| {
+            assert_eq!(method, "team.info");
+            observed.fetch_add(1, Ordering::SeqCst);
+        })),
+        false,
+        network,
+    );
+    assert_eq!(
+        client.team_info().await.unwrap()["team"]["name"],
+        "Recovered"
+    );
+    assert_eq!(dialer.count.load(Ordering::SeqCst), 3);
+    assert_eq!(calls.load(Ordering::SeqCst), 3);
+    assert_eq!(client.request_count(), 3);
+    assert_eq!(server.received().len(), 1);
+}
+#[tokio::test]
+async fn slack_client_history_recording_is_newest_first_on_each_page() {
+    let (server, network) = fake(vec![
+        route(
+            "/api/conversations.history?channel=CCHAN&limit=200",
+            200,
+            include_str!("../fixtures/history_CCHAN_p1.json"),
+        ),
+        route(
+            "/api/conversations.history?channel=CCHAN&cursor=cchan-page-2&limit=200",
+            200,
+            include_str!("../fixtures/history_CCHAN_p2.json"),
+        ),
+    ])
+    .await;
+    let mut client = client(network);
+    let mut previous = None;
+    for cursor in [None, Some("cchan-page-2")] {
+        let page = client
+            .conversations_history("CCHAN", Bounds::default(), cursor, 200)
+            .await
+            .unwrap();
+        for message in page["messages"].as_array().unwrap() {
+            let stamp = message["ts"].as_str().unwrap().parse::<f64>().unwrap();
+            if let Some(previous) = previous {
+                assert!(
+                    previous >= stamp,
+                    "Slack history changed newest-first order"
+                );
+            }
+            previous = Some(stamp);
+        }
+    }
+    assert_eq!(server.received().len(), 2);
 }

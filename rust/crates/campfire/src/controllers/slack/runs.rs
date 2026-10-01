@@ -568,7 +568,7 @@ pub async fn personal_undo(c: &mut Ctx) -> Result {
     mutate(c, false, true).await
 }
 
-fn data(
+pub(super) fn data(
     conn: &rusqlite::Connection,
     run: SlackImport,
     now: campfire_db::Timestamp,

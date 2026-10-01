@@ -136,6 +136,301 @@
         "needed": null,
         "provided": null
       }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": 0
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: 0"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": 42
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: 42"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": false
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: false"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": true
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: true"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": []
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: []"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": [
+          1,
+          "x"
+        ]
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: [1, \"x\"]"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": {}
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: {}"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": {
+          "a": 1
+        }
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: {\"a\" => 1}"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": 0,
+        "provided": {
+          "raw": true
+        }
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: 0)",
+        "needed": 0,
+        "provided": {
+          "raw": true
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": false,
+        "provided": {
+          "raw": true
+        }
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: false)",
+        "needed": false,
+        "provided": {
+          "raw": true
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": true,
+        "provided": {
+          "raw": true
+        }
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: true)",
+        "needed": true,
+        "provided": {
+          "raw": true
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": [
+          1,
+          false,
+          null
+        ],
+        "provided": {
+          "raw": true
+        }
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: 1,false,)",
+        "needed": [
+          1,
+          false,
+          null
+        ],
+        "provided": {
+          "raw": true
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": [
+          [
+            "a",
+            "b"
+          ],
+          "c"
+        ],
+        "provided": {
+          "raw": true
+        }
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: a,b,c)",
+        "needed": [
+          [
+            "a",
+            "b"
+          ],
+          "c"
+        ],
+        "provided": {
+          "raw": true
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": {
+          "a": 1,
+          "b": false
+        },
+        "provided": {
+          "raw": true
+        }
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: a,1,b,false)",
+        "needed": {
+          "a": 1,
+          "b": false
+        },
+        "provided": {
+          "raw": true
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": [
+          {
+            "a": 1
+          }
+        ],
+        "provided": {
+          "raw": true
+        }
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: {\"a\" => 1})",
+        "needed": [
+          {
+            "a": 1
+          }
+        ],
+        "provided": {
+          "raw": true
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": ""
+      },
+      "expected": {
+        "payload": {
+          "ok": ""
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": []
+      },
+      "expected": {
+        "payload": {
+          "ok": []
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": {}
+      },
+      "expected": {
+        "payload": {
+          "ok": {}
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": " "
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: unknown"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "\u0000"
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: \u0000"
+      }
     }
   ]
 }
