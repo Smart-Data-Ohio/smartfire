@@ -1356,6 +1356,24 @@
           "rust": "ws11_plaintext_case_repeat_noop"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agents/work_payload_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_work_payload_cases_test.rs",
+      "cases": [
+        {
+          "rails": "carries the full work shape for a channel thread",
+          "rust": "ws11_work_payload_case_complete_thread_shape"
+        },
+        {
+          "rails": "marks human owners and null owners",
+          "rust": "ws11_work_payload_case_human_and_null_owners"
+        },
+        {
+          "rails": "carries board identity, tags, run_url, and links for a post",
+          "rust": "ws11_work_payload_case_board_tags_run_and_links"
+        }
+      ]
     }
   ],
   "boundary_deferred": {

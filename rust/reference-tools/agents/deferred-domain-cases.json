@@ -140,15 +140,6 @@
       "remaining_named_case_ports": [
         "kill switch leaves owned work assigned without reassigning it"
       ]
-    },
-    {
-      "rails_file": "test/models/agents/work_payload_test.rb",
-      "owner": "WS11; WS8 message presenter; WS15g private repository reader",
-      "remaining_named_case_ports": [
-        "carries the full work shape for a channel thread",
-        "marks human owners and null owners",
-        "carries board identity, tags, run_url, and links for a post"
-      ]
     }
   ]
 }

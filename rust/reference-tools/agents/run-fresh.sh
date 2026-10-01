@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-FRESH="$ROOT/.scratch/fresh-ws11-delivery-adapters"
+FRESH="$ROOT/.scratch/fresh-ws11-github-domain"
 test ! -e "$FRESH"
 SOURCE_SHA=$(git -C "$ROOT" rev-parse HEAD)
 REMOTE_SHA=$(git -C "$ROOT" ls-remote origin refs/heads/rust/ws11-agents | cut -f1)
@@ -15,7 +15,6 @@ export CI=1 TMPDIR="$FRESH/.scratch" CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0
 export CARGO_PROFILE_DEV_DEBUG=line-tables-only CARGO_PROFILE_TEST_DEBUG=line-tables-only
 export CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249
 export INTEGRATION_TEST_PORT_RANGE=52250-52298 WS15E_TEST_PORT_RANGE=52250-52298 GITHUB_TEST_PORT_RANGE=52250-52298
-export WS15E_FIZZY_MESSAGE_CASE_PORT=52299
 export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$FRESH/rust/reference-tools/agents/pinned-media-runner.py"
 cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 > "$ROOT/.scratch/fresh-metadata.json"
 python3 rust/reference-tools/agents/check-seeds.py > "$ROOT/.scratch/fresh-seeds.log"
