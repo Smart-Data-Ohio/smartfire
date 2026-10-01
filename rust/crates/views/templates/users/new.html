@@ -7,7 +7,7 @@
       <span class="for-screen-reader">Sign in</span>
 {% endfilter %}  </div>
 {% endblock %}
-{% block content %}{% let form = h::form_with(h::routes::join(join_code)).model("user").class("center") %}{% filter form_with(form) %}
+{% block content %}{{ "\n\n" }}{% let form = h::form_with(h::routes::join(join_code)).model("user").class("center") %}{% filter form_with(form) %}
   <section class="nametag u-relative">
     <div class="flex justify-center align-center pad-block">
       {{ h::image_tag(ctx, "lanyard.svg", h::attrs().class("nametag__lanyard").aria_hidden()) }}

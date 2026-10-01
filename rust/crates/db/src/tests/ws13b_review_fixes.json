@@ -1,0 +1,333 @@
+{
+  "reference_pin": "d7c7de92",
+  "rings": [
+    {
+      "operation": "revoke",
+      "initial": [
+        {
+          "eventType": "huddle_started",
+          "state": "unread"
+        }
+      ],
+      "after_mutation": [
+        {
+          "eventType": "huddle_ended",
+          "state": "unread"
+        }
+      ],
+      "ring_job_enqueued": false
+    },
+    {
+      "operation": "remove_recipient",
+      "initial": [
+        {
+          "eventType": "huddle_started",
+          "state": "unread"
+        }
+      ],
+      "after_mutation": [],
+      "ring_job_enqueued": false
+    },
+    {
+      "operation": "remove_caller",
+      "initial": [
+        {
+          "eventType": "huddle_started",
+          "state": "unread"
+        }
+      ],
+      "after_mutation": [
+        {
+          "eventType": "huddle_ended",
+          "state": "unread"
+        }
+      ],
+      "ring_job_enqueued": false
+    },
+    {
+      "operation": "sign_out",
+      "initial": [
+        {
+          "eventType": "huddle_started",
+          "state": "unread"
+        }
+      ],
+      "after_mutation": [
+        {
+          "eventType": "huddle_ended",
+          "state": "unread"
+        }
+      ],
+      "ring_job_enqueued": false
+    },
+    {
+      "operation": "leave",
+      "initial": [
+        {
+          "eventType": "huddle_started",
+          "state": "unread"
+        }
+      ],
+      "after_mutation": [
+        {
+          "eventType": "huddle_ended",
+          "state": "unread"
+        }
+      ],
+      "ring_job_enqueued": false
+    },
+    {
+      "operation": "suppressed_revoke",
+      "initial": [
+        {
+          "eventType": "huddle_started",
+          "state": "unread"
+        }
+      ],
+      "after_mutation": [
+        {
+          "eventType": "huddle_ended",
+          "state": "unread"
+        }
+      ],
+      "ring_job_enqueued": false
+    },
+    {
+      "operation": "suppressed_leave",
+      "initial": [
+        {
+          "eventType": "huddle_started",
+          "state": "unread"
+        }
+      ],
+      "after_mutation": [
+        {
+          "eventType": "huddle_ended",
+          "state": "unread"
+        }
+      ],
+      "ring_job_enqueued": false
+    }
+  ],
+  "failures": [
+    {
+      "operation": "create",
+      "error": "ActiveRecord::StatementInvalid",
+      "grants": 1,
+      "items": 0,
+      "last_issued_at": "2026-01-01T12:00:00Z",
+      "push_jobs": 0
+    },
+    {
+      "operation": "reuse",
+      "error": "ActiveRecord::StatementInvalid",
+      "grants": 1,
+      "items": 0,
+      "last_issued_at": "2026-01-01T12:03:00Z",
+      "push_jobs": 0
+    },
+    {
+      "operation": "group",
+      "error": "ActiveRecord::StatementInvalid",
+      "grants": 1,
+      "items": 1,
+      "last_issued_at": "2026-01-01T12:00:00Z",
+      "push_jobs": 1
+    }
+  ],
+  "times": [
+    {
+      "input": "2026-01-01 17:00:00 +0500",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "+0500",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01 07:00:00 -0500",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "-0500",
+        "offset": -18000
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +05:00",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "+05:00",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01T17:00:00+0500",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "+0500",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01T12:00:00Z",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "Z",
+        "offset": 0
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00.500000 +0500",
+      "parsed": "2026-01-01T12:00:00.500000Z",
+      "parts": {
+        "zone": "+0500",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01T24:00:00Z",
+      "parsed": "2026-01-02T00:00:00.000000Z",
+      "parts": {
+        "zone": "Z",
+        "offset": 0
+      }
+    },
+    {
+      "input": "2026-01-01T24:01:00Z",
+      "parsed": null,
+      "parts": {
+        "zone": "Z",
+        "offset": 0
+      }
+    },
+    {
+      "input": "2026-01-01T24:00:01Z",
+      "parsed": null,
+      "parts": {
+        "zone": "Z",
+        "offset": 0
+      }
+    },
+    {
+      "input": "2026-01-01T12:00:60Z",
+      "parsed": "2026-01-01T12:01:00.000000Z",
+      "parts": {
+        "zone": "Z",
+        "offset": 0
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +2500",
+      "parsed": null,
+      "parts": {
+        "zone": "+2500",
+        "offset": 90000
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +0560",
+      "parsed": "2026-01-01T11:00:00.000000Z",
+      "parts": {
+        "zone": "+0560",
+        "offset": 21600
+      }
+    },
+    {
+      "input": "2026-01-01 07:00:00 -0560",
+      "parsed": "2026-01-01T13:00:00.000000Z",
+      "parts": {
+        "zone": "-0560",
+        "offset": -21600
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +05:30:60",
+      "parsed": "2026-01-01T17:00:00.000000Z",
+      "parts": {
+        "zone": "+05:30:60",
+        "offset": null
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +2400",
+      "parsed": null,
+      "parts": {
+        "zone": "+2400",
+        "offset": 86400
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +2360",
+      "parsed": null,
+      "parts": {
+        "zone": "+2360",
+        "offset": 86400
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +050000",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "+050000",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +05:30:00",
+      "parsed": "2026-01-01T11:30:00.000000Z",
+      "parts": {
+        "zone": "+05:30:00",
+        "offset": 19800
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +05",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "+05",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +5",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "+5",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +0500tail",
+      "parsed": "2026-01-01T12:00:00.000000Z",
+      "parts": {
+        "zone": "+0500",
+        "offset": 18000
+      }
+    },
+    {
+      "input": "2026-01-01 17:00:00 +05:60",
+      "parsed": "2026-01-01T17:00:00.000000Z",
+      "parts": {
+        "zone": "+05:60",
+        "offset": null
+      }
+    }
+  ],
+  "boundaries": [
+    {
+      "seen_at": "2026-01-01T11:59:59.000000Z",
+      "changed": true,
+      "seen_after": null
+    },
+    {
+      "seen_at": "2026-01-01T12:00:00.000000Z",
+      "changed": true,
+      "seen_after": null
+    },
+    {
+      "seen_at": "2026-01-01T12:00:01.000000Z",
+      "changed": false,
+      "seen_after": "2026-01-01T12:00:01.000000Z"
+    }
+  ]
+}

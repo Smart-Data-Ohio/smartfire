@@ -1,0 +1,20 @@
+{
+  "app/controllers/users/profiles_controller.rb": "3c5abb50d70d3fb938cd35e4675bc3ec09562f7164a2cf8d50c7d04b46230357",
+  "app/helpers/users/profiles_helper.rb": "2793cc9d9baa15468b9b84ac813878b8af1d26f922c32aedec1c435d0b8d2f71",
+  "app/models/user.rb": "41c18c8325200bf8034554c4b107cc722d7b89aba32ade9d9944a7055587dd5b",
+  "app/models/user/inbox_preferences.rb": "12fc4a801806c55cca7f1bc85c63795437cf09bf573f9c403830ba2165e6fd39",
+  "app/models/user/status_settings.rb": "8d77c63951da6e429585d7cf0171355719f82d14e2e83f0efd1ad1b0e18336d1",
+  "app/views/users/profiles/_appearance.html.erb": "6ebcb819c1414a353316a7753f22fd13ef2fb09140a5c47cef88be0afe78fa5a",
+  "app/views/users/profiles/_fizzy_connection.html.erb": "54c82ac0063c0061f8a874981baf03e87ff6bd251407c085c80ada3466a96652",
+  "app/views/users/profiles/_github_connection.html.erb": "02c151c3129933a6705ddcb484850cd218588ba44d9d69025bcc42e94d1eb4d4",
+  "app/views/users/profiles/_google_calendar.html.erb": "fa4697a7b9cf89a2e58d95ab0838f35afa49c9e060752abb2a51d8b807f5d76e",
+  "app/views/users/profiles/_google_sign_in.html.erb": "c256057cf64d8c14eb034d8f748626b70d6031d44d865d96f1a7f3e8ac3917e5",
+  "app/views/users/profiles/_membership.html.erb": "bee1bbd8930e3bd1085d170c720b8180d4ea98d430cf071ec6419e6ab853ee0e",
+  "app/views/users/profiles/_notifications.html.erb": "2b79871131d6ab1d03abc0ee83b7c8a858b1562a4fe41a4b168c6c7cdae4d57e",
+  "app/views/users/profiles/_sessions.html.erb": "9097841487ae4f47190d32e740111fdc4939131d149455ffc8174bca267d1f4b",
+  "app/views/users/profiles/_slack_import.html.erb": "e7b99849a1632b29000a6b6bd903911c28864e5e7e9bd96b3ec1d1a4aeed9480",
+  "app/views/users/profiles/_status.html.erb": "8e4553dee3137b28212fe4dd08160f91475f859a7ecefa83e52bcfcd9d55e40b",
+  "app/views/users/profiles/_transfer.html.erb": "2e63817502f8c49197e94a47f753a88c785604bdce3d6d34731553dfe764f4a0",
+  "app/views/users/profiles/_two_factor.html.erb": "d85f26cfaedc39c3c253f2d122dd08547461b069f863a8f9976a2805887ee1cd",
+  "app/views/users/profiles/show.html.erb": "dbdaa29a5ae7610a1b961f731d2df8cfaf14a2e86e4952e5ece24df96edfc07f"
+}

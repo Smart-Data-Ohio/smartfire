@@ -1,0 +1,309 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "invitations": [
+    {
+      "name": "recipient",
+      "input": {
+        "item": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "event_type": "huddle_started",
+          "handled_at": null,
+          "read_at": null,
+          "source_id": 1,
+          "source_type": "HuddleGrant",
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 149087659
+        },
+        "grant": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "identity": "ws13b-job-participant",
+          "last_issued_at": "2026-01-01 12:00:00 UTC",
+          "last_seen_at": null,
+          "membership_id": 449028908,
+          "revoked_at": null,
+          "room_id": 186869642,
+          "room_name": "campfire-room-a73904fa17a2ddc309ed143a33bc98c2a3f7e5a6f37410c66b68402021995032",
+          "server_muted": false,
+          "session_id": 1,
+          "stage_role": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 127326141
+        },
+        "session": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "device_id": null,
+          "ip_address": null,
+          "last_active_at": "2026-01-01 12:00:00 UTC",
+          "token": "ws13b-job-session",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_agent": null,
+          "user_id": 127326141
+        },
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "missing": false
+      },
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "off",
+      "input": {
+        "item": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "event_type": "huddle_started",
+          "handled_at": null,
+          "read_at": null,
+          "source_id": 1,
+          "source_type": "HuddleGrant",
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 149087659
+        },
+        "grant": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "identity": "ws13b-job-participant",
+          "last_issued_at": "2026-01-01 12:00:00 UTC",
+          "last_seen_at": null,
+          "membership_id": 449028908,
+          "revoked_at": null,
+          "room_id": 186869642,
+          "room_name": "campfire-room-a73904fa17a2ddc309ed143a33bc98c2a3f7e5a6f37410c66b68402021995032",
+          "server_muted": false,
+          "session_id": 1,
+          "stage_role": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 127326141
+        },
+        "session": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "device_id": null,
+          "ip_address": null,
+          "last_active_at": "2026-01-01 12:00:00 UTC",
+          "token": "ws13b-job-session",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_agent": null,
+          "user_id": 127326141
+        },
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "nothing",
+        "connected_at": null,
+        "missing": false
+      },
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "connected",
+      "input": {
+        "item": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "event_type": "huddle_started",
+          "handled_at": null,
+          "read_at": null,
+          "source_id": 1,
+          "source_type": "HuddleGrant",
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 149087659
+        },
+        "grant": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "identity": "ws13b-job-participant",
+          "last_issued_at": "2026-01-01 12:00:00 UTC",
+          "last_seen_at": null,
+          "membership_id": 449028908,
+          "revoked_at": null,
+          "room_id": 186869642,
+          "room_name": "campfire-room-a73904fa17a2ddc309ed143a33bc98c2a3f7e5a6f37410c66b68402021995032",
+          "server_muted": false,
+          "session_id": 1,
+          "stage_role": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 127326141
+        },
+        "session": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "device_id": null,
+          "ip_address": null,
+          "last_active_at": "2026-01-01 12:00:00 UTC",
+          "token": "ws13b-job-session",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_agent": null,
+          "user_id": 127326141
+        },
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": "2026-01-01 12:00:00 UTC",
+        "missing": false
+      },
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "missing",
+      "input": {
+        "item": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "event_type": "huddle_started",
+          "handled_at": null,
+          "read_at": null,
+          "source_id": 1,
+          "source_type": "HuddleGrant",
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 149087659
+        },
+        "grant": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "identity": "ws13b-job-participant",
+          "last_issued_at": "2026-01-01 12:00:00 UTC",
+          "last_seen_at": null,
+          "membership_id": 449028908,
+          "revoked_at": null,
+          "room_id": 186869642,
+          "room_name": "campfire-room-a73904fa17a2ddc309ed143a33bc98c2a3f7e5a6f37410c66b68402021995032",
+          "server_muted": false,
+          "session_id": 1,
+          "stage_role": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_id": 127326141
+        },
+        "session": {
+          "id": 1,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "device_id": null,
+          "ip_address": null,
+          "last_active_at": "2026-01-01 12:00:00 UTC",
+          "token": "ws13b-job-session",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-01-01 12:00:00 UTC",
+          "user_agent": null,
+          "user_id": 127326141
+        },
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "missing": true
+      },
+      "pushes": []
+    }
+  ],
+  "presence": {
+    "counts": {
+      "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms": 1,
+      "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms": 1,
+      "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OlZvaWNlLzkwMDE:messages": 1
+    },
+    "missing": []
+  },
+  "reconciler": [
+    {
+      "name": "normal",
+      "calls": [
+        "invitations",
+        "streams",
+        "cleanup"
+      ],
+      "logs": []
+    },
+    {
+      "name": "resolver_failure",
+      "calls": [
+        "invitations",
+        "streams",
+        "cleanup"
+      ],
+      "logs": [
+        "Huddle invitation resolution failed: StandardError"
+      ]
+    },
+    {
+      "name": "stream_failure",
+      "calls": [
+        "invitations",
+        "streams",
+        "cleanup"
+      ],
+      "logs": [
+        "Huddle stream reconciliation failed: StandardError"
+      ]
+    },
+    {
+      "name": "resolver_sql_failure",
+      "calls": [
+        "invitations",
+        "streams",
+        "cleanup"
+      ],
+      "logs": [
+        "Huddle invitation resolution failed: ActiveRecord::StatementInvalid"
+      ]
+    },
+    {
+      "name": "stream_validation_failure",
+      "calls": [
+        "invitations",
+        "streams",
+        "cleanup"
+      ],
+      "logs": [
+        "Huddle stream reconciliation failed: ActiveRecord::RecordInvalid"
+      ]
+    }
+  ]
+}

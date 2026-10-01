@@ -283,7 +283,8 @@ async fn logo_destroy_audits_even_when_the_attachment_is_already_absent() {
     account_case("logo_absent").await;
 }
 #[tokio::test]
-async fn account_audit_failure_rolls_back_settings_code_styles_and_logo() {
+async fn account_audit_failure_preserves_rails_committed_settings_code_styles_and_logo() {
+    let oracle: Value = serde_json::from_str(include_str!("../../../../vectors/users_account_audit_failures.json")).unwrap();
     for name in [
         "settings",
         "join_reset",
@@ -292,18 +293,28 @@ async fn account_audit_failure_rolls_back_settings_code_styles_and_logo() {
         "settings_add_logo",
     ] {
         let case = &vectors()["account"][name];
-        let a = app().await;
+        let mut a = app().await;
+        // The Rails oracle's test adapter queues image analysis without performing it.
+        // Stop workers before preparing or assigning attachments; NullAnalyzer callbacks
+        // still run synchronously after commit through the real save path.
+        a.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
         let mut b = prepare_account(&a, case).await;
-        let before = a.db().read(Account::first).await.unwrap();
-        let attachments = |c: &campfire_db::Connection| -> campfire_db::Result<Vec<i64>> {
-            Ok(c.prepare("SELECT id FROM active_storage_attachments WHERE record_type='Account' AND name='logo' ORDER BY id")?.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<Vec<_>>>()?)
-        };
-        let related = a.db().read(attachments).await.unwrap();
+        let before = a.db().read(Account::first).await.unwrap().unwrap();
         a.db().write(|tx| { tx.conn().execute_batch("CREATE TRIGGER reject_account_audit BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT,'review audit failure'); END;")?; Ok(()) }).await.unwrap();
         let response = b.write(account_request(case)).await;
-        assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR, "{name}");
-        assert_eq!(a.db().read(Account::first).await.unwrap(), before, "{name}");
-        assert_eq!(a.db().read(attachments).await.unwrap(), related, "{name}");
-        assert_eq!(audits(&a).await, json!([]), "{name}");
+        let saved = a.db().read(Account::first).await.unwrap().unwrap();
+        assert_eq!(saved.id, before.id, "{name}");
+        assert_eq!(saved.created_at, before.created_at, "{name}");
+        let blob = a.db().read(move |conn| {
+            Ok(crate::controllers::presenters::attachments::attached_blob(conn, "Account", saved.id, "logo")?.map(|blob| json!({
+                "filename":blob.filename.raw(), "content_type":blob.content_type, "byte_size":blob.byte_size,
+                "checksum":blob.checksum, "metadata":serde_json::from_str::<Value>(&blob.metadata.encode()).unwrap()
+            })))
+        }).await.unwrap();
+        assert_eq!(json!({
+            "status":response.status.as_u16(), "location":response.headers.get("location").map(|v|v.to_str().unwrap()),
+            "name":saved.name, "styles":saved.custom_styles, "restrict":saved.settings().restrict_room_creation_to_administrators(),
+            "code_changed":saved.join_code != before.join_code, "logo":blob.is_some(), "blob":blob, "audits":audits(&a).await
+        }), oracle["rows"][name], "{name}: production Rails response and committed account/blob/audit state");
     }
 }

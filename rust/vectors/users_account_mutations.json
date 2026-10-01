@@ -1,0 +1,938 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "name": "settings_name",
+      "method": "PUT",
+      "path": "/account",
+      "params": {
+        "account": {
+          "name": "Different"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Different",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "account.settings.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "Different",
+          "details": {
+            "name": {
+              "before": "Signal",
+              "after": "Different"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "settings_noop",
+      "method": "PUT",
+      "path": "/account",
+      "params": {
+        "account": {
+          "name": "Signal"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "settings_restrict",
+      "method": "PUT",
+      "path": "/account",
+      "params": {
+        "account": {
+          "settings": {
+            "restrict_room_creation_to_administrators": "1"
+          }
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": true,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "account.settings.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "Signal",
+          "details": {
+            "restrict_room_creation_to_administrators": {
+              "before": false,
+              "after": true
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "settings_unknown",
+      "method": "PUT",
+      "path": "/account",
+      "params": {
+        "account": {
+          "name": "must not save",
+          "settings": {
+            "unknown": "1"
+          }
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 500,
+      "location": null,
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "custom_styles",
+      "method": "PUT",
+      "path": "/account/custom_styles",
+      "params": {
+        "account": {
+          "custom_styles": "/* 🌴 */ :root { color: red; }"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/custom_styles/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": "/* 🌴 */ :root { color: red; }",
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "account.custom_styles.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "Signal",
+          "details": {
+            "custom_styles": {
+              "before": {
+                "size": 0,
+                "digest": "e3b0c44298fc"
+              },
+              "after": {
+                "size": 32,
+                "digest": "7190001033ab"
+              }
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "styles_noop",
+      "method": "PUT",
+      "path": "/account/custom_styles",
+      "params": {
+        "account": {
+          "custom_styles": "old"
+        }
+      },
+      "styles_before": "old",
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/custom_styles/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": "old",
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "styles_nil",
+      "method": "PUT",
+      "path": "/account/custom_styles",
+      "params": {
+        "account": {
+          "custom_styles": null
+        }
+      },
+      "styles_before": "old",
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/custom_styles/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "account.custom_styles.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "Signal",
+          "details": {
+            "custom_styles": {
+              "before": {
+                "size": 3,
+                "digest": "cba06b5736fa"
+              },
+              "after": {
+                "size": 0,
+                "digest": "e3b0c44298fc"
+              }
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "styles_unpermitted",
+      "method": "PUT",
+      "path": "/account/custom_styles",
+      "params": {
+        "account": {
+          "custom_styles": [
+            "wrong"
+          ]
+        }
+      },
+      "styles_before": "old",
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/custom_styles/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": "old",
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "logo_delete",
+      "method": "DELETE",
+      "path": "/account/logo",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "account.settings.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "Signal",
+          "details": {
+            "logo": {
+              "before": true,
+              "after": false
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "join_reset",
+      "method": "POST",
+      "path": "/account/join_code",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": true,
+        "role": "member",
+        "status": "active",
+        "subject_status": null,
+        "subject_role": null,
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "account.join_code.reset",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "Signal",
+          "details": {},
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "role_promote",
+      "method": "PUT",
+      "path": "/account/users/712064548",
+      "params": {
+        "user": {
+          "role": "administrator"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "administrator",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "administrator",
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "user.role.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "role": {
+              "before": "member",
+              "after": "administrator"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "role_noop",
+      "method": "PUT",
+      "path": "/account/users/712064548",
+      "params": {
+        "user": {
+          "role": "member"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "member",
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "role_invalid",
+      "method": "PUT",
+      "path": "/account/users/712064548",
+      "params": {
+        "user": {
+          "role": "bot"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "member",
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "role_failed_validation",
+      "method": "PUT",
+      "path": "/account/users/712064548",
+      "params": {
+        "user": {
+          "role": "administrator"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "neon",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "member",
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "role_self_noop",
+      "method": "PUT",
+      "path": "/account/users/127326141",
+      "params": {
+        "user": {
+          "role": "administrator"
+        }
+      },
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "administrator",
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "ban_private",
+      "method": "POST",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": "127.0.0.1",
+      "status": 422,
+      "location": null,
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "member",
+        "active_delta": 0,
+        "target_sessions": 1,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "ban_active",
+      "method": "POST",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": "203.0.113.42",
+      "status": 302,
+      "location": "http://campfire.test/users/712064548",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "banned",
+        "subject_status": "banned",
+        "subject_role": "member",
+        "active_delta": -1,
+        "target_sessions": 0,
+        "banned_ips": [
+          "203.0.113.42",
+          "203.0.113.43"
+        ]
+      },
+      "audits": [
+        {
+          "action": "user.ban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "active",
+              "after": "banned"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "ban_deactivated",
+      "method": "POST",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 1,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/users/712064548",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "banned",
+        "subject_status": "banned",
+        "subject_role": "member",
+        "active_delta": 0,
+        "target_sessions": 0,
+        "banned_ips": [
+          "203.0.113.42",
+          "203.0.113.43"
+        ]
+      },
+      "audits": [
+        {
+          "action": "user.ban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "deactivated",
+              "after": "banned"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "ban_replay",
+      "method": "POST",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 2,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/users/712064548",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "banned",
+        "subject_status": "banned",
+        "subject_role": "member",
+        "active_delta": 0,
+        "target_sessions": 0,
+        "banned_ips": [
+          "203.0.113.42",
+          "203.0.113.43"
+        ]
+      },
+      "audits": []
+    },
+    {
+      "name": "unban_banned",
+      "method": "DELETE",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 2,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/users/712064548",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "member",
+        "active_delta": 1,
+        "target_sessions": 0,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "user.unban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "banned",
+              "after": "active"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "unban_active",
+      "method": "DELETE",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/users/712064548",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "member",
+        "active_delta": 0,
+        "target_sessions": 0,
+        "banned_ips": []
+      },
+      "audits": []
+    },
+    {
+      "name": "unban_deactivated",
+      "method": "DELETE",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 1,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/users/712064548",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "active",
+        "subject_role": "member",
+        "active_delta": 1,
+        "target_sessions": 0,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "user.unban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "deactivated",
+              "after": "active"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    },
+    {
+      "name": "deactivate",
+      "method": "DELETE",
+      "path": "/account/users/712064548",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "deactivated",
+        "subject_status": "deactivated",
+        "subject_role": "member",
+        "active_delta": -1,
+        "target_sessions": 0,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "user.deactivate",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "active",
+              "after": "deactivated"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    }
+  ],
+  "deferred_agent_owner_cases": [
+    {
+      "name": "deactivate_self",
+      "method": "DELETE",
+      "path": "/account/users/127326141",
+      "params": {},
+      "styles_before": null,
+      "theme_before": "system",
+      "status_before": 0,
+      "session_ip": null,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "state": {
+        "account_name": "Signal",
+        "restrict": false,
+        "styles": null,
+        "code_changed": false,
+        "role": "member",
+        "status": "active",
+        "subject_status": "deactivated",
+        "subject_role": "administrator",
+        "active_delta": -1,
+        "target_sessions": 0,
+        "banned_ips": []
+      },
+      "audits": [
+        {
+          "action": "agent.suspend",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Agent",
+          "target_id": 773018776,
+          "target_label": "Agent Bender Bot",
+          "details": {},
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        },
+        {
+          "action": "user.deactivate",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <david@37signals.com>",
+          "details": {
+            "status": {
+              "before": "active",
+              "after": "deactivated"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-account-fixture"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "app/controllers/accounts/logos_controller.rb": "1fb97dc26d9ab8f72a5b667747f9350d73e72813d657328423804995a03e6c38",
+  "app/controllers/accounts_controller.rb": "751ab0ccedd83573a097c81b27c39ed6b98256fcb00f556517fce433b65475f6",
+  "app/models/account.rb": "ac2c814c1577a1ef3a58504a1dd038a128272c4964deb346df9e33505b81e157",
+  "test/fixtures/files/moon.jpg": "f95cac806ae17f0d59ad75e5d03d82a05019a65469e9e325baae898d46e7f1e5",
+  "test/fixtures/files/pixel.bmp": "6ce7061de3595da77975e268a979f9dd0e1f187b7ebdbb42a88ac211a79aa3aa"
+}

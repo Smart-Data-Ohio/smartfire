@@ -1,0 +1,6 @@
+{
+  "app/models/google/sign_in.rb": "eb4a9aea65e3e1f575c7fb8b4769f9cdce34f9b92cb55a8c5fee1701664aa5e5",
+  "app/models/google/client.rb": "6e4eff284246eafbc1ac3da2fac1663aa751c9773d490c8b6f277846c09ac705",
+  "app/views/sessions/new.html.erb": "bfa12f42b9a803a984505c602e6030931c63c7af1afea31189867c724661dc93",
+  "app/views/sessions/_google_sign_in.html.erb": "fe56bc96389318106ef2cc197fe31fa7caa5d1f9fe9209d2d0815f2634011a98"
+}
