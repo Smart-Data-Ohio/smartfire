@@ -1,10 +1,10 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 17 further root-controller declarations now have explicit existing-test attribution; this records assertion scope, not new test executions. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 48 further declarations now have explicit existing-test attribution across root messages, boosts, threads, replies and forwards; this records assertion scope, not new test executions. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
-56 named declarations; 18 have scoped Rust evidence below, and 38 await attribution/signoff. Reference execution counts are in the main report.
+56 named declarations; 31 have scoped Rust evidence below, and 25 await attribution/signoff. Reference execution counts are in the main report.
 
 - index returns the last page by default — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (complete pinned Rails page/response comparisons).
 - index is not found for a soft-deleted room — WS8bm. Attributed to `messages::http_tests::deleted_room_is_inaccessible_even_with_a_lingering_membership` (actual requests with retained membership).
@@ -14,13 +14,13 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - index etag changes when an off-page reply source is edited — WS8bm.
 - index etag changes when a card fetch completes — WS15g / WS15e; WS8bm render integration.
 - index etag changes when an author is renamed — WS8bm. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (author cache stamp invalidates the existing validator).
-- index etag changes when the older of two pins is removed — WS8b-m2; WS8bm cache integration.
+- index etag changes when the older of two pins is removed — WS8b-m2; WS8bm cache integration. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (actual older-pin removal invalidates the prior HTTP validator; M2 owns pin endpoints).
 - get renders a single message belonging to the user — WS8bm. Attributed to `messages::root_tests::standalone_message_wrapper_matches_rails_bytes` (four complete standalone Rails view bodies).
 - room message list announces live appends — WS8b-r; WS8bm list integration.
-- image attachments use the filename as alt text — WS8bm.
-- creating a message broadcasts the message to the room — WS8bm.
-- broadcast message actions preserve a nonstandard request port — WS8bm.
-- creating a Markdown message preserves its source and derives the rich body — WS8bm.
+- image attachments use the filename as alt text — WS8bm. Attributed to `messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits` (complete square/wide/unrepresentable image HTML on cold and warm caches).
+- creating a message broadcasts the message to the room — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (real HTTP POST to guarded WS7 socket; complete Rails append frame).
+- broadcast message actions preserve a nonstandard request port — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (create/update/delete requests carry campfire.test:3443; full Rails frame bytes).
+- creating a Markdown message preserves its source and derives the rich body — WS8bm. Attributed to `messages::http_tests::root_create_preserves_markdown_numeric_client_id_and_deduplicates_retries` (exact source and derived plain text; conflicting legacy body does not replace source).
 - preview renders the same safe Markdown without writing — WS8bm. Attributed to `messages::http_tests::preview_matches_real_rails_http_without_writing` (eight complete Rails responses and unchanged message count).
 - preview requires room membership — WS8bm. Attributed to `messages::http_tests::preview_requires_membership_and_a_valid_source_parameter` (signed-in non-member receives 404).
 - preview rejects oversized Markdown without parsing or writing it — WS8bm. Attributed to `messages::http_tests::preview_matches_real_rails_http_without_writing` (actual oversized Rails source case and unchanged message count).
@@ -37,11 +37,11 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - admin cannot update a message belonging to another user — WS8bm. Attributed to `messages::http_tests::author_only_edits_even_for_an_administrator` (admin edit/update denied).
 - destroy destroys a message belonging to the user — WS8bm. Attributed to `messages::paging_tests::root_formats_and_destroy_side_effects_match_rails` (own deletes across Rails formats remove rows).
 - admin destroy destroys a message belonging to another user — WS8bm.
-- destroy broadcasts tombstone updates to replies — WS8bm.
-- destroying a thread parent broadcasts a thread summary refresh — WS8bm.
-- edited messages show an edited marker with the edit time — WS8bm.
+- destroy broadcasts tombstone updates to replies — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (HTTP destroy with root and thread replies; complete captured Rails tombstone frames).
+- destroying a thread parent broadcasts a thread summary refresh — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (HTTP destroy of the parent; complete captured Rails indicator frames).
+- edited messages show an edited marker with the edit time — WS8bm. Attributed to `messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits` (complete edited_text and edited_image HTML including time attribute).
 - the edited marker renders the same UTC time in every time zone — WS8bm.
-- editing a message broadcasts its meta so other clients see the edited marker — WS8bm.
+- editing a message broadcasts its meta so other clients see the edited marker — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (HTTP update; complete captured Rails meta frame).
 - identical and attachment-only saves do not mark a message edited — WS8bm.
 - identical rich-text saves do not mark a message edited — WS8bm.
 - a blank body on a bodyless message does not mark it edited — WS8bm.
@@ -58,11 +58,10 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - revoked agent delivery posts no webhook — WS11; WS8bm HTTP integration.
 - mentioning a bot without an agent row still uses the legacy webhook — WS11; WS8bm HTTP integration.
 - retried create with the same client id returns the original message — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
-- system notes render as a compact note without message chrome — WS8bm.
-- system notes cannot be edited or deleted by their actor — WS8bm.
-- system notes cannot be deleted by an administrator — WS8bm.
-- system note actions report no edit or delete — WS8bm.
-
+- system notes render as a compact note without message chrome — WS8bm. Attributed to `messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits` (complete system_note HTML on cold and warm cache).
+- system notes cannot be edited or deleted by their actor — WS8bm. Attributed to `messages::http_tests::system_notes_are_immutable_for_author_and_administrator` (real own-note edit/update/delete requests; row retained).
+- system notes cannot be deleted by an administrator — WS8bm. Attributed to `messages::http_tests::system_notes_are_immutable_for_author_and_administrator` (real other-author note deletion denied; row retained).
+- system note actions report no edit or delete — WS8bm. Attributed to `messages::root_tests::actions_match_rails_for_two_members_without_shared_viewer_state` (complete actions JSON for two viewers includes the system-note fixture).
 ## test/controllers/messages_drive_attachments_test.rb
 
 19 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
@@ -105,44 +104,43 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/messages/boosts_controller_test.rb
 
-17 named declarations. Three cases have the component/action evidence below; merged room/browser signoff and the remaining named attribution stay pending. Reference execution counts are in the main report.
+17 named declarations have scoped Rust evidence below; complete merged room/browser signoff remains pending. Reference execution counts are in the main report.
 
-- create — WS8bm.
-- destroy — WS8bm.
-- a human emoji toggle removes legacy duplicates under the message lock — WS8bm.
-- a quick reaction sent as a shortcode toggles instead of duplicating — WS8bm.
-- create accepts a brand shortcode and renders its icon — WS8bm.
-- create accepts a workspace icon shortcode and renders its image — WS8bm.
-- create stores an unknown shortcode as literal text — WS8bm.
-- two users reacting with the same custom icon share one counted chip — WS8bm.
-- an autocompleted emoji shortcode with a trailing space renders its chip — WS8bm.
-- an autocompleted brand shortcode with a trailing space renders its icon chip — WS8bm.
-- a non-quick emoji aggregates and toggles instead of duplicating — WS8bm.
-- keycaps, flags, ZWJ sequences, VS16 and modifiers aggregate and toggle — WS8bm.
-- plain digits and letters stay per-person legacy boosts without toggling — WS8bm.
-- free text stays a per-person legacy boost without toggling — WS8bm.
+- create — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- destroy — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- a human emoji toggle removes legacy duplicates under the message lock — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- a quick reaction sent as a shortcode toggles instead of duplicating — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- create accepts a brand shortcode and renders its icon — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- create accepts a workspace icon shortcode and renders its image — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- create stores an unknown shortcode as literal text — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- two users reacting with the same custom icon share one counted chip — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- an autocompleted emoji shortcode with a trailing space renders its chip — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- an autocompleted brand shortcode with a trailing space renders its icon chip — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- a non-quick emoji aggregates and toggles instead of duplicating — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- keycaps, flags, ZWJ sequences, VS16 and modifiers aggregate and toggle — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- plain digits and letters stay per-person legacy boosts without toggling — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
+- free text stays a per-person legacy boost without toggling — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
 - the boost action opens the soft keyboard — WS8bm; `boost_pages_match_complete_rails_forms_distinct_counts_and_escaped_reactors`, complete `index_empty`/`index_mixed` Rails components with `soft-keyboard#open` and actual successful index requests. Keyboard interaction remains system-phase work.
 - action metadata groups reaction counts by distinct reactor — WS8bm; the same test's actual `actions_david`/`actions_jason` requests compare whole JSON with three duplicate boosts, two distinct reactors and viewer-specific activity.
 - the reaction tooltip lists reactors as plain text, never interactive content — WS8bm; the same test's complete `index_hostile_name` component escapes an interactive-looking reactor name. Merged room HTTP/browser signoff remains pending; this component comparison alone is not that signoff.
-
 ## test/controllers/channel_threads_controller_test.rb
 
-24 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+24 named declarations; 9 have scoped Rust evidence below, and 15 await attribution/signoff. Reference execution counts are in the main report.
 
-- creation accepts nested thread message parameters and joins only the creator — WS8bm.
+- creation accepts nested thread message parameters and joins only the creator — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (nested_create request and complete persisted members/messages match Rails).
 - retried creation with the same first-message client id returns the existing thread — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
-- creator settings, joined-member reopening, and moderator lifecycle powers stay distinct — WS8bm.
-- browsing does not join and stale threads show as closed without writes — WS8bm.
-- explicitly closing an already-stale thread persists closed_at — WS8bm.
-- reopening a time-stale thread restarts its archive clock instead of leaving it closed — WS8bm.
+- creator settings, joined-member reopening, and moderator lifecycle powers stay distinct — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (forbidden_lock, reopen_without_join, creator_reopen, moderator_lock, creator_unlock and moderator_unlock requests/rows).
+- browsing does not join and stale threads show as closed without writes — WS8bm. Attributed to `channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes` (stale show JSON/body, all listed reads leave the viewer unjoined).
+- explicitly closing an already-stale thread persists closed_at — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (stale_close request and exact persisted closed_at).
+- reopening a time-stale thread restarts its archive clock instead of leaving it closed — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (stale_reopen request and exact persisted last_activity_at/closed_at).
 - unlocking a time-stale thread reopens it instead of leaving it closed — WS8bm.
 - posting to a thread persists closed_at for its stale siblings — WS8bm.
 - thread index costs a constant number of queries as threads grow — WS8bm.
-- joining accepts only thread notification preferences and preserves an existing preference when omitted — WS8bm.
+- joining accepts only thread notification preferences and preserves an existing preference when omitted — WS8bm. Attributed to `channel_threads::tests::joins_reads_and_leaves_match_rails_json_redirects_and_rows` (join/preference/rejoin request oracle and exact persisted membership fields).
 - closed state contains locked threads and direct rooms reject thread creation — WS8bm.
 - closed listing finds stale threads in SQL with one threads query — WS8bm.
-- a deleted starter is represented explicitly so open clients clear its preview — WS8bm.
-- content anchors only a message in the requested thread — WS8bm.
+- a deleted starter is represented explicitly so open clients clear its preview — WS8bm. Attributed to `channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes` (show_deleted_parent exact JSON and complete owned HTML body).
+- content anchors only a message in the requested thread — WS8bm. Attributed to `channel_threads::content_tests::content_scopes_room_and_anchor_without_joining_and_denies_bots` (HTTP cross-thread/cross-room anchors denied and membership unchanged).
 - converts a thread to work, assigns an eligible owner, and keeps an audit trail — WS12 / WS11; WS8bm HTTP seam.
 - work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable — WS12 / WS11; WS8bm HTTP seam.
 - assigned owner can change work status but cannot reassign it — WS12 / WS11; WS8bm HTTP seam.
@@ -153,24 +151,22 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - the owner picker lists eligible agents with profiles and excludes ineligible ones — WS12 / WS11; WS8bm HTTP seam.
 - a member who cannot manage the thread cannot assign an agent — WS12 / WS11; WS8bm HTTP seam.
 - ordinary thread fields remain separate from work tracking — WS12 / WS11; WS8bm HTTP seam.
-
 ## test/controllers/channel_thread_messages_controller_test.rb
 
-12 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+12 named declarations; 8 have scoped Rust evidence below, and 4 await attribution/signoff. Reference execution counts are in the main report.
 
-- a post joins and reopens an unlocked closed thread atomically — WS8bm.
-- locked threads block every edit and post while delete stays author-or-admin — WS8bm.
+- a post joins and reopens an unlocked closed thread atomically — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (post request; exact joined/closed/message-count state).
+- locked threads block every edit and post while delete stays author-or-admin — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (locked_post, locked_update and locked_delete exact responses and rows).
 - thread unread state changes for every joined user regardless of preference — WS8bm.
 - editing a thread message to add a post URL broadcasts the new card — WS15g / WS15e; WS8bm render integration.
 - editing a thread message to remove a post URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration.
-- destroy broadcasts tombstone updates and a thread summary refresh — WS8bm.
-- edited thread messages show an edited marker — WS8bm.
-- editing a thread message broadcasts its meta with the edited marker — WS8bm.
-- identical thread message saves do not mark the message edited — WS8bm.
+- destroy broadcasts tombstone updates and a thread summary refresh — WS8bm. Attributed to `channels::tests::hub_test::message_parity::thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames` (actual nested DELETE; complete tombstone/indicator frames on the correct streams).
+- edited thread messages show an edited marker — WS8bm. Attributed to `channels::tests::hub_test::message_parity::thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames` (actual nested update; complete Rails meta HTML with the edited marker and time).
+- editing a thread message broadcasts its meta with the edited marker — WS8bm. Attributed to `channels::tests::hub_test::message_parity::thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames` (actual nested update; complete captured Rails meta frame).
+- identical thread message saves do not mark the message edited — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (identical request and exact saved edited_at).
 - nested HTML message URL redirects into the parent room shell — WS8b-r; WS8bm list integration.
 - retried post with the same client id returns the original message — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
-- thread system notes cannot be edited or deleted — WS8bm.
-
+- thread system notes cannot be edited or deleted — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (note_update/note_delete exact Rails refusals; rows retained).
 ## test/controllers/channel_thread_messages_drive_attachments_test.rb
 
 13 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
@@ -191,19 +187,18 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/message_forwards_controller_test.rb
 
-7 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+7 named declarations; 4 have scoped Rust evidence below, and 3 await attribution/signoff. Reference execution counts are in the main report.
 
-- destinations returns reachable rooms and unlocked threads without caching — WS8bm.
-- nested destination endpoint supports a thread message — WS8bm.
+- destinations returns reachable rooms and unlocked threads without caching — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (destinations/global_destinations exact body and no-store response).
+- nested destination endpoint supports a thread message — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (nested_destinations exact response body/headers).
 - destinations excludes board rooms — WS12 / WS11; WS8bm HTTP seam.
-- create refuses board destinations on the server — WS12 / WS11; WS8bm HTTP seam.
+- create refuses board destinations on the server — WS12 / WS11; WS8bm HTTP seam. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (board request rejected with exact Rails body and unchanged message count; WS12 still owns board panes).
 - direct destinations use the other participant's display name — WS8bm.
-- destinations show stale threads as closed without writing — WS8bm.
+- destinations show stale threads as closed without writing — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (stale picker status in exact body; closed_at remains NULL after all requests).
 - destinations cost a constant number of queries as reachable rooms grow — WS8bm.
-
 ## test/controllers/message_forward_sources_controller_test.rb
 
-2 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+2 named declarations have scoped Rust evidence below. Reference execution counts are in the main report.
 
-- source endpoint is no-store and keeps inaccessible source identity out of the response — WS8bm.
-- source endpoint returns only the canonical URL to a viewer who still has access — WS8bm.
+- source endpoint is no-store and keeps inaccessible source identity out of the response — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (source_inaccessible complete response/no-store after removing source membership).
+- source endpoint returns only the canonical URL to a viewer who still has access — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (source_visible/source_global/nested_source complete JSON and cache headers).
