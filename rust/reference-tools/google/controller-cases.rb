@@ -7,6 +7,14 @@ Rails.logger=ActiveSupport::Logger.new($stderr)
 ActiveJob::Base.queue_adapter = :test
 ActionController::Base.allow_forgery_protection = false
 Rails.application.routes.default_url_options.merge!(host: 'campfire.test', protocol: 'http')
+Rails.application.env_config['action_dispatch.content_security_policy_nonce_generator']=->(_) { 'NONCE' }
+ApplicationController.prepend(Module.new do
+  def form_authenticity_token(form_options:{})
+    action,method=form_options.values_at(:action,:method)
+    action && method ? "#{method.to_s.downcase}:#{action}" : 'GLOBAL'
+  end
+end)
+ENV['VAPID_PUBLIC_KEY']='';Rails.configuration.x.vapid.public_key=nil
 BASE = Time.utc(2026,3,2,16)
 $controller_now = BASE
 Time.define_singleton_method(:current) { $controller_now }
@@ -87,6 +95,7 @@ end
 [nil,[],42,{'keys'=>nil},{'keys'=>'unexpected'},{'keys'=>[nil,42,'invalid',{'kty'=>'RSA','kid'=>[],'n'=>{},'e'=>42}]}].each { |payload| specs << {purpose:'sign_in',scenario:'key_shape',payload:} }
 %w[consume_backup consume_device consume_all_devices consume_disable before_reauth_expiry at_reauth_expiry after_reauth_expiry wrong_credential_preserves].each { |scenario|specs << {purpose:'reauth',scenario:} }
 %w[legacy_password provision provision_secondary provision_secondary_hosted provision_org external_password immutable_email deactivated banned bot retained_deactivated retained_banned different_subject self_changed admin_allowed linking_disabled policy_changed].each { |scenario|specs << {purpose:'sign_in',scenario:,lifecycle:true} }
+specs += %w[success wrong_subject stale missing_auth].map { |scenario|{purpose:'sudo',scenario:,continuation:true} }
 specs += %w[join_signup provision_self_change calendar_only].map { |scenario| {purpose:'sign_in',scenario:,lifecycle:true} }
 specs << {purpose:'sign_in',scenario:'predecessor',lifecycle:true}
 specs << {purpose:'sign_in',scenario:'rotation',lifecycle:true}
@@ -129,6 +138,7 @@ specs.each_with_index do |spec,index|
       raise 'missing authored history fixture' if $controller_history.empty?
     end
     actor=purpose=='link' || purpose=='sign_in' ? kevin : david
+    actor.update_columns(password_digest:nil) if spec[:continuation]
     subject='controller-member';email=purpose=='link' ? 'kevin.w@smartdata.net' : 'david@smartdata.net'
     email=case scenario
       when 'provision','provision_self_change' then 'new-member@smartdata.net'
@@ -167,12 +177,22 @@ specs.each_with_index do |spec,index|
       client.get('/session/new')
       initial={status:client.response.status,google_mark:client.response.body.include?('Sign in with Google'),domain_sentence:client.response.body[/Google sign-in for (.*?) accounts/,1]}
     end
+    prompt=nil;gate=nil
+    if spec[:continuation]
+      client.delete('/fizzy/connection')
+      gate={status:client.response.status,location:client.response.location}
+      ActionController::Base.allow_forgery_protection=true
+      client.get('/sudo/new');prompt={status:client.response.status,body:client.response.body}
+      ActionController::Base.allow_forgery_protection=false
+    end
     before=counts
     path={'reauth'=>'/two_factor_reauthentication','sudo'=>'/sudo/google','link'=>'/user/profile/google_sign_in_link','sign_in'=>'/session/google'}.fetch(purpose)
     $controller_calls=[];$controller_transport=false;$controller_key_payload=JWKS
     client.post(path)
     start={status:client.response.status}
     start[:page]=initial if initial
+    start[:gate]=gate if gate
+    start[:prompt]=prompt if prompt
     query=client.response.location && Rack::Utils.parse_query(URI(client.response.location).query)
     if query && query['state']
       flow=client.request.session[:google_sign_in_request]
@@ -201,7 +221,9 @@ specs.each_with_index do |spec,index|
         $controller_token_payload={'access_token'=>'signin-access-token','refresh_token'=>'signin-refresh-token','id_token'=>JWT.encode(claims,ROTATED_KEY,'RS256',{kid:'rotated'})}
       end
       call_before=0
+      ActionController::Base.allow_forgery_protection=true
       client.get('/session/google/callback',params:{state:scenario=='forged_state' ? 'forged' : scenario=='missing_state' ? nil : query['state'],code:'fixture-code',**(scenario=='cancelled' ? {error:'access_denied'} : {})})
+      ActionController::Base.allow_forgery_protection=false
       if scenario=='provision_self_change'
         Rails.application.executor.run!(reset:true)
         user=GoogleIdentity.find_by!(subject:'controller-member').user
@@ -214,6 +236,17 @@ specs.each_with_index do |spec,index|
         client.get('/session/google/callback',params:{state:query['state'],code:'fixture-code'})
       end
       result=observation(client,before,call_before)
+      if %w[token_shape key_shape].include?(scenario)
+        ActionController::Base.allow_forgery_protection=true
+        client.follow_redirect!
+        ActionController::Base.allow_forgery_protection=false
+        result[:follow]={status:client.response.status,body:client.response.body}
+      end
+      if spec[:continuation]
+        result[:body]=client.response.body if client.response.status==200
+        client.delete('/fizzy/connection');result[:protected]=observation(client,before,$controller_calls.length)
+        client.get('/users/me/profile');result[:same_member]={status:client.response.status,email_visible:client.response.body.include?('david@37signals.com'),identity_owner:GoogleIdentity.find_by!(subject:'controller-member').user_id}
+      end
       if spec[:lifecycle]
         result[:lifecycle]=lifecycle_observation
         if %w[legacy_password provision provision_secondary external_password].include?(scenario)

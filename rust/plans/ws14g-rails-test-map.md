@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 247 ported domain/API/controller cases; 364 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
+Path-glob ledger: 48 files; 611 named cases; 256 ported domain/API/controller cases; 355 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -240,17 +240,17 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/sessions/google_responses_test.rb
 
-- **Deferred** — malformed JSON structures from the token endpoint return to password sign-in — WS14g continuation.
-- **Deferred** — malformed JSON structures from the key endpoint return a retry message — WS14g continuation.
+- **Ported** — malformed JSON structures from the token endpoint return to password sign-in — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (12 malformed token/key scenarios; actual follow redirect and complete login HTML with production CSRF; approved #163 layout only).
+- **Ported** — malformed JSON structures from the key endpoint return a retry message — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (12 malformed token/key scenarios; actual follow redirect and complete login HTML with production CSRF; approved #163 layout only).
 
 ## test/controllers/sessions/google_status_race_test.rb
 
-- **Deferred** — #{action} racing #{linked ? 'linked' : 'first'} Google login leaves no usable session — WS14g continuation.
+- **Ported** — #{action} racing #{linked ? 'linked' : 'first'} Google login leaves no usable session — `app::google_tests::security_cases::google_status_races_and_link_csrf_match_pinned_rails_requests` (four committed deactivation/ban races through a real contending SQLite connection; exact zero sessions and protected-root redirect).
 
 ## test/controllers/sudos_controller_test.rb
 
 - **Outside slice** — the prompt shows the password form for password users — WS9.
-- **Deferred** — the prompt shows Google confirmation for Google-only users — WS14g adapter + WS9 integration.
+- **Ported** — the prompt shows Google confirmation for Google-only users — `app::google_tests::parity_cases::google_only_sudo_gated_requests_match_pinned_rails_prompt_confirmation_and_replay` (four Google-only gated DELETE flows; complete prompt/continue HTML, actual replay, audits and rejected stale/missing/different credentials; the continuation mutation fails).
 - **Outside slice** — confirming with the password verifies and audit-logs — WS9.
 - **Outside slice** — confirming with the wrong password fails and stays gated — WS9.
 - **Outside slice** — an unknown verifier is rejected as unavailable — WS9.
@@ -277,11 +277,11 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Outside slice** — editing a bot without touching the webhook needs no confirmation — WS9.
 - **Outside slice** — changing a bot webhook needs confirmation — WS9.
 - **Outside slice** — submitting a bot webhook unchanged needs no confirmation — WS9.
-- **Deferred** — Google re-auth confirms a Google-only user and continues — WS14g adapter + WS9 integration.
-- **Deferred** — Google re-auth with a different Google account is rejected — WS14g adapter + WS9 integration.
+- **Ported** — Google re-auth confirms a Google-only user and continues — `app::google_tests::parity_cases::google_only_sudo_gated_requests_match_pinned_rails_prompt_confirmation_and_replay` (four Google-only gated DELETE flows; complete prompt/continue HTML, actual replay, audits and rejected stale/missing/different credentials; the continuation mutation fails).
+- **Ported** — Google re-auth with a different Google account is rejected — `app::google_tests::parity_cases::google_only_sudo_gated_requests_match_pinned_rails_prompt_confirmation_and_replay` (four Google-only gated DELETE flows; complete prompt/continue HTML, actual replay, audits and rejected stale/missing/different credentials; the continuation mutation fails).
 - **Ported** — Google re-auth forces a fresh Google login — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
-- **Deferred** — Google re-auth with a stale Google login is rejected — WS14g adapter + WS9 integration.
-- **Deferred** — Google re-auth without an auth_time is rejected — WS14g adapter + WS9 integration.
+- **Ported** — Google re-auth with a stale Google login is rejected — `app::google_tests::parity_cases::google_only_sudo_gated_requests_match_pinned_rails_prompt_confirmation_and_replay` (four Google-only gated DELETE flows; complete prompt/continue HTML, actual replay, audits and rejected stale/missing/different credentials; the continuation mutation fails).
+- **Ported** — Google re-auth without an auth_time is rejected — `app::google_tests::parity_cases::google_only_sudo_gated_requests_match_pinned_rails_prompt_confirmation_and_replay` (four Google-only gated DELETE flows; complete prompt/continue HTML, actual replay, audits and rejected stale/missing/different credentials; the continuation mutation fails).
 - **Ported** — Google confirmation is unavailable without a linked identity — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Outside slice** — confirmation attempts are rate limited — WS9.
 - **Outside slice** — the confirmation limit lives in the shared rate-limit store, not per-process memory — WS9.
@@ -295,7 +295,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — a member already linked to another subject is refused — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Ported** — a link flow finished by a different signed-in member links nobody — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Ported** — a link flow whose member signed out does not sign anyone in — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
-- **Partial** — starting a link requires a signed-in member and CSRF protection — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — starting a link requires a signed-in member and CSRF protection — `app::google_tests::security_cases::google_status_races_and_link_csrf_match_pinned_rails_requests` (anonymous redirect; missing/invalid CSRF return Rails complete production 422 body with no Google calls or identities).
 
 ## test/integration/drive_picker_test.rb
 
@@ -881,3 +881,7 @@ All DriveFilesController declarations are mapped through existing and 15 new rea
 All connection declarations are now mapped. Seven new real request producers compare exact Calendar jobs, flags, scopes/tokens, identity retention, preserved other-user grants/entries and organizer-specific Meet link clearing. Existing fenced socket coverage closes the cleared-meeting badge assertion. This consumes WS14e domain rows and shared connection logic, without duplicating Event/attendance ownership.
 
 The two agent polling payload assertions consume WS11 EventPolling and the production message presenter and match Rails' real GET; final native GET status/auth/transport awaits WS11-api's missing `/agents/events` route. The agent webhook declaration is complete through the real mention producer, Delivery and claimed EventWebhook consumers and local HTTP POST. No real Google HTTP or pixel work was used. Unblocked Calendar/client, remaining step-up/race/malformed-response, model and interaction assertions remain named individually above.
+
+## Authentication continuation after main 2e0c0f05
+
+The 96-case Google controller matrix now follows malformed token/key redirects through complete production login bodies, and exercises actual Google-only sudo protected-action continuation. Complete prompt/replay HTML uses the approved #163 layout and fixed rendering entropy. The seven real security requests add four first/linked deactivate/ban races through separate contending SQLite connections and anonymous/missing/invalid-CSRF link starts. No linker stub, sleep, real Google call or outer rollback is used. All original Google session, response, status-race, pre-hijack and Google sudo/link declarations are now mapped. Non-Google sudo cases remain with WS9.

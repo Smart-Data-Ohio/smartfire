@@ -1,7 +1,29 @@
 //! Pinned Rails request/flash/audit/identity observations for complete Google controller cases.
 use super::*;
+use crate::controllers::presenters::test_support::{Reply, with_fixed_render_secrets};
 use campfire_kit::{Crypto, FrozenClock, RailsCrypto};
 use std::time::Duration;
+fn page(reply: &Reply, expected: &Value, name: &str) -> Value {
+    assert_eq!(
+        reply.status.as_u16() as u64,
+        expected["status"].as_u64().unwrap(),
+        "{name}: status"
+    );
+    if !crate::app::asset_goldens::compare(name, &reply.text(), expected["body"].as_str().unwrap())
+    {
+        if let Ok(dir) = std::env::var("WS14G_PAGE_DIFF_DIR") {
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(format!("{dir}/{name}.actual"), reply.text()).unwrap();
+            std::fs::write(
+                format!("{dir}/{name}.expected"),
+                expected["body"].as_str().unwrap(),
+            )
+            .unwrap();
+        }
+        panic!("{name}: complete HTML");
+    }
+    json!({"status":reply.status.as_u16(),"body":expected["body"]})
+}
 fn session(a: &TestApp, b: &Browser<'_>) -> Value {
     let raw = b.cookie_header().split(';').find_map(|s| {
         s.trim()
@@ -114,13 +136,39 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
 }
 #[tokio::test]
 async fn google_callback_rotation_and_predecessor_match_pinned_rails() {
-    let mut oracle:Value = serde_json::from_str(include_str!("../../../../../vectors/google_controller_cases.json")).unwrap();
-    oracle["rows"].as_array_mut().unwrap().retain(|row|matches!(row["spec"]["scenario"].as_str(), Some("rotation" | "predecessor")));
+    let mut oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/google_controller_cases.json"
+    ))
+    .unwrap();
+    oracle["rows"].as_array_mut().unwrap().retain(|row| {
+        matches!(
+            row["spec"]["scenario"].as_str(),
+            Some("rotation" | "predecessor")
+        )
+    });
     assert_eq!(oracle["rows"].as_array().unwrap().len(), 2);
     run_cases(oracle).await;
 }
+#[tokio::test]
+async fn google_only_sudo_gated_requests_match_pinned_rails_prompt_confirmation_and_replay() {
+    let mut oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/google_controller_cases.json"
+    ))
+    .unwrap();
+    oracle["rows"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|row| row["spec"]["continuation"] == true);
+    assert_eq!(oracle["rows"].as_array().unwrap().len(), 4);
+    run_cases(oracle).await;
+}
 async fn run_cases(oracle: Value) {
-    assert_eq!(json!(crate::security::parameter_filter().filter(&json!({"code":"private-code-fixture"}))["code"]), oracle["filtered_code"]);
+    assert_eq!(
+        json!(
+            crate::security::parameter_filter().filter(&json!({"code":"private-code-fixture"}))["code"]
+        ),
+        oracle["filtered_code"]
+    );
     let domains = regex::Regex::new("Google sign-in for (.*?) accounts").unwrap();
     for row in oracle["rows"].as_array().unwrap() {
         let now = jiff::Timestamp::from_second(oracle["now"].as_i64().unwrap()).unwrap();
@@ -135,6 +183,7 @@ async fn run_cases(oracle: Value) {
         let purpose = row["spec"]["purpose"].as_str().unwrap();
         let scenario = row["spec"]["scenario"].as_str().unwrap();
         let lifecycle = row["spec"]["lifecycle"].as_bool().unwrap_or(false);
+        let continuation = row["spec"]["continuation"].as_bool().unwrap_or(false);
         a.booted.app.google.install(SignIn::with_client(
             config(if scenario == "provision_org" {
                 &["example.org"]
@@ -178,6 +227,7 @@ async fn run_cases(oracle: Value) {
                     if matches!(scenario,"banned"|"retained_banned") {tx.conn().execute("UPDATE users SET status=2 WHERE id=?",[KEVIN])?;}
                     tx.conn().execute_batch("UPDATE sqlite_sequence SET seq=9000000000 WHERE name='users'")?;
                 }
+                if continuation { tx.conn().execute("UPDATE users SET password_digest=NULL WHERE id=?", [actor])?; }
                 if let Some((id, subject, email)) = identity {
                     campfire_db::models::google_identity::GoogleIdentity::link_to_user(
                         tx,
@@ -211,13 +261,34 @@ async fn run_cases(oracle: Value) {
             a.sign_in(actor).await
         };
         if scenario == "join_signup" {
-            let code = a.db().read(|conn| Ok(conn.query_row("SELECT join_code FROM accounts LIMIT 1", [], |row| row.get::<_,String>(0))?)).await.unwrap();
+            let code = a
+                .db()
+                .read(|conn| {
+                    Ok(
+                        conn.query_row("SELECT join_code FROM accounts LIMIT 1", [], |row| {
+                            row.get::<_, String>(0)
+                        })?,
+                    )
+                })
+                .await
+                .unwrap();
             b.get(&format!("/join/{code}")).await;
-            b.write(Req::new(Method::POST, &format!("/join/{code}")).form(&[("user[name]","Pre-claimer"),("user[email_address]","newhire@smartdata.net"),("user[password]","secret123456")])).await;
-            b.write(Req::new(Method::DELETE,"/session")).await;
+            b.write(Req::new(Method::POST, &format!("/join/{code}")).form(&[
+                ("user[name]", "Pre-claimer"),
+                ("user[email_address]", "newhire@smartdata.net"),
+                ("user[password]", "secret123456"),
+            ]))
+            .await;
+            b.write(Req::new(Method::DELETE, "/session")).await;
         }
         if scenario == "calendar_only" {
-            crate::app::google_api_tests::grant(&a,DAVID,campfire_db::Timestamp::from_jiff(now).since(jiff::SignedDuration::from_hours(1)),false).await;
+            crate::app::google_api_tests::grant(
+                &a,
+                DAVID,
+                campfire_db::Timestamp::from_jiff(now).since(jiff::SignedDuration::from_hours(1)),
+                false,
+            )
+            .await;
         }
         let initial_page = b
             .get(if purpose == "sign_in" {
@@ -265,8 +336,28 @@ async fn run_cases(oracle: Value) {
             "link" => "/user/profile/google_sign_in_link",
             _ => "/session/google",
         };
+        let mut gate = None;
+        let mut prompt = None;
+        if continuation {
+            let reply = b.write(Req::new(Method::DELETE, "/fizzy/connection")).await;
+            gate = Some(json!({"status":reply.status.as_u16(),"location":reply.location()}));
+            let reply = with_fixed_render_secrets(b.get("/sudo/new")).await;
+            prompt = Some(page(
+                &reply,
+                &row["start"]["prompt"],
+                "Google-only sudo prompt",
+            ));
+            assert!(!reply.text().contains("name=\"password\""));
+            assert!(reply.text().contains("action=\"/sudo/google\""));
+        }
         let start_reply = b.write(Req::new(Method::POST, path)).await;
         let mut started = json!({"status":start_reply.status.as_u16()});
+        if let Some(gate) = gate {
+            started["gate"] = gate;
+        }
+        if let Some(prompt) = prompt {
+            started["prompt"] = prompt;
+        }
         if purpose == "sign_in" {
             let html = initial_page.text();
             started["page"] = json!({"status":initial_page.status.as_u16(), "google_mark":html.contains("Sign in with Google"), "domain_sentence":domains.captures(&html).map(|c|c[1].to_owned())});
@@ -377,8 +468,22 @@ async fn run_cases(oracle: Value) {
             }
             *r.response.lock().unwrap() = Ok((200, serde_json::to_vec(&json!({"access_token":"signin-access-token","refresh_token":"signin-refresh-token","id_token":token(claims.clone())})).unwrap()));
             if scenario == "rotation" {
-                a.booted.app.google.sign_in().verify(&token(claims.clone()), &q["nonce"], "sign_in", now.as_second()).await.unwrap();
-                *r.certs.lock().unwrap() = Some(Ok((200, serde_json::to_vec(&oracle["rotated_jwks"]).unwrap())));
+                a.booted
+                    .app
+                    .google
+                    .sign_in()
+                    .verify(
+                        &token(claims.clone()),
+                        &q["nonce"],
+                        "sign_in",
+                        now.as_second(),
+                    )
+                    .await
+                    .unwrap();
+                *r.certs.lock().unwrap() = Some(Ok((
+                    200,
+                    serde_json::to_vec(&oracle["rotated_jwks"]).unwrap(),
+                )));
                 *r.response.lock().unwrap() = Ok((200, serde_json::to_vec(&json!({"access_token":"signin-access-token","refresh_token":"signin-refresh-token","id_token":token_with_key(claims, "rotated", include_bytes!("../../integrations/google/rotated-signing.der"))})).unwrap()));
             }
             if scenario == "token_shape" {
@@ -411,24 +516,58 @@ async fn run_cases(oracle: Value) {
                     ""
                 }
             );
-            let mut cb = b.get(&callback_path).await;
+            let mut cb = with_fixed_render_secrets(b.get(&callback_path)).await;
             if scenario == "provision_self_change" {
                 let id=a.db().write(|tx| {
                     let id=campfire_db::models::google_identity::GoogleIdentity::for_subject(tx.conn(),"controller-member")?.unwrap().user_id;
                     tx.conn().execute("UPDATE sessions SET two_factor_verified_at=? WHERE id=(SELECT max(id) FROM sessions WHERE user_id=?)",rusqlite::params![tx.now(),id])?;
                     Ok(id)
                 }).await.unwrap();
-                let response=b.write(Req::new(Method::PUT,"/users/me/profile").form(&[("user[email_address]","changed@smartdata.net")])).await;
-                assert_eq!(response.status,StatusCode::FOUND);
-                assert!(a.db().read(move |conn| Ok(conn.query_row("SELECT email_self_changed_at IS NOT NULL FROM users WHERE id=?",[id],|r|r.get::<_,bool>(0))?)).await.unwrap());
-                b.write(Req::new(Method::DELETE,"/session")).await;b.get("/session/new").await;
-                let next=start(&mut b,"/session/google").await;
-                let mut next_claims=super::claims(&a,&next,"controller-member","new-member@smartdata.net");
-                next_claims["name"]=json!("Fixture member");
-                answer(&r,next_claims);
-                cb=callback(&mut b,&next["state"]).await;
+                let response = b
+                    .write(
+                        Req::new(Method::PUT, "/users/me/profile")
+                            .form(&[("user[email_address]", "changed@smartdata.net")]),
+                    )
+                    .await;
+                assert_eq!(response.status, StatusCode::FOUND);
+                assert!(
+                    a.db()
+                        .read(move |conn| Ok(conn.query_row(
+                            "SELECT email_self_changed_at IS NOT NULL FROM users WHERE id=?",
+                            [id],
+                            |r| r.get::<_, bool>(0)
+                        )?))
+                        .await
+                        .unwrap()
+                );
+                b.write(Req::new(Method::DELETE, "/session")).await;
+                b.get("/session/new").await;
+                let next = start(&mut b, "/session/google").await;
+                let mut next_claims =
+                    super::claims(&a, &next, "controller-member", "new-member@smartdata.net");
+                next_claims["name"] = json!("Fixture member");
+                answer(&r, next_claims);
+                cb = callback(&mut b, &next["state"]).await;
             }
             let mut observed = observation(&a, &b, &cb, &before, &r, 0, &password).await;
+            if matches!(scenario, "token_shape" | "key_shape") {
+                let reply = with_fixed_render_secrets(b.get(cb.location().unwrap())).await;
+                observed["follow"] = page(&reply, &row["result"]["follow"], scenario);
+            }
+            if continuation {
+                if cb.status == StatusCode::OK {
+                    let expected = json!({"status":200,"body":row["result"]["body"]});
+                    observed["body"] =
+                        page(&cb, &expected, "Google sudo continuation")["body"].clone();
+                    assert!(cb.text().contains("action=\"/fizzy/connection\""));
+                }
+                let calls = r.calls.lock().unwrap().len();
+                let reply = b.write(Req::new(Method::DELETE, "/fizzy/connection")).await;
+                observed["protected"] =
+                    observation(&a, &b, &reply, &before, &r, calls, &password).await;
+                let reply = b.get("/users/me/profile").await;
+                observed["same_member"] = json!({"status":reply.status.as_u16(),"email_visible":reply.text().contains("david@37signals.com"),"identity_owner":actor});
+            }
             if lifecycle {
                 observed["lifecycle"] = lifecycle_observation(&a, &history).await;
                 if matches!(
@@ -519,9 +658,18 @@ async fn run_cases(oracle: Value) {
             }
             observed
         };
-        let token_columns = a.db().read(|c| {
-            Ok(c.prepare("PRAGMA table_info(google_identities)")?.query_map([], |r| r.get::<_,String>(1))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().filter(|name|matches!(name.as_str(), "access_token" | "refresh_token")).collect::<Vec<_>>())
-        }).await.unwrap();
+        let token_columns = a
+            .db()
+            .read(|c| {
+                Ok(c.prepare("PRAGMA table_info(google_identities)")?
+                    .query_map([], |r| r.get::<_, String>(1))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?
+                    .into_iter()
+                    .filter(|name| matches!(name.as_str(), "access_token" | "refresh_token"))
+                    .collect::<Vec<_>>())
+            })
+            .await
+            .unwrap();
         assert_eq!(json!(token_columns), oracle["identity_token_columns"]);
         assert_eq!(started, row["start"], "{}: authorize", row["spec"]);
         assert_eq!(
