@@ -310,7 +310,7 @@ pub enum PostResult {
 }
 
 enum PostCheck {
-    Allowed(Option<crate::ChannelThread>),
+    Allowed(Option<Box<crate::ChannelThread>>),
     Finished(PostResult),
 }
 
@@ -356,7 +356,7 @@ fn check_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveIn
         errors.add("drive_attachments", "includes an invalid file id");
         return Ok(PostCheck::Finished(PostResult::Denied(invalid(errors))));
     }
-    Ok(PostCheck::Allowed(thread))
+    Ok(PostCheck::Allowed(thread.map(Box::new)))
 }
 
 /// The same service preflight, before the app stages an attachment. The writer checks again.

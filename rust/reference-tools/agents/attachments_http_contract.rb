@@ -24,6 +24,50 @@ end
 ["invalid-signature",nil,"",false,3,[],{}].each_with_index do |attachment,i|
  add.call("attachment_signed_#{i}",:post,"/rooms/#{room}/agents/messages",{message:{attachment:attachment,client_message_id:"attachment-signed-#{i}"}},{attachment_case:true})
 end
+# Multipart thread and Drive checks use the same production Posting service.
+def with_fields(body, fields)
+ fields.each do |name,value|
+  chunk="--ws11api-attachment\r\nContent-Disposition: form-data; name=\"#{name}\"\r\n\r\n#{value}\r\n"
+  body=body.sub("--ws11api-attachment--\r\n",chunk+"--ws11api-attachment--\r\n")
+ end
+ body
+end
+[
+ [{"thread_id"=>thread},{}],
+ [{"thread_id"=>thread},{locked:true}],
+ [{"thread_id"=>0},{}],
+ [{"thread_id"=>thread},{board:true}],
+ [{"message[drive_file_ids][]"=>"1AbcDefGhIjKlMnOpQrSt"},{}],
+ [{"message[drive_file_ids][]"=>"bad/id"},{}],
+ [{},{grant:["post_messages"],revoked:true}],
+ [{},{grant:["post_messages"],grant_room:201306877}],
+ [{},{remove_member:true}]
+].each_with_index do |(fields,setup),i|
+ add.call("attachment_extended_rest_#{i}",:post,"/rooms/#{room}/agents/messages",with_fields(multipart("message[attachment]","attachment-extended-#{i}"),fields),setup.merge(content_type:"multipart/form-data; boundary=ws11api-attachment",attachment_case:true))
+end
+[
+ [{},{grant:["react"]}],
+ [{},{grant:["post_messages"],revoked:true}],
+ [{},{grant:["post_messages"],grant_room:201306877}],
+ [{},{remove_member:true}],
+ [{"thread_id"=>thread},{}]
+].each_with_index do |(fields,setup),i|
+ add.call("attachment_bot_extended_#{i}",:post,"/rooms/#{room}/394959859-BenderToken1/messages",with_fields(multipart("attachment","bot-extended-#{i}"),fields),setup.merge(content_type:"multipart/form-data; boundary=ws11api-attachment",attachment_case:true,bot_key:true))
+end
+[
+ [{},{message_cap:0}],
+ [{reply_to_message_id:0},{}],
+ [{drive_file_ids:["bad/id"]},{}],
+ [{drive_file_ids:false},{}],
+ [{},{grant:["read_messages"]}],
+ [{},{remove_member:true}],
+ [{thread_id:thread},{locked:true}]
+].each_with_index do |(attrs,setup),i|
+ thread_id=attrs.delete(:thread_id)
+ body={message:{attachment:"invalid-signature",client_message_id:"attachment-precedence-#{i}"}.merge(attrs)}
+ body[:thread_id]=thread_id if thread_id
+ add.call("attachment_precedence_#{i}",:post,"/rooms/#{room}/agents/messages",body,setup.merge(attachment_case:true))
+end
 travel_to Time.utc(2026,3,2,16) do
  results=cases.map do |item|
   result=nil
@@ -34,6 +78,7 @@ travel_to Time.utc(2026,3,2,16) do
     ThreadTag.where(channel_thread_id:thread).delete_all
     ChannelThread.where(id:thread).delete_all
     Room.where(id:room).update_all(type:"Rooms::Closed")
+    Membership.find_or_create_by!(room_id:room,user_id:394959859)
     agent=Agent.find(773018776)
     User.find(394959859).update_columns(bot_token_digest:User.digest_bot_token("BenderToken1"))
     agent.agent_events.delete_all; agent.agent_grants.delete_all; agent.agent_credentials.delete_all

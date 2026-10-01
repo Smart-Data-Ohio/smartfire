@@ -137,7 +137,14 @@ async fn start(
     // Rails checks replay/budget/Drive before assigning an attachment. Repeat the same
     // permission and service checks in the writer after staging, so a revoked grant wins.
     if assignment.is_some() {
-        let (attributes, drive) = (a.clone(), drive.clone());
+        // Root message construction assigns the attachment before Drive validation;
+        // thread posting validates Drive ids before constructing its message.
+        let early_drive = if a.thread_id.is_none() {
+            agent_posting::DriveInput::Absent
+        } else {
+            drive.clone()
+        };
+        let (attributes, drive) = (a.clone(), early_drive);
         let early = c
             .app()
             .db
