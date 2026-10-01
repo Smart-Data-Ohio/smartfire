@@ -55,7 +55,8 @@ pub async fn create(c: &mut Ctx) -> Result {
     let context = super::audit_context(c)?;
     let notice = format!("GitHub connected as {login}.");
     let bot_id = bot.id;
-    c.app()
+    let audit = c
+        .app()
         .db
         .write(move |tx| {
             Account::relink(
@@ -71,18 +72,19 @@ pub async fn create(c: &mut Ctx) -> Result {
                 },
             )?;
             let agent = Agent::for_user(tx.conn(), bot_id)?;
-            AuditLog::record(
-                tx,
-                NewAuditLog {
-                    action: "agent.github.connect".into(),
-                    target: Some(super::audit_target(&bot, agent.as_ref())),
-                    changes: Some(serde_json::json!({"github_login":login})),
-                    ..Default::default()
-                },
-                &context,
-            )?;
-            Ok(())
+            Ok(NewAuditLog {
+                action: "agent.github.connect".into(),
+                target: Some(super::audit_target(&bot, agent.as_ref())),
+                changes: Some(serde_json::json!({"github_login":login})),
+                ..Default::default()
+            })
         })
+        .await
+        .map_err(Error::internal)?;
+    // Rails account.save! commits before the independent AuditLog.record!.
+    c.app()
+        .db
+        .write(move |tx| AuditLog::record(tx, audit, &context).map(|_| ()))
         .await
         .map_err(Error::internal)?;
     redirect(c, bot_id, &notice, true)
@@ -107,7 +109,8 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             .await
             .map_err(Error::internal)?;
         let context = super::audit_context(c)?;
-        c.app()
+        let audit = c
+            .app()
             .db
             .write(move |tx| {
                 // FLAGGED WS15g destroy seam: GithubConnectedAccount has no destroy
@@ -118,18 +121,19 @@ pub async fn destroy(c: &mut Ctx) -> Result {
                     [account.id],
                 )?;
                 let agent = Agent::for_user(tx.conn(), bot_id)?;
-                AuditLog::record(
-                    tx,
-                    NewAuditLog {
-                        action: "agent.github.disconnect".into(),
-                        target: Some(super::audit_target(&bot, agent.as_ref())),
-                        changes: Some(serde_json::json!({"github_login":account.github_login})),
-                        ..Default::default()
-                    },
-                    &context,
-                )?;
-                Ok(())
+                Ok(NewAuditLog {
+                    action: "agent.github.disconnect".into(),
+                    target: Some(super::audit_target(&bot, agent.as_ref())),
+                    changes: Some(serde_json::json!({"github_login":account.github_login})),
+                    ..Default::default()
+                })
             })
+            .await
+            .map_err(Error::internal)?;
+        // Rails account.destroy! also commits before the audit insert.
+        c.app()
+            .db
+            .write(move |tx| AuditLog::record(tx, audit, &context).map(|_| ()))
             .await
             .map_err(Error::internal)?;
     }

@@ -399,7 +399,7 @@ async fn github_mutations_require_sudo_before_any_external_call_or_write() {
     assert!(server.received.lock().unwrap().is_empty());
 }
 #[tokio::test]
-async fn github_audit_rejection_rolls_back_link_and_unlink_and_keeps_tokens_out_of_audits() {
+async fn github_audit_rejection_preserves_rails_committed_link_and_unlink() {
     let (test, _server) = fixture(200, r#"{"login":"machine"}"#).await;
     let mut browser = admin(&test).await;
     test.booted.app.db.write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_github_audit BEFORE INSERT ON audit_logs WHEN NEW.action LIKE 'agent.github.%' BEGIN SELECT RAISE(ABORT,'fixture audit rejection'); END;")?;Ok(())}).await.unwrap();
@@ -410,14 +410,19 @@ async fn github_audit_rejection_rolls_back_link_and_unlink_and_keeps_tokens_out_
             .status,
         StatusCode::INTERNAL_SERVER_ERROR
     );
-    assert!(stored(&test).await.is_none());
-    link(&test, "never-log-token").await;
-    let before = stored(&test).await;
+    assert_eq!(
+        stored(&test).await.unwrap().2,
+        "never-log-token",
+        "Rails commits Account.save! before the audit insert"
+    );
     assert_eq!(
         browser.form("delete", &path(&test), &[]).await.status,
         StatusCode::INTERNAL_SERVER_ERROR
     );
-    assert_eq!(stored(&test).await, before);
+    assert!(
+        stored(&test).await.is_none(),
+        "Rails commits Account.destroy! before the audit insert"
+    );
     assert_eq!(audit_count(&test, "agent.github.connect").await, 0);
     assert_eq!(audit_count(&test, "agent.github.disconnect").await, 0);
 }
