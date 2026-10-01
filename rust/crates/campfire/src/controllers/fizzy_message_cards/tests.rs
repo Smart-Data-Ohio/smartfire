@@ -9,6 +9,7 @@ use axum::http::{Method, StatusCode};
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
+use std::os::fd::{AsFd, OwnedFd};
 
 #[tokio::test]
 async fn ws15e_fizzy_message_creation_http_matrix() {
@@ -34,15 +35,23 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
         "no_connection",
         "direct_bots",
     ] {
+        // Keep the allocated socket open across exec, rather than choosing a port and rebinding.
+        // stdin carries the listener; the child gets its own configured origin without mutating ENV.
+        let listener = crate::test_support::bind_listener()
+            .await
+            .into_std()
+            .expect("reserve an isolated Fizzy API listener");
+        let base = format!("http://{}", listener.local_addr().unwrap());
         let output = tokio::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
                 "--exact",
                 "--nocapture",
-                "--test-threads=1",
+                "--test-threads=8",
             ])
             .env("WS15E_FIZZY_MESSAGE_CASE", case)
-            .env("FIZZY_API_BASE_URL", crate::integrations::test_support::fixture_http_base(51598, 0))
+            .env("FIZZY_API_BASE_URL", &base)
+            .stdin(OwnedFd::from(listener))
             .output()
             .await
             .unwrap();
@@ -56,10 +65,16 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
             stdout.contains("1 passed; 0 failed"),
             "must execute: {stdout}"
         );
-        println!("Fizzy message cards Rails case {case}: 1 passed; 0 failed");
+        println!("Fizzy message cards Rails case {case} at {base}: 1 passed; 0 failed");
     }
 }
 async fn run(case: &str) {
+    let listener =
+        std::net::TcpListener::from(std::io::stdin().as_fd().try_clone_to_owned().unwrap());
+    let base = crate::integrations::fizzy::client::api_base_url();
+    assert_eq!(base, format!("http://{}", listener.local_addr().unwrap()));
+    listener.set_nonblocking(true).unwrap();
+    let listener = tokio::net::TcpListener::from_std(listener).unwrap();
     let mut app = TestApp::boot().await.expect("pinned seeds required");
     app.booted
         .jobs
@@ -161,12 +176,10 @@ async fn run(case: &str) {
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
-    let api_base = crate::integrations::fizzy::client::api_base_url();
-    let base = format!("{api_base}/897362094/cards/580");
     let url = if case == "long_reply" {
         format!("https://example.com/{}", "x".repeat(60000))
     } else {
-        base
+        format!("{base}/897362094/cards/580")
     };
     let create_status = if matches!(case, "readonly" | "revoked" | "probe_failure") {
         401
@@ -183,9 +196,6 @@ async fn run(case: &str) {
         "new_rejected" => 401,
         _ => 200,
     };
-    let listener = tokio::net::TcpListener::bind(api_base.strip_prefix("http://").unwrap())
-        .await
-        .unwrap();
     let server = FakeServer::on_listener(
         vec![
             Route::new("GET", "127.0.0.1", "/897362094/boards.json", board_status).body(
