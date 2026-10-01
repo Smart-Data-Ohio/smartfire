@@ -36,11 +36,11 @@ for path in files:
         if not match or (path.name=="channel_threads_controller_test.rb" and line not in work_cases):
             continue
         title = match[1]
-        status, owner, evidence = "deferred", "WS12", "Outside the completed stars, inbox-access/state and board room/list/row slices."
+        status, owner, evidence = "deferred", "WS12", "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
         if "activity_items_controller" in relative or "activity_items_helper" in relative or "system/activity_inbox" in relative:
             owner, evidence = "WS11-UI controller/rendering + WS12 domain integration", "Merge WS11-UI and replace its flagged activity adapters with ActivityItem domain APIs; verify full response bytes and inbox interactions."
         elif any(part in relative for part in ("channel_thread_agent_assignment", "agents/work", "agent_boards", "agent_working_presence", "agent_work_assignment", "agents/posts_controller", "agents/mcp_handoff")):
-            owner,evidence = "WS12 using merged WS11 #176", "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
+            owner,evidence = "WS12 using merged WS11 #176", "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
         elif relative=="test/models/user_star_test.rb":
             status,evidence="ported","crates/db/src/tests/user_star_test.rs (5 discriminating model/independent-writer tests)."
         elif relative=="test/controllers/rooms/boards_controller_test.rb":
@@ -67,9 +67,9 @@ for path in files:
             elif "owner availability" in title:
                 status,evidence="ported","crates/db/src/tests/work_read_test.rs covers every assigned owner kind, membership removal and revoked agent grants, plus HTTP owner labels."
             elif "agent owner" in title:
-                owner,evidence="WS12 using merged WS11 #176","Read candidates/filtering are integrated with real Agent APIs and covered, but this original declaration also calls the still-pending assignment writer."
+                owner,evidence="WS12 using merged WS11 #176","Eligible owner reads and assignment writes exist. This declaration has not been mapped to a complete assertion set; its remaining combined scenarios are still WS12-owned."
             else:
-                evidence="WS12 board post/result/work slice. Existing tracking validation is retained, but removing tracking, comma-separated HTTP tag input, result writes/events/recipients and run URL writes are not closed by board listing tests."
+                evidence="WS12 board post/result/work slice. Completed mutation cases are mapped below; this remaining declaration needs its own complete assertion set (including run URL and other combined scenarios)."
         elif relative=="test/controllers/channel_threads_board_test.rb":
             if title in {"new post form renders in boards and 404s in channels and for non-members", "post page shows the board header, result, and manage controls without tracking controls"}:
                 status,evidence="ported","channel_threads/board_read_tests.rs: 29 complete Rails HTTP bodies, including new forms, pages, permissions, links/history/result, pane/anchors and missing memberships."
@@ -140,6 +140,8 @@ for path in files:
             "recording the same source twice is idempotent",
         }:
             status,owner,evidence="ported","WS12","work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
+        if relative=="test/system/boards_test.rb" and title=="replying on a board post sends and clears the composer":
+            status,owner,evidence="ported","WS12","reference-tools/boards/write_browser.mjs: actual signed-session Markdown reply form, rendered message, cleared composer and persisted plain text through the JSON read on both Rails and Rust."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")

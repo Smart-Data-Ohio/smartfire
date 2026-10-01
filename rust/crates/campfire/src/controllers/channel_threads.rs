@@ -235,8 +235,11 @@ async fn render_membership(c: &mut Ctx, thread: ChannelThread, member: ThreadMem
 }
 
 fn render_error(c: &mut Ctx, status: StatusCode, message: &str) -> Result {
-    if c.format()? == Some(&format::JSON) { render_json(c, status, &json!({"error": message})) }
-    else { Ok(c.head(status)) }
+    match c.respond_to(&[&format::HTML, &format::JSON]) {
+        Ok(chosen) if *chosen == format::JSON => render_json(c, status, &json!({"error": message})),
+        Ok(_) | Err(Error::UnknownFormat) => Ok(c.head(status)),
+        Err(error) => Err(error),
+    }
 }
 
 fn render_json(c: &mut Ctx, status: StatusCode, payload: &Value) -> Result {

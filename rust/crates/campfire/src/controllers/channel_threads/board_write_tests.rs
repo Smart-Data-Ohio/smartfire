@@ -98,6 +98,11 @@ async fn board_writes_match_complete_rails_responses_without_masks() {
             .unwrap();
         let request =
             Req::new(method, row["path"].as_str().unwrap()).header("user-agent", "Mozilla");
+        let request = if let Some(accept) = row["accept"].as_str() {
+            request.header("accept", accept)
+        } else {
+            request
+        };
         let request = if row["encoding"] == "json" {
             request
                 .header("content-type", "application/json")
@@ -135,6 +140,12 @@ async fn board_writes_match_complete_rails_responses_without_masks() {
         assert_eq!(
             response.location(),
             row["location"].as_str(),
+            "{}",
+            row["name"]
+        );
+        assert_eq!(
+            response.content_type(),
+            row["content_type"].as_str(),
             "{}",
             row["name"]
         );

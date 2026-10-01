@@ -175,8 +175,13 @@ impl ActivityItem {
         let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;
         let mut items = Vec::new();
         for candidate in candidates.recipients {
-            if let Some(item) = Self::record(tx, candidate.user_id,
-                super::ActivitySource::Message(message.id), candidate.event_type, true)? {
+            if let Some(item) = Self::record(
+                tx,
+                candidate.user_id,
+                super::ActivitySource::Message(message.id),
+                candidate.event_type,
+                true,
+            )? {
                 items.push(item);
             }
         }

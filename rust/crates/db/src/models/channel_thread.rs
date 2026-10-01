@@ -30,7 +30,7 @@ use crate::time::Timestamp;
 mod board;
 mod work;
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, board_page_number};
-pub use work::{WorkChanges, WORK_UPDATE_FORBIDDEN, normalize_owner_id};
+pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
 pub const AUTO_ARCHIVE_OPTIONS: [i64; 4] = [60, 1_440, 4_320, 10_080];
@@ -209,9 +209,18 @@ impl ChannelThread {
 
     /// Preload the forward picker's threads in one query, retaining each room's ordering.
     pub fn for_rooms(conn: &Connection, room_ids: &[i64]) -> Result<Vec<Self>> {
-        if room_ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn, &format!("SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC", placeholders(room_ids.len())),
-            rusqlite::params_from_iter(room_ids), Self::from_row)
+        if room_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC",
+                placeholders(room_ids.len())
+            ),
+            rusqlite::params_from_iter(room_ids),
+            Self::from_row,
+        )
     }
 
     /// `room.channel_threads.active.ordered`: neither closed nor locked (stale ones included:
@@ -340,7 +349,13 @@ impl ChannelThread {
         self.validate_for_save(conn, room, tag_names, self.id == 0)
     }
 
-    fn validate_for_save(&self, conn: &Connection, room: &Room, tag_names: Option<&[String]>, owner_changed: bool) -> Result<Errors> {
+    fn validate_for_save(
+        &self,
+        conn: &Connection,
+        room: &Room,
+        tag_names: Option<&[String]>,
+        owner_changed: bool,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
         if self.name.trim().is_empty() {
             errors.add("name", "can't be blank");
@@ -379,7 +394,9 @@ impl ChannelThread {
         if self.work_owner_id.is_some() && self.work_status.as_deref().is_none_or(str::is_empty) {
             errors.add("work_owner", "requires work tracking");
         }
-        if owner_changed { errors.0.extend(self.validate_work_owner(conn)?.0); }
+        if owner_changed {
+            errors.0.extend(self.validate_work_owner(conn)?.0);
+        }
         // room_cannot_be_direct
         if room.direct() {
             errors.add("room", "can't be a direct room");
@@ -444,10 +461,18 @@ impl ChannelThread {
             return Ok(());
         }
         let room = Room::find(tx.conn(), changed.room_id)?;
-        if let Err(error)=changed.validate_for_save(tx.conn(), &room, None, changed.work_owner_id != self.work_owner_id)?.into_result() {
+        if let Err(error) = changed
+            .validate_for_save(
+                tx.conn(),
+                &room,
+                None,
+                changed.work_owner_id != self.work_owner_id,
+            )?
+            .into_result()
+        {
             // Like Active Record, the operation instance retains assigned values
             // after a validation failure while its transaction rolls back the rows.
-            *self=changed;
+            *self = changed;
             return Err(error);
         }
         let now = tx.now();
@@ -463,16 +488,37 @@ impl ChannelThread {
         macro_rules! dirty { ($($field:ident),+ $(,)?) => { $(
             if changed.$field != self.$field { fields.push((stringify!($field), &changed.$field)); }
         )+ }; }
-        dirty!(auto_archive_after_minutes, closed_at, last_activity_at, locked_at, name,
-            work_status, work_status_changed_at, work_owner_id, result_markdown,
-            result_updated_at, result_updated_by_id, run_url);
+        dirty!(
+            auto_archive_after_minutes,
+            closed_at,
+            last_activity_at,
+            locked_at,
+            name,
+            work_status,
+            work_status_changed_at,
+            work_owner_id,
+            result_markdown,
+            result_updated_at,
+            result_updated_by_id,
+            run_url
+        );
         fields.push(("updated_at", &now));
-        let assignments = fields.iter().map(|(column, _)| format!("\"{column}\"=?")).collect::<Vec<_>>().join(",");
+        let assignments = fields
+            .iter()
+            .map(|(column, _)| format!("\"{column}\"=?"))
+            .collect::<Vec<_>>()
+            .join(",");
         let mut values = fields.iter().map(|(_, value)| *value).collect::<Vec<_>>();
         values.push(&self.id);
-        tx.conn().execute(&format!("UPDATE channel_threads SET {assignments} WHERE id=?"), values.as_slice())?;
+        tx.conn().execute(
+            &format!("UPDATE channel_threads SET {assignments} WHERE id=?"),
+            values.as_slice(),
+        )?;
         let status_changed = changed.work_status != self.work_status;
-        let row_changed = status_changed || changed.name != self.name || changed.work_owner_id != self.work_owner_id || changed.last_activity_at != self.last_activity_at;
+        let row_changed = status_changed
+            || changed.name != self.name
+            || changed.work_owner_id != self.work_owner_id
+            || changed.last_activity_at != self.last_activity_at;
         *self = changed;
         self.register_board_update(tx, &room, row_changed, status_changed)?;
         Ok(())
@@ -497,27 +543,46 @@ impl ChannelThread {
 
     /// The ordinary thread metadata update with Rails' pending tag set. WS12's board
     /// auto-assignment/row callbacks remain at its existing seam; this caller handles channels.
-    pub fn update_metadata(&mut self, tx: &mut Tx<'_>, name: Option<&str>, minutes: Option<i64>, tags: Option<&[String]>) -> Result<()> {
+    pub fn update_metadata(
+        &mut self,
+        tx: &mut Tx<'_>,
+        name: Option<&str>,
+        minutes: Option<i64>,
+        tags: Option<&[String]>,
+    ) -> Result<()> {
         let mut changed = self.clone();
-        if let Some(name) = name { changed.name = name.into(); }
-        if let Some(minutes) = minutes { changed.auto_archive_after_minutes = minutes; }
+        if let Some(name) = name {
+            changed.name = name.into();
+        }
+        if let Some(minutes) = minutes {
+            changed.auto_archive_after_minutes = minutes;
+        }
         let names = tags.map(normalize_tag_names);
         let room = Room::find(tx.conn(), self.room_id)?;
-        if let Err(error)=changed.validate(tx.conn(), &room, names.as_deref())?.into_result() {
-            *self=changed;
+        if let Err(error) = changed
+            .validate(tx.conn(), &room, names.as_deref())?
+            .into_result()
+        {
+            *self = changed;
             return Err(error);
         }
         // Remove obsolete tags before save's stored-tag validation, then add only missing
         // names. A metadata no-op or unchanged tag retains its existing row/timestamp.
         if let Some(names) = &names {
             for tag in self.tags(tx.conn())? {
-                if !names.contains(&tag.name) { tag.destroy(tx)?; }
+                if !names.contains(&tag.name) {
+                    tag.destroy(tx)?;
+                }
             }
         }
         self.save(tx, changed)?;
         if let Some(names) = names {
             let existing = self.tag_names(tx.conn())?;
-            for name in names { if !existing.contains(&name) { ThreadTag::create(tx, self.id, &name)?; } }
+            for name in names {
+                if !existing.contains(&name) {
+                    ThreadTag::create(tx, self.id, &name)?;
+                }
+            }
         }
         Ok(())
     }
@@ -538,9 +603,13 @@ impl ChannelThread {
 
     /// Same lifecycle read with the already-preloaded parent room (destination pickers).
     pub fn status_in_room(&self, room: &Room, now: Timestamp) -> ThreadStatus {
-        if self.locked_at.is_some() { ThreadStatus::Locked }
-        else if self.closed_at.is_some() || (!room.board() && self.auto_archive_at() <= now) { ThreadStatus::Closed }
-        else { ThreadStatus::Active }
+        if self.locked_at.is_some() {
+            ThreadStatus::Locked
+        } else if self.closed_at.is_some() || (!room.board() && self.auto_archive_at() <= now) {
+            ThreadStatus::Closed
+        } else {
+            ThreadStatus::Active
+        }
     }
 
     /// `auto_archive_at`
@@ -817,7 +886,10 @@ impl ChannelThread {
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
         crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
         // Rails suppresses a dependent tag's row replacement while its parent is destroyed.
-        tx.conn().execute_cached("DELETE FROM thread_tags WHERE channel_thread_id=?", [self.id])?;
+        tx.conn().execute_cached(
+            "DELETE FROM thread_tags WHERE channel_thread_id=?",
+            [self.id],
+        )?;
         for message in Message::in_thread(tx.conn(), self.id)? {
             message.destroy_with_conversation(tx)?;
         }
@@ -964,7 +1036,10 @@ impl ChannelThread {
             None => None,
         };
         let mut candidates = Vec::new();
-        let mut users: HashMap<i64, User> = User::where_ids(conn, &user_ids)?.into_iter().map(|user| (user.id, user)).collect();
+        let mut users: HashMap<i64, User> = User::where_ids(conn, &user_ids)?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect();
         for membership in memberships {
             let recipient = users.remove(&membership.user_id).or_not_found("User")?;
             candidates.push(ThreadPushCandidate {
@@ -1025,7 +1100,12 @@ impl ChannelThread {
             };
             pushes.push(ThreadPush {
                 user_id: candidate.recipient.id,
-                payload: PushPayload::new(title, body.clone(), path.clone(), Some(format!("room-{}", thread.room_id))),
+                payload: PushPayload::new(
+                    title,
+                    body.clone(),
+                    path.clone(),
+                    Some(format!("room-{}", thread.room_id)),
+                ),
                 tag: format!("room-{}", thread.room_id),
                 subscriptions,
             });
@@ -1034,18 +1114,38 @@ impl ChannelThread {
     }
 
     /// The production policy, with status/cache and DND exceptions preloaded once per batch.
-    pub fn push_recipients_with_policy(conn: &Connection, rich_text: &dyn RichText, thread_id: i64, message_id: i64, now: Timestamp) -> Result<Vec<ThreadPush>> {
-        let Some(message) = Message::find_by_id(conn, message_id)? else { return Ok(Vec::new()) };
-        let ids: Vec<i64> = query_all(conn, "SELECT user_id FROM thread_memberships WHERE thread_id=?", [thread_id], |row| row.get(0))?;
+    pub fn push_recipients_with_policy(
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        thread_id: i64,
+        message_id: i64,
+        now: Timestamp,
+    ) -> Result<Vec<ThreadPush>> {
+        let Some(message) = Message::find_by_id(conn, message_id)? else {
+            return Ok(Vec::new());
+        };
+        let ids: Vec<i64> = query_all(
+            conn,
+            "SELECT user_id FROM thread_memberships WHERE thread_id=?",
+            [thread_id],
+            |row| row.get(0),
+        )?;
         let users = crate::UserStatusSettings::for_ids(conn, &ids)?;
-        let exceptions = super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
+        let exceptions =
+            super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
         Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
             crate::NotificationPolicy {
-                recipient: users.get(&candidate.recipient.id), kind: crate::NotificationKind::ThreadMessage,
-                room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement), thread_involvement: Some(candidate.thread_membership.involvement),
-                mentioned: candidate.mentioned, reply_to_recipient: candidate.reply_to_recipient, keyword_matched: false,
-                dnd_exception: exceptions.contains(&candidate.recipient.id), now,
-            }.push()
+                recipient: users.get(&candidate.recipient.id),
+                kind: crate::NotificationKind::ThreadMessage,
+                room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement),
+                thread_involvement: Some(candidate.thread_membership.involvement),
+                mentioned: candidate.mentioned,
+                reply_to_recipient: candidate.reply_to_recipient,
+                keyword_matched: false,
+                dnd_exception: exceptions.contains(&candidate.recipient.id),
+                now,
+            }
+            .push()
         })
     }
 }

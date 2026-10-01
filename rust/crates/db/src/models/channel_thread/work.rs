@@ -41,6 +41,10 @@ pub fn normalize_owner_id(value: &Value) -> Result<Option<i64>> {
 }
 
 fn ruby_integer(value: &str) -> Option<i64> {
+    // Integer rejects NUL bytes, even though Ruby's String#strip removes them.
+    if value.contains('\0') {
+        return None;
+    }
     let value = campfire_richtext::ruby::strip(value);
     let (negative, value) = if let Some(value) = value.strip_prefix('-') {
         (true, value)

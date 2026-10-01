@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run identical board read interactions against isolated Rails and Rust seeds."""
+"""Run identical board interactions against isolated Rails and Rust seeds."""
 from pathlib import Path
 import hashlib
 import json
@@ -24,6 +24,7 @@ binary = target / "debug/campfire"
 assert binary.is_file(), "build the debug campfire binary first"
 for port in (53410,53411,53412):
     with socket.socket() as check:
+        check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         check.bind(("127.0.0.1",port))
 env = os.environ.copy()
 for line in (root / "parity/.env.reference").read_text().splitlines():

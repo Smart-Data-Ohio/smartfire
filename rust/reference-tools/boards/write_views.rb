@@ -114,6 +114,16 @@ add.call('result-error-after-metadata-html',owner,update,'patch',{thread:{name:'
 add.call('work-error-after-result-html',admin,update,'patch',{thread:{name:'Attempted title',tags:'new-tag',result_markdown:'New result',work_status:'unknown'}},[],422)
 add.call('invalid-owner-update-html',admin,update,'patch',{thread:{work_owner_id:773523958}},[],422)
 add.call('remove-board-work-html',admin,update,'patch',{thread:{work_status:'',work_owner_id:''}},[],422)
+[
+ ['create-invalid-tags-turbo','post',create,'text/vnd.turbo-stream.html, text/html, application/xhtml+xml'],
+ ['create-invalid-tags-stream-only','post',create,'text/vnd.turbo-stream.html'],
+ ['create-invalid-tags-json-preferred','post',create,'application/json, text/html'],
+ ['create-invalid-tags-html-preferred','post',create,'text/html, application/json'],
+ ['update-invalid-tags-turbo','patch',update,'text/vnd.turbo-stream.html, text/html, application/xhtml+xml']
+].each do |name,method,path,accept|
+ add.call(name,admin,path,method,{thread:{name:'Rejected tag',tags:'invalid!',first_message:'Retained brief'}},[],422)
+ fixtures.last[:accept]=accept
+end
 fixtures.each do |row|
  ActiveRecord::Base.transaction do
   row[:setup].each { |sql| ActiveRecord::Base.connection.execute(sql) }
@@ -122,17 +132,19 @@ fixtures.each do |row|
   request.cookie_jar.signed[:session_token]=user.sessions.where.not(two_factor_verified_at:nil).first!.token
   browser=ActionDispatch::Integration::Session.new(Rails.application);browser.host! 'campfire.test'
   options={params:row[:input],headers:{'Cookie'=>"session_token=#{Rack::Utils.escape(request.cookie_jar[:session_token])}",'User-Agent'=>'Mozilla'}}
+  options[:headers]['Accept']=row[:accept] if row[:accept]
   options[:as]=:json if row[:encoding]=='json'
   browser.public_send(row[:method],row[:path],**options)
   raise "unexpected Rails response #{row[:name]}: #{browser.response.status}, #{browser.response.body[0,500]}" unless browser.response.status==row[:status]
   row[:body]=browser.response.body
   row[:location]=browser.response.headers['Location']
+  row[:content_type]=browser.response.headers['Content-Type']
   rows << row
   raise ActiveRecord::Rollback
  end
  ActiveSupport::IsolatedExecutionState.clear
 end
-inputs=[42,42.8,"+42","0x2a","0b101010","052","4_2",nil,false," \n",[],{},true,"42junk","09","4__2","1e1",[42],{"id"=>42},"--42","+-42","0x_2a"]
+inputs=[42,42.8,"+42","0x2a","0b101010","052","4_2",nil,false," \n",[],{},true,"42junk","09","4__2","1e1",[42],{"id"=>42},"--42","+-42","0x_2a","42"+0.chr,0.chr+"42"]
 coercions=inputs.map do |input|
  begin
   normalized=ChannelThread.send(:normalize_board_post_owner_id!,ChannelThread.new,input)
