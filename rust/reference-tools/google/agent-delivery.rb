@@ -20,7 +20,7 @@ rows=[]
     message=room.messages.create!(creator:User.find(127326141),markdown_source:'Hey @[Bender Bot], see these',client_message_id:"drive-#{name}")
     ids=name=='poll_empty' ? [] : name=='poll_files' ? %w[1AbcDefGhIjKlMnOpQrSt 2BcdEfgHiJkLmNoPqRsTu] : %w[1AbcDefGhIjKlMnOpQrSt]
     ids.each { |file_id|message.drive_attachments.create!(file_id:) }
-    result=nil
+    result=nil;http_observation=nil
     if name.start_with?('poll')
       client=ActionDispatch::Integration::Session.new(Rails.application);client.host! 'campfire.test'
       client.get('/agents/events?envelope=1',headers:{'Authorization'=>['Bearer','bender-test-secret-1234'].join(' ')})
@@ -28,6 +28,7 @@ rows=[]
       row=client.response.parsed_body['events'].find { |entry|entry.dig('message','id')==message.id }
       raise 'missing message event' unless row
       result={attachments:row.dig('message','drive_attachments')}
+      http_observation={status:client.response.status,cache_control:client.response.headers['Cache-Control'],envelope:client.response.parsed_body.keys.sort,next_since_header_matches:client.response.headers['X-Smartfire-Next-Since']==client.response.parsed_body['next_since'].to_s,attachments:row.dig('message','drive_attachments')}
     else
       captured=[]
       # Keep outbound webhook local and recorded; no Google call is involved.
@@ -42,7 +43,7 @@ rows=[]
       raise "webhook did not post exactly once: #{event.reload.webhook_status} #{event.webhook_last_error}" unless captured.length==1
       result={attachments:captured[0].dig('message','drive_attachments'),agent_id:captured[0].dig('agent','id'),delivered:event.reload.webhook_status=='delivered'}
     end
-    rows << {name:,ids:,result:}
+    rows << {name:,ids:,result:,http:http_observation}
   rescue => error
     warn error.full_message
     raise

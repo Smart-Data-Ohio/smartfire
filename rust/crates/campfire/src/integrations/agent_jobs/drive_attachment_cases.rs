@@ -1,6 +1,7 @@
 //! WS14g consumes WS11's real delivery/poll/presenter APIs. Google metadata never enters payloads.
 use super::super::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use crate::controllers::presenters::test_support::Req;
 use crate::controllers::presenters::{
     Presenter,
     test_support::{BENDER, DAVID, TestApp},
@@ -11,7 +12,7 @@ use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
 };
-async fn exercise(name: &str) {
+async fn exercise(name: &str, http: bool) {
     let oracle: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/google_agent_delivery.json"
     ))
@@ -25,11 +26,12 @@ async fn exercise(name: &str) {
     let clock = Arc::new(campfire_kit::FrozenClock::new(
         "2026-03-02T16:00:00Z".parse().unwrap(),
     ));
-    let (app, _dir) = TestApp::boot_with_clock(clock)
+    let a = TestApp::boot_with_clock(clock)
         .await
         .unwrap()
-        .stop_jobs()
+        .without_job_runner()
         .await;
+    let app = a.booted.app.clone();
     let ids = row["ids"]
         .as_array()
         .unwrap()
@@ -67,6 +69,51 @@ async fn exercise(name: &str) {
         })
         .await
         .unwrap();
+    if http {
+        let secret = app
+            .db
+            .write(move |tx| {
+                Ok(
+                    campfire_db::models::agent_credential::AgentCredential::create_with_secret(
+                        tx,
+                        aid,
+                        "Drive polling HTTP comparison",
+                        DAVID,
+                        None,
+                    )?
+                    .1,
+                )
+            })
+            .await
+            .unwrap();
+        let reply = a
+            .anonymous()
+            .send(
+                Req::new(hyper::Method::GET, "/agents/events?envelope=1")
+                    .header("Authorization", &["Bearer", &secret].join(" ")),
+            )
+            .await;
+        assert_eq!(
+            reply.status.as_u16(),
+            200,
+            "pending WS11-API polling route at 60d97bd"
+        );
+        let body = reply.json();
+        let event = body["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["message"]["id"] == mid)
+            .expect("HTTP poll omitted produced mention");
+        let mut keys = body.as_object().unwrap().keys().collect::<Vec<_>>();
+        keys.sort();
+        let actual = json!({"status":reply.status.as_u16(),"cache_control":reply.header("cache-control"),"envelope":keys,"next_since_header_matches":reply.header("x-smartfire-next-since")==Some(body["next_since"].to_string().as_str()),"attachments":event["message"]["drive_attachments"]});
+        assert_eq!(
+            actual, row["http"],
+            "pinned Rails {name}: HTTP envelope and Drive metadata projection"
+        );
+        return;
+    }
     let result = if name.starts_with("poll") {
         let app2 = app.clone();
         let page = app
@@ -148,13 +195,24 @@ async fn exercise(name: &str) {
 }
 #[tokio::test]
 async fn ws14g_agent_polling_carries_drive_file_ids_and_urls_only() {
-    exercise("poll_files").await;
+    exercise("poll_files", false).await;
 }
 #[tokio::test]
 async fn ws14g_agent_polling_carries_an_empty_drive_array() {
-    exercise("poll_empty").await;
+    exercise("poll_empty", false).await;
 }
 #[tokio::test]
 async fn ws14g_agent_webhook_posts_drive_files_without_names() {
-    exercise("webhook_files").await;
+    exercise("webhook_files", false).await;
+}
+
+#[tokio::test]
+#[ignore = "pending WS11-API PR: /agents/events shape at 60d97bd is not on main"]
+async fn ws14g_agent_polling_http_carries_drive_file_ids_and_urls_only() {
+    exercise("poll_files", true).await;
+}
+#[tokio::test]
+#[ignore = "pending WS11-API PR: /agents/events shape at 60d97bd is not on main"]
+async fn ws14g_agent_polling_http_carries_an_empty_drive_array() {
+    exercise("poll_empty", true).await;
 }
