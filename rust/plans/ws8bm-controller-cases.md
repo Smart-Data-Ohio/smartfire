@@ -1,41 +1,41 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 17 further root-controller declarations now have explicit existing-test attribution; this records assertion scope, not new test executions. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
-56 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+56 named declarations; 18 have scoped Rust evidence below, and 38 await attribution/signoff. Reference execution counts are in the main report.
 
-- index returns the last page by default — WS8bm.
-- index is not found for a soft-deleted room — WS8bm.
-- index returns a page before the specified message — WS8bm.
-- index returns a page after the specified message — WS8bm.
-- index returns no_content when there are no messages — WS8bm.
+- index returns the last page by default — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (complete pinned Rails page/response comparisons).
+- index is not found for a soft-deleted room — WS8bm. Attributed to `messages::http_tests::deleted_room_is_inaccessible_even_with_a_lingering_membership` (actual requests with retained membership).
+- index returns a page before the specified message — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (actual before-cursor requests against Rails).
+- index returns a page after the specified message — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (actual after-cursor requests against Rails).
+- index returns no_content when there are no messages — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (empty-edge status and exact response headers).
 - index etag changes when an off-page reply source is edited — WS8bm.
 - index etag changes when a card fetch completes — WS15g / WS15e; WS8bm render integration.
-- index etag changes when an author is renamed — WS8bm.
+- index etag changes when an author is renamed — WS8bm. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (author cache stamp invalidates the existing validator).
 - index etag changes when the older of two pins is removed — WS8b-m2; WS8bm cache integration.
-- get renders a single message belonging to the user — WS8bm.
+- get renders a single message belonging to the user — WS8bm. Attributed to `messages::root_tests::standalone_message_wrapper_matches_rails_bytes` (four complete standalone Rails view bodies).
 - room message list announces live appends — WS8b-r; WS8bm list integration.
 - image attachments use the filename as alt text — WS8bm.
 - creating a message broadcasts the message to the room — WS8bm.
 - broadcast message actions preserve a nonstandard request port — WS8bm.
 - creating a Markdown message preserves its source and derives the rich body — WS8bm.
-- preview renders the same safe Markdown without writing — WS8bm.
-- preview requires room membership — WS8bm.
-- preview rejects oversized Markdown without parsing or writing it — WS8bm.
-- preview is protected against cross-site form submissions — WS8bm.
+- preview renders the same safe Markdown without writing — WS8bm. Attributed to `messages::http_tests::preview_matches_real_rails_http_without_writing` (eight complete Rails responses and unchanged message count).
+- preview requires room membership — WS8bm. Attributed to `messages::http_tests::preview_requires_membership_and_a_valid_source_parameter` (signed-in non-member receives 404).
+- preview rejects oversized Markdown without parsing or writing it — WS8bm. Attributed to `messages::http_tests::preview_matches_real_rails_http_without_writing` (actual oversized Rails source case and unchanged message count).
+- preview is protected against cross-site form submissions — WS8bm. Attributed to `messages::http_tests::preview_rejects_cross_site_submissions_without_a_csrf_token` (actual hostile-Origin request receives 422).
 - creating a message broadcasts unread room to each member — WS8bm.
 - creating a message doesn't broadcast unread room to non-members — WS8bm.
-- update updates a message belonging to the user — WS8bm.
-- updating a Markdown message preserves exact new source — WS8bm.
-- a legacy body update clears stale Markdown mode — WS8bm.
+- update updates a message belonging to the user — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (six exact HTTP update responses and saved fields).
+- updating a Markdown message preserves exact new source — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (exact persisted markdown_source).
+- a legacy body update clears stale Markdown mode — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (legacy conversion and clearing state).
 - editing a message to add a PR URL broadcasts the new card — WS15g / WS15e; WS8bm render integration.
 - editing a message to remove a PR URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration.
 - legacy rich-text edits re-sync card references — WS15g / WS15e; WS8bm render integration.
 - messages render empty card containers for future broadcasts — WS15g / WS15e; WS8bm render integration.
-- admin cannot update a message belonging to another user — WS8bm.
-- destroy destroys a message belonging to the user — WS8bm.
+- admin cannot update a message belonging to another user — WS8bm. Attributed to `messages::http_tests::author_only_edits_even_for_an_administrator` (admin edit/update denied).
+- destroy destroys a message belonging to the user — WS8bm. Attributed to `messages::paging_tests::root_formats_and_destroy_side_effects_match_rails` (own deletes across Rails formats remove rows).
 - admin destroy destroys a message belonging to another user — WS8bm.
 - destroy broadcasts tombstone updates to replies — WS8bm.
 - destroying a thread parent broadcasts a thread summary refresh — WS8bm.
@@ -50,7 +50,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - card fetches do not mark a message edited — WS15g / WS15e; WS8bm render integration.
 - reply tombstones do not mark the reply edited — WS8bm.
 - ensure non-admin can't update a message belonging to another user — WS8bm.
-- ensure non-admin can't destroy a message belonging to another user — WS8bm.
+- ensure non-admin can't destroy a message belonging to another user — WS8bm. Attributed to `messages::http_tests::non_author_non_admin_cannot_edit_or_delete` (other member delete denied).
 - mentioning a bot triggers a webhook — WS11; WS8bm HTTP integration.
 - mentioning a bot from Markdown triggers a webhook — WS11; WS8bm HTTP integration.
 - mentioning an agent-backed bot skips the legacy webhook job — WS11; WS8bm HTTP integration.
