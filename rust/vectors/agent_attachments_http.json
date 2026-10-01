@@ -17,7 +17,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -48,7 +52,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -158,7 +166,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -189,7 +201,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -459,7 +475,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -538,7 +558,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -567,7 +591,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -814,7 +842,11 @@
           "filename": "note.txt",
           "content_type": "text/plain",
           "byte_size": 18,
-          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
         },
         "markdown_source": null
       },
@@ -990,6 +1022,876 @@
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_1_0",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"client_message_id\":\"direct-attachment_rest_direct_1_0\"}}",
+      "setup": {
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "moon.jpg",
+          "content_type": "image/jpeg",
+          "byte_size": 12794,
+          "checksum": "j65kKv2abaidraFRfGAQlg==",
+          "metadata": {
+            "identified": true,
+            "width": 640,
+            "height": 640,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"direct-attachment_rest_direct_1_0\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"moon.jpg\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_1_1",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"client_message_id\":\"direct-attachment_rest_direct_1_1\"}}",
+      "setup": {
+        "repeat": 1,
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "moon.jpg",
+          "content_type": "image/jpeg",
+          "byte_size": 12794,
+          "checksum": "j65kKv2abaidraFRfGAQlg==",
+          "metadata": {
+            "identified": true,
+            "width": 640,
+            "height": 640,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"direct-attachment_rest_direct_1_1\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"moon.jpg\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_1_2",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"client_message_id\":\"direct-attachment_rest_direct_1_2\"}}",
+      "setup": {
+        "message_cap": 0,
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_1_3",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"client_message_id\":\"direct-attachment_rest_direct_1_3\"}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_1_4",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"client_message_id\":\"direct-attachment_rest_direct_1_4\"}}",
+      "setup": {
+        "board": true,
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 422,
+      "response_body": "{\"errors\":{\"thread\":[\"must be present in a board\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_9_0",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"client_message_id\":\"direct-attachment_rest_direct_9_0\"}}",
+      "setup": {
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "alpha-centuri.mov",
+          "content_type": "video/quicktime",
+          "byte_size": 3945267,
+          "checksum": "uBpNcgufEylNjFfte1x5LQ==",
+          "metadata": {
+            "identified": true,
+            "width": 320.0,
+            "height": 180.0,
+            "duration": 65.84,
+            "display_aspect_ratio": [
+              16,
+              9
+            ],
+            "audio": false,
+            "video": true,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"direct-attachment_rest_direct_9_0\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"alpha-centuri.mov\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_9_1",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"client_message_id\":\"direct-attachment_rest_direct_9_1\"}}",
+      "setup": {
+        "repeat": 1,
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "alpha-centuri.mov",
+          "content_type": "video/quicktime",
+          "byte_size": 3945267,
+          "checksum": "uBpNcgufEylNjFfte1x5LQ==",
+          "metadata": {
+            "identified": true,
+            "width": 320.0,
+            "height": 180.0,
+            "duration": 65.84,
+            "display_aspect_ratio": [
+              16,
+              9
+            ],
+            "audio": false,
+            "video": true,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"direct-attachment_rest_direct_9_1\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"alpha-centuri.mov\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_9_2",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"client_message_id\":\"direct-attachment_rest_direct_9_2\"}}",
+      "setup": {
+        "message_cap": 0,
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_9_3",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"client_message_id\":\"direct-attachment_rest_direct_9_3\"}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_direct_9_4",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"client_message_id\":\"direct-attachment_rest_direct_9_4\"}}",
+      "setup": {
+        "board": true,
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 422,
+      "response_body": "{\"errors\":{\"thread\":[\"must be present in a board\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_media_0",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": null,
+      "setup": {
+        "upload_filename": "moon.jpg",
+        "upload_mime": "image/jpeg",
+        "upload_bytes": null,
+        "attachment_case": true,
+        "bot_key": false,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment"
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "moon.jpg",
+          "content_type": "image/jpeg",
+          "byte_size": 12794,
+          "checksum": "j65kKv2abaidraFRfGAQlg==",
+          "metadata": {
+            "identified": true,
+            "width": 640,
+            "height": 640,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"media-attachment_rest_media_0\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"moon.jpg\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_media_1",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": null,
+      "setup": {
+        "upload_filename": "invalid.png",
+        "upload_mime": "image/png",
+        "upload_bytes": "invalid image",
+        "attachment_case": true,
+        "bot_key": false,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment"
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "invalid.png",
+          "content_type": "image/png",
+          "byte_size": 13,
+          "checksum": "8ypsnhXdIBUu6LFMf5SwQA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_media_2",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": null,
+      "setup": {
+        "upload_filename": "invalid.mov",
+        "upload_mime": "video/quicktime",
+        "upload_bytes": "invalid video",
+        "attachment_case": true,
+        "bot_key": false,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment"
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "invalid.mov",
+          "content_type": "video/quicktime",
+          "byte_size": 13,
+          "checksum": "5/bH4y7kRFEW9g8Bkk8qFg==",
+          "metadata": {
+            "identified": true,
+            "audio": false,
+            "video": false,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_direct_1_0",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_1_0\"}}",
+      "setup": {
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "moon.jpg",
+          "content_type": "image/jpeg",
+          "byte_size": 12794,
+          "checksum": "j65kKv2abaidraFRfGAQlg==",
+          "metadata": {
+            "identified": true,
+            "width": 640,
+            "height": 640,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1900700004"
+      }
+    },
+    {
+      "name": "attachment_bot_direct_1_1",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_1_1\"}}",
+      "setup": {
+        "repeat": 1,
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "moon.jpg",
+          "content_type": "image/jpeg",
+          "byte_size": 12794,
+          "checksum": "j65kKv2abaidraFRfGAQlg==",
+          "metadata": {
+            "identified": true,
+            "width": 640,
+            "height": 640,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1900700004"
+      }
+    },
+    {
+      "name": "attachment_bot_direct_1_2",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_1_2\"}}",
+      "setup": {
+        "message_cap": 0,
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_direct_1_3",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_1_3\"}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_direct_1_4",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_1_4\"}}",
+      "setup": {
+        "board": true,
+        "direct_blob": 1,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 422,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_direct_9_0",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_9_0\"}}",
+      "setup": {
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "alpha-centuri.mov",
+          "content_type": "video/quicktime",
+          "byte_size": 3945267,
+          "checksum": "uBpNcgufEylNjFfte1x5LQ==",
+          "metadata": {
+            "identified": true,
+            "width": 320.0,
+            "height": 180.0,
+            "duration": 65.84,
+            "display_aspect_ratio": [
+              16,
+              9
+            ],
+            "audio": false,
+            "video": true,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1900700004"
+      }
+    },
+    {
+      "name": "attachment_bot_direct_9_1",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_9_1\"}}",
+      "setup": {
+        "repeat": 1,
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "alpha-centuri.mov",
+          "content_type": "video/quicktime",
+          "byte_size": 3945267,
+          "checksum": "uBpNcgufEylNjFfte1x5LQ==",
+          "metadata": {
+            "identified": true,
+            "width": 320.0,
+            "height": 180.0,
+            "duration": 65.84,
+            "display_aspect_ratio": [
+              16,
+              9
+            ],
+            "audio": false,
+            "video": true,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1900700004"
+      }
+    },
+    {
+      "name": "attachment_bot_direct_9_2",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_9_2\"}}",
+      "setup": {
+        "message_cap": 0,
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_direct_9_3",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_9_3\"}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_direct_9_4",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\",\"message\":{\"client_message_id\":\"direct-attachment_bot_direct_9_4\"}}",
+      "setup": {
+        "board": true,
+        "direct_blob": 9,
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 422,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_media_0",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": null,
+      "setup": {
+        "upload_filename": "moon.jpg",
+        "upload_mime": "image/jpeg",
+        "upload_bytes": null,
+        "attachment_case": true,
+        "bot_key": true,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment"
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "moon.jpg",
+          "content_type": "image/jpeg",
+          "byte_size": 12794,
+          "checksum": "j65kKv2abaidraFRfGAQlg==",
+          "metadata": {
+            "identified": true,
+            "width": 640,
+            "height": 640,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1900700004"
+      }
+    },
+    {
+      "name": "attachment_bot_media_1",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": null,
+      "setup": {
+        "upload_filename": "invalid.png",
+        "upload_mime": "image/png",
+        "upload_bytes": "invalid image",
+        "attachment_case": true,
+        "bot_key": true,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment"
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "invalid.png",
+          "content_type": "image/png",
+          "byte_size": 13,
+          "checksum": "8ypsnhXdIBUu6LFMf5SwQA==",
+          "metadata": {
+            "identified": true,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_media_2",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": null,
+      "setup": {
+        "upload_filename": "invalid.mov",
+        "upload_mime": "video/quicktime",
+        "upload_bytes": "invalid video",
+        "attachment_case": true,
+        "bot_key": true,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment"
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "invalid.mov",
+          "content_type": "video/quicktime",
+          "byte_size": 13,
+          "checksum": "5/bH4y7kRFEW9g8Bkk8qFg==",
+          "metadata": {
+            "identified": true,
+            "audio": false,
+            "video": false,
+            "analyzed": true
+          }
+        },
+        "markdown_source": null
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
         "Pragma": null,
         "Retry-After": null,
         "Location": null

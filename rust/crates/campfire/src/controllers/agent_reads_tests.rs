@@ -77,6 +77,18 @@ pub(super) async fn check(case: &Value) {
         if let Some(body) = case["body"].as_str() {
             req = req.body(body);
         }
+        if let Some(filename)=case["setup"]["upload_filename"].as_str() {
+            let mime=case["setup"]["upload_mime"].as_str().unwrap();
+            let field=if case["setup"]["bot_key"]==true {"attachment"} else {"message[attachment]"};
+            let mut body=format!("--ws11api-attachment\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"{filename}\"\r\nContent-Type: {mime}\r\n\r\n").into_bytes();
+            let bytes=case["setup"]["upload_bytes"].as_str().map(str::as_bytes).unwrap_or_else(|| {
+                assert_eq!(filename,"moon.jpg");
+                include_bytes!("../../../../vectors/users_logos/moon.jpg")
+            });
+            body.extend_from_slice(bytes);
+            body.extend_from_slice(format!("\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nmedia-{}\r\n--ws11api-attachment--\r\n",case["name"].as_str().unwrap()).as_bytes());
+            req=req.body(body);
+        }
         req
     };
     for _ in 0..case["setup"]["repeat"].as_u64().unwrap_or(0) {
@@ -126,7 +138,7 @@ pub(super) async fn check(case: &Value) {
             let id:Option<i64>=conn.query_row("SELECT MAX(id) FROM messages WHERE id>=1900700004",[],|row|row.get(0))?;
             let message=id.map(|id|Message::find(conn,id)).transpose()?;
             let blob=if let Some(message)=&message {campfire_storage::Blob::attached(conn,"Message",message.id,"attachment").map_err(|error|campfire_db::Error::Other(error.to_string()))?} else {None};
-            Ok(serde_json::json!({"messages":count,"markdown_source":message.and_then(|message|message.markdown_source),"attachment":blob.map(|blob|serde_json::json!({"filename":blob.filename.to_string(),"content_type":blob.content_type,"byte_size":blob.byte_size,"checksum":blob.checksum}))}))
+            Ok(serde_json::json!({"messages":count,"markdown_source":message.and_then(|message|message.markdown_source),"attachment":blob.map(|blob|serde_json::json!({"filename":blob.filename.to_string(),"content_type":blob.content_type,"byte_size":blob.byte_size,"checksum":blob.checksum,"metadata":serde_json::from_str::<Value>(&blob.metadata.encode()).unwrap()}))}))
         }).await.unwrap();
         assert_eq!(&actual,expected,"{name}: persisted attachment state");
     }

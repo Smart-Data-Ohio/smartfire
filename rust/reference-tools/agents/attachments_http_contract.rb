@@ -9,8 +9,8 @@ thread = 1900700020
 cases = []
 add = ->(name,method,path,body=nil,setup={}) { cases << {name:name,method:method,path:path,body:body,setup:setup} }
 tool = ->(name,args={},setup={},label=name) { add.call("mcp_#{label}",:post,"/agents/mcp",{jsonrpc:"2.0",id:13,method:"tools/call",params:{name:name,arguments:args}},setup) }
-def multipart(attachment_name, client=nil)
- body="--ws11api-attachment\r\nContent-Disposition: form-data; name=\"#{attachment_name}\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n"
+def multipart(attachment_name, client=nil, filename="note.txt", mime="text/plain", bytes="Attachment α & β")
+ body="--ws11api-attachment\r\nContent-Disposition: form-data; name=\"#{attachment_name}\"; filename=\"#{filename}\"\r\nContent-Type: #{mime}\r\n\r\n".b + bytes.b + "\r\n"
  body += "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\n#{client}\r\n" if client
  body+"--ws11api-attachment--\r\n"
 end
@@ -68,6 +68,18 @@ end
  body[:thread_id]=thread_id if thread_id
  add.call("attachment_precedence_#{i}",:post,"/rooms/#{room}/agents/messages",body,setup.merge(attachment_case:true))
 end
+# Existing direct-upload blobs and binary/error media exercise real analysis/representation.
+[false,true].each do |bot|
+ path=bot ? "/rooms/#{room}/394959859-BenderToken1/messages" : "/rooms/#{room}/agents/messages"
+ [1,9].each do |blob|
+  [{},{repeat:1},{message_cap:0},{grant:["read_messages"]},{board:true}].each_with_index do |setup,i|
+   add.call("attachment_#{bot ? 'bot' : 'rest'}_direct_#{blob}_#{i}",:post,path,nil,setup.merge(direct_blob:blob,attachment_case:true,bot_key:bot))
+  end
+ end
+ [["moon.jpg","image/jpeg",nil],["invalid.png","image/png","invalid image"],["invalid.mov","video/quicktime","invalid video"]].each_with_index do |(filename,mime,bytes),i|
+  add.call("attachment_#{bot ? 'bot' : 'rest'}_media_#{i}",:post,path,nil,{upload_filename:filename,upload_mime:mime,upload_bytes:bytes,attachment_case:true,bot_key:bot,content_type:"multipart/form-data; boundary=ws11api-attachment"})
+ end
+end
 travel_to Time.utc(2026,3,2,16) do
  results=cases.map do |item|
   result=nil
@@ -103,7 +115,16 @@ travel_to Time.utc(2026,3,2,16) do
     agent.update_columns(daily_message_cap:item[:setup][:message_cap])
     Rails.cache=ActiveSupport::Cache::MemoryStore.new
     session=ActionDispatch::Integration::Session.new(Rails.application);session.host! "campfire.test"
+    if item[:setup][:direct_blob]
+      attrs={attachment:ActiveStorage::Blob.find(item[:setup][:direct_blob]).signed_id,client_message_id:"direct-#{item[:name]}"}
+      item[:body]=item[:setup][:bot_key] ? {attachment:attrs[:attachment],message:{client_message_id:attrs[:client_message_id]}} : {message:attrs}
+    end
     body=item[:body].is_a?(String) ? item[:body] : item[:body]&.to_json
+    if item[:setup][:upload_filename]
+      filename=item[:setup][:upload_filename]
+      bytes=item[:setup][:upload_bytes] || File.binread(Rails.root.join("test/fixtures/files",filename))
+      body=multipart(item[:setup][:bot_key] ? "attachment" : "message[attachment]","media-#{item[:name]}",filename,item[:setup][:upload_mime],bytes)
+    end
     headers={"Accept"=>"application/json","Content-Type"=>(item[:setup][:content_type] || "application/json"),"Authorization"=>["Bearer",secret].join(" ")}
     headers.delete("Authorization") if item[:setup][:bot_key]
     (item[:setup][:repeat] || 0).times {session.public_send(item[:method],item[:path],params:body,headers:headers)}
@@ -112,7 +133,8 @@ travel_to Time.utc(2026,3,2,16) do
     created=Message.where("id >= ?",base+3).order(:id).last
     blob=created&.attachment&.blob
     attachment_state={messages:Message.where("id >= ?",base+3).count,attachment:blob && {filename:blob.filename.to_s,content_type:blob.content_type,byte_size:blob.byte_size,checksum:blob.checksum},markdown_source:created&.markdown_source}
-    result=item.merge(attachment_state:attachment_state,body:body,status:response.status,response_body:response.body,response_headers:%w[Content-Type Cache-Control Pragma Retry-After Location].to_h { |key| [key,response.headers[key]] })
+    attachment_state[:attachment][:metadata]=blob.metadata if blob
+    result=item.merge(attachment_state:attachment_state,body:item[:setup][:upload_filename] ? nil : body,status:response.status,response_body:response.body,response_headers:%w[Content-Type Cache-Control Pragma Retry-After Location].to_h { |key| [key,response.headers[key]] })
 
    end
   ensure
