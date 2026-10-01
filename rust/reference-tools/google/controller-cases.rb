@@ -60,6 +60,7 @@ def observation(client,before,call_before)
     calls:$controller_calls[call_before..],delta:counts.zip(before).map { |a,b| a-b },
     markers:client.request.session.to_h.slice('two_factor_reauthenticated_at','sudo_verified_at'),
     flow_present:client.request.session[:google_sign_in_request].present?,
+    calendar_users:GoogleAccount.order(:user_id).pluck(:user_id),
     identities:GoogleIdentity.order(:user_id).map { |i|i.attributes.slice('user_id','subject','email','domain') },
     email:user.email_address,password_preserved:user.password_digest==$controller_password,
     audits:AuditLog.order(:id).map { |a|a.attributes.slice('action','actor_id','target_id','target_type','target_label','details') }
@@ -71,6 +72,7 @@ def lifecycle_observation
   {
     user:target.attributes.slice('id','name','email_address','role','status'),
     password_present:target.password_digest.present?,
+    email_self_changed:target.email_self_changed_at.present?,google_email_link_allowed:target.google_email_link_allowed?,
     memberships:target.memberships.order(:room_id).pluck(:room_id),
     history_preserved:Message.where(creator_id:712064548).order(:id).pluck(:id,:room_id,:creator_id)==$controller_history
   }
@@ -85,6 +87,7 @@ end
 [nil,[],42,{'keys'=>nil},{'keys'=>'unexpected'},{'keys'=>[nil,42,'invalid',{'kty'=>'RSA','kid'=>[],'n'=>{},'e'=>42}]}].each { |payload| specs << {purpose:'sign_in',scenario:'key_shape',payload:} }
 %w[consume_backup consume_device consume_all_devices consume_disable before_reauth_expiry at_reauth_expiry after_reauth_expiry wrong_credential_preserves].each { |scenario|specs << {purpose:'reauth',scenario:} }
 %w[legacy_password provision provision_secondary provision_secondary_hosted provision_org external_password immutable_email deactivated banned bot retained_deactivated retained_banned different_subject self_changed admin_allowed linking_disabled policy_changed].each { |scenario|specs << {purpose:'sign_in',scenario:,lifecycle:true} }
+specs += %w[join_signup provision_self_change calendar_only].map { |scenario| {purpose:'sign_in',scenario:,lifecycle:true} }
 specs << {purpose:'sign_in',scenario:'predecessor',lifecycle:true}
 specs << {purpose:'sign_in',scenario:'rotation',lifecycle:true}
 specs += %w[forged_state missing_state replay unconfigured_password].map { |scenario| {purpose:'sign_in',scenario:} }
@@ -98,6 +101,7 @@ specs.each_with_index do |spec,index|
   snapshot="#{database}.controller-cases-backup"
   FileUtils.cp(database,snapshot)
   begin
+    Rails.application.executor.run!(reset:true)
     $controller_now=BASE
     ENV['GOOGLE_CLIENT_ID']='test-client-id';ENV['GOOGLE_CLIENT_SECRET']='FAKE-google-client-secret'
     ENV['GOOGLE_SIGN_IN_DOMAINS']=%w[unconfigured unconfigured_password].include?(spec[:scenario]) ? '' : 'smartdata.net,cnbssoftware.com'
@@ -127,7 +131,9 @@ specs.each_with_index do |spec,index|
     actor=purpose=='link' || purpose=='sign_in' ? kevin : david
     subject='controller-member';email=purpose=='link' ? 'kevin.w@smartdata.net' : 'david@smartdata.net'
     email=case scenario
-      when 'provision' then 'new-member@smartdata.net'
+      when 'provision','provision_self_change' then 'new-member@smartdata.net'
+      when 'join_signup' then 'newhire@smartdata.net'
+      when 'calendar_only' then 'david@smartdata.net'
       when 'provision_secondary','provision_secondary_hosted' then 'new-member@cnbssoftware.com'
       when 'provision_org' then 'new-member@example.org'
       when 'external_password' then 'legacy@external.test'
@@ -146,6 +152,15 @@ specs.each_with_index do |spec,index|
     device = nil
     if %w[consume_device consume_all_devices].include?(scenario)
       device, = TwoFactorRememberedDevice.create_for!(actor,user_agent:"Controller fixture",ip_address:"127.0.0.1")
+    end
+    if scenario=='join_signup'
+      code=Account.first.join_code
+      client.get("/join/#{code}");client.post("/join/#{code}",params:{user:{name:'Pre-claimer',email_address:'newhire@smartdata.net',password:'secret123456'}});client.delete('/session')
+    end
+    if scenario=='calendar_only'
+      GoogleAccount.where(user:david).delete_all
+      Rails.application.executor.run!(reset:true)
+      GoogleAccount.create!(user:david,email:'david@smartdata.net',access_token:'access-token',refresh_token:'refresh-token',access_token_expires_at:BASE+3600)
     end
     initial=nil
     if purpose=='sign_in'
@@ -187,6 +202,17 @@ specs.each_with_index do |spec,index|
       end
       call_before=0
       client.get('/session/google/callback',params:{state:scenario=='forged_state' ? 'forged' : scenario=='missing_state' ? nil : query['state'],code:'fixture-code',**(scenario=='cancelled' ? {error:'access_denied'} : {})})
+      if scenario=='provision_self_change'
+        Rails.application.executor.run!(reset:true)
+        user=GoogleIdentity.find_by!(subject:'controller-member').user
+        user.sessions.order(:id).last.mark_two_factor_verified!
+        client.put('/users/me/profile',params:{user:{email_address:'changed@smartdata.net'}})
+        raise 'profile change failed' unless client.response.status==302 && user.reload.email_self_changed_at.present?
+        client.delete('/session');client.get('/session/new');client.post('/session/google')
+        query=Rack::Utils.parse_query(URI(client.response.location).query)
+        claims['nonce']=query['nonce'];$controller_token_payload={'access_token'=>'signin-access-token','id_token'=>JWT.encode(claims,KEY,'RS256',{kid:'fixture'})}
+        client.get('/session/google/callback',params:{state:query['state'],code:'fixture-code'})
+      end
       result=observation(client,before,call_before)
       if spec[:lifecycle]
         result[:lifecycle]=lifecycle_observation
@@ -232,6 +258,9 @@ specs.each_with_index do |spec,index|
       end
     end
     rows << {index:,spec:,actor_id:actor.id,jz_id:jz.id,start:,result:}
+  rescue => error
+    warn error.full_message
+    raise
   ensure
     ActiveRecord::Base.connection_pool.disconnect!
     FileUtils.rm_f(["#{database}-wal","#{database}-shm"])

@@ -34,12 +34,13 @@ async fn observation(
     let password = password.clone();
     let mut state=a.db().read(move |c| {
         let identities=c.prepare("SELECT user_id,subject,email,domain FROM google_identities ORDER BY user_id")?.query_map([],|r|Ok(json!({"user_id":r.get::<_,i64>(0)?,"subject":r.get::<_,String>(1)?,"email":r.get::<_,String>(2)?,"domain":r.get::<_,String>(3)?})))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        let calendar_users=c.prepare("SELECT user_id FROM google_accounts ORDER BY user_id")?.query_map([],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
         let audits=c.prepare("SELECT action,actor_id,target_id,target_type,target_label,details FROM audit_logs ORDER BY id")?.query_map([],|r|Ok(json!({"action":r.get::<_,String>(0)?,"actor_id":r.get::<_,Option<i64>>(1)?,"target_id":r.get::<_,Option<i64>>(2)?,"target_type":r.get::<_,Option<String>>(3)?,"target_label":r.get::<_,Option<String>>(4)?,"details":r.get::<_,Value>(5)?})))?.collect::<rusqlite::Result<Vec<_>>>()?;
         let user=campfire_db::User::find(c,KEVIN)?;
         let device_count:i64=c.query_row("SELECT count(*) FROM two_factor_remembered_devices WHERE user_id=?",[DAVID],|r|r.get(0))?;
         let backup_count:i64=c.query_row("SELECT count(*) FROM two_factor_backup_codes b JOIN two_factor_credentials c ON c.id=b.two_factor_credential_id WHERE c.user_id=? AND b.used_at IS NULL",[DAVID],|r|r.get(0))?;
         let credential_enabled=campfire_db::TwoFactorCredential::for_user(c,DAVID)?.is_some_and(|c|c.enabled());
-        Ok(json!({"identities":identities,"audits":audits,"email":user.email_address,"password_preserved":user.password_digest==password,"device_count":device_count,"backup_count":backup_count,"credential_enabled":credential_enabled}))
+        Ok(json!({"calendar_users":calendar_users,"identities":identities,"audits":audits,"email":user.email_address,"password_preserved":user.password_digest==password,"device_count":device_count,"backup_count":backup_count,"credential_enabled":credential_enabled}))
     }).await.unwrap();
     let counts = a
         .db()
@@ -97,9 +98,10 @@ async fn lifecycle_observation(a: &TestApp, history: &[(i64, i64, i64)]) -> Valu
         use rusqlite::OptionalExtension;
         let id=c.query_row("SELECT user_id FROM google_identities WHERE subject='controller-member'",[],|r|r.get::<_,i64>(0)).optional()?.or(c.query_row("SELECT id FROM users WHERE email_address IN ('new-member@smartdata.net','new-member@cnbssoftware.com')",[],|r|r.get::<_,i64>(0)).optional()?).unwrap_or(KEVIN);
         let user=campfire_db::User::find(c,id)?;
+        let markers:(bool,bool)=c.query_row("SELECT email_self_changed_at IS NOT NULL,google_email_link_allowed FROM users WHERE id=?",[id],|r|Ok((r.get(0)?,r.get(1)?)))?;
         let memberships=c.prepare("SELECT room_id FROM memberships WHERE user_id=? ORDER BY room_id")?.query_map([id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
         let actual=c.prepare("SELECT id,room_id,creator_id FROM messages WHERE creator_id=? ORDER BY id")?.query_map([KEVIN],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?.collect::<rusqlite::Result<Vec<(i64,i64,i64)>>>()?;
-        Ok(json!({"user":{"id":id,"name":user.name,"email_address":user.email_address,"role":user.role.name(),"status":user.status.name()},"password_present":user.password_digest.is_some(),"memberships":memberships,"history_preserved":actual==history}))
+        Ok(json!({"user":{"id":id,"name":user.name,"email_address":user.email_address,"role":user.role.name(),"status":user.status.name()},"password_present":user.password_digest.is_some(),"email_self_changed":markers.0,"google_email_link_allowed":markers.1,"memberships":memberships,"history_preserved":actual==history}))
     }).await.unwrap()
 }
 #[tokio::test]
@@ -208,6 +210,15 @@ async fn run_cases(oracle: Value) {
         } else {
             a.sign_in(actor).await
         };
+        if scenario == "join_signup" {
+            let code = a.db().read(|conn| Ok(conn.query_row("SELECT join_code FROM accounts LIMIT 1", [], |row| row.get::<_,String>(0))?)).await.unwrap();
+            b.get(&format!("/join/{code}")).await;
+            b.write(Req::new(Method::POST, &format!("/join/{code}")).form(&[("user[name]","Pre-claimer"),("user[email_address]","newhire@smartdata.net"),("user[password]","secret123456")])).await;
+            b.write(Req::new(Method::DELETE,"/session")).await;
+        }
+        if scenario == "calendar_only" {
+            crate::app::google_api_tests::grant(&a,DAVID,campfire_db::Timestamp::from_jiff(now).since(jiff::SignedDuration::from_hours(1)),false).await;
+        }
         let initial_page = b
             .get(if purpose == "sign_in" {
                 "/session/new"
@@ -308,7 +319,9 @@ async fn run_cases(oracle: Value) {
             }
             let email = if lifecycle {
                 match scenario {
-                    "provision" => "new-member@smartdata.net",
+                    "provision" | "provision_self_change" => "new-member@smartdata.net",
+                    "join_signup" => "newhire@smartdata.net",
+                    "calendar_only" => "david@smartdata.net",
                     "provision_secondary" | "provision_secondary_hosted" => {
                         "new-member@cnbssoftware.com"
                     }
@@ -398,7 +411,23 @@ async fn run_cases(oracle: Value) {
                     ""
                 }
             );
-            let cb = b.get(&callback_path).await;
+            let mut cb = b.get(&callback_path).await;
+            if scenario == "provision_self_change" {
+                let id=a.db().write(|tx| {
+                    let id=campfire_db::models::google_identity::GoogleIdentity::for_subject(tx.conn(),"controller-member")?.unwrap().user_id;
+                    tx.conn().execute("UPDATE sessions SET two_factor_verified_at=? WHERE id=(SELECT max(id) FROM sessions WHERE user_id=?)",rusqlite::params![tx.now(),id])?;
+                    Ok(id)
+                }).await.unwrap();
+                let response=b.write(Req::new(Method::PUT,"/users/me/profile").form(&[("user[email_address]","changed@smartdata.net")])).await;
+                assert_eq!(response.status,StatusCode::FOUND);
+                assert!(a.db().read(move |conn| Ok(conn.query_row("SELECT email_self_changed_at IS NOT NULL FROM users WHERE id=?",[id],|r|r.get::<_,bool>(0))?)).await.unwrap());
+                b.write(Req::new(Method::DELETE,"/session")).await;b.get("/session/new").await;
+                let next=start(&mut b,"/session/google").await;
+                let mut next_claims=super::claims(&a,&next,"controller-member","new-member@smartdata.net");
+                next_claims["name"]=json!("Fixture member");
+                answer(&r,next_claims);
+                cb=callback(&mut b,&next["state"]).await;
+            }
             let mut observed = observation(&a, &b, &cb, &before, &r, 0, &password).await;
             if lifecycle {
                 observed["lifecycle"] = lifecycle_observation(&a, &history).await;

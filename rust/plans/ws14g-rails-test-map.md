@@ -226,7 +226,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — rejection logs carry no tokens or codes — `app::google_tests::google_sessions_rejection_log_names_reason_without_token_or_authorization_code`.
 - **Ported** — authorization code is filtered from logs — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (production parameter filter equals Rails-generated code-filter observation)`.
 - **Ported** — Google sign-in creates no Calendar/Drive connection and stores no tokens — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (recorded token response includes access/refresh tokens, every account delta and identity schema token columns compared with Rails)`.
-- **Partial** — Calendar connection is never treated as login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — Calendar connection is never treated as login identity — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (Calendar-only holder and verified email provision a different identity owner; exact preserved Calendar user IDs)`.
 - **Ported** — connecting Calendar creates no login identity — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (identity rows compared after real callback/DELETE; separation preserved).
 - **Ported** — disconnecting Calendar keeps the login identity — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (identity rows compared after real callback/DELETE; separation preserved).
 
@@ -235,8 +235,8 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — a self-changed email is not auto-linked and asks for an administrator — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Ported** — an administrator allowing the link lets the next Google sign-in link — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Ported** — an account from before the rule, with its original email, still auto-links — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
-- **Deferred** — a join-code signup never auto-links by email, even untouched — WS14g continuation.
-- **Deferred** — a Google-provisioned account keeps signing in by subject after a self-change — WS14g continuation.
+- **Ported** — a join-code signup never auto-links by email, even untouched — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (actual join GET/POST and logout before Google callback, full denial/state/audit observations)`.
+- **Ported** — a Google-provisioned account keeps signing in by subject after a self-change — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (real provision, verified-session fixture, profile PUT, logout and repeat Google sign-in; exact trust markers/user/identity/audits)`.
 
 ## test/controllers/sessions/google_responses_test.rb
 
@@ -606,8 +606,8 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/models/google/picker_test.rb
 
-- **Deferred** — configured only when all three public values are present — WS14g continuation.
-- **Deferred** — blank values count as missing — WS14g continuation.
+- **Ported** — configured only when all three public values are present — `picker_configuration::tests::google_picker_public_configuration_matches_pinned_rails_without_client_secrets (21 Rails configurations, public values only)`.
+- **Ported** — blank values count as missing — `picker_configuration::tests::google_picker_public_configuration_matches_pinned_rails_without_client_secrets (nil, empty, spaces, tabs/newlines, NBSP and em-space per field)`.
 
 ## test/models/google/sign_in/account_linker_test.rb
 
@@ -767,7 +767,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — Google sign-in success is recorded — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Ported** — Google sign-in that provisions a user records the creation — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Ported** — Google sign-in that auto-links an allowed address records the link — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
-- **Deferred** — repeat Google sign-in records no link or creation row — WS14g audit producer + WS9 integration.
+- **Ported** — repeat Google sign-in records no link or creation row — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (two real logins around self-change, full audit rows compared with pinned Rails)`.
 - **Ported** — rejected Google sign-in is recorded as a failure — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 
 ## test/controllers/two_factor/reauthentications_controller_test.rb (Google/Calendar/Drive cases only)
@@ -848,11 +848,11 @@ The sign-in lifecycle matrix now commits the Rails HTTP requests and restores th
 
 Release-input validation caught production Drive recipient validation reading the regex from a test vector. The verified URI::MailTo pattern is now a production constant; tests compare its complete source and all twelve email/twelve selection vectors. The guard remains unweakened and excludes parity files.
 
-Requested main b908ebc2 is now merged with both parents retained. Its real profile composition and settings/status APIs are consumed. All 22 additional Google/Calendar/Drive profile declarations and both Google confirmation declarations are mapped. The three agent polling/REST/webhook delivery declarations remain deferred to WS11; other unblocked scope still remains.
+Requested main b908ebc2 is now merged with both parents retained. Its real profile composition and settings/status APIs are consumed. All 22 additional Google/Calendar/Drive profile declarations and both Google confirmation declarations are mapped. Superseded by the later #176 merge: all three payload contracts now consume WS11's real APIs; the two polling declarations still need WS11-api's REST transport. Other unblocked scope remains.
 
 ## WS11 key-provider integration handoff
 
-Checked `origin/rust/ws11-agents` while merging requested main `b908ebc2`. WS11's `sync_message_references` and `sync_message_reference_phase` reuse boot's `app.ar_encryption`. Retain that reuse when #176 merges. Retain `Secrets::ar_encryption_key` and its OnceLock in `rails_compat`: boot's object and any other object share exactly that provider's derivation, with no global/phase cache and no derived-byte change. Existing pinned cipher vectors and the concurrent provider regression cover both construction and reuse. The three Drive agent-delivery declarations above remain deferred to WS11's real polling/webhook APIs.
+Checked `origin/rust/ws11-agents` while merging requested main `b908ebc2`. WS11's `sync_message_references` and `sync_message_reference_phase` reuse boot's `app.ar_encryption`. Retain that reuse when #176 merges. Retain `Secrets::ar_encryption_key` and its OnceLock in `rails_compat`: boot's object and any other object share exactly that provider's derivation, with no global/phase cache and no derived-byte change. Existing pinned cipher vectors and the concurrent provider regression cover both construction and reuse. The later #176 merge retains both boot-object reuse and the general per-Secrets cache; see the current delivery mapping above.
 
 ### Requested b908ebc2 continuation: authentication
 
@@ -860,7 +860,7 @@ The controller matrix now compares 87 complete request/state observations, inclu
 
 ### Requested b908ebc2 continuation: Drive recipients
 
-All 23 named recipient declarations now have real pinned request observations. The 31-case matrix includes blank/nil/malformed emails, deactivated/banned/bot/agent members, both company domains and external passwords, stale membership, canonical order/duplicate collapse/empty selection, malformed/oversized selections, absent picker key/project, anonymous/nonmember/bot/agent access, CSRF, 60 previews then list/validate rejection and a separate user budget. Google consent is unnecessary and no Google HTTP occurs. The three agent polling/webhook delivery declarations remain WS11-owned, distinct from these existing authentication APIs.
+All 23 named recipient declarations now have real pinned request observations. The 31-case matrix includes blank/nil/malformed emails, deactivated/banned/bot/agent members, both company domains and external passwords, stale membership, canonical order/duplicate collapse/empty selection, malformed/oversized selections, absent picker key/project, anonymous/nonmember/bot/agent access, CSRF, 60 previews then list/validate rejection and a separate user budget. Google consent is unnecessary and no Google HTTP occurs. The later #176 merge lets WS14g consume all three delivery APIs; final polling HTTP transport remains with WS11-api.
 
 ### Requested b908ebc2 continuation: configured composition
 
@@ -869,3 +869,15 @@ Twenty-one complete responses (3 login and 18 profile) now match the approved pi
 ## WS16 Google provisioning handoff
 
 The real POST `/session/google` and GET `/session/google/callback` routes are wired in `controllers/google_sign_in.rs`. The callback verifies outside the SQLite writer, then calls `authentication::begin_google_session` and `GoogleIdentity::resolve` in one immediate transaction. New members go through the owner `User::create`, including its normal after-commit effects; WS16 should consume this path for placeholder claiming, rather than duplicate provisioning. Recorded client injection is `app.google.install(SignIn::with_client(config, client))`. Both start/callback guards and first-login provisioning are exercised in `app::google_tests`; the request/state/audit matrix has 89 pinned Rails cases. No WS16 placeholder domain code was duplicated.
+
+## Continuation after requested main 2b051607 and WS11 #176
+
+Merged requested main in f0676b7b, then #176's main 7442031d in 00724a33. Both merges retain their parents. The boot-agent encryption object is reused in both jobs.rs phases; the per-Secrets OnceLock remains the only derived-key cache, with unchanged bytes.
+
+All original `sessions/google_controller_test.rb` and `google_pre_hijack_test.rb` declarations are now mapped, including actual join-code creation, Google-only profile self-change/repeat login, a Calendar-only holder provisioning a different identity owner, filtered codes and rotated signing keys. The 92-case matrix compares full persisted identity/session/audit/trust-marker/Calendar-owner observations. The additional repeat-sign-in audit declaration is also closed.
+
+All DriveFilesController declarations are mapped through existing and 15 new real endpoint scenarios. Cache expiry is checked at 299/300/301 seconds with both Rails cache and application clocks advanced; per-viewer budgets and reset buckets are exact. The 21 Picker configurations include each missing/blank public value, Unicode whitespace, unchanged surrounding spaces and no client-secret dependency.
+
+All connection declarations are now mapped. Seven new real request producers compare exact Calendar jobs, flags, scopes/tokens, identity retention, preserved other-user grants/entries and organizer-specific Meet link clearing. Existing fenced socket coverage closes the cleared-meeting badge assertion. This consumes WS14e domain rows and shared connection logic, without duplicating Event/attendance ownership.
+
+The two agent polling payload assertions consume WS11 EventPolling and the production message presenter and match Rails' real GET; final native GET status/auth/transport awaits WS11-api's missing `/agents/events` route. The agent webhook declaration is complete through the real mention producer, Delivery and claimed EventWebhook consumers and local HTTP POST. No real Google HTTP or pixel work was used. Unblocked Calendar/client, remaining step-up/race/malformed-response, model and interaction assertions remain named individually above.
