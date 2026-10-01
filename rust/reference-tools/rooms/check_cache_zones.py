@@ -11,13 +11,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--record", action="store_true")
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[3]
-scratch = root / ".scratch/zone-write-followup/rails"
+scratch = root / ".scratch/zone-cache-followup/rails"
 scratch.mkdir(parents=True, exist_ok=True)
-env = dict(os.environ, PARITY_NAMESPACE="ws8br-card-write-zones", PARITY_OWNER="ws8br",
+env = dict(os.environ, PARITY_NAMESPACE="ws8br-cache-zones", PARITY_OWNER="ws8br",
            PARITY_IMAGE="ws8br-reference-status-2e20b24c")
 run = subprocess.run([str(root / "rust/parity/bin/reference"), "exec", "--seed", "default",
                       "--time", "2026-03-02T16:00:00Z", "--freeze", "bin/rails", "runner",
-                      "--skip-executor", "/work/reference-tools/rooms/card_write_zones.rb"],
+                      "--skip-executor", "/work/reference-tools/rooms/cache_zones.rb"],
                      cwd=root, env=env, capture_output=True)
 (scratch / "stdout.json").write_bytes(run.stdout)
 (scratch / "stderr.log").write_bytes(run.stderr)
@@ -26,8 +26,8 @@ captured = json.loads(run.stdout)
 for path, digest in captured["sources"].items():
     pinned = subprocess.check_output(["git", "show", f"d7c7de92:{path}"], cwd=root)
     assert digest == hashlib.sha256(pinned).hexdigest(), f"Rails source drift: {path}"
-fixture = root / "rust/crates/campfire/src/controllers/rooms/card_write_zones.json"
+fixture = root / "rust/crates/campfire/src/controllers/rooms/cache_zones.json"
 if args.record:
     fixture.write_text(json.dumps(captured, indent=2, ensure_ascii=False) + "\n")
-assert captured == json.loads(fixture.read_text()), "Rails card write-zone HTTP corpus changed"
-print("Rails card write-zone oracle: 70 captured HTTP responses; 10 creation/append containers, 10 shared actor-zone replacements, 10 other-viewer reloads, 40 GitHub containers and one background UTC frame; 8 pinned sources; byte-identical")
+assert captured == json.loads(fixture.read_text()), "Rails cache-zone corpus changed"
+print("Rails cache-zone oracle: 44 HTTP responses; two warm sharing pairs; 40 timestamp keys across eight zones and five DST/seasonal instants; 4 pinned sources; exact keys and cache reuse")

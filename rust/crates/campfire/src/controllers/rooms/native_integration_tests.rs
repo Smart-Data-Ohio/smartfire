@@ -319,6 +319,7 @@ async fn audit_event_broadcasts(defaults: bool) {
     let room = app.db().read(|conn| campfire_db::Room::find(conn, ALL_TALK)).await.unwrap();
     let stream = crate::channels::room_gid(&room).to_param();
     let mut browser = app.david();
+    let mut other = app.sign_in(JASON).await;
     for case in zone_cases(&oracle, "event_edit", defaults) {
         set_audit_zone(&app, case).await;
         assert_eq!(case["frame"]["stream"], format!("{stream}:messages"));
@@ -327,6 +328,12 @@ async fn audit_event_broadcasts(defaults: bool) {
                 ("event[ends_at]", "2026-03-08T07:30"), ("event[time_zone]", "UTC")])).await;
         assert_eq!(response.status.as_u16(), case["status"].as_u64().unwrap() as u16);
         assert_audit_frame(&mut clients, &case["frame"]).await;
+        let reload = other.get(&format!("/rooms/{ALL_TALK}")).await;
+        assert_eq!(reload.status, StatusCode::OK);
+        let body = reload.text();
+        let actual = card_container(&body, "event_cards_message_ws8br-zone-spring");
+        let expected = case["reload_other_html"].as_str().unwrap();
+        if actual != expected { rails_mismatch(actual, expected, "actor edit then India viewer reload"); }
         // Validation failure must restore the writer scope too; later jobs have no actor.
         let invalid = browser.write(Req::new(axum::http::Method::PATCH, case["path"].as_str().unwrap())
             .form(&[("event[title]", "")])).await;
@@ -360,4 +367,79 @@ async fn zone_audit_utc_and_invalid_zone_fallbacks_cover_all_three_paths() {
     audit_message_creation(true).await;
     audit_github_messages(true).await;
     audit_event_broadcasts(true).await;
+}
+
+fn cache_zone_oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!("cache_zones.json")).unwrap()
+}
+
+async fn assert_rails_collection_keys(app: &TestApp, case: &serde_json::Value) {
+    let expected = case["keys"].clone();
+    let room_id = case["room_id"].as_i64().unwrap();
+    let state = app.booted.app.clone();
+    app.db().read(move |conn| {
+        let mut presenter = crate::controllers::presenters::Presenter::new(conn, &state, Some("campfire.test".into()));
+        presenter.use_viewer_zone(DAVID)?;
+        let records = crate::controllers::presenters::room_shell::find_messages(conn, room_id, None)?;
+        let mut actual = serde_json::Map::new();
+        for message in records {
+            actual.insert(message.id.to_string(), serde_json::Value::String(presenter.message_collection_cache_key(&message)?));
+        }
+        assert_eq!(actual.len(), expected.as_object().unwrap().len());
+        for (id, key) in actual {
+            assert_eq!(key, expected[&id], "Rails collection timestamp components for message {id}");
+        }
+        Ok(())
+    }).await.unwrap();
+}
+
+async fn audit_cache_sharing(kind: &str) {
+    let app = TestApp::boot_frozen().await.expect("default seed required");
+    let oracle = cache_zone_oracle();
+    let pair = oracle["pairs"].as_array().unwrap().iter().find(|pair| pair["kind"] == kind).unwrap();
+    let first = &pair["cases"][0];
+    let second = &pair["cases"][1];
+    assert_eq!(first["keys"], second["keys"]);
+    assert!(first["written_fragments"].as_u64().unwrap() > 0);
+    assert_eq!(first["written_fragments"], second["written_fragments"]);
+    let mut browser = app.david();
+    set_audit_zone(&app, first).await;
+    let path = format!("/rooms/{}", first["room_id"]);
+    assert_eq!(browser.get(&path).await.status, StatusCode::OK);
+    let cold = app.booted.app.fragment_cache.len();
+    assert!(cold > 0, "exercise actual collection fragments");
+    set_audit_zone(&app, second).await;
+    assert_eq!(browser.get(&path).await.status, StatusCode::OK);
+    let warm = app.booted.app.fragment_cache.len();
+    assert_eq!(warm, cold, "{kind}: Rails reuses identical keys; cold {cold}, warm {warm}");
+    assert_rails_collection_keys(&app, second).await;
+    set_audit_zone(&app, first).await;
+    assert_eq!(browser.get(&path).await.status, StatusCode::OK);
+    assert_eq!(app.booted.app.fragment_cache.len(), cold);
+    assert_rails_collection_keys(&app, first).await;
+}
+
+#[tokio::test]
+async fn zone_cache_hawaii_and_honolulu_share_github_fragments_like_rails() {
+    audit_cache_sharing("github_alias").await;
+}
+
+#[tokio::test]
+async fn zone_cache_hawaii_and_india_share_ordinary_fragments_like_rails() {
+    audit_cache_sharing("ordinary").await;
+}
+
+#[tokio::test]
+async fn zone_cache_timestamp_components_match_rails_across_dst_and_fractional_zones() {
+    let app = TestApp::boot_frozen().await.expect("default seed required");
+    let oracle = cache_zone_oracle();
+    for case in oracle["seasonal"].as_array().unwrap() {
+        let instant = case["instant"].as_str().unwrap().parse::<jiff::Timestamp>().unwrap();
+        app.db().write(move |tx| {
+            tx.conn().execute("UPDATE github_pull_requests SET updated_at=? WHERE id=1", [campfire_db::Timestamp::from_jiff(instant)])?;
+            Ok(())
+        }).await.unwrap();
+        set_audit_zone(&app, case).await;
+        assert_rails_collection_keys(&app, case).await;
+    }
 }

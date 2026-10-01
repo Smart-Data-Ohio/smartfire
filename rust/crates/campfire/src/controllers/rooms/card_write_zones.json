@@ -132,6 +132,8 @@
       "broadcast_html": "<div id=\"event_cards_message_ws8br-zone-create-9\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone spring</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T06:30:00Z\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T07:30:00Z\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000612_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000612\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n      <article class=\"event-card\" data-event-card=\"8000000602\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000602\">Zone fall</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-11-01T05:30:00Z\" data-local-time-target=\"datetime\">November 1, 2026 at 5:30 AM</time>\n      &ndash; <time datetime=\"2026-11-01T06:30:00Z\" data-local-time-target=\"datetime\">November 1, 2026 at 6:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000612_event_8000000602\" src=\"/rooms/486777696/events/8000000602/attendance?message_id=9000000612\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>"
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 0</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "Hawaii",
       "path": "/rooms/486777696/events/8000000601",
@@ -143,6 +145,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 1</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "Eastern Time (US & Canada)",
       "path": "/rooms/486777696/events/8000000601",
@@ -154,6 +158,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 2</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "Asia/Kolkata",
       "path": "/rooms/486777696/events/8000000601",
@@ -165,6 +171,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 3</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "Kathmandu",
       "path": "/rooms/486777696/events/8000000601",
@@ -176,6 +184,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 4</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "Sydney",
       "path": "/rooms/486777696/events/8000000601",
@@ -187,6 +197,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 5</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "Adelaide",
       "path": "/rooms/486777696/events/8000000601",
@@ -198,6 +210,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 6</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "UTC",
       "path": "/rooms/486777696/events/8000000601",
@@ -209,6 +223,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 7</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": null,
       "path": "/rooms/486777696/events/8000000601",
@@ -220,6 +236,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 8</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "",
       "path": "/rooms/486777696/events/8000000601",
@@ -231,6 +249,8 @@
       }
     },
     {
+      "reload_other_zone": "Asia/Kolkata",
+      "reload_other_html": "<div id=\"event_cards_message_ws8br-zone-spring\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000601\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000601\">Zone edit 9</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-08T12:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 6:30 AM</time>\n      &ndash; <time datetime=\"2026-03-08T13:00:00+05:30\" data-local-time-target=\"datetime\">March 8, 2026 at 7:30 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000601_event_8000000601\" src=\"/rooms/486777696/events/8000000601/attendance?message_id=9000000601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>",
       "kind": "event_edit",
       "zone": "Not a real zone",
       "path": "/rooms/486777696/events/8000000601",

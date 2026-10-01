@@ -38,6 +38,13 @@ cookie = request.cookie_jar[:session_token]
 browser = ActionDispatch::Integration::Session.new(Rails.application)
 browser.host! "campfire.test"
 browser.cookies[:session_token] = cookie
+other = User.find(149087659)
+other.update_columns(time_zone: "Asia/Kolkata")
+other_session = other.sessions.first || other.sessions.create!
+request.cookie_jar.signed[:session_token] = other_session.token
+other_browser = ActionDispatch::Integration::Session.new(Rails.application)
+other_browser.host! "campfire.test"
+other_browser.cookies[:session_token] = request.cookie_jar[:session_token]
 frames = []
 ActionCable.server.define_singleton_method(:broadcast) { |stream, payload, **options| frames << { stream:, payload: } }
 zones = ["Hawaii", "Eastern Time (US & Canada)", "Asia/Kolkata", "Kathmandu", "Sydney", "Adelaide", "UTC", nil, "", "Not a real zone"]
@@ -71,7 +78,10 @@ zones.each_with_index do |zone, index|
   raise "edit failed #{browser.response.status}" unless browser.response.status == 302
   matching = frames.select { |f| f[:payload].is_a?(String) && f[:payload].include?(%{target="#{target}"}) }
   raise "expected one shared replacement" unless matching.one?
-  cases << { kind: "event_edit", zone:, path: "/rooms/#{room.id}/events/#{event.id}", title:, status: browser.response.status, frame: matching.first }
+  other_browser.get("/rooms/#{room.id}")
+  raise "other viewer reload failed" unless other_browser.response.status == 200
+  reload_other_html = container(other_browser.response.body, target)
+  cases << { reload_other_zone: "Asia/Kolkata", reload_other_html:, kind: "event_edit", zone:, path: "/rooms/#{room.id}/events/#{event.id}", title:, status: browser.response.status, frame: matching.first }
 end
 frames.clear
 Time.use_zone("UTC") { event.reload.update!(title: "Background UTC") }

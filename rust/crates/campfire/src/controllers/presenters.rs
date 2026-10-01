@@ -604,9 +604,7 @@ impl<'a> Presenter<'a> {
             )?
         };
         let Some(base) = self.cache_base_url.as_deref().filter(|_| !has_events) else { return Ok(MessageItem::View(Box::new(view()?))) };
-        let mut key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
-        // Local datetime attributes differ even when the instant and all model stamps agree.
-        if self.render_zone.name() != "UTC" { key.push_str(&format!("/time_zone/{}", self.render_zone.name())); }
+        let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
         let html = fragment_cache::try_fetch_value(|| key, || {
             let view = view()?;
             let account = campfire_db::Account::first(self.conn)?;
@@ -655,7 +653,7 @@ impl<'a> Presenter<'a> {
     }
 
     fn renderable_message(&self, message: &Message, room_name: &str) -> Result<MessageView> {
-        let (github_cards_html, mut github_cards_stamp) = if let Some(data) = &self.search_preloads {
+        let (github_cards_html, github_cards_stamp) = if let Some(data) = &self.search_preloads {
             if let Some(github) = data.github.get(&message.id) {
                 self.github_refreshes
                     .borrow_mut()
@@ -676,9 +674,6 @@ impl<'a> Presenter<'a> {
             );
             (Some(html), github::cache_stamp(self.conn, message)?)
         };
-        if !github_cards_stamp.is_empty() && self.render_zone.name() != "UTC" {
-            github_cards_stamp.push_str(&format!("/time_zone/{}", self.render_zone.name()));
-        }
         let plain_text = self.plain_text_body(message)?;
         Ok(MessageView {
             id: message.id,
