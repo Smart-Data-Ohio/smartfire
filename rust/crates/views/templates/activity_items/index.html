@@ -1,0 +1,43 @@
+{% extends "layouts/application.html" %}
+{% block head %}<meta name="turbo-cache-control" content="no-cache">  
+  <meta name="activity-inbox" content="true">
+{% endblock %}
+{% block nav %}  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Personal workspace</span>
+    <h1 id="activity-inbox-title" class="room__contents">
+      <span class="room-header__name">Activity inbox</span>
+    </h1>
+  </div>
+{% endblock %}
+{% block sidebar %}{{ h::sidebar_turbo_frame_tag(Some(h::routes::user_sidebar().as_str()), "") }}{% endblock %}
+{% block content %}
+
+
+<section class="activity-inbox__page" aria-labelledby="activity-inbox-title"
+         data-controller="activity-inbox"
+         data-activity-inbox-url-value="{{ self.stream_path() }}">
+  <header class="activity-inbox__header">
+    <div>
+      <p class="activity-inbox__kicker">Your conversations</p>
+      <p class="activity-inbox__description">Mentions, replies, followed threads, work updates, and huddle calls that need your attention.</p>
+    </div>
+    <span id="activity-unread-count" class="activity-inbox__count" {% if unread_count == 0 %}hidden{% endif %}>{{ unread_count }}</span>
+  </header>
+
+  <nav class="activity-inbox__filters" aria-label="Activity filters">
+{% for (value,label) in [("unread","Unread"),("read","Read"),("handled","Handled")] %}      {{ self.filter_link(value,label,type_filter,self.active_filter(value)) }}
+{% endfor %}  </nav>
+
+  <nav class="activity-inbox__filters" aria-label="Activity type filters">
+{% for (value,label) in crate::activity::TYPES %}      {{ self.filter_link(filter,label,value,self.active_type(value)) }}
+{% endfor %}  </nav>
+
+  <div id="activity-items-list" class="activity-inbox__list" aria-live="polite">
+    {{ self.list()? }}
+  </div>
+
+  <div id="activity-items-pagination">
+    {{ self.pagination() }}
+  </div>
+</section>
+{% endblock %}

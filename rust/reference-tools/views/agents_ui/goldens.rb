@@ -25,6 +25,25 @@ end
   result[:pages][viewer] = render_with(user: viewer == :admin ? david : kevin, template: "agents/directory/index", layout: "application", assigns: { agents: Agent.for_directory })
 end
 result[:pages][:empty] = render_with(user: kevin, template: "agents/directory/index", layout: "application", assigns: { agents: [] })
+# Bot profiles call the real owner readers, including private management facts.
+bender.agent.update!(provider: "OpenAI", runtime: "Codex CLI 0.9", description: "Does things <safely> & carefully")
+result[:profiles] = {}
+[:admin, :member].each do |viewer|
+  who = viewer == :admin ? david : kevin
+  agent = bender.agent.reload
+  Current.user = who
+  all_rooms = agent.user.rooms.ordered.to_a
+  shared = all_rooms.select { |room| who.rooms.exists?(room.id) }
+  facts = result[:agents].find { |item| item[:id] == agent.id }.merge(
+    provider_runtime: [agent.provider, agent.runtime].compact_blank.join(" · "), description: agent.description,
+    rooms: shared.map { |room| [room.id, ApplicationController.helpers.room_display_name(room)] },
+    has_rooms: all_rooms.any?, hidden_room_count: all_rooms.size - shared.size,
+    grants: agent.grants_summary,
+    management: who.administrator? || agent.owner == who ? [agent.activity_summary, ApplicationController.helpers.agent_budget_usage_line(agent)] : nil
+  )
+  result[:profiles][viewer] = { facts:, html: render_with(user: who, template: "users/show", layout: "application", assigns: { user: bender }) }
+end
+result[:workspace_navigation] = render_with(user: kevin, inline: File.read(Rails.root.join("app/views/users/sidebars/show.html.erb")).match(/      <nav class="sidebar-list workspace-destinations".*?<\/nav>/m)[0]+"\n")
 result[:badges] = {}
 bender.agent.tap do |agent|
   %w[idle working waiting failed suspended].each do |status|
@@ -51,5 +70,37 @@ result[:thread_steps_empty] = render_with(partial: "agent_steps/thread_steps", l
 rng = Random.new(11)
 durations = ((0..12000).to_a + (0..2000).flat_map { |n| [12000 + 50*n, 12049 + 50*n, 12051 + 50*n] } + Array.new(1000) { rng.rand(2**63) } + [2**53-1, 2**53, 2**53+50, 2**60-1, 2**63-1]).uniq
 result[:durations] = durations.map { |duration| [duration, ApplicationController.helpers.agent_step_duration(duration)] }
+# Inbox pages use real accessible rows and owner-created/settled requests.
+class GoldenController
+  helper ActivityItemsHelper
+end
+agent = bender.agent.reload
+request = AgentApproval.create!(agent:, action: "deploy", summary: "Ship <this> & notify")
+result[:inboxes] = {}
+%w[unread read handled].each do |filter|
+  request.decide!(decision: "approved", by: david) if filter == "handled"
+  Current.user = david
+  scope = ActivityItem.accessible_to(david)
+  unread_count = scope.unread.count
+  items = scope.public_send(filter).ordered.limit(100).to_a
+  helper = ApplicationController.helpers.extend(ActivityItemsHelper)
+  facts = items.map do |item|
+    source = item.source
+    approval = if source.is_a?(AgentApproval)
+      { id: source.id, bot_name: source.agent.user.name,
+        avatar_url: render_with(inline: "<%= fresh_user_avatar_path(bot) %>", locals: { bot: source.agent.user }),
+        room_name: source.room && helper.room_display_name(source.room), action: source.action, summary: source.summary,
+        status: source.effective_status, expires_at: source.expires_at.iso8601, decided_by: source.decided_by&.name,
+        decision_note: source.decision_note.presence, github_login: source.github_login.presence,
+        fizzy_user_name: source.fizzy_user_name.presence, approvable: source.approvable_by?(david) }
+    end
+    Current.user = david
+    { id: item.id, state: item.state, event_label: helper.activity_item_event_label(item),
+      created_at: source&.created_at&.iso8601, approval:,
+      title: helper.activity_item_source_label(item), author: helper.activity_item_source_author(item),
+      body: helper.activity_item_source_body(item).truncate(500) }
+  end
+  result[:inboxes][filter] = { items: facts, unread_count:, html: render_with(user: david, template: "activity_items/index", layout: "application", assigns: { activity_items: items, filter:, type_filter: "all", unread_count:, next_cursor: nil }) }
+end
 File.write("/rails/storage/db/agents-ui.json", JSON.pretty_generate(result) + "\n")
-puts "Rails agent UI goldens: #{result[:pages].size} pages, #{result[:badges].size} badges, 2 thread-step wrappers, #{result[:durations].size} durations"
+puts "Rails agent UI goldens: #{result[:pages].size} pages, #{result[:badges].size} badges, 2 bot profiles, 1 workspace navigation, 3 inbox pages, 2 thread-step wrappers, #{result[:durations].size} durations"

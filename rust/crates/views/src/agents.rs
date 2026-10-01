@@ -37,7 +37,7 @@ impl DirectoryAgent {
             *now,
         )
     }
-    fn last_seen(&self, ctx: &ViewContext, now: &jiff::Timestamp) -> String {
+    pub fn last_seen(&self, ctx: &ViewContext, now: &jiff::Timestamp) -> String {
         self.last_seen_at
             .map(|time| {
                 format!(
@@ -47,7 +47,7 @@ impl DirectoryAgent {
             })
             .unwrap_or_else(|| "never".into())
     }
-    fn badge(&self, ctx: &ViewContext<'_>, now: &jiff::Timestamp) -> askama::Result<h::Html> {
+    pub fn badge(&self, ctx: &ViewContext<'_>, now: &jiff::Timestamp) -> askama::Result<h::Html> {
         Ok(h::raw(
             StatusBadge {
                 ctx,
@@ -110,4 +110,34 @@ impl Directory<'_> {
 pub struct ThreadSteps {
     pub thread_id: i64,
     pub steps: Vec<crate::messages::parts::AgentStep>,
+}
+
+/// Public bot profile facts. Management facts are present only for the owner/admin.
+#[derive(Clone, Debug)]
+pub struct Profile {
+    pub agent: DirectoryAgent,
+    pub provider_runtime: String,
+    pub description: Option<String>,
+    pub rooms: Vec<(i64, String)>,
+    pub has_rooms: bool,
+    pub hidden_room_count: usize,
+    pub grants: String,
+    pub management: Option<(String, String)>,
+}
+#[derive(Template)]
+#[template(path = "users/_agent_profile.html")]
+pub struct ProfileDetails<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub profile: &'a Profile,
+    pub now: jiff::Timestamp,
+}
+impl ProfileDetails<'_> {
+    fn subscription(&self) -> h::Html {
+        h::builder_tag("turbo-cable-stream-source", h::attrs().attr("channel", "AgentsChannel")
+            .attr("signed-stream-name", (self.ctx.signed_stream_name)(&["agents:all"])))
+    }
+    fn rooms(&self) -> h::Html {
+        h::raw(self.profile.rooms.iter().map(|(id, name)|
+            h::link_to_text(name, &h::routes::room(*id), h::attrs()).0).collect::<Vec<_>>().join(", "))
+    }
 }

@@ -94,13 +94,17 @@ pub async fn show(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
+    let profile_viewer = concerns::require_current_user(c)?.clone();
+    let profile_secrets = secrets.clone();
+    let zone = presenters::view_context::Layout::load(c).await?.time_zone;
+    let agent_profile = c.app().db.read(move |conn| presenters::agents::profile(conn, &profile_secrets, id, &profile_viewer, now, &zone)).await.map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     view_context::page_or_frame(
         c,
         StatusCode::OK,
-        |ctx| show_page(ctx, &user, &transfer_id, &profile_status).render(),
+        |ctx| show_page(ctx, &user, &transfer_id, &profile_status, &agent_profile, now.jiff()).render(),
         |ctx| {
-            let page = show_page(ctx, &user, &transfer_id, &profile_status);
+            let page = show_page(ctx, &user, &transfer_id, &profile_status, &agent_profile, now.jiff());
             campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
         },
     )
@@ -112,12 +116,15 @@ fn show_page<'a>(
     user: &users::UserSummary,
     transfer_id: &str,
     status: &users::statuses::ProfileStatus,
+    agent_profile: &Option<campfire_views::agents::Profile>,
+    now: jiff::Timestamp,
 ) -> users::Show<'a> {
     users::Show {
         ctx,
         user: user.clone(),
         transfer_id: transfer_id.to_string(),
         profile_status: Some(status.clone()),
+        agent_profile: agent_profile.clone(), now,
     }
 }
 

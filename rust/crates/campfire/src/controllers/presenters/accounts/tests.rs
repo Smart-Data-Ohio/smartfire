@@ -38,6 +38,8 @@ mod agent_broadcasts;
 mod webhook_secrets;
 #[path = "tests/kill_switch.rs"]
 mod kill_switch;
+#[path = "tests/navigation_inbox.rs"]
+mod navigation_inbox;
 #[path = "tests/member_panel.rs"]
 mod member_panel;
 #[path = "tests/member_polling.rs"]
