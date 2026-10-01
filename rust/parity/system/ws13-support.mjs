@@ -43,7 +43,8 @@ async function fixture(t, names, options={}) {
     // Capybara's selector wait does not bound Selenium page loads. Retain
     // Playwright's normal navigation budget rather than inheriting that 2 s wait.
     page.setDefaultNavigationTimeout(30000);
-    await visitRoom(page,data.room);
+    // Rails opens later sessions only after the first participant has joined.
+    if(!options.defer_visits?.includes(name)) await visitRoom(page,data.room);
     pages[name] = page;
   }
   const state = async () => (await api.request.get(`${origin}/__ws13__/rooms/${data.room}`)).json();

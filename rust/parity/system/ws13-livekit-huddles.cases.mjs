@@ -1,6 +1,7 @@
 // Original Rails huddles declarations. Real local audio/video and native SDK only.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {visitRoom} from './ws13-support.mjs';
 import {mediaFixture,join,leave,click,target,controller,microphone,evaluate,wait,processor,trackId,trackState,storedNoise,constraints,setting,meterLevel,meterRunning,stat,sampling,breakNoise,noise,media,reconnect,permission,restorePermission,participantCount,text,absent} from './ws13-livekit-support.mjs';
 
 test('noise suppression runs on the microphone, can be switched off, and is remembered',async t=>{
@@ -199,7 +200,9 @@ test('two users exchange camera video while navigating, muting, toggling, and le
   await p.locator('#sidebar').getByRole('link',{name:'Designers',exact:false}).click();await leave(p);await join(p);await text(p,target('camera')+'[aria-pressed="false"]','Camera');await absent(p,'.huddle__camera video');
 });
 test('two direct message participants exchange audio and screen while navigating and reconnecting',async t=>{
-  const f=await mediaFixture(t,['david','jason'],{kind:'direct'});const p=f.pages.david;const j=f.pages.jason;await join(p);await join(j);
+  // Original Rails open_huddle_as starts David before signing Jason in.
+  // Jason must not already have a live Cable subscription when the invitation rings.
+  const f=await mediaFixture(t,['david','jason'],{kind:'direct',defer_visits:['jason']});const p=f.pages.david;const j=f.pages.jason;await join(p);await visitRoom(j,f.room);await join(j);
   await text(p,'.room-header__kind','Direct message');await participantCount(p,2);await media(p,'audio');const pcs=await evaluate(p,'window.huddleTestPeerConnections.length');
   await click(p,'Share screen');await p.getByRole('button',{name:'Stop sharing',exact:true}).waitFor();await participantCount(j,2);await media(j,'audio');await j.locator('.huddle__screen video').waitFor();await wait(j,screenVideo,'the direct-message screen did not decode video');await media(j,'video');
   await p.locator('#sidebar').getByRole('link',{name:'HQ',exact:true}).click();await text(p,'.room--current','HQ');await p.locator('#channel-huddle[data-state="connected"]').waitFor();assert.equal(await evaluate(p,'window.huddleTestPeerConnections.length'),pcs);
