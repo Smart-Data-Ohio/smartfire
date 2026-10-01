@@ -1,6 +1,6 @@
 //! `reference/app/models/thread_tag.rb`: one row per tag name on a board post. The tag set is
-//! written through [`ChannelThread`](crate::ChannelThread)'s `tag_names`; its board row
-//! broadcast (`after_commit :broadcast_board_row_replace`) belongs to the board port (WS12).
+//! written through [`ChannelThread`](crate::ChannelThread)'s `tag_names`; each create/destroy
+//! replaces both board rows after commit (`after_commit :broadcast_board_row_replace`).
 
 use rusqlite::{Connection, Row, params};
 

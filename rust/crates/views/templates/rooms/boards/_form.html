@@ -1,4 +1,4 @@
-{% filter room_form(ctx, form.room, form.can_administer, crate::messages::RoomKind::Board) %}
+{{ "\n  " }}{% filter room_form(ctx, form.room, form.can_administer, crate::messages::RoomKind::Board) %}
   {% filter user_filter_menu_tag %}
     {% if form.selected_users.len() + form.unselected_users.len() > 20 %}{{ h::user_filter_search_tag() }}{% endif %}
 
@@ -9,4 +9,4 @@
 {% endif %}
       {{ form.unselected_list(ctx) }}
     </div>
-{% endfilter %}{% endfilter %}
+{% endfilter %}{% endfilter %}{{ "\n" }}

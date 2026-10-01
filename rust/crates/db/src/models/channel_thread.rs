@@ -5,10 +5,10 @@
 //!
 //! Boards and work tracking (WS12) keep their state in this model, so the struct carries every
 //! column and the validations that only read columns are here. What WS12 adds, it adds at the
-//! points marked `WS12:` below: the board-post announcements and row broadcasts
-//! (`announce_board_post`, `broadcast_board_row_*`), tag auto-assignment, the work-status stamp
+//! points marked `WS12:` below: tag auto-assignment, the work-status stamp
 //! for updates, `work_owner_must_be_eligible` for agents, the work update, result and handoff
 //! methods, and the deleted-work webhooks.
+//! Board listings, post/row broadcasts and their commit callbacks live in `channel_thread/board`.
 
 use std::collections::{HashMap, HashSet};
 
@@ -256,7 +256,8 @@ impl ChannelThread {
     /// (`apply_pending_tag_names`), with `work_status_changed_at` stamped when a work status is
     /// set (`stamp_work_status_changed_at`).
     ///
-    /// WS12: `announce_board_post` and `apply_board_tag_auto_assign_on_create` run after commit.
+    /// `announce_board_post` broadcasts the rows and marks the board unread after commit.
+    /// WS12: tag auto-assignment remains with the automation domain.
     pub fn create(tx: &mut Tx<'_>, attributes: NewChannelThread) -> Result<Self> {
         let now = tx.now();
         let room = Room::find(tx.conn(), attributes.room_id)?;

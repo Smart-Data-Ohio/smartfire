@@ -142,13 +142,27 @@ async fn render_form(c: &mut Ctx, room: FormRoom, status: StatusCode) -> Result 
     };
     if let Some(id) = form.room.id {
         let viewer = require_current_user(c)?.clone();
-        let github = c.app().db.read(move |conn| {
-            let room = Room::find(conn, id)?;
-            crate::controllers::presenters::github::subscription_section(conn, &room, &viewer)
-        }).await.map_err(db_error)?;
-        page::framed_page!(c, status, |ctx| campfire_views::rooms::boards::Edit { ctx, form: &form, github: github.clone() }).await
+        let github = c
+            .app()
+            .db
+            .read(move |conn| {
+                let room = Room::find(conn, id)?;
+                crate::controllers::presenters::github::subscription_section(conn, &room, &viewer)
+            })
+            .await
+            .map_err(db_error)?;
+        page::framed_page!(c, status, |ctx| campfire_views::rooms::boards::Edit {
+            ctx,
+            form: &form,
+            github: github.clone()
+        })
+        .await
     } else {
-        page::framed_page!(c, status, |ctx| campfire_views::rooms::boards::New { ctx, form: &form }).await
+        page::framed_page!(c, status, |ctx| campfire_views::rooms::boards::New {
+            ctx,
+            form: &form
+        })
+        .await
     }
 }
 
@@ -265,11 +279,13 @@ async fn broadcast_to_members(c: &mut Ctx, room: &Room, update: bool) -> Result<
                 broadcasts.closed_room_update(conn, &room, &partials, header.as_deref())
             } else {
                 {
-                use crate::channels::broadcasts::{Partials, Stream};
-                let html = partials.shared_room(&room);
-                for user_id in room.user_ids(conn)? { broadcasts.prepend(&Stream::user_rooms(user_id), "board_rooms", &html); }
-                Ok(())
-            }
+                    use crate::channels::broadcasts::{Partials, Stream};
+                    let html = partials.shared_room(&room);
+                    for user_id in room.user_ids(conn)? {
+                        broadcasts.prepend(&Stream::user_rooms(user_id), "board_rooms", &html);
+                    }
+                    Ok(())
+                }
             }
         })
         .await
@@ -277,15 +293,48 @@ async fn broadcast_to_members(c: &mut Ctx, room: &Room, update: bool) -> Result<
 }
 
 pub(crate) async fn render_index(c: &mut Ctx, room: Room) -> Result {
-    let text = |key: &str| c.params.get(key).and_then(|value| value.to_s()).unwrap_or_default();
+    let text = |key: &str| {
+        c.params
+            .get(key)
+            .map(|value| campfire_richtext::ruby::json_value_to_s(&value.to_json()))
+            .unwrap_or_default()
+    };
     let board_view = text("view") == "board";
     let status = text("status");
-    let status = if matches!(status.as_str(), "open"|"done"|"all") {status} else {"open".into()};
+    let status = if matches!(status.as_str(), "open" | "done" | "all") {
+        status
+    } else {
+        "open".into()
+    };
     let owner = text("owner");
-    let owner = if campfire_richtext::ruby::is_blank(&owner) {"anyone".into()} else {owner};
+    let owner = if campfire_richtext::ruby::is_blank(&owner) {
+        "anyone".into()
+    } else {
+        owner
+    };
     let tag = campfire_richtext::ruby::strip(&text("tag")).to_string();
     let number = campfire_db::models::channel_thread::board_page_number(&text("page"));
     let viewer = require_current_user(c)?.clone();
-    let listing = crate::controllers::messages::present(c, move |p| crate::controllers::presenters::boards::listing(p,&room,&viewer,board_view,status,owner,tag,number)).await?;
-    page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::boards::Index {ctx, board:&listing}).await
+    let listing = crate::controllers::messages::present(c, move |p| {
+        crate::controllers::presenters::boards::listing(
+            p,
+            &room,
+            &viewer,
+            crate::controllers::presenters::boards::Filters {
+                board_view,
+                status,
+                owner,
+                tag,
+                page: number,
+            },
+        )
+    })
+    .await?;
+    page::framed_page!(c, StatusCode::OK, |ctx| {
+        campfire_views::rooms::boards::Index {
+            ctx,
+            board: &listing,
+        }
+    })
+    .await
 }

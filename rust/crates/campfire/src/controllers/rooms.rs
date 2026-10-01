@@ -784,3 +784,5 @@ mod review_cache_tests;
 mod boards_read_tests;
 #[cfg(test)]
 mod boards_domain_tests;
+#[cfg(test)]
+mod boards_rails_cases;

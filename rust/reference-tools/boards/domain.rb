@@ -1,5 +1,8 @@
 # Rails callback ordering, tag transactions and full-relation board filters.
 require "json"
+require "digest"
+hashes=JSON.parse(File.read(File.join(ENV.fetch("PARITY_WORK"),"reference-tools/boards/source-hashes.json")))
+hashes.each { |file,hash| raise "source drift: #{file}" unless Digest::SHA256.file(Rails.root.join(file)).hexdigest == hash }
 require "active_support/testing/time_helpers"
 include ActiveSupport::Testing::TimeHelpers
 travel_to Time.utc(2026,3,2,16)

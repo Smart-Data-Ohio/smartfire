@@ -1,2 +1,12 @@
-{% extends "rooms/layouts/_new.html" %}
-{% block room_form %}{% include "rooms/boards/_form.html" %}{% endblock %}
+{% extends "layouts/application.html" %}
+{% block head %}{% endblock %}
+{% block nav %}  <div class="flex-item-justify-start">
+    {{ h::link_back_to_last_room_visited(ctx) }}
+  </div>
+{% endblock %}
+{% block content %}
+
+<section class="panel txt-align-center" style="view-transition-name: new-room">
+  {% include "rooms/boards/_form.html" %}
+</section>
+{% endblock %}
