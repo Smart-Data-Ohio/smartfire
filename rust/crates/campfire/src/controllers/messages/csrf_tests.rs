@@ -39,7 +39,7 @@ async fn fragments(app: &TestApp, ids: Vec<i64>) -> Vec<Arc<String>> {
         let p=Presenter::new(conn,&runtime,None);
         campfire_views::fragment_cache::with(&runtime.fragment_cache,|| ids.iter().map(|id| {
             let message=Message::find(conn,*id)?;
-            let key=campfire_views::messages::collection_fragment_key(&p.message_collection_cache_key(&message)?,"http://campfire.test");
+            let key=p.message_fragment_cache_key(&message,"http://campfire.test")?;
             Ok(campfire_views::fragment_cache::read(&key).expect("actual HTTP populated the shared collection cache"))
         }).collect())
     }).await.unwrap()
@@ -89,7 +89,7 @@ async fn merged_room_shell_mounts_the_shared_collection_fragment_instead_of_rebu
     let cached=app.db().read(move |conn| {
         let p=Presenter::new(conn,&runtime,None);
         let message=Message::find(conn,id)?;
-        let key=campfire_views::messages::collection_fragment_key(&p.message_collection_cache_key(&message)?,"http://campfire.test");
+        let key=p.message_fragment_cache_key(&message,"http://campfire.test")?;
         // A valid tokenless cache value with an inert witness distinguishes reuse
         // from a byte-identical fresh render. No production renderer is mutated.
         let html=oracle()["fragments"][0]["html"].as_str().unwrap().to_owned();

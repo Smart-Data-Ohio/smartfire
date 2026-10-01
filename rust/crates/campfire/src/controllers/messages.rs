@@ -13,7 +13,7 @@ mod review_tests;
 pub mod pins;
 pub mod by_bots;
 pub(crate) mod payload;
-mod freshness;
+pub(crate) mod freshness;
 pub(crate) mod rendered;
 #[cfg(test)]
 mod root_tests;
@@ -21,6 +21,10 @@ mod root_tests;
 mod paging_tests;
 #[cfg(test)]
 mod collection_tests;
+#[cfg(test)]
+mod cache_reaction_review_tests;
+#[cfg(test)]
+mod rendered_dependency_tests;
 #[cfg(test)]
 mod csrf_tests;
 #[cfg(test)]

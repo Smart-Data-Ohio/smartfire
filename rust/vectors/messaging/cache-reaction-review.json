@@ -1,0 +1,125 @@
+{
+  "reference": "d7c7de92",
+  "source_id": 935962058,
+  "reply_id": 935962059,
+  "states": [
+    {
+      "name": "initial",
+      "time": "2026-03-02T16:00:00.000000Z",
+      "collection_key": "messages/935962059-20260302160000000000/////false/false////3",
+      "validator": "messages/935962059-20260302160000000000/messages/935962058-20260302160000000000/20260302160000000000/4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945/3",
+      "html": "\n<div id=\"message_review-cache-reply\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935962059\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"149087659\" data-actions-url=\"http://campfire.test/rooms/486777696/messages/935962059/actions\" data-message-url=\"http://campfire.test/rooms/486777696/messages/935962059\" data-boost-url=\"http://campfire.test/messages/935962059/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_review-cache-reply\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_review-cache-reply\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_review-cache-reply\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Jason\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n        <strong data-reply-target=\"author\">Jason</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962059\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962059\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n            <div class=\"message__reply-preview\" data-reply-preview=\"true\" data-reply-target-id=\"935962058\">\n      <span class=\"message__reply-preview-label\">Replying to <strong>David</strong></span>\n      <a class=\"message__reply-preview-link\" data-reply-target-id=\"935962058\" href=\"http://campfire.test/rooms/486777696/@935962058\">\n        <span class=\"overflow-ellipsis\">Review before edit</span>\n        <span class=\"for-screen-reader\">View original message</span>\n</a>  </div>\n\n\n          <div id=\"presentation_message_review-cache-reply\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Review reply</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_review-cache-reply\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_review-cache-reply\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_review-cache-reply\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_review-cache-reply\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_review-cache-reply\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_review-cache-reply\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_review-cache-reply\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_review-cache-reply\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_review-cache-reply\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_review-cache-reply\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935962059/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_review-cache-reply\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>"
+    },
+    {
+      "name": "source_edited",
+      "time": "2026-03-02T16:00:00.125000Z",
+      "collection_key": "messages/935962059-20260302160000000000/////false/false////3",
+      "validator": "messages/935962059-20260302160000000000/messages/935962058-20260302160000125000/20260302160000125000/4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945/3",
+      "html": "\n<div id=\"message_review-cache-reply\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935962059\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"149087659\" data-actions-url=\"http://campfire.test/rooms/486777696/messages/935962059/actions\" data-message-url=\"http://campfire.test/rooms/486777696/messages/935962059\" data-boost-url=\"http://campfire.test/messages/935962059/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_review-cache-reply\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_review-cache-reply\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_review-cache-reply\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Jason\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n        <strong data-reply-target=\"author\">Jason</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962059\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962059\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n            <div class=\"message__reply-preview\" data-reply-preview=\"true\" data-reply-target-id=\"935962058\">\n      <span class=\"message__reply-preview-label\">Replying to <strong>David</strong></span>\n      <a class=\"message__reply-preview-link\" data-reply-target-id=\"935962058\" href=\"http://campfire.test/rooms/486777696/@935962058\">\n        <span class=\"overflow-ellipsis\">Review after edit</span>\n        <span class=\"for-screen-reader\">View original message</span>\n</a>  </div>\n\n\n          <div id=\"presentation_message_review-cache-reply\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Review reply</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_review-cache-reply\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_review-cache-reply\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_review-cache-reply\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_review-cache-reply\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_review-cache-reply\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_review-cache-reply\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_review-cache-reply\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_review-cache-reply\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_review-cache-reply\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_review-cache-reply\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935962059/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_review-cache-reply\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>"
+    },
+    {
+      "name": "author_renamed",
+      "time": "2026-03-02T16:00:00.250000Z",
+      "collection_key": "messages/935962059-20260302160000000000/////false/false////3",
+      "validator": "messages/935962059-20260302160000000000/messages/935962058-20260302160000125000/20260302160000250000/4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945/3",
+      "html": "\n<div id=\"message_review-cache-reply\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935962059\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"149087659\" data-actions-url=\"http://campfire.test/rooms/486777696/messages/935962059/actions\" data-message-url=\"http://campfire.test/rooms/486777696/messages/935962059\" data-boost-url=\"http://campfire.test/messages/935962059/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_review-cache-reply\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_review-cache-reply\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_review-cache-reply\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Jason\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n        <strong data-reply-target=\"author\">Jason</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962059\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962059\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n            <div class=\"message__reply-preview\" data-reply-preview=\"true\" data-reply-target-id=\"935962058\">\n      <span class=\"message__reply-preview-label\">Replying to <strong>Review renamed author</strong></span>\n      <a class=\"message__reply-preview-link\" data-reply-target-id=\"935962058\" href=\"http://campfire.test/rooms/486777696/@935962058\">\n        <span class=\"overflow-ellipsis\">Review after edit</span>\n        <span class=\"for-screen-reader\">View original message</span>\n</a>  </div>\n\n\n          <div id=\"presentation_message_review-cache-reply\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Review reply</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_review-cache-reply\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_review-cache-reply\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_review-cache-reply\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_review-cache-reply\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_review-cache-reply\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_review-cache-reply\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_review-cache-reply\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_review-cache-reply\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_review-cache-reply\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_review-cache-reply\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935962059/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_review-cache-reply\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>"
+    }
+  ],
+  "reactions": [
+    {
+      "content": " 👍 ",
+      "resolved": " 👍 ",
+      "reaction": false,
+      "counts": [
+        1,
+        2
+      ],
+      "stored": [
+        " 👍 ",
+        " 👍 "
+      ]
+    },
+    {
+      "content": " 👍 ",
+      "resolved": " 👍 ",
+      "reaction": false,
+      "counts": [
+        1,
+        2
+      ],
+      "stored": [
+        " 👍 ",
+        " 👍 "
+      ]
+    },
+    {
+      "content": " 👍 ",
+      "resolved": " 👍 ",
+      "reaction": false,
+      "counts": [
+        1,
+        2
+      ],
+      "stored": [
+        " 👍 ",
+        " 👍 "
+      ]
+    },
+    {
+      "content": "　:thumbsup:　",
+      "resolved": "　:thumbsup:　",
+      "reaction": false,
+      "counts": [
+        1,
+        2
+      ],
+      "stored": [
+        "　:thumbsup:　",
+        "　:thumbsup:　"
+      ]
+    },
+    {
+      "content": "\u0000 \t\n\r\u000b\f👍\f\u000b\r\n\t \u0000",
+      "resolved": "👍",
+      "reaction": true,
+      "counts": [
+        1,
+        0
+      ],
+      "stored": []
+    },
+    {
+      "content": " :thumbsup: ",
+      "resolved": "👍",
+      "reaction": true,
+      "counts": [
+        1,
+        0
+      ],
+      "stored": []
+    },
+    {
+      "content": " :gpt: ",
+      "resolved": ":openai:",
+      "reaction": true,
+      "counts": [
+        1,
+        0
+      ],
+      "stored": []
+    },
+    {
+      "content": " :does_not_exist: ",
+      "resolved": ":does_not_exist:",
+      "reaction": false,
+      "counts": [
+        1,
+        2
+      ],
+      "stored": [
+        ":does_not_exist:",
+        ":does_not_exist:"
+      ]
+    }
+  ]
+}

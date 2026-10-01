@@ -231,7 +231,7 @@ impl super::Presenter<'_> {
             if pr.stale(campfire_db::Timestamp::from_jiff(self.now)) { self.remember_github_refresh(id); }
         }
         let base = self.cache_base_url.as_deref().unwrap_or("http://example.org");
-        super::page::render_detached_at(self.app, None, base, |ctx| thread_header(self.conn, ctx, thread))
+        super::page::render_detached_in_zone(self.app, None, base, &self.render_zone, |ctx| thread_header(self.conn, ctx, thread))
             .map(campfire_views::helpers::raw)
     }
 }

@@ -234,7 +234,7 @@ impl Preloads {
 }
 // Stored ActionText nodes are canonicalized, but also scan Trix JSON and nested content.
 // Decoding is the established, User-only unverified-SGID fallback, never Marshal loading.
-fn mention_ids(body: &str, depth: usize) -> Vec<i64> {
+pub(crate) fn mention_ids(body: &str, depth: usize) -> Vec<i64> {
     if depth > 32 {
         return vec![];
     }
