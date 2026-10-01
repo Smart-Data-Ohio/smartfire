@@ -213,3 +213,22 @@ pub fn thread_header(
         &data,
     ))
 }
+
+impl super::Presenter<'_> {
+    /// The owned thread page calls WS15g's private-safe adapter after room authorization.
+    /// Rendering records refresh intent; the caller enqueues after releasing this reader.
+    pub fn github_thread_header(&self, thread: &campfire_db::ChannelThread) -> Result<campfire_views::helpers::Html> {
+        use rusqlite::OptionalExtension;
+        let id = self.conn.query_row(
+            "SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=? AND room_id=?",
+            rusqlite::params![thread.id, thread.room_id], |r| r.get::<_, i64>(0),
+        ).optional()?;
+        if let Some(id) = id {
+            let pr = PullRequest::find(self.conn, id)?;
+            if pr.stale(campfire_db::Timestamp::from_jiff(self.now)) { self.github_refreshes.borrow_mut().insert(id); }
+        }
+        let base = self.cache_base_url.as_deref().unwrap_or("http://example.org");
+        super::page::render_detached_at(self.app, None, base, |ctx| thread_header(self.conn, ctx, thread))
+            .map(campfire_views::helpers::raw)
+    }
+}

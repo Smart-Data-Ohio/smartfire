@@ -9,6 +9,8 @@ pub use writes::{create, destroy, new, update};
 pub(crate) mod write_tests;
 #[cfg(test)]
 mod content_tests;
+#[cfg(test)]
+mod github_tests;
 
 use askama::Template;
 use campfire_db::{ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, Timestamp};
@@ -130,18 +132,15 @@ async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Mess
         Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name(),
             render_thread_pull_request_header(p, &thread)?))
     }).await?;
-    // Work/board/PR sections are integration seams with WS12/WS15. The ordinary standalone
+    // Work/board sections remain WS12 seams. The standalone PR header uses WS15g. The ordinary standalone
     // thread uses the same stable collection entry point as the room's message list.
     page::titled_content(c, response_status, &name, |ctx| campfire_views::channel_threads::Show { ctx,
         name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items }.render()).await
 }
 
-/// WS15g integration call site: resolve `github_pr_thread_pull_request(thread)` here, then
-/// lend its card to `campfire_views::github::thread_header(ctx, room_id, thread_id, card)`.
-/// Neither provider is on main at this branch's baseline. This is an explicit empty-fragment
-/// seam, not acceptance of populated PR headers; it does not block ordinary thread HTML.
-fn render_thread_pull_request_header(_p: &crate::controllers::presenters::Presenter<'_>, _thread: &ChannelThread) -> campfire_db::Result<campfire_views::helpers::Html> {
-    Ok(campfire_views::helpers::empty())
+/// Named WS15g integration call site, after authorizing the parent room and scoped thread.
+fn render_thread_pull_request_header(p: &crate::controllers::presenters::Presenter<'_>, thread: &ChannelThread) -> campfire_db::Result<campfire_views::helpers::Html> {
+    p.github_thread_header(thread)
 }
 
 fn work_status_label(status: Option<&str>) -> Option<&'static str> {
