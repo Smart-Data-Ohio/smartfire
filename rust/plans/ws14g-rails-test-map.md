@@ -1,18 +1,18 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 117 ported domain/API/controller cases; 494 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 138 ported domain/API/controller cases; 473 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
 
 ## test/controllers/accounts/users/google_links_controller_test.rb
 
-- **Partial** — administrators allow a Google link for a self-changed email — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — administrators unlink a Google identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — members cannot allow or remove Google links — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — bots have no Google link to manage — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — the account page offers the controls to administrators only — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — administrators allow a Google link for a self-changed email — `app::google_admin_tests::google_admin_link_controls_and_all_security_audits_match_pinned_rails` (allow + idempotent repeat; exact audit fields).
+- **Ported** — administrators unlink a Google identity — `app::google_admin_tests::google_admin_link_controls_and_all_security_audits_match_pinned_rails` (unlink + idempotent repeat; exact audit fields).
+- **Ported** — members cannot allow or remove Google links — `app::google_admin_tests::google_admin_link_controls_and_all_security_audits_match_pinned_rails`; removing the permission guard fails at member_allow (302 versus Rails 403).
+- **Ported** — bots have no Google link to manage — `app::google_admin_tests::google_admin_link_controls_and_all_security_audits_match_pinned_rails` (bot_target).
+- **Ported** — the account page offers the controls to administrators only — `app::google_admin_tests::google_admin_link_controls_and_all_security_audits_match_pinned_rails`; `campfire_views::core::google_administrator_link_forms_match_complete_pinned_rails_bytes` compares every complete form across eleven row states.
 
 ## test/controllers/agents/drive_attachments_delivery_test.rb
 
@@ -66,7 +66,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — callback with a failed exchange redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
 - **Ported** — callback without an id_token redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
 - **Ported** — callback with an id_token for another client redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
-- **Partial** — disconnect clears local state without waiting on Google, then cleans up remotely — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — disconnect clears local state without waiting on Google, then cleans up remotely — `app::google_lifecycle_tests::google_user_lifecycle_matches_every_recorded_rails_state_and_publication` (disconnect scenarios; exact committed state at channels/stop, snapshot and cleanup job).
 - **Ported** — disconnect without readable tokens skips cleanup but still disconnects — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
 - **Ported** — disconnect drops the meeting cache — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
 - **Deferred** — disconnect while in a meeting broadcasts the cleared badge — WS14g integration with WS17 status/OOO broadcast claims; cache removal is ported, the cleared badge broadcast remains absent.
@@ -339,27 +339,27 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/jobs/calendar/inbound_sync_job_test.rb
 
-- **Deferred** — a copy cancelled in Google declines the event locally — WS14g continuation.
-- **Deferred** — a copy deleted in Google declines the event locally — WS14g continuation.
-- **Deferred** — a confirmed copy never flips a local decline back to going — WS14g continuation.
-- **Deferred** — a confirmed copy leaves a going response alone — WS14g continuation.
-- **Deferred** — cancelled events are never touched — WS14g continuation.
-- **Deferred** — nothing happens without a usable account — WS14g continuation.
-- **Deferred** — a revoked grant aborts the sweep instead of failing every entry — WS14g continuation.
-- **Deferred** — the sweep preloads events instead of querying per entry — WS14g continuation.
+- **Ported** — a copy cancelled in Google declines the event locally — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (cancelled_going + head/follower series states), through WS14e respond.
+- **Ported** — a copy deleted in Google declines the event locally — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (deleted_maybe).
+- **Ported** — a confirmed copy never flips a local decline back to going — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (confirmed_declined; response and update stamp).
+- **Ported** — a confirmed copy leaves a going response alone — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (confirmed_going; attendance updated_at starts sixty seconds earlier and stays unchanged).
+- **Ported** — cancelled events are never touched — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (cancelled_local; zero Google requests).
+- **Ported** — nothing happens without a usable account — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (missing_account, disconnected, wrong_scope).
+- **Ported** — a revoked grant aborts the sweep instead of failing every entry — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (revoked_aborts; one entry request and invalid_grant disconnect).
+- **Partial** — the sweep preloads events instead of querying per entry — the native joined projection batches upcoming entries without per-entry Event loading; the SQL-read-count regression remains WS14g work.
 
 ## test/jobs/calendar/meet_link_job_test.rb
 
-- **Deferred** — provisions a Meet link through the organizer's calendar copy — WS14g continuation.
-- **Deferred** — nothing happens without a request — WS14g continuation.
-- **Deferred** — no Meet link unless the organizer has connected Google — WS14g continuation.
-- **Deferred** — a disconnected organizer account provisions nothing — WS14g continuation.
-- **Deferred** — a second run is a no-op once the link exists — WS14g continuation.
-- **Deferred** — a permanent Google refusal is logged, not raised — WS14g continuation.
-- **Deferred** — a pending conference without a link raises for the job to retry — WS14g continuation.
-- **Deferred** — a pending conference schedules a job retry with backoff — WS14g continuation.
-- **Deferred** — creating an event with a request enqueues provisioning — WS14g continuation.
-- **Deferred** — a series copies the request to every occurrence — WS14g continuation.
+- **Ported** — provisions a Meet link through the organizer's calendar copy — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (provisions; exact POST/PATCH payloads, no PUT).
+- **Ported** — nothing happens without a request — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (not_requested).
+- **Ported** — no Meet link unless the organizer has connected Google — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (organizer_unconnected).
+- **Ported** — a disconnected organizer account provisions nothing — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (organizer_disconnected).
+- **Ported** — a second run is a no-op once the link exists — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (existing_link; same pre-existing-link setup as Rails).
+- **Ported** — a permanent Google refusal is logged, not raised — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (patch_refused; no exception, nil link and request flag retained, matching the Rails assertions).
+- **Ported** — a pending conference without a link raises for the job to retry — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (pending; exact Unavailable, nil link and request flag retained).
+- **Ported** — a pending conference schedules a job retry with backoff — `app::google_consumer_tests::google_pending_meet_conference_uses_the_real_durable_retry_handler`; actual runner persists the original args, first group count, and Rails polynomial delay.
+- **Outside slice** — creating an event with a request enqueues provisioning — WS14e owns the Event producer. WS14g consumes its exact class and payload; see WS14e tests.
+- **Outside slice** — a series copies the request to every occurrence — WS14e owns recurrence and Event producers; WS14g consumes the emitted jobs.
 
 ## test/jobs/calendar/remote_delete_job_test.rb
 
@@ -818,10 +818,12 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## Continuation coverage and remaining seams
 
-Connection controllers and Google API refresh/revoke are implemented with recorded Rails fixtures. SyncEntry, RemoteDelete, WatchChannel, DisconnectCleanup and MeetingRefresh now have registered consumers; deterministic entry IDs/payloads, interval sets, cache completion, throttle claims, cleanup ordering and channel replacement have native coverage. MeetLink and InboundSync remain WS14g work: they must use WS14e's validated Event.update/attendance response callbacks once the integration seam is available, rather than write Event rows directly. Job payload declarations remain matched to Rails and WS14e/WS17.
+Main was merged at `35c0e65b` to consume WS14e's `CalendarEvent::respond` and `CalendarEvent::save_meet_link`. All seven Calendar classes, including InboundSync and MeetLink, now have registered consumers. The 38 pinned consumer scenarios exercise exact HTTP, responses, attendance timestamps, link/request flags, queue emissions, channel errors and disconnects. Real-runner tests verify declines, provisioning and pending retries. Late enqueue failures roll back domain changes and callback jobs; complete Meet-card and disconnect status/OOO socket frames are compared with Rails after commit. Compound attendance parameters have 24 Rails-generated GET/PATCH vectors with exact opening-frame and hidden-input bytes.
 
-The Google profile connection and sign-in panels are byte-identical for seven connection and three identity states; Drive chips are exact for empty and populated attachments. Complete page composition and visual comparisons still need work with WS6/WS19. The profile renderer now reads Calendar connection and login identity separately. Metadata/search and human room recipients are implemented; valid agent-token authorization depends on WS11's base authentication seam. Message attachment submission remains with WS8b-m/m2 and WS11-api: Rails permits authorized message writers to submit IDs without a Google grant. Existing Message validation/save/touch/cascade code is reused.
+Retry budgets now persist by Rails exception-handler group, survive restarts and reset on manual retry. Six serialized Rails retry sequences cover mixed inherited/Google errors and exhaustion. Native tests cover writer rollback, expired process leases, explicit re-enqueue and terminal cleanup. Rails.error subscriber integration and cleanup account-id error context remain unfinished.
 
-Ten additional coalesced session tests cover the largest controller file. Four further connection controller tests cover authorize guards/parameter shapes, exact rejection notices with no grant/audit/job writes, granted/omitted scope retention and reconnect, and unreadable-token disconnect with cache removal, retained flags and isolated entries/grants. Cases left Partial still need their complete original assertions; deactivation/ban races, account history/password preservation, rotation over HTTP, authenticated replay, full configured pages, some audits and admin controls remain individually assigned above. Other Calendar/Drive files retain Partial/Deferred where the exact named case is not yet mapped; native representative tests are not a claim that all 611 declarations are done.
+The profile connection/sign-in panels match seven connection and three identity states, Drive chips match empty/populated states, and administrator allow/unlink forms match eleven account rows byte for byte. Complete configured pages and interaction assertions remain WS14g work with the page/layout owners. No browser pixel-diff work is required or listed as remaining.
 
-Retry bookkeeping note: Calendar handlers preserve eight Google attempts and five inherited SQLite busy attempts. The shared durable runner counts total executions; Rails keeps exception-handler-specific counters when error classes alternate. That remaining queue contract belongs with WS3 integration. Cleanup exhaustion now completes after logging, matching the Rails retry block; the separate Rails.error reporting subscriber integration remains unfinished.
+The WS11 agent credential/authentication seam is now on merged main; it is consumed rather than reimplemented. Drive attachment message submission/JSON/thread broadcasts remain with WS8b-m/m2 and agent polling/REST delivery with WS11-api. Existing Message attachment domain validation/save/touch/cascade code remains shared. Human recipient policy and viewer metadata authorization are implemented; remaining named tests below their respective headings remain explicitly partial/deferred.
+
+The remaining session/link/step-up controller cases include account history/password preservation, domain/rotation changes across HTTP, authenticated replay, deactivation/ban races and the full original audits/page assertions. Existing representative tests do not count as completion of an unmapped Rails case. The SQL-read-count assertion for inbound preloading is also unfinished.

@@ -84,8 +84,9 @@ specs.each_with_index do |spec,i|
   target.update_column(:title,'') if spec[:invalid]
   user.update_columns(status:1) if spec[:inactive]
   membership.delete if spec[:nonmember]
-  before=rows.map { |e| {id:e.id,starts_at:e.reload.starts_at.iso8601,ends_at:e.ends_at&.iso8601,cancelled:e.cancelled?,requested:e.meet_link_requested?,link:e.meet_link,response:e.response_for(user)} }
-  before << {id:extra.id,starts_at:extra.starts_at.iso8601,ends_at:nil,cancelled:false,requested:false,link:nil,response:extra.response_for(user)} if extra
+  EventAttendance.where(event_id: (rows.map(&:id)+[extra&.id]).compact, user_id: user.id).update_all(updated_at:now-60)
+  before=rows.map { |e| {id:e.id,starts_at:e.reload.starts_at.iso8601,ends_at:e.ends_at&.iso8601,cancelled:e.cancelled?,requested:e.meet_link_requested?,link:e.meet_link,response:e.response_for(user),attendance_updated_at:e.attendances.find_by(user:)&.updated_at&.iso8601} }
+  before << {id:extra.id,starts_at:extra.starts_at.iso8601,ends_at:nil,cancelled:false,requested:false,link:nil,response:extra.response_for(user),attendance_updated_at:extra.attendances.find_by(user:)&.updated_at&.iso8601} if extra
   answers.replace([spec.fetch(:remote,[200,spec[:kind]=='meet' ? {hangoutLink:'https://meet.google.com/abc-defg-hij'} : {status:'confirmed'}])])
   answers.unshift(spec.fetch(:insert,[200,{}])) if spec[:kind]=='meet'
   answers << spec[:refresh] if spec[:refresh]
@@ -102,7 +103,7 @@ specs.each_with_index do |spec,i|
     error=e.class.name
   end
   jobs=ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j|j[:job].name.start_with?('Calendar::') }.map { |j| {class:j[:job].name,args:j[:args]} }
-  out[:cases] << {spec:,events:before,entry_id:entry&.id,error:,calls:calls.dup,link:target.reload.meet_link,responses:before.map { |e|Event.find(e[:id]).response_for(user) },jobs:,channel_error:channel.reload.last_error,connected:account&.reload&.connected?,announcement_id:,frames:frames.dup}
+  out[:cases] << {spec:,events:before,entry_id:entry&.id,error:,calls:calls.dup,link:target.reload.meet_link,requested:target.meet_link_requested?,attendance_updated_at:before.map { |e|EventAttendance.find_by(event_id:e[:id],user_id:user.id)&.updated_at&.iso8601 },responses:before.map { |e|Event.find(e[:id]).response_for(user) },jobs:,channel_error:channel.reload.last_error,connected:account&.reload&.connected?,announcement_id:,frames:frames.dup}
   room.memberships.create!(user:,involvement:membership.involvement) if spec[:nonmember]
   user.update_columns(status:0)
 end

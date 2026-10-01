@@ -6,6 +6,7 @@ use crate::{
 use campfire_db::{CalendarEvent, Timestamp};
 use campfire_kit::FrozenClock;
 use hyper::Method;
+use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 
@@ -52,7 +53,7 @@ async fn fixture(case: &Value) -> (TestApp, Arc<Recorded>) {
             let series=spec["series"]==true;
             tx.conn().execute("INSERT INTO events(id,room_id,organizer_id,title,starts_at,ends_at,time_zone,series_id,recurrence_rule,recurrence_until,meet_link_requested,meet_link,cancelled_at,created_at,updated_at) VALUES(?,?,?,'Calendar consumer',?,?,'UTC',?,?,?,?,?,?,?,?)",rusqlite::params![id,ALL_TALK,DAVID,row["starts_at"].as_str().unwrap().parse::<jiff::Timestamp>().map(Timestamp::from_jiff).unwrap(),row["ends_at"].as_str().map(|s|s.parse::<jiff::Timestamp>().map(Timestamp::from_jiff).unwrap()),series.then_some(head),series.then_some("weekly"),series.then_some("2026-03-16"),row["requested"].as_bool().unwrap(),row["link"].as_str(),(row["cancelled"]==true).then_some(tx.now()),tx.now(),tx.now()])?;
             if let Some(response)=row["response"].as_str() {
-                tx.conn().execute("INSERT INTO event_attendances(event_id,user_id,response,created_at,updated_at) VALUES(?,?,?,?,?)",rusqlite::params![id,DAVID,response,tx.now(),tx.now()])?;
+                tx.conn().execute("INSERT INTO event_attendances(event_id,user_id,response,created_at,updated_at) VALUES(?,?,?,?,?)",rusqlite::params![id,DAVID,response,tx.now(),tx.now().ago(jiff::SignedDuration::from_secs(60))])?;
             }
         }
         let index=spec["index"].as_u64().unwrap_or(0) as usize;
@@ -170,13 +171,24 @@ async fn google_consumers_match_every_recorded_rails_state_and_request() {
             .collect::<Vec<_>>();
         let snapshot=a.db().read(move |c| {
             let responses=ids.iter().map(|id|CalendarEvent::find(c,*id)?.response_for(c,Some(DAVID))).collect::<campfire_db::Result<Vec<_>>>()?;
-            let link=CalendarEvent::find(c,event_id)?.meet_link;
+            let event=CalendarEvent::find(c,event_id)?;
+            let link=event.meet_link;
+            let requested=event.meet_link_requested;
+            let attendance_updated_at=ids.iter().map(|id| c.query_row("SELECT updated_at FROM event_attendances WHERE event_id=? AND user_id=?",rusqlite::params![id,DAVID],|row| row.get::<_,Timestamp>(0)).optional().map(|stamp| stamp.map(|stamp|stamp.jiff().to_string()))).collect::<rusqlite::Result<Vec<_>>>()?;
             let jobs=c.prepare("SELECT job_class,arguments FROM background_jobs WHERE job_class LIKE 'Calendar::%' ORDER BY id")?.query_map([],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?)))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().map(|(class,args)|{let args:Value=serde_json::from_str(&args).unwrap();json!({"class":class,"args":[args["event_id"],args["user_id"]]})}).collect::<Vec<_>>();
             let channel_error=c.query_row("SELECT last_error FROM calendar_push_channels WHERE user_id=?",[DAVID],|r|r.get::<_,Option<String>>(0))?;
             let connected=campfire_db::models::google_account::GoogleAccount::for_user(c,DAVID)?.map(|a|a.connected());
-            Ok(json!({"responses":responses,"link":link,"jobs":jobs,"channel_error":channel_error,"connected":connected}))
+            Ok(json!({"responses":responses,"link":link,"requested":requested,"attendance_updated_at":attendance_updated_at,"jobs":jobs,"channel_error":channel_error,"connected":connected}))
         }).await.unwrap();
-        for key in ["responses", "link", "jobs", "channel_error", "connected"] {
+        for key in [
+            "responses",
+            "link",
+            "requested",
+            "attendance_updated_at",
+            "jobs",
+            "channel_error",
+            "connected",
+        ] {
             assert_eq!(snapshot[key], case[key], "{name}: {key}");
         }
         println!("Pinned Rails Calendar consumer {name}: passed");

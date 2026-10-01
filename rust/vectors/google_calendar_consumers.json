@@ -21,7 +21,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000000,
@@ -34,6 +35,10 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T16:00:00Z"
+      ],
       "responses": [
         "declined"
       ],
@@ -69,7 +74,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "maybe"
+          "response": "maybe",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000010,
@@ -82,6 +88,10 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T16:00:00Z"
+      ],
       "responses": [
         "declined"
       ],
@@ -113,7 +123,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "declined"
+          "response": "declined",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000020,
@@ -126,6 +137,10 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "declined"
       ],
@@ -148,7 +163,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000030,
@@ -161,6 +177,10 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -187,7 +207,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000040,
@@ -200,6 +221,10 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -229,7 +254,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": null
+          "response": null,
+          "attendance_updated_at": null
         }
       ],
       "entry_id": 9200000050,
@@ -242,6 +268,10 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        null
+      ],
       "responses": [
         null
       ],
@@ -265,13 +295,18 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000060,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -295,13 +330,18 @@
           "cancelled": true,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000070,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -325,13 +365,18 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000080,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -355,13 +400,18 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000090,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -385,13 +435,18 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000100,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -415,13 +470,18 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000110,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -445,13 +505,18 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000120,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -481,7 +546,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000131,
@@ -490,7 +556,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000132,
@@ -499,7 +566,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000130,
@@ -512,6 +580,12 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T16:00:00Z",
+        "2026-03-02T16:00:00Z",
+        "2026-03-02T16:00:00Z"
+      ],
       "responses": [
         "declined",
         "declined",
@@ -564,7 +638,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000141,
@@ -573,7 +648,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000142,
@@ -582,7 +658,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000140,
@@ -595,6 +672,12 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z",
+        "2026-03-02T16:00:00Z",
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going",
         "declined",
@@ -636,7 +719,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000155,
@@ -645,7 +729,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000150,
@@ -663,6 +748,11 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z",
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going",
         "going"
@@ -691,7 +781,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000165,
@@ -700,7 +791,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000160,
@@ -718,6 +810,11 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z",
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going",
         "going"
@@ -746,7 +843,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000175,
@@ -755,7 +853,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000170,
@@ -768,6 +867,11 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z",
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going",
         "going"
@@ -796,7 +900,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000185,
@@ -805,7 +910,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000180,
@@ -818,6 +924,11 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z",
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going",
         "going"
@@ -852,7 +963,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         },
         {
           "id": 9100000195,
@@ -861,7 +973,8 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000190,
@@ -884,6 +997,11 @@
         }
       ],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z",
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going",
         "going"
@@ -907,7 +1025,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -946,6 +1065,10 @@
         }
       ],
       "link": "https://meet.google.com/abc-defg-hij",
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -956,7 +1079,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
-          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-provisions\"><template>  <div id=\"event_cards_message_consumer-provisions\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000200\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000200\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962083_event_9100000200\" src=\"/rooms/486777696/events/9100000200/attendance?message_id=935962083\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-provisions\"><template>  <div id=\"event_cards_message_consumer-provisions\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000200\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000200\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962083_event_9100000200\" src=\"/rooms/486777696/events/9100000200/attendance?message_id=935962083\">\n    <p class=\"event-card__response-loading\">Loading response\u2026</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
         }
       ]
     },
@@ -974,7 +1097,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": 9200000210,
@@ -1012,6 +1136,10 @@
         }
       ],
       "link": "https://meet.google.com/abc-defg-hij",
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1022,7 +1150,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
-          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-synced_copy\"><template>  <div id=\"event_cards_message_consumer-synced_copy\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000210\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000210\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962084_event_9100000210\" src=\"/rooms/486777696/events/9100000210/attendance?message_id=935962084\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-synced_copy\"><template>  <div id=\"event_cards_message_consumer-synced_copy\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000210\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000210\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962084_event_9100000210\" src=\"/rooms/486777696/events/9100000210/attendance?message_id=935962084\">\n    <p class=\"event-card__response-loading\">Loading response\u2026</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
         }
       ]
     },
@@ -1040,13 +1168,18 @@
           "cancelled": false,
           "requested": false,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": false,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1070,13 +1203,18 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1100,13 +1238,18 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1130,13 +1273,18 @@
           "cancelled": false,
           "requested": true,
           "link": "https://meet.google.com/existing",
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
       "error": null,
       "calls": [],
       "link": "https://meet.google.com/existing",
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1160,13 +1308,18 @@
           "cancelled": true,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
       "error": null,
       "calls": [],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1197,7 +1350,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1225,6 +1379,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1251,7 +1409,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1279,6 +1438,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1309,7 +1472,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1348,6 +1512,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1374,7 +1542,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1413,6 +1582,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1439,7 +1612,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1478,6 +1652,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1504,7 +1682,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1543,6 +1722,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1575,7 +1758,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1614,6 +1798,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1640,7 +1828,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1679,6 +1868,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1707,7 +1900,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1746,6 +1940,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1774,7 +1972,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1813,6 +2012,10 @@
         }
       ],
       "link": "7",
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
@@ -1823,7 +2026,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
-          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-scalar_link\"><template>  <div id=\"event_cards_message_consumer-scalar_link\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000360\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000360\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962099_event_9100000360\" src=\"/rooms/486777696/events/9100000360/attendance?message_id=935962099\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-scalar_link\"><template>  <div id=\"event_cards_message_consumer-scalar_link\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000360\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000360\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962099_event_9100000360\" src=\"/rooms/486777696/events/9100000360/attendance?message_id=935962099\">\n    <p class=\"event-card__response-loading\">Loading response\u2026</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
         }
       ]
     },
@@ -1841,7 +2044,8 @@
           "cancelled": false,
           "requested": true,
           "link": null,
-          "response": "going"
+          "response": "going",
+          "attendance_updated_at": "2026-03-02T15:59:00Z"
         }
       ],
       "entry_id": null,
@@ -1880,6 +2084,10 @@
         }
       ],
       "link": null,
+      "requested": true,
+      "attendance_updated_at": [
+        "2026-03-02T15:59:00Z"
+      ],
       "responses": [
         "going"
       ],
