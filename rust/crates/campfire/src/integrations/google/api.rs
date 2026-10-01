@@ -142,7 +142,12 @@ impl Api {
                 query(params).into_bytes(),
             )
             .await
-            .map_err(|_| Error::Unavailable("Google Calendar request failed (transport)".into()))
+            .map_err(|error| {
+                Error::Unavailable(format!(
+                    "Google Calendar request failed ({})",
+                    error.class()
+                ))
+            })
     }
     pub async fn exchange_code(&self, code: &str, redirect_uri: &str) -> Result<Value> {
         let (status, body) = self
@@ -371,10 +376,11 @@ impl Api {
                     .unwrap_or_default(),
             )
             .await
-            .map_err(|_| {
+            .map_err(|error| {
                 Error::Unavailable(format!(
-                    "Google {} request failed (transport)",
-                    if request.drive { "Drive" } else { "Calendar" }
+                    "Google {} request failed ({})",
+                    if request.drive { "Drive" } else { "Calendar" },
+                    error.class()
                 ))
             })
     }

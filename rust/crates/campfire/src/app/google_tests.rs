@@ -46,7 +46,7 @@ impl Client for Recorded {
                             include_bytes!("../integrations/google/test-jwks.json").to_vec(),
                         ))
                     })
-                    .map_err(|_| Unavailable);
+                    .map_err(|_| crate::integrations::net::http::HttpError::OpenTimeout.into());
             }
             assert_eq!(
                 (host, method, target),
@@ -56,7 +56,7 @@ impl Client for Recorded {
                 .lock()
                 .unwrap()
                 .clone()
-                .map_err(|_| Unavailable)
+                .map_err(|_| crate::integrations::net::http::HttpError::OpenTimeout.into())
         })
     }
 }

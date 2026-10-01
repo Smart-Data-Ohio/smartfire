@@ -61,10 +61,13 @@ impl QueueDrain {
         a: &TestApp,
         attempt: u32,
     ) -> Option<campfire_db::Timestamp> {
+        self.job_attempt(a, "Calendar::DisconnectCleanupJob", attempt).await
+    }
+    pub async fn job_attempt(&mut self, a: &TestApp, class: &'static str, attempt: u32) -> Option<campfire_db::Timestamp> {
         use rusqlite::OptionalExtension;
         loop {
             while self.changed.try_recv().is_ok() {}
-            let row=a.db().write(|tx| Ok(tx.conn().query_row("SELECT status,attempts,run_at,last_error FROM background_jobs WHERE job_class='Calendar::DisconnectCleanupJob'",[],|r|Ok((r.get::<_,String>(0)?,r.get::<_,u32>(1)?,r.get::<_,campfire_db::Timestamp>(2)?,r.get::<_,Option<String>>(3)?))).optional()?)).await.unwrap();
+            let row=a.db().write(move |tx| Ok(tx.conn().query_row("SELECT status,attempts,run_at,last_error FROM background_jobs WHERE job_class=?",[class],|r|Ok((r.get::<_,String>(0)?,r.get::<_,u32>(1)?,r.get::<_,campfire_db::Timestamp>(2)?,r.get::<_,Option<String>>(3)?))).optional()?)).await.unwrap();
             match row {
                 None => return None,
                 Some((status, count, at, _)) if status == "ready" && count == attempt => {

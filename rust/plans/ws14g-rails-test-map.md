@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 256 ported domain/API/controller cases; 355 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
+Path-glob ledger: 48 files; 611 named cases; 288 ported domain/API/controller cases; 323 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -376,38 +376,38 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/jobs/calendar/sync_entry_job_test.rb
 
-- **Deferred** — going creates one Google event with the expected payload — WS14g continuation.
-- **Deferred** — an event with a venue syncs its location and join line — WS14g continuation.
-- **Deferred** — events without an end default to one hour — WS14g continuation.
-- **Deferred** — changing to maybe keeps the entry — WS14g continuation.
-- **Deferred** — declined deletes the entry — WS14g continuation.
-- **Deferred** — an event time change patches the same id — WS14g continuation.
-- **Deferred** — cancellation deletes the entry — WS14g continuation.
-- **Deferred** — leaving the room deletes the entry — WS14g continuation.
-- **Deferred** — a user without a connection never triggers a request — WS14g continuation.
-- **Deferred** — a disconnected account never triggers a request — WS14g continuation.
-- **Deferred** — an invalid_grant during sync disconnects and drops the local entry — WS14g continuation.
-- **Deferred** — two runs for the same state make no second insert — WS14g continuation.
-- **Deferred** — google event ids are deterministic per event and user and use Google's charset — WS14g continuation.
-- **Deferred** — concurrent first runs share one id and converge through the conflict path — WS14g continuation.
-- **Deferred** — a 409 on insert falls back to updating the same id — WS14g continuation.
-- **Deferred** — an update 404 falls back to inserting the same id — WS14g continuation.
-- **Deferred** — delete treats a Google 404 as deleted — WS14g continuation.
-- **Deferred** — a failed insert records last_error without raising — WS14g continuation.
-- **Deferred** — a transport failure records last_error and enqueues a retry — WS14g continuation.
-- **Deferred** — the reconciler re-raises transient failures for the job to retry — WS14g continuation.
-- **Deferred** — a 429 schedules a retry instead of parking the entry — WS14g continuation.
-- **Deferred** — a quota 403 schedules a retry — WS14g continuation.
-- **Deferred** — a permission 403 records last_error without retrying — WS14g continuation.
-- **Deferred** — a delete transport failure keeps the row and enqueues a retry — WS14g continuation.
-- **Deferred** — going again after declining resurrects the remote copy as confirmed — WS14g continuation.
-- **Deferred** — delete treats a Google 410 as deleted — WS14g continuation.
-- **Deferred** — a grant without the calendar scope never triggers a request — WS14g continuation.
-- **Deferred** — losing the calendar scope drops the entry without a request — WS14g continuation.
-- **Deferred** — an unreadable token drops the entry without a request — WS14g continuation.
-- **Deferred** — a reconciled decline does not enqueue a remote delete — WS14g continuation.
-- **Deferred** — a failed delete keeps the row with last_error for a retry — WS14g continuation.
-- **Deferred** — missing records are a no-op — WS14g continuation.
+- **Ported** — going creates one Google event with the expected payload — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — an event with a venue syncs its location and join line — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — events without an end default to one hour — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — changing to maybe keeps the entry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — declined deletes the entry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — an event time change patches the same id — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — cancellation deletes the entry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — leaving the room deletes the entry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a user without a connection never triggers a request — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a disconnected account never triggers a request — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — an invalid_grant during sync disconnects and drops the local entry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — two runs for the same state make no second insert — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — google event ids are deterministic per event and user and use Google's charset — `campfire_db::models::google_entry::tests::google_entry_payload_and_ids_match_rails` (pinned ID vectors across event/user changes and exact charset bytes), plus the 39-observation EntrySync request matrix.
+- **Ported** — concurrent first runs share one id and converge through the conflict path — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a 409 on insert falls back to updating the same id — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — an update 404 falls back to inserting the same id — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — delete treats a Google 404 as deleted — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a failed insert records last_error without raising — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a transport failure records last_error and enqueues a retry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — the reconciler re-raises transient failures for the job to retry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a 429 schedules a retry instead of parking the entry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a quota 403 schedules a retry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a permission 403 records last_error without retrying — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a delete transport failure keeps the row and enqueues a retry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — going again after declining resurrects the remote copy as confirmed — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — delete treats a Google 410 as deleted — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a grant without the calendar scope never triggers a request — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — losing the calendar scope drops the entry without a request — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — an unreadable token drops the entry without a request — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a reconciled decline does not enqueue a remote delete — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — a failed delete keeps the row with last_error for a retry — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
+- **Ported** — missing records are a no-op — `app::google_calendar_job_tests::sync_cases::google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_retries` (39 pinned consumer observations; exact requests, entry/grant/errors and durable retry CLASS/arguments; frozen clock and committed drain).
 - **Deferred** — responding going on the first event of a series syncs every occurrence — WS14g continuation.
 - **Deferred** — creating an attendance enqueues a sync — WS14g continuation.
 - **Deferred** — changing a response enqueues a sync but other saves do not — WS14g continuation.
@@ -885,3 +885,7 @@ The two agent polling payload assertions consume WS11 EventPolling and the produ
 ## Authentication continuation after main 2e0c0f05
 
 The 96-case Google controller matrix now follows malformed token/key redirects through complete production login bodies, and exercises actual Google-only sudo protected-action continuation. Complete prompt/replay HTML uses the approved #163 layout and fixed rendering entropy. The seven real security requests add four first/linked deactivate/ban races through separate contending SQLite connections and anonymous/missing/invalid-CSRF link starts. No linker stub, sleep, real Google call or outer rollback is used. All original Google session, response, status-race, pre-hijack and Google sudo/link declarations are now mapped. Non-Google sudo cases remain with WS9.
+
+## Calendar consumer continuation
+
+The first 32 original SyncEntry declarations are mapped through the 39-scenario recorded consumer matrix and the pinned deterministic-ID vectors. The remaining eleven producer declarations still need WS14g comparisons using real WS14e event APIs. Stored transport errors retain their Ruby class and exclude transport message details. Real runner retries compare original arguments after the durable metadata envelope, ready/attempt state and the unchanged first-delay bounds; the frozen clock and change-driven drain preserve the five-second deadline. The unmodified continuation baseline failed first on `transport_job` with `(transport)` versus Rails `(Net::OpenTimeout)`.

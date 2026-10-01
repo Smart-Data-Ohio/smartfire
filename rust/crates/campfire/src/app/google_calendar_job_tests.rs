@@ -495,3 +495,5 @@ async fn google_calendar_entry_sync_records_transient_failure_then_drops_unreach
     );
     assert_eq!(r.calls.lock().unwrap().len(), calls);
 }
+
+mod sync_cases;

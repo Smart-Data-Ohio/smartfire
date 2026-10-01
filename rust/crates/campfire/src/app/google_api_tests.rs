@@ -57,12 +57,19 @@ impl Recorded {
             .push_back(Ok((status, serde_json::to_vec(&body).unwrap())));
     }
     pub fn fail_for(&self, method: Method, target: &str) {
+        self.fail_for_error(
+            method,
+            target,
+            crate::integrations::net::http::HttpError::OpenTimeout.into(),
+        );
+    }
+    pub fn fail_for_error(&self, method: Method, target: &str, error: Unavailable) {
         self.targeted_answers
             .lock()
             .unwrap()
             .entry((method.to_string(), target.into()))
             .or_default()
-            .push_back(Err(Unavailable));
+            .push_back(Err(error));
     }
 }
 impl Client for Recorded {
@@ -95,7 +102,7 @@ impl Client for Recorded {
                 )
                 .is_ok()
             {
-                return Err(Unavailable);
+                return Err(crate::integrations::net::http::HttpError::OpenTimeout.into());
             }
             if let Some(answer) = self
                 .targeted_answers
