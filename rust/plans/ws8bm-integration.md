@@ -87,7 +87,20 @@ attachment APIs and ready-listener test helpers, the message worker's in-transac
 thread post (wrapped in M2's `PostingOutcome::Created`), both queue invariants, and the
 owner's feature dispatch, Picker availability and schedule child. Do not select an
 entire side of these files. Full merged live chrome, populated PR cards and real schedule
-provider parity remain separate integration work; no current combined-page pass is claimed.
+provider parity remain separate integration work; no whole combined-page pass is claimed.
+
+The current `reference-tools/messaging/owner-current-integration.patch` records the
+tested small adapters after resolving that merge: the real schedule child and assertions,
+request fetch intent before cached message rendering (using M2's batched references),
+sanitized filenames in M2's preloaded text, the legacy quiet-stream payload decoder,
+and verbatim list/pending-template mounts. It preserves the list's invitation whitespace;
+the shell must not prepend that line again or append a newline to `PendingTemplate`.
+The isolated merge passes 17 thread tests with the real schedule provider and five native
+room tests. Its separate strict component checker passes eight of nine byte comparisons
+and fails on Designers' missing populated GitHub PR card (1,089 bytes), with no mask.
+Fizzy, LinkedIn and generic card bodies match. Refresh the old automated merge checker
+before using it for this revision; this patch requires the six merge overlaps above to
+be resolved first. The main worker branch still has the flagged schedule/PR call sites.
 
 ## Standalone thread show and PR integration
 
