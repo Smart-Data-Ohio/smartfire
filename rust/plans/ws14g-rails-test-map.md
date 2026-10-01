@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 146 ported domain/API/controller cases; 465 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 147 ported domain/API/controller cases; 464 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -346,7 +346,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — cancelled events are never touched — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (cancelled_local; zero Google requests).
 - **Ported** — nothing happens without a usable account — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (missing_account, disconnected, wrong_scope).
 - **Ported** — a revoked grant aborts the sweep instead of failing every entry — `app::google_consumer_tests::google_consumers_match_every_recorded_rails_state_and_request` (revoked_aborts; one entry request and invalid_grant disconnect).
-- **Partial** — the sweep preloads events instead of querying per entry — the native joined projection batches upcoming entries without per-entry Event loading; the SQL-read-count regression remains WS14g work.
+- **Ported** — the sweep preloads events instead of querying per entry — `app::google_consumer_tests::google_inbound_preloads_events_once_for_both_rails_batch_sizes` (real traced writer/read pool; Rails 3-entry and 30-entry batches both read events once; complete calls/responses/no-job state).
 
 ## test/jobs/calendar/meet_link_job_test.rb
 
@@ -833,3 +833,5 @@ The remaining session/link/step-up controller cases include account history/pass
 The real combined RSVP/Meet runner now uses a frozen clock, deterministic inbound-scope capture and a change-driven committed queue drain. Its original five-second deadline and normal runner concurrency remain. The application encryption provider now caches its 65536-round derivation per Secrets, matching Rails; repeated derivation was the CPU bottleneck. Thirty trials at eight concurrent tests on four CPUs passed after the fix (5/30 before it).
 
 The new controller-cases probe captures 66 complete Rails request observations, including signed-out/other-member callbacks, domain/nonce/subject checks, signed-in replay, malformed token/key payloads, and strict auth_time cutoff ±1 second for both reauth and sudo. Reauth observations follow the callback and exercise backup rotation (including single consumption), device removal, disabling two factor, wrong credentials, and the 599/600/601-second expiration boundary. Sudo protected-action continuation, whole-page composition and Google-only provisioning transitions still have their own remaining ledger entries. Eight additional controller declarations are now fully mapped; these are outside the primary 611-case count.
+
+Inbound preloading now has the original one-event-read assertion, scaled from 3 to 30 confirmed entries, with recorded Google calls and unchanged responses/jobs. The merged owner SQL tracer is reused on the actual reader count.

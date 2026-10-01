@@ -474,3 +474,119 @@ async fn google_pending_meet_conference_uses_the_real_durable_retry_handler() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn google_inbound_preloads_events_once_for_both_rails_batch_sizes() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/google_inbound_preload.json"
+    ))
+    .unwrap();
+    for row in oracle["rows"].as_array().unwrap() {
+        let at: jiff::Timestamp = "2026-03-02T16:00:00Z".parse().unwrap();
+        let mut a = TestApp::boot_with_clock(Arc::new(FrozenClock::new(at)))
+            .await
+            .unwrap();
+        a.booted.jobs.stop(Duration::from_secs(5)).await;
+        let r = Recorded::new(vec![]);
+        a.booted
+            .app
+            .google
+            .install_api(api::Api::new(support::config(), r.clone()));
+        support::grant(
+            &a,
+            DAVID,
+            Timestamp::from_jiff(at).since(jiff::SignedDuration::from_hours(1)),
+            false,
+        )
+        .await;
+        let size = row["size"].as_i64().unwrap();
+        a.db().write(move |tx| {
+            tx.conn().execute_batch("DELETE FROM event_calendar_entries;DELETE FROM background_jobs;")?;
+            tx.conn().execute("UPDATE google_accounts SET scopes=? WHERE user_id=?",[campfire_db::models::google_account::CALENDAR_SCOPE,&DAVID.to_string()])?;
+            for i in 0..size {
+                let id=9_500_000_000+i;
+                tx.conn().execute("INSERT INTO events(id,room_id,organizer_id,title,starts_at,time_zone,created_at,updated_at) VALUES(?,?,?,'Preload',?,'UTC',?,?)",rusqlite::params![id,ALL_TALK,DAVID,tx.now().since(jiff::SignedDuration::from_hours(1)),tx.now(),tx.now()])?;
+                CalendarEvent::respond(tx,id,DAVID,"going",false)?;
+                let entry=campfire_db::models::google_entry::reserve(tx,id,DAVID)?;
+                campfire_db::models::google_entry::success(tx,&entry)?;
+            }
+            tx.conn().execute_batch("DELETE FROM background_jobs;")?;
+            Ok(())
+        }).await.unwrap();
+        // Owner callbacks enqueue after commit; clear fixture work only after it was published.
+        a.db()
+            .write(|tx| {
+                tx.conn().execute_batch("DELETE FROM background_jobs;")?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        for id in row["calls"].as_array().unwrap() {
+            r.answer_for(
+                Method::GET,
+                &format!("{}/{}", api::EVENTS, id.as_str().unwrap()),
+                200,
+                json!({"status":"confirmed"}),
+            );
+        }
+        let probe = crate::controllers::rooms::query_probe::SqlProbe::start(
+            a.db(),
+            a.booted.app.config.db_readers,
+        )
+        .await;
+        calendar_sync::inbound(&a.booted.app, DAVID).await.unwrap();
+        let queries = probe.finish().await;
+        let event_queries = queries
+            .iter()
+            .filter(|q| {
+                let sql = q.sql.to_ascii_uppercase();
+                sql.trim_start().starts_with("SELECT")
+                    && (sql.contains("FROM EVENTS") || sql.contains("JOIN EVENTS"))
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            event_queries.len() as u64,
+            row["event_reads"].as_u64().unwrap(),
+            "{size}: {event_queries:?}"
+        );
+        let calls = r
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|c| {
+                c["path"]
+                    .as_str()
+                    .unwrap()
+                    .rsplit('/')
+                    .next()
+                    .unwrap()
+                    .to_owned()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(json!(calls), row["calls"]);
+        let state = a
+            .db()
+            .read(move |c| {
+                let responses = (0..size)
+                    .map(|i| {
+                        CalendarEvent::find(c, 9_500_000_000 + i)?.response_for(c, Some(DAVID))
+                    })
+                    .collect::<campfire_db::Result<Vec<_>>>()?;
+                let jobs = c
+                    .prepare("SELECT job_class FROM background_jobs ORDER BY id")?
+                    .query_map([], |r| r.get::<_, String>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
+                Ok((responses, jobs))
+            })
+            .await
+            .unwrap();
+        assert_eq!(json!(state.0), row["responses"]);
+        assert_eq!(json!(state.1), row["jobs"]);
+        println!(
+            "Inbound preload: {size} entries; {} event SELECT; {} recorded Google GETs",
+            event_queries.len(),
+            calls.len()
+        );
+    }
+}

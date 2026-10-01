@@ -499,7 +499,7 @@ mod switchers_rails_cases;
 mod native_integration_tests;
 
 #[cfg(test)]
-mod query_probe;
+pub(crate) mod query_probe;
 
 #[cfg(test)]
 #[path = "rooms/owner_panel_tests.rs"]
