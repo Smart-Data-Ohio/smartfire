@@ -571,8 +571,12 @@ impl Message {
                     tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?;
                 }
             }
-            crate::models::message_reference::sync(tx, &message)?;
-            message.sync_external_references(tx, !importing)?;
+            if importing {
+                crate::models::message_reference::sync(tx, &message)?;
+                message.sync_external_references(tx, false)?;
+            } else {
+                message.sync_all_references(tx)?;
+            }
             if !importing {
                 message.push_later_in_conversation(tx);
             }
