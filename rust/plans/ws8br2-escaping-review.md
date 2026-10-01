@@ -4,7 +4,7 @@ Reference: Rails d7c7de92, with the approved 2e20b24c status/controller/layout o
 
 The sweep includes `views/src/users.rs`, `views/src/users/`, `views/src/accounts.rs`,
 `views/src/accounts/`, `views/src/{public_pages,welcome,first_runs,pwa}.rs`, their templates,
-and the shared application title/style helpers used by those pages. Every raw-content,
+the owned room shell/header/forms/DM picker, and the shared application title/style helpers used by those pages. Every raw-content,
 HTML-trusting link/button/content-tag helper and safe-output boundary was inspected back
 through its arguments. Attributes use the escaping attribute builder. Askama expressions
 escape stored strings before block filters receive the rendered HTML.
@@ -19,6 +19,7 @@ escape stored strings before block filters receive the rendered HTML.
 | Account users, help contact, icons, logos, invite and settings | Names, email, icon titles/creator names and account name use escaped expressions/form/attribute helpers. Help-contact link attributes escape the interpolated name/address. Form filters contain locally rendered tags. |
 | Audit HTML and CSV | Actor/target labels, details, user-agent/IP and filter values use escaped expressions, text option helpers or explicitly escaped option text. CSV retains Rails' quoting and formula handling; its values are not HTML. |
 | Custom styles | The editor textarea escapes its value, including a closing textarea/script sequence. The application style helper deliberately emits the authorized custom CSS as Rails' `html_safe` style content; changing that would change the feature. |
+| Room shell/header/forms/DM picker | Header identity and OOO names/notes are escaped template expressions. Form-layout safe content is the already rendered filter body. The delete-room button explicitly escapes its display-name span. Jump controls contain generated image/span HTML. Message/composer/pins/thread/huddle fragments are trusted owner render output, not labels. Newly merged Events rendering belongs to WS14e. |
 | Welcome, first run, public, PWA and QR | Stored values go through expressions, form/text or attribute helpers. Public layout raw content is assembled from the page templates, not an input string. Shared page titles use the text helper. |
 
 The only direct stored-text-to-HTML-trusting sink found was the agent room link. New
