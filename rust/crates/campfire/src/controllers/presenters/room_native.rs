@@ -56,6 +56,8 @@ pub(crate) fn load(conn: &campfire_db::Connection, app: &crate::app::AppState,
     let divider=super::room_shell::unread_divider(conn,&membership,&messages)?;
     let mut presenter = super::Presenter::new(conn, app, request_host);
     presenter.cache_base_url = Some(cache_base_url);
+    // SetTimeZone applies the persisted viewer zone before RoomsController#show.
+    presenter.use_viewer_zone(user.id)?;
     let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
     let room_gid = crate::channels::room_gid(room).to_param();
     let drive=presenter.composer_drive_flow(user,app.config.google_picker.is_some() && !user.is_bot())?;
