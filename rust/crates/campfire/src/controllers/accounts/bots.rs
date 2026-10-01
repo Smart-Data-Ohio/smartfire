@@ -42,7 +42,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     // `create_webhook!(url: webhook_url) if webhook_url`: any non-nil value, "" included.
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
-    let pending = c
+    c
         .app()
         .db
         .write(move |tx| {
@@ -51,7 +51,6 @@ pub async fn create(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    attachments::analyze_later(c.app(), pending);
     redirect_to_bots(c)
 }
 
@@ -84,7 +83,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let webhook_submitted = params.contains_key("webhook_url");
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
-    let pending = c
+    c
         .app()
         .db
         .write(move |tx| {
@@ -97,7 +96,6 @@ pub async fn update(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    attachments::analyze_later(c.app(), pending);
     redirect_to_bots(c)
 }
 
@@ -105,7 +103,8 @@ pub async fn update(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before(c).await?;
     let mut bot = set_bot(c).await?;
-    c.app().db.write(move |tx| bot.deactivate(tx)).await.map_err(Error::internal)?;
+    let context = crate::controllers::two_factor::audit_context(c)?;
+    c.app().db.write(move |tx| bot.deactivate_with_audit(tx, &context)).await.map_err(Error::internal)?;
     redirect_to_bots(c)
 }
 

@@ -109,7 +109,7 @@
       "content-length": "42644",
       "content-type": "application/json"
     },
-    "body_sha256": "b6c2c7db352721426c89be6717027e2aeec085830f76bc678a1e99bdd1b900c4"
+    "body_sha256": "c517b720d8fef04cd4c59fb4ae850c08f0931ce53497ca0624dfe782ff958c6a"
   },
   {
     "method": "GET",
@@ -1541,15 +1541,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/profile_card_controller-25a0f42e.js",
+    "path": "/assets/controllers/profile_card_controller-ca4bd34b.js",
     "env": {},
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "4011",
+      "content-length": "4353",
       "content-type": "text/javascript"
     },
-    "body_sha256": "97022164531c003ded9fe08db208d8e765f1c0edf355728ed22ea9f170d87d15"
+    "body_sha256": "dadc00e7439ce18049f64e5e9f6e640a81318aeb8262c1b987655abce942a29b"
   },
   {
     "method": "GET",
@@ -4409,15 +4409,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/people-b8926caa.css",
+    "path": "/assets/people-8adb2aea.css",
     "env": {},
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "9516",
+      "content-length": "10299",
       "content-type": "text/css"
     },
-    "body_sha256": "ba03e3466b80821a04cc7bdb19828da828d61534de6e55860f89ac0d5d701af5"
+    "body_sha256": "fdef4009a16efb9294d643d187afa6fcffbdf8054eadccf5ed6aee3e343855db"
   },
   {
     "method": "GET",

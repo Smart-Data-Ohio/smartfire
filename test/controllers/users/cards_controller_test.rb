@@ -19,6 +19,7 @@ class Users::CardsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{rooms_directs_path}']", 2
     assert_select "button", text: "Message"
     assert_select "button", text: "Start call"
+    assert_select "a", text: "Set a status", count: 0
     assert_select "a[href='#{user_path(users(:jason))}']", text: "View profile"
     assert_select "button", text: "Copy mention"
   end
@@ -49,6 +50,7 @@ class Users::CardsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".profile-card__name", text: "David"
     assert_select "a[href='#{user_profile_path}']", text: "Edit profile"
+    assert_select "a[href='#{edit_user_status_path}']:not([data-turbo-frame])", text: "Set a status"
     assert_select "button", text: "Message", count: 0
     assert_select "button", text: "Start call", count: 0
     assert_select "button", text: "Copy mention", count: 0

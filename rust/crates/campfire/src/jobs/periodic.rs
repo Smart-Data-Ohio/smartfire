@@ -20,8 +20,8 @@
 //! | clear plaintext bot tokens | 24 h, its work once per process | WS11 registers it; ported here ([`clear_plaintext_bot_tokens_task`]), see below |
 //! | retention prune | `RETENTION_PRUNE_INTERVAL` (24 h) | WS8 |
 //! | presence leases | 1 min | WS17 |
-//! | meeting status | 1 min | WS14 |
-//! | out of office | 1 min | WS14 |
+//! | meeting status | 1 min | WS17 (WS14 refresh execution) |
+//! | out of office | 1 min | WS17 (WS14 refresh execution) |
 //! | board sla nudges | 5 min | WS12 |
 //! | board stale digests | 1 h | WS12 |
 //! | streaming messages | 30 s | WS11 |
@@ -144,8 +144,29 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         app.db.write(|tx|campfire_db::models::room_delete::reenqueue_stuck(tx,600)).await?;
         Ok(())
     }));
+    use crate::integrations::action_claims;
+    periodic.task(Task::new("stuck GitHub claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
+        action_claims::recover_stuck_claims(&app.db, action_claims::GITHUB, app.db.env().now()).await;
+        Ok(())
+    }));
+    periodic.task(Task::new("stuck Fizzy claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
+        action_claims::recover_stuck_claims(&app.db, action_claims::FIZZY, app.db.env().now()).await;
+        Ok(())
+    }));
     periodic.task(Task::new("retention prune", intervals.retention, |app: App| async move {
         app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("presence leases", Duration::from_secs(MINUTE), |app: App| async move {
+        app.db.write(|tx| campfire_db::WorkspacePresenceLease::prune(tx, 100)).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("meeting status", Duration::from_secs(MINUTE), |app: App| async move {
+        campfire_db::models::calendar_dispatch::dispatch_meetings(&app.db, app.db.env().now()).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("out of office", Duration::from_secs(MINUTE), |app: App| async move {
+        campfire_db::models::calendar_dispatch::dispatch_ooo(&app.db, app.db.env().now()).await?;
         Ok(())
     }));
     periodic
@@ -244,4 +265,21 @@ pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> 
         healed += updated;
     }
     Ok(healed)
+}
+
+#[cfg(test)]
+mod ws17_tests {
+    use super::*;
+    #[test]
+    fn ws17_calendar_sweeps_are_registered_once_each_minute() {
+        let tasks = periodic(PeriodicIntervals {
+            reminders: Duration::from_secs(30),
+            retention: Duration::from_secs(24 * HOUR),
+        });
+        for name in ["meeting status", "out of office"] {
+            let matching: Vec<_> = tasks.tasks().filter(|task| task.name() == name).collect();
+            assert_eq!(matching.len(), 1, "{name}");
+            assert_eq!(matching[0].interval(), Duration::from_secs(MINUTE));
+        }
+    }
 }

@@ -685,6 +685,6 @@ async fn sudo_views_match_six_rails_seed_bodies_byte_for_byte() {
             std::fs::write(format!("{dir}/{name}.actual"), &actual).unwrap();
             std::fs::write(format!("{dir}/{name}.expected"), expected.as_str().unwrap()).unwrap();
         }
-        assert_eq!(actual, expected.as_str().unwrap(), "sudo view {name}");
+        assert!(super::asset_goldens::compare(name, &actual, expected.as_str().unwrap()));
     }
 }

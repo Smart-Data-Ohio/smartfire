@@ -14,14 +14,57 @@ on:
     branches: [ main, ci/rust-speedups ]
     paths:
       - "rust/**"
+      # Embedded styles, images, sounds and emoji read by the Propshaft build.
+      - "app/assets/**"
+      # Application modules and controllers read by the importmap/Propshaft build.
+      - "app/javascript/**"
+      # Third-party application modules on the Propshaft load path.
+      - "vendor/javascript/**"
+      # Public files embedded and served by the asset crate.
+      - "public/**"
+      # Pins and pin_all_from inputs expanded into the embedded importmap.
+      - "config/importmap.rb"
+      # Assets version included in Propshaft digests.
+      - "config/initializers/assets.rb"
+      # Vendored brand icon catalog checked against the Rails original.
+      - "config/icons.yml"
+      # Fixture records and media consumed by database/storage tests.
+      - "test/fixtures/**"
+      # Schema hash and declared migration versions checked by database tests.
+      - "db/schema.rb"
+      # Migration filename versions compared with the Rust schema manifest.
+      - "db/migrate/**"
+      # Built-in sound catalog checked against its Rails definition.
+      - "app/models/sound.rb"
       - ".github/workflows/rust.yml"
   pull_request:
     branches: [ main ]
     paths:
       - "rust/**"
+      # Embedded styles, images, sounds and emoji read by the Propshaft build.
+      - "app/assets/**"
+      # Application modules and controllers read by the importmap/Propshaft build.
+      - "app/javascript/**"
+      # Third-party application modules on the Propshaft load path.
+      - "vendor/javascript/**"
+      # Public files embedded and served by the asset crate.
+      - "public/**"
+      # Pins and pin_all_from inputs expanded into the embedded importmap.
+      - "config/importmap.rb"
+      # Assets version included in Propshaft digests.
+      - "config/initializers/assets.rb"
+      # Vendored brand icon catalog checked against the Rails original.
+      - "config/icons.yml"
+      # Fixture records and media consumed by database/storage tests.
+      - "test/fixtures/**"
+      # Schema hash and declared migration versions checked by database tests.
+      - "db/schema.rb"
+      # Migration filename versions compared with the Rust schema manifest.
+      - "db/migrate/**"
+      # Built-in sound catalog checked against its Rails definition.
+      - "app/models/sound.rb"
       - ".github/workflows/rust.yml"
-  # For checking the port against a Rails change the path filter doesn't see (app/assets,
-  # app/javascript, config/importmap.rb, test/fixtures, db/schema.rb are all read by the port).
+  # Manual reruns remain available alongside automatic checks of every live Rails input.
   workflow_dispatch:
 
 permissions: {}

@@ -124,6 +124,44 @@
   margin-block-start: 0.5rem;
 }
 
+/* Status popup (users/statuses/edit): the profile page's status fields,
+   swapped into the card. Fields shrink to the card's width rather than
+   their options' natural width. */
+.status-popup__title {
+  font-size: 1.1rem;
+  margin-block: 0 0.5rem;
+}
+
+/* The form is a flex container, so without clearing it would narrow
+   itself beside the floated close button for its whole height. */
+.status-popup form {
+  clear: both;
+}
+
+.status-popup label {
+  white-space: nowrap;
+}
+
+.status-popup .input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.status-popup input[name="user[custom_status_emoji]"] {
+  flex: 0 0 3.5rem;
+}
+
+.status-popup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
+}
+
+.status-popup__actions .btn {
+  flex: 1 1 auto;
+}
+
 .profile-card__star .btn,
 .profile-card__star form {
   inline-size: 100%;
