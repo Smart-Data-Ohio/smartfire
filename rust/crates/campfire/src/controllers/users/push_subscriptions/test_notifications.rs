@@ -115,6 +115,7 @@ mod tests {
         let app = TestApp::boot()
             .await
             .expect("WS17 requires the parity seed");
+        let app = app.without_job_runner().await;
         let id = subscription(&app, DAVID).await;
         let before = app
             .db()

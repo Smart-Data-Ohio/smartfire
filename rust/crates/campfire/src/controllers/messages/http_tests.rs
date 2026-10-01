@@ -372,7 +372,7 @@ async fn markdown_message_fragments_match_real_rails_records_and_cache_hits() {
 
 #[tokio::test]
 async fn root_create_preserves_markdown_numeric_client_id_and_deduplicates_retries() {
-    let app = boot().await;
+    let app = boot().await.without_job_runner().await;
     let mut david = app.david();
     let path = format!("/rooms/{ALL_TALK}/messages");
     let body = serde_json::json!({"message": {

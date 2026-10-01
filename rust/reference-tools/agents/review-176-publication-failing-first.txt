@@ -1,0 +1,9 @@
+Production baseline: b795aa8e2f20086472bca140a7b010965469e98e
+Only regression tests, pinned probe and its vector added before this run.
+Command: rust/reference-tools/agents/run-focused.sh --workspace --exclude html5ever --no-fail-fast ws11_publication_
+Exit: 101
+
+WS11 deletion publication concurrent commits: {"first_types":["github_action_completed"],"second_types":["fizzy_action_completed"],"second_cursor_is_interleaved_event":true,"deletion_id_after_interleaved_event":false,"resumed_types":[],"resumed_cursor_is_deletion":false,"deletion_count":1,"thread_exists":false}
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1052 filtered out; finished in 0.91s
+WS11 deletion publication same transaction: {"first_types":["github_action_completed"],"first_cursor_is_committed_event":true,"deletion_id_after_committed_event":false,"resumed_types":[],"resumed_cursor_is_deletion":false,"deletion_count":1,"thread_exists":false}
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 891 filtered out; finished in 0.11s

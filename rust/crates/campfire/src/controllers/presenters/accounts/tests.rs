@@ -844,6 +844,7 @@ async fn manages_bots() {
     assert_ne!(old_digest, new_digest);
     assert!(admin.get("/account/bots").await.text().contains(campfire_db::user::BOT_KEY_PLACEHOLDER));
 
+    assert!(!admin.get("/account/bots").await.text().contains(&test.label("bot_keys.bender")));
 
     admin
         .get(&format!("/account/bots/{bender}/edit"))

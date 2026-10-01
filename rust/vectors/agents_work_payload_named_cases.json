@@ -1,0 +1,84 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "thread": {
+      "id": 900150001,
+      "room_id": 486777696,
+      "board_id": null,
+      "board_name": null,
+      "title": "Payload work",
+      "work_status": "in_progress",
+      "owner": {
+        "id": 394959859,
+        "name": "Bender Bot",
+        "agent": true
+      },
+      "tags": [],
+      "result": "## Outcome",
+      "result_updated_at": "2026-03-02T16:00:00.000Z",
+      "run_url": null,
+      "url": "/rooms/486777696?thread=900150001",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "links": []
+    },
+    "human": {
+      "id": 900150002,
+      "room_id": 486777696,
+      "board_id": null,
+      "board_name": null,
+      "title": "Human work",
+      "work_status": "planned",
+      "owner": {
+        "id": 149087659,
+        "name": "Jason",
+        "agent": false
+      },
+      "tags": [],
+      "result": null,
+      "result_updated_at": null,
+      "run_url": null,
+      "url": "/rooms/486777696?thread=900150002",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "links": []
+    },
+    "unowned": {
+      "id": 900150003,
+      "room_id": 486777696,
+      "board_id": null,
+      "board_name": null,
+      "title": "Unowned work",
+      "work_status": "planned",
+      "owner": null,
+      "tags": [],
+      "result": null,
+      "result_updated_at": null,
+      "run_url": null,
+      "url": "/rooms/486777696?thread=900150003",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "links": []
+    },
+    "board": {
+      "id": 900150004,
+      "room_id": 900150010,
+      "board_id": 900150010,
+      "board_name": "Launch",
+      "title": "Board payload",
+      "work_status": "in_progress",
+      "owner": {
+        "id": 394959859,
+        "name": "Bender Bot",
+        "agent": true
+      },
+      "tags": [
+        "api",
+        "launch"
+      ],
+      "result": null,
+      "result_updated_at": null,
+      "run_url": "https://example.com/runs/1",
+      "url": "/rooms/900150010?thread=900150004",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "links": []
+    }
+  }
+}

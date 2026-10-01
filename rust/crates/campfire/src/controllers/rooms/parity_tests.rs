@@ -103,7 +103,7 @@ async fn parity_room_scoped_endpoints_reject_deleted_rooms_even_with_membership(
 
 #[tokio::test]
 async fn parity_destroy_marks_enqueues_and_returns_json() {
-    let app = app().await;
+    let app = app().await.without_job_runner().await;
     let mut david = app.david();
     let reply = david
         .write(Req::new(Method::DELETE, &format!("/rooms/{ALL_TALK}.json")))

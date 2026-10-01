@@ -64,7 +64,7 @@ async fn assert_frames(app: &TestApp, socket: &mut Client, frames: &[Value], nam
 async fn replay(names: &[&str]) {
     let golden = vectors();
     let now = stamp(golden["now"].as_str().unwrap());
-    let app = boot().await;
+    let app = boot().await.without_job_runner().await;
     let (_server, mut socket) = subscribe(&app).await;
     for name in names {
         let row = golden["rows"]
@@ -189,7 +189,7 @@ calendar_scenario!(
 
 #[tokio::test]
 async fn ws17_both_optins_refresh_through_meeting_dispatcher_only() {
-    let app = boot().await;
+    let app = boot().await.without_job_runner().await;
     let golden = vectors();
     let row = golden["rows"]
         .as_array()
@@ -208,7 +208,7 @@ async fn ws17_both_optins_refresh_through_meeting_dispatcher_only() {
 
 async fn failed_member(kind: &str) {
     use crate::controllers::presenters::test_support::JASON;
-    let app = boot().await;
+    let app = boot().await.without_job_runner().await;
     let golden = vectors();
     let row = golden["rows"]
         .as_array()
