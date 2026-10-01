@@ -14,6 +14,7 @@ pub mod link_embeds;
 pub mod fizzy_cards;
 pub mod twitter_cards;
 pub mod page;
+pub mod events;
 pub mod pagination;
 pub mod rich_text;
 mod message_cache;
@@ -366,7 +367,9 @@ impl<'a> Presenter<'a> {
             }
             Ok(view)
         };
-        let Some(base) = self.cache_base_url.as_deref() else { return Ok(MessageItem::View(Box::new(view()?))) };
+        // Event cards contain viewer-zone dates and must render in the request context.
+        let has_events: bool = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM event_references WHERE message_id=?)", [message.id], |row| row.get(0))?;
+        let Some(base) = self.cache_base_url.as_deref().filter(|_| !has_events) else { return Ok(MessageItem::View(Box::new(view()?))) };
         let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
         let html = fragment_cache::try_fetch_value(|| key, || {
             let view = view()?;
@@ -436,6 +439,7 @@ impl<'a> Presenter<'a> {
             details: self.message_details(message)?,
             components: {
                 let mut components = link_embeds::components(self, message)?;
+                components.event_views = events::for_message(self.conn, message)?;
                 components.quote_references = self.quote_components(message)?.quote_references;
                 components.github_cards_html = github_cards_html;
                 components.github_cards_stamp = github_cards_stamp;

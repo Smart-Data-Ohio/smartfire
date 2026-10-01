@@ -240,7 +240,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
-        "accounts/users/two_factor_resets#create" => arc(accounts::users::two_factor_resets::create),
+        "accounts/users/two_factor_resets#create" => {
+            arc(accounts::users::two_factor_resets::create)
+        }
         "users/push_subscriptions/test_notifications#create" => {
             arc(users::push_subscriptions::test_notifications::create)
         }
@@ -312,6 +314,15 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
         "switchers#show" => arc(switchers::show),
         "rooms/members#index" => arc(rooms::members::index),
+        "rooms/events#index" => arc(rooms::events::index),
+        "rooms/events#show" => arc(rooms::events::show),
+        "rooms/events#new" => arc(rooms::events::new),
+        "rooms/events#create" => arc(rooms::events::create),
+        "rooms/events#edit" => arc(rooms::events::edit),
+        "rooms/events#update" => arc(rooms::events::update),
+        "rooms/events#cancel" => arc(rooms::events::cancel),
+        "rooms/events/attendances#show" => arc(rooms::events::attendance_show),
+        "rooms/events/attendances#update" => arc(rooms::events::attendance_update),
         "rooms/refreshes#show" => arc(rooms::refreshes::show),
         "rooms/reads#create" => arc(rooms::reads::create),
         "rooms/reads#destroy" => arc(rooms::reads::destroy),
@@ -722,6 +733,14 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "rooms/events#index",
+        "rooms/events#show",
+        "rooms/events#new",
+        "rooms/events#create",
+        "rooms/events#edit",
+        "rooms/events#update",
+        "rooms/events#cancel",
+        "rooms/events/attendances#show", "rooms/events/attendances#update",
         "switchers#show",
         "rooms#join", "rooms/reads#create", "rooms/reads#destroy",
         "rooms#leave", "rooms/directs#update", "rooms/directs#add_members", "rooms/directs#leave",

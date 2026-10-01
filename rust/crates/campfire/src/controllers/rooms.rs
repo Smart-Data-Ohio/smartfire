@@ -22,6 +22,7 @@ pub mod pins;
 pub mod slash_commands;
 pub mod message_links;
 pub mod files;
+pub mod events;
 
 use askama::Template;
 use campfire_db::{Account, Room, RoomType, User};

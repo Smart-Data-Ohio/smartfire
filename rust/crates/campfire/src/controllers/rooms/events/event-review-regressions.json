@@ -1,0 +1,4998 @@
+{
+  "production_500": "<!DOCTYPE html>\n<html>\n  <head>\n    <title>Something went wrong (500)</title>\n    <meta charset=\"UTF-8\">\n    <style>\n      *,\n      *::before,\n      *::after {\n        box-sizing: border-box;\n      }\n\n      body {\n        --lch-black: 0% 0 0;\n        --lch-gray: 75% 0.005 96;\n        --lch-white: 100% 0 0;\n\n        --color-border: oklch(var(--lch-gray));\n        --color-bg: oklch(var(--lch-white));\n        --color-text: oklch(var(--lch-black));\n\n        --btn-size: 2.65em;\n\n        background-color: var(--color-bg);\n        block-size: 100dvh;\n        color: var(--color-text);\n        display: grid;\n        margin: 0;\n        padding: 0;\n        place-items: center;\n        font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\";\n\n        @media (prefers-color-scheme: dark) {\n          --lch-black: 100% 0 0;\n          --lch-gray: 44.95% 0 0;\n          --lch-white: 0% 0 0;\n        }\n      }\n\n      svg {\n        fill: var(--color-text);\n\n        @media (prefers-color-scheme: dark) {\n          fill: var(--color-text);\n        }\n      }\n\n      .error {\n        align-items: center;\n        display: flex;\n        flex-direction: column;\n        gap: 2em;\n        justify-content: start;\n        margin-block-end: 15dvh;\n      }\n\n      .error__img {\n        aspect-ratio: 1;\n        background-color: var(--color-text);\n        block-size: auto;\n        border-radius: 50%;\n        display: grid;\n        place-items: center;\n        inline-size: 30dvh;\n\n        svg {\n          fill: var(--color-bg);\n          grid-area: 1/1;\n          max-inline-size: 66%;\n\n          @media (prefers-color-scheme: dark) {\n            fill: var(--color-bg);\n          }\n        }\n      }\n\n      .buttons {\n        display: flex;\n        flex-direction: row;\n        gap: 1em;\n        justify-content: center;\n      }\n\n      .btn {\n        align-items: center;\n        aspect-ratio: 1;\n        background-color: var(--color-bg);\n        block-size: var(--btn-size);\n        border-radius: 50%;\n        border: 1px solid var(--color-border);\n        color: var(--color-text);\n        cursor: pointer;\n        display: grid;\n        font-weight: 600;\n        font-size: 1.4rem;\n        gap: 0.5em;\n        inline-size: var(--btn-size);\n        justify-content: center;\n        padding: 0;\n        place-items: center;\n        text-align: center;\n\n        svg {\n          -webkit-touch-callout: none;\n          grid-area: 1/1;\n          inline-size: 1.3em;\n          max-inline-size: unset;\n          user-select: none;\n        }\n      }\n\n      .for-screen-reader {\n        clip-path: inset(50%);\n        height: 1px;\n        width: 1px;\n        overflow: hidden;\n        position: absolute;\n        white-space: nowrap;\n      }\n    </style>\n  </head>\n\n  <body>\n    <div class=\"error\">\n      <div class=\"error__img\">\n        <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" aria-label=\"Server error\">\n          <title>server-warning</title>\n          <path\n            d=\"M2.5,6h17A2.5,2.5,0,0,0,22,3.5v-1A2.5,2.5,0,0,0,19.5,0H2.5A2.5,2.5,0,0,0,0,2.5v1A2.5,2.5,0,0,0,2.5,6ZM3.635,3A1.115,1.115,0,1,1,4.749,4.114,1.114,1.114,0,0,1,3.635,3ZM7.5,3A1.115,1.115,0,1,1,8.614,4.114,1.115,1.115,0,0,1,7.5,3Z\" />\n          <path\n            d=\"M14.892,11.574a2.952,2.952,0,0,1,3.339-1.486,3.061,3.061,0,0,1,1.934,1.59l.26.495a.5.5,0,0,0,.765.154A2.468,2.468,0,0,0,22,10.5v-1A2.5,2.5,0,0,0,19.5,7H2.5A2.5,2.5,0,0,0,0,9.5v1A2.5,2.5,0,0,0,2.5,13H13.842a.5.5,0,0,0,.442-.268ZM9.729,10A1.115,1.115,0,1,1,8.614,8.885,1.115,1.115,0,0,1,9.729,10ZM5.864,10A1.115,1.115,0,1,1,4.749,8.885,1.115,1.115,0,0,1,5.864,10Z\" />\n          <path\n            d=\"M2.5,20h7.67a.5.5,0,0,0,.442-.268l2.624-5A.5.5,0,0,0,12.792,14H2.5A2.5,2.5,0,0,0,0,16.5v1A2.5,2.5,0,0,0,2.5,20Zm1.136-3a1.115,1.115,0,1,1,1.114,1.115A1.114,1.114,0,0,1,3.635,17ZM7.5,17a1.115,1.115,0,1,1,1.115,1.115A1.115,1.115,0,0,1,7.5,17Z\" />\n          <path\n            d=\"M11.165,21.905a1.429,1.429,0,0,0,.048,1.408A1.453,1.453,0,0,0,12.446,24H22.558a1.455,1.455,0,0,0,1.232-.687,1.429,1.429,0,0,0,.048-1.408l-5.055-9.634a1.45,1.45,0,0,0-2.562,0ZM17.5,14.75a.75.75,0,0,1,.75.75v3a.75.75,0,0,1-1.5,0v-3A.75.75,0,0,1,17.5,14.75Zm1,6.5a1,1,0,1,1-1-1A1,1,0,0,1,18.5,21.25Z\" />\n        </svg>\n      </div>\n      <a href=\"/\" class=\"btn\" autofocus=\"true\">\n        <svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">\n          <path\n            d=\"m21.864 9.5h-11.607a.25.25 0 0 1 -.174-.43l3.864-3.721a2.609 2.609 0 0 0 -.075-3.682 2.612 2.612 0 0 0 -3.68-.077l-9.792 9.699a1 1 0 0 0 -.008 1.411l9.625 9.724a2.66 2.66 0 0 0 3.755-3.757l-3.729-3.733a.25.25 0 0 1 .177-.427h11.673c1.556 0 2-1.675 2-2.51a2.28 2.28 0 0 0 -2.029-2.497z\" />\n        </svg>\n        <span class=\"for-screen-reader\">Go back</span>\n      </a>\n    </div>\n  </body>\n</html>\n",
+  "attendance": [
+    {
+      "name": "review_form",
+      "form": "response=declined&message_id=601&attendance=oops",
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "review_form",
+      "form": "response=declined&message_id=601&attendance=oops",
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_string",
+      "params": {
+        "message_id": "601",
+        "attendance": "oops"
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_string",
+      "params": {
+        "message_id": "601",
+        "attendance": "oops"
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_string",
+      "params": {
+        "response": "declined",
+        "attendance": "oops"
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_string",
+      "params": {
+        "response": "declined",
+        "attendance": "oops"
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": "oops"
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": "oops"
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": "oops"
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": "oops"
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000029",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_string",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": "oops"
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_string",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": "oops"
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000035",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_string",
+      "params": {
+        "response": "oops",
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_string",
+      "params": {
+        "response": "oops",
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000041",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_shape_string",
+      "params": {
+        "response": "declined",
+        "message_id": "oops",
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_string",
+      "params": {
+        "response": "declined",
+        "message_id": "oops",
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_oops_event_8000000047",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_string",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": "oops"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_string",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": "oops"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000053",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_string",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": "oops"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_string",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": "oops"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_oops_event_8000000059",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_string",
+      "show": true,
+      "params": {
+        "message_id": "oops"
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_oops_event_8000000062",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_string",
+      "show": true,
+      "params": {
+        "message_id": "oops"
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_oops_event_8000000065",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "oops",
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "oops",
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000071",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_empty_string",
+      "params": {
+        "message_id": "601",
+        "attendance": ""
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_empty_string",
+      "params": {
+        "message_id": "601",
+        "attendance": ""
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_empty_string",
+      "params": {
+        "response": "declined",
+        "attendance": ""
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_empty_string",
+      "params": {
+        "response": "declined",
+        "attendance": ""
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": ""
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": ""
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": ""
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": ""
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000095",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_empty_string",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": ""
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_empty_string",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": ""
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000101",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_empty_string",
+      "params": {
+        "response": "",
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_empty_string",
+      "params": {
+        "response": "",
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000107",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "",
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "",
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_602_event_8000000113",
+      "message_value": "602",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_empty_string",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": ""
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_empty_string",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": ""
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000119",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_empty_string",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": ""
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_empty_string",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": ""
+        }
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_empty_string",
+      "show": true,
+      "params": {
+        "message_id": ""
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message__event_8000000128",
+      "message_value": "",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_empty_string",
+      "show": true,
+      "params": {
+        "message_id": ""
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message__event_8000000131",
+      "message_value": "",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "",
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_empty_string",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "",
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000137",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_number",
+      "params": {
+        "message_id": "601",
+        "attendance": 7
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_number",
+      "params": {
+        "message_id": "601",
+        "attendance": 7
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_number",
+      "params": {
+        "response": "declined",
+        "attendance": 7
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_number",
+      "params": {
+        "response": "declined",
+        "attendance": 7
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_number",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": 7
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_number",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": 7
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_number",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": 7
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_number",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": 7
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000161",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_number",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": 7
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_number",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": 7
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000167",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_number",
+      "params": {
+        "response": 7,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_number",
+      "params": {
+        "response": 7,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000173",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_shape_number",
+      "params": {
+        "response": "declined",
+        "message_id": 7,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_number",
+      "params": {
+        "response": "declined",
+        "message_id": 7,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_7_event_8000000179",
+      "message_value": "7",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_number",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": 7
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_number",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": 7
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000185",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_number",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": 7
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_number",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": 7
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_7_event_8000000191",
+      "message_value": "7",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_number",
+      "show": true,
+      "params": {
+        "message_id": 7
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_7_event_8000000194",
+      "message_value": "7",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_number",
+      "show": true,
+      "params": {
+        "message_id": 7
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_7_event_8000000197",
+      "message_value": "7",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_number",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": 7,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_number",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": 7,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000203",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_true",
+      "params": {
+        "message_id": "601",
+        "attendance": true
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_true",
+      "params": {
+        "message_id": "601",
+        "attendance": true
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_true",
+      "params": {
+        "response": "declined",
+        "attendance": true
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_true",
+      "params": {
+        "response": "declined",
+        "attendance": true
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_true",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": true
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_true",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": true
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_true",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": true
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_true",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": true
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000227",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_true",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": true
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_true",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": true
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000233",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_true",
+      "params": {
+        "response": true,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_true",
+      "params": {
+        "response": true,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000239",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_shape_true",
+      "params": {
+        "response": "declined",
+        "message_id": true,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_true",
+      "params": {
+        "response": "declined",
+        "message_id": true,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_true_event_8000000245",
+      "message_value": "true",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_true",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": true
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_true",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": true
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000251",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_true",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": true
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_true",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": true
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_true_event_8000000257",
+      "message_value": "true",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_true",
+      "show": true,
+      "params": {
+        "message_id": true
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_true_event_8000000260",
+      "message_value": "true",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_true",
+      "show": true,
+      "params": {
+        "message_id": true
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_true_event_8000000263",
+      "message_value": "true",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_true",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": true,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_true",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": true,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000269",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_false",
+      "params": {
+        "message_id": "601",
+        "attendance": false
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_false",
+      "params": {
+        "message_id": "601",
+        "attendance": false
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_false",
+      "params": {
+        "response": "declined",
+        "attendance": false
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_false",
+      "params": {
+        "response": "declined",
+        "attendance": false
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_false",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": false
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_false",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": false
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_false",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": false
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_false",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": false
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000293",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_false",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": false
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_false",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": false
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000299",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_false",
+      "params": {
+        "response": false,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_false",
+      "params": {
+        "response": false,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000305",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_false",
+      "params": {
+        "response": "declined",
+        "message_id": false,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_false",
+      "params": {
+        "response": "declined",
+        "message_id": false,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_602_event_8000000311",
+      "message_value": "602",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_false",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": false
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_false",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": false
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000317",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_false",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": false
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_false",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": false
+        }
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_false",
+      "show": true,
+      "params": {
+        "message_id": false
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_false_event_8000000326",
+      "message_value": "false",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_false",
+      "show": true,
+      "params": {
+        "message_id": false
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_false_event_8000000329",
+      "message_value": "false",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_false",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": false,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_false",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": false,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000335",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_array",
+      "params": {
+        "message_id": "601",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_array",
+      "params": {
+        "message_id": "601",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_array",
+      "params": {
+        "response": "declined",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_array",
+      "params": {
+        "response": "declined",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000359",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_array",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_array",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": [
+          "oops"
+        ]
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000365",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_array",
+      "params": {
+        "response": [
+          "oops"
+        ],
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_array",
+      "params": {
+        "response": [
+          "oops"
+        ],
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000371",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_shape_array",
+      "params": {
+        "response": "declined",
+        "message_id": [
+          "oops"
+        ],
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_array",
+      "params": {
+        "response": "declined",
+        "message_id": [
+          "oops"
+        ],
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_[\"oops\"]_event_8000000377",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_array",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": [
+            "oops"
+          ]
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_array",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": [
+            "oops"
+          ]
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000383",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_array",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": [
+            "oops"
+          ]
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_array",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": [
+            "oops"
+          ]
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_[\"oops\"]_event_8000000389",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_array",
+      "show": true,
+      "params": {
+        "message_id": [
+          "oops"
+        ]
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_[\"oops\"]_event_8000000392",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_array",
+      "show": true,
+      "params": {
+        "message_id": [
+          "oops"
+        ]
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_[\"oops\"]_event_8000000395",
+      "message_value": "oops",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": [
+          "oops"
+        ],
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": [
+          "oops"
+        ],
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000401",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_empty_array",
+      "params": {
+        "message_id": "601",
+        "attendance": []
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_empty_array",
+      "params": {
+        "message_id": "601",
+        "attendance": []
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_empty_array",
+      "params": {
+        "response": "declined",
+        "attendance": []
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_empty_array",
+      "params": {
+        "response": "declined",
+        "attendance": []
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": []
+      },
+      "frame": false,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": []
+      },
+      "frame": true,
+      "status": 500,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": []
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": []
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000425",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_empty_array",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": []
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_empty_array",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": []
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000431",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_empty_array",
+      "params": {
+        "response": [],
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_empty_array",
+      "params": {
+        "response": [],
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000437",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": [],
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": [],
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_602_event_8000000443",
+      "message_value": "602",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_empty_array",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": []
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_empty_array",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": []
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000449",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_empty_array",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": []
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_empty_array",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": []
+        }
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_empty_array",
+      "show": true,
+      "params": {
+        "message_id": []
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_[]_event_8000000458",
+      "message_value": "",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_empty_array",
+      "show": true,
+      "params": {
+        "message_id": []
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_[]_event_8000000461",
+      "message_value": "",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": [],
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_empty_array",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": [],
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000467",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_null",
+      "params": {
+        "message_id": "601",
+        "attendance": null
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_null",
+      "params": {
+        "message_id": "601",
+        "attendance": null
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000473",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_null",
+      "params": {
+        "response": "declined",
+        "attendance": null
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_null",
+      "params": {
+        "response": "declined",
+        "attendance": null
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_null",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": null
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_null",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": null
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000485",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_null",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": null
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_null",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": null
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000491",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_null",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": null
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_null",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": null
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000497",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_null",
+      "params": {
+        "response": null,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_null",
+      "params": {
+        "response": null,
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000503",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_null",
+      "params": {
+        "response": "declined",
+        "message_id": null,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_null",
+      "params": {
+        "response": "declined",
+        "message_id": null,
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_602_event_8000000509",
+      "message_value": "602",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_null",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": null
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_null",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": null
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000515",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_null",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": null
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_null",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": null
+        }
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_null",
+      "show": true,
+      "params": {
+        "message_id": null
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message__event_8000000524",
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_null",
+      "show": true,
+      "params": {
+        "message_id": null
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message__event_8000000527",
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_null",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": null,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_null",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": null,
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000533",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {}
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {}
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000539",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {}
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {}
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": {}
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": {}
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000551",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": {}
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": {}
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000557",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_hash",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": {}
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_hash",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": {}
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000563",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_hash",
+      "params": {
+        "response": {},
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_hash",
+      "params": {
+        "response": {},
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000569",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_hash",
+      "params": {
+        "response": "declined",
+        "message_id": {},
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_hash",
+      "params": {
+        "response": "declined",
+        "message_id": {},
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_602_event_8000000575",
+      "message_value": "602",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": {}
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": {}
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000581",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": {}
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": {}
+        }
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_hash",
+      "show": true,
+      "params": {
+        "message_id": {}
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_{}_event_8000000590",
+      "message_value": "{}",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_hash",
+      "show": true,
+      "params": {
+        "message_id": {}
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_{}_event_8000000593",
+      "message_value": "{}",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": {},
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": {},
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000599",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_nonempty_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_lookup_nonempty_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000605",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_lookup_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": true,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_lookup_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000617",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "lazy_bypass_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": "1",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000623",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_nonempty_hash",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "invalid_bypass_nonempty_hash",
+      "params": {
+        "response": "invalid",
+        "message_id": "601",
+        "attendance": {
+          "value": "oops"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000629",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "response_shape_nonempty_hash",
+      "params": {
+        "response": {
+          "value": "oops"
+        },
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "response_shape_nonempty_hash",
+      "params": {
+        "response": {
+          "value": "oops"
+        },
+        "message_id": "601",
+        "attendance": {
+          "response": "declined"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000635",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "message_shape_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": {
+          "value": "oops"
+        },
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "message_shape_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": {
+          "value": "oops"
+        },
+        "attendance": {
+          "message_id": "602"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_{\"value\" => \"oops\"}_event_8000000641",
+      "message_value": "{\"value\" => \"oops\"}",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_nonempty_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": {
+            "value": "oops"
+          }
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_response_shape_nonempty_hash",
+      "params": {
+        "message_id": "601",
+        "attendance": {
+          "response": {
+            "value": "oops"
+          }
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_601_event_8000000647",
+      "message_value": "601",
+      "invalid": true,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": {
+            "value": "oops"
+          }
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "nested_message_shape_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "attendance": {
+          "message_id": {
+            "value": "oops"
+          }
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "frame_id": "response_for_message_{\"value\" => \"oops\"}_event_8000000653",
+      "message_value": "{\"value\" => \"oops\"}",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_nonempty_hash",
+      "show": true,
+      "params": {
+        "message_id": {
+          "value": "oops"
+        }
+      },
+      "frame": false,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_{\"value\" => \"oops\"}_event_8000000656",
+      "message_value": "{\"value\" => \"oops\"}",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "show_message_shape_nonempty_hash",
+      "show": true,
+      "params": {
+        "message_id": {
+          "value": "oops"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": true,
+      "responses": [
+        "going",
+        "going",
+        "going"
+      ],
+      "frame_id": "response_for_message_{\"value\" => \"oops\"}_event_8000000659",
+      "message_value": "{\"value\" => \"oops\"}",
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": {
+          "value": "oops"
+        },
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": false,
+      "status": 302,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": null,
+      "message_value": null,
+      "invalid": false,
+      "closed": false
+    },
+    {
+      "name": "apply_shape_nonempty_hash",
+      "params": {
+        "response": "declined",
+        "message_id": "601",
+        "apply_to_future": {
+          "value": "oops"
+        },
+        "attendance": {
+          "apply_to_future": "1"
+        }
+      },
+      "frame": true,
+      "status": 200,
+      "unchanged": false,
+      "responses": [
+        "going",
+        "declined",
+        "declined"
+      ],
+      "frame_id": "response_for_message_601_event_8000000665",
+      "message_value": "601",
+      "invalid": false,
+      "closed": false
+    }
+  ],
+  "event_params": [
+    {
+      "name": "create_string",
+      "action": "create",
+      "params": {
+        "event": "oops"
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "update_string",
+      "action": "update",
+      "params": {
+        "event": "oops"
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "new_string",
+      "action": "new",
+      "params": {
+        "event": "oops"
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_empty_string",
+      "action": "create",
+      "params": {
+        "event": ""
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "update_empty_string",
+      "action": "update",
+      "params": {
+        "event": ""
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "new_empty_string",
+      "action": "new",
+      "params": {
+        "event": ""
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_number",
+      "action": "create",
+      "params": {
+        "event": 7
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "update_number",
+      "action": "update",
+      "params": {
+        "event": 7
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "new_number",
+      "action": "new",
+      "params": {
+        "event": 7
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_true",
+      "action": "create",
+      "params": {
+        "event": true
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "update_true",
+      "action": "update",
+      "params": {
+        "event": true
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "new_true",
+      "action": "new",
+      "params": {
+        "event": true
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_false",
+      "action": "create",
+      "params": {
+        "event": false
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "update_false",
+      "action": "update",
+      "params": {
+        "event": false
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "new_false",
+      "action": "new",
+      "params": {
+        "event": false
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_array",
+      "action": "create",
+      "params": {
+        "event": [
+          "oops"
+        ]
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "update_array",
+      "action": "update",
+      "params": {
+        "event": [
+          "oops"
+        ]
+      },
+      "status": 500,
+      "unchanged": true
+    },
+    {
+      "name": "new_array",
+      "action": "new",
+      "params": {
+        "event": [
+          "oops"
+        ]
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_empty_array",
+      "action": "create",
+      "params": {
+        "event": []
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "update_empty_array",
+      "action": "update",
+      "params": {
+        "event": []
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "new_empty_array",
+      "action": "new",
+      "params": {
+        "event": []
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_null",
+      "action": "create",
+      "params": {
+        "event": null
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "update_null",
+      "action": "update",
+      "params": {
+        "event": null
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "new_null",
+      "action": "new",
+      "params": {
+        "event": null
+      },
+      "status": 200,
+      "unchanged": true
+    },
+    {
+      "name": "create_hash",
+      "action": "create",
+      "params": {
+        "event": {}
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "update_hash",
+      "action": "update",
+      "params": {
+        "event": {}
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "new_hash",
+      "action": "new",
+      "params": {
+        "event": {}
+      },
+      "status": 400,
+      "unchanged": true
+    },
+    {
+      "name": "create_nonempty_hash",
+      "action": "create",
+      "params": {
+        "event": {
+          "value": "oops"
+        }
+      },
+      "status": 422,
+      "unchanged": true
+    },
+    {
+      "name": "update_nonempty_hash",
+      "action": "update",
+      "params": {
+        "event": {
+          "value": "oops"
+        }
+      },
+      "status": 422,
+      "unchanged": true
+    },
+    {
+      "name": "new_nonempty_hash",
+      "action": "new",
+      "params": {
+        "event": {
+          "value": "oops"
+        }
+      },
+      "status": 200,
+      "unchanged": true
+    }
+  ],
+  "invitations": [
+    {
+      "position": 0,
+      "recipients": [
+        149087659,
+        712064548,
+        773523953
+      ],
+      "rejected": 149087659,
+      "error": "ActiveRecord::StatementInvalid",
+      "persisted": true,
+      "invited": [],
+      "organizer_response": "going",
+      "announcements": 0
+    },
+    {
+      "position": 1,
+      "recipients": [
+        149087659,
+        712064548,
+        773523953
+      ],
+      "rejected": 712064548,
+      "error": "ActiveRecord::StatementInvalid",
+      "persisted": true,
+      "invited": [
+        149087659
+      ],
+      "organizer_response": "going",
+      "announcements": 0
+    },
+    {
+      "position": 2,
+      "recipients": [
+        149087659,
+        712064548,
+        773523953
+      ],
+      "rejected": 773523953,
+      "error": "ActiveRecord::StatementInvalid",
+      "persisted": true,
+      "invited": [
+        149087659,
+        712064548
+      ],
+      "organizer_response": "going",
+      "announcements": 0
+    }
+  ]
+}

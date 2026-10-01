@@ -1,0 +1,112 @@
+{% extends "layouts/application.html" %}
+
+{% block head %}{{ h::builder_tag("meta",h::attrs().name("turbo-cache-control").attr("content","no-cache")) }}
+{% endblock %}
+{% block nav %}{% let event = &view.event %}  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Events in {{ view.room_name }}</span>
+    <h1 class="room__contents overflow-ellipsis">
+      <span class="room-header__name overflow-ellipsis">{{ event.card.title }}</span>
+    </h1>
+  </div>
+
+  <div class="room-header__actions">
+    {% filter link_to(event.events_path(),h::attrs().class("btn room-header__action").aria("label","All events").title("All events")) %}
+      {{ h::image_tag(ctx,"arrow-left.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="room-header__action-label">All events</span>
+{% endfilter %}  </div>
+{% endblock %}
+{% block sidebar %}{{ h::sidebar_turbo_frame_tag(Some("/users/me/sidebar"), "") }}{% endblock %}
+{% block content %}
+
+
+
+{% let event = &view.event %}<section class="room-events" aria-labelledby="event-title">
+{% if event.card.cancelled %}    <p class="room-events__cancelled" role="status">This event was cancelled.</p>
+{% endif %}
+  <header class="room-events__header">
+    <div>
+      <span class="room-events__eyebrow">Event · organized by {{ event.card.organizer_name }}</span>
+      <h1 id="event-title">{{ event.card.title }}</h1>
+      <p class="room-events__times">
+        {{ event.card.start_tag(&ctx.time_zone) }}
+{% if event.card.ends_at.is_some() %}          &ndash; {{ event.card.end_tag(&ctx.time_zone) }}
+{% endif %}        <span class="room-events__zone">{{ event.zone_label() }}</span>
+      </p>
+{% if let Some(venue) = event.venue %}        <p class="room-events__times">
+          Where:
+          <span class="{{ venue.kind() }}"><span class="sidebar-item__icon" aria-hidden="true"></span></span>
+{% if venue.member %}            {{ h::link_to_text(&venue.name,&venue.path(),h::attrs()) }}
+{% else %}            {{ venue.name }}
+{% endif %}{% if venue.member %}            {% if venue.stage %}{{ event.live_dot(venue,false) }}{% endif %}
+            {{ h::link_to_text("Join",&venue.path(),h::attrs().class("btn btn--primary")) }}
+{% endif %}        </p>
+{% endif %}{% if let Some(meet_link) = event.card.meet_link %}        <p class="room-events__times">
+          Meet: {{ h::link_to_text("Join Google Meet",meet_link,h::attrs()) }}
+        </p>
+{% endif %}    </div>
+
+{% if event.manageable %}      <nav class="room-events__actions" aria-label="Event management">
+        {{ h::link_to_text("Edit",&event.edit_path(),h::attrs().class("btn")) }}
+{% if event.card.series %}          {% let form = h::form_with(event.cancel_path()).method("patch").data("turbo_confirm","Cancel this event? Attendees will be notified.") %}{% filter form_with(form) %}
+            <label>
+              {{ h::radio_button_tag("cancel_scope","this_event",true,h::attrs()) }}
+              This event
+            </label>
+            <label>
+              {{ h::radio_button_tag("cancel_scope","this_and_following",false,h::attrs()) }}
+              This and following
+            </label>
+            {{ h::legacy_tag("input",h::attrs().type_("submit").name("commit").value("Cancel event").class("btn btn--negative").data("disable_with","Cancel event")) }}
+{% endfilter %}{% else %}          {{ event.cancel_button() }}
+{% endif %}      </nav>
+{% endif %}  </header>
+
+{% if let (Some(phrase),Some(until)) = (&event.recurrence_phrase,&event.recurrence_until) %}    <p class="room-events__series" role="note">
+      Part of a series: repeats {{ phrase }} until {{ until }}.
+{% if let Some(previous_event) = event.previous %}        {{ h::link_to_text("Previous occurrence",&event.path_for(*previous_event),h::attrs()) }}
+{% endif %}{% if let Some(next_event) = event.next %}        {{ h::link_to_text("Next occurrence",&event.path_for(*next_event),h::attrs()) }}
+{% endif %}    </p>
+{% endif %}
+{% if let Some(description) = event.description_html %}    <div class="room-events__description">
+      {{ h::raw(description) }}
+    </div>
+{% endif %}
+{% if event.calendar_copy %}    <p class="room-events__calendar-note" role="status">Added to your Google Calendar</p>
+{% endif %}
+  <section class="room-events__response" aria-labelledby="event-response-title">
+    <h2 id="event-response-title" class="room-events__heading">Your response</h2>
+{% if event.respondable %}      <p>
+        Currently:
+        <strong>{{ event.response_label() }}</strong>
+      </p>
+      {% let form = h::form_with(event.attendance_path()).method("patch").class("room-events__responses") %}{% filter form_with(form) %}
+{% if event.head %}          <p class="room-events__hint">Responding here applies your response to every future occurrence in this series.</p>
+{% else if event.card.series && event.next.is_some() %}          <label>
+            {{ event.future_checkbox() }}
+            Apply to all future occurrences
+          </label>
+{% endif %}        {{ event.response_button("Going","going","btn") }}
+        {{ event.response_button("Maybe","maybe","btn") }}
+        {{ event.response_button("Declined","declined","btn btn--plain") }}
+{% endfilter %}{% else if event.card.cancelled %}      <p>Responses are closed because this event was cancelled.</p>
+{% endif %}  </section>
+
+  <section class="room-events__attendees" aria-labelledby="event-attendees-title">
+    <h2 id="event-attendees-title" class="room-events__heading">
+      Attendees
+      <span class="room-events__counts">
+        {{ event.counts("going") }},
+        {{ event.counts("maybe") }},
+        {{ event.counts("declined") }}
+      </span>
+    </h2>
+{% if event.attendances.is_empty() %}      <p class="room-events__empty">No responses yet.</p>
+{% else %}      <ul class="room-events__attendee-list">
+{% for attendance in event.attendances %}          <li>
+            {{ attendance.name }}
+            <span class="room-events__attendee-response">· {{ attendance.label() }}</span>
+          </li>
+{% endfor %}      </ul>
+{% endif %}  </section>
+</section>
+{% endblock %}

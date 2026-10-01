@@ -1,0 +1,1086 @@
+{
+  "respond": [
+    {
+      "spec": {
+        "name": "singleton_new"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-0",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "singleton_changed",
+        "existing": "going"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-0",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "singleton_unchanged",
+        "existing": "maybe"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:00:00.000000Z"
+        }
+      ],
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "head_new",
+        "series": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-0",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-1",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-2",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "head_overwrites",
+        "series": true,
+        "existing": "maybe",
+        "distinct": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:00:00.000000Z"
+        },
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:00:00.000000Z"
+        },
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-2",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "follower_local",
+        "series": true,
+        "index": 1,
+        "existing": "going"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "going",
+          "updated_at": "2026-09-22T12:00:00.000000Z"
+        },
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "going",
+          "updated_at": "2026-09-22T12:00:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-1",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "follower_future",
+        "series": true,
+        "index": 1,
+        "future": true,
+        "existing": "going",
+        "distinct": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "going",
+          "updated_at": "2026-09-22T12:00:00.000000Z"
+        },
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-1",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-2",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "head_skips_cancelled",
+        "series": true,
+        "cancelled": 1
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        null,
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-0",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-2",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "last_has_no_future",
+        "series": true,
+        "index": 2,
+        "future": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        null,
+        null,
+        {
+          "response": "maybe",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-2",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "cancelled_anchor",
+        "series": true,
+        "cancelled": 0
+      },
+      "result": "ActiveRecord::RecordInvalid",
+      "errors": [
+        "Event is cancelled"
+      ],
+      "before_commit": null,
+      "state": [
+        null,
+        null,
+        null
+      ],
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "bot",
+        "user": "bender"
+      },
+      "result": "ActiveRecord::RecordInvalid",
+      "errors": [
+        "User must be an active human",
+        "User must be a member of the event room"
+      ],
+      "before_commit": null,
+      "state": [
+        null
+      ],
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "nonmember",
+        "nonmember": true
+      },
+      "result": "ActiveRecord::RecordInvalid",
+      "errors": [
+        "User must be a member of the event room"
+      ],
+      "before_commit": null,
+      "state": [
+        null
+      ],
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "unknown_response",
+        "response": "not-a-response"
+      },
+      "result": "ArgumentError",
+      "errors": [],
+      "before_commit": null,
+      "state": [
+        null
+      ],
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "follower_failure",
+        "series": true,
+        "fail": true
+      },
+      "result": "ActiveRecord::StatementInvalid",
+      "errors": [],
+      "before_commit": null,
+      "state": [
+        null,
+        null,
+        null
+      ],
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "outer_rollback",
+        "series": true,
+        "rollback": true
+      },
+      "result": "RuntimeError",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        null,
+        null,
+        null
+      ],
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "two_calls_one_transaction",
+        "series": true,
+        "twice": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "declined",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "declined",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "declined",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-0",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-1",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-2",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "two_calls_unchanged_first",
+        "series": true,
+        "existing": "maybe",
+        "twice": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        {
+          "response": "declined",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "declined",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        },
+        {
+          "response": "declined",
+          "updated_at": "2026-09-22T12:01:00.000000Z"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-0",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-1",
+            149087659
+          ]
+        ],
+        [
+          "Calendar::SyncEntryJob",
+          [
+            "event-2",
+            149087659
+          ]
+        ]
+      ],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "response_then_destroy",
+        "destroy": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": [
+        null
+      ],
+      "jobs": [],
+      "cards": []
+    }
+  ],
+  "meet_link": [
+    {
+      "spec": {
+        "name": "new_link",
+        "link": "https://meet.example.test/fixture"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": "https://meet.example.test/fixture",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-new_link-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-new_link-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "same_link",
+        "link": "https://meet.example.test/fixture",
+        "existing": "https://meet.example.test/fixture"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": "https://meet.example.test/fixture",
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-same_link-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-same_link-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "changed_link",
+        "link": "https://meet.example.test/changed",
+        "existing": "https://meet.example.test/fixture"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": "https://meet.example.test/changed",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-changed_link-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-changed_link-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "clear_link",
+        "link": null,
+        "existing": "https://meet.example.test/fixture"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [
+        [
+          "Calendar::MeetLinkJob",
+          [
+            "event-0"
+          ]
+        ]
+      ],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-clear_link-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-clear_link-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "blank_link",
+        "link": " "
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": " ",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [
+        [
+          "Calendar::MeetLinkJob",
+          [
+            "event-0"
+          ]
+        ]
+      ],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-blank_link-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-blank_link-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "not_requested",
+        "link": null,
+        "requested": false
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-not_requested-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-not_requested-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "non_https_is_stored",
+        "link": "http://meet.example.test/fixture"
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": "http://meet.example.test/fixture",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-non_https_is_stored-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-non_https_is_stored-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "cancelled",
+        "link": "https://meet.example.test/fixture",
+        "cancelled": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": "https://meet.example.test/fixture",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-cancelled-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-cancelled-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "invalid_title",
+        "link": "https://meet.example.test/fixture",
+        "invalid": "title"
+      },
+      "result": "ActiveRecord::RecordInvalid",
+      "errors": [
+        "Title can't be blank"
+      ],
+      "before_commit": null,
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "invalid_end",
+        "link": "https://meet.example.test/fixture",
+        "invalid": "ends_at"
+      },
+      "result": "ActiveRecord::RecordInvalid",
+      "errors": [
+        "Ends at must be after the start time"
+      ],
+      "before_commit": null,
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "invalid_zone",
+        "link": "https://meet.example.test/fixture",
+        "invalid": "time_zone"
+      },
+      "result": "ActiveRecord::RecordInvalid",
+      "errors": [
+        "Time zone is invalid"
+      ],
+      "before_commit": null,
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "ineligible_organizer",
+        "link": "https://meet.example.test/fixture",
+        "nonmember": true
+      },
+      "result": "ActiveRecord::RecordInvalid",
+      "errors": [
+        "Organizer must be an active human member of the room"
+      ],
+      "before_commit": null,
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "storage_failure",
+        "link": "https://meet.example.test/fixture",
+        "fail": true
+      },
+      "result": "ActiveRecord::StatementInvalid",
+      "errors": [],
+      "before_commit": null,
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "outer_rollback",
+        "link": "https://meet.example.test/fixture",
+        "rollback": true
+      },
+      "result": "RuntimeError",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": null,
+        "updated_at": "2026-09-22T12:00:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [],
+      "cards": []
+    },
+    {
+      "spec": {
+        "name": "two_saves_one_transaction",
+        "link": "https://meet.example.test/fixture",
+        "twice": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": "https://meet.example.test/second",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-two_saves_one_transaction-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-two_saves_one_transaction-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "blank_twice",
+        "link": " ",
+        "twice": true,
+        "second": " "
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": " ",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [
+        [
+          "Calendar::MeetLinkJob",
+          [
+            "event-0"
+          ]
+        ]
+      ],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-blank_twice-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-blank_twice-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "blank_then_link",
+        "link": " ",
+        "twice": true
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": "https://meet.example.test/second",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": false
+      },
+      "jobs": [],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-blank_then_link-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-blank_then_link-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "link_then_blank",
+        "link": "https://meet.example.test/fixture",
+        "twice": true,
+        "second": " "
+      },
+      "result": "ok",
+      "errors": [],
+      "before_commit": {
+        "jobs": 0,
+        "frames": 0
+      },
+      "state": {
+        "meet_link": " ",
+        "updated_at": "2026-09-22T12:01:00.000000Z",
+        "needs_meet_link": true
+      },
+      "jobs": [
+        [
+          "Calendar::MeetLinkJob",
+          [
+            "event-0"
+          ]
+        ]
+      ],
+      "cards": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-link_then_blank-announcement",
+          "action": "replace",
+          "maintain_scroll": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82NTQ2MzI4NzY:messages",
+          "target": "event_cards_message_api-link_then_blank-extra",
+          "action": "replace",
+          "maintain_scroll": true
+        }
+      ]
+    }
+  ]
+}

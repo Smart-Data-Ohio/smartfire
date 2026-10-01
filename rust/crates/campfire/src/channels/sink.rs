@@ -101,6 +101,9 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
     let Broadcast::Turbo(frame) = broadcast else { unreachable!() };
     let app = app.ok_or_else(|| anyhow::anyhow!("app is not booted for partial rendering"))?;
     let html = match &frame.partial {
+        Some(campfire_db::broadcasts::Partial::EventCards { message_id }) => {
+            Some(app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?)
+        }
         Some(partial) => match super::rooms_directory::render(app, partial)? {
             Some(html) => Some(html),
             None => crate::controllers::messages::rendered::domain_partial(app, partial)?,
