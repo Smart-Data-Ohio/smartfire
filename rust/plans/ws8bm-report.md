@@ -1,107 +1,128 @@
-# WS8bm behaviour parity — partial
+# WS8bm messaging and behaviour parity — partial
 
 Worker: GPT-6.1 Sol. Branch: `rust/ws8bm-messages-http`.
-Pinned Rails `d7c7de9264c63015be398001d7a1094e7695a6db`, with approved #163 application layout/assets drift only. No pixels or screenshots.
+Reference: Rails `d7c7de9264c63015be398001d7a1094e7695a6db`, with the approved drift in wave4/_common.md. No screenshots or pixel comparisons.
 
-Current mapped system scope: **42 passed / 87 remaining / 6 owner-blocked**, out of 135 exact pinned declarations. This run adds 31 accepted flows to the 12 in frozen PR #182, then returns one earlier flow to the backlog after its stronger fresh-clone assertion fails. Net pass credit increases by 30. These are scoped Playwright equivalents checked on both real applications, not execution of the original Ruby system files. Original source hashes and exact names are verified by the inventory.
+**73 passed / 56 remaining / 6 WS12-blocked**, from 135 exact named system declarations. This run credits 31 new declarations and restores the existing thread-create re-entry, then withdraws the intermittent reply-upload declaration: **net +31**. These are scoped Playwright behaviour equivalents run against both actual apps, with persisted-row checks; they are not execution of the original Ruby system files.
 
-Controller attribution remains **146/156**; the only ten unmatched declarations require WS12. The owned controller declaration gate remains met. Behaviour/system sign-off is partial. WS12 activity/work/board routes retain authorized, flagged 501 seams. This worker made no writes to frozen PR #182. Remote readback found its independent review-fix head `8cc1e939`; those production fixes are not in this working branch. They must be retained when the lead merges the PR and this continuation. No reviewer finding was relayed to this worker as a new task.
+Controller attribution remains **146/156**. All ten unmatched declarations require WS12. The owned controller declaration gate is met; behaviour sign-off is partial. Activity/work/board seams retain their authorized, flagged 501 responses.
 
-## Pushed slices
+## Merges and pushed slices
 
-- `976be8ff52aed2ae479d241b357b7622476d711b`: 20 message-list navigation/focus/live-region regressions and four Markdown composer/reply/upload/mention/recovery/in-flight-draft flows. Adds a self-contained pinned-Rails fixture builder and served-implementation mutation checks. Count after this slice: 36 / 95 / 4.
-- `91e1f17282d9b31ac6b661a647bf56d08b35bc81`: actual search empty/operator/pagination navigation and Markdown forwarding, with exact rendered ActionText snapshot persistence on both databases. Count after this slice: 38 / 93 / 4.
-- `16fc4e3c27d9a255fd8035235dca92f7986b889a`: five unread/divider/jump/around/mark-unread flows. Two previously deferred cases are correctly reclassified as WS12-blocked because their full assertions require board/work or activity pages. Count after this slice: 43 / 86 / 6.
+- `4d8e42c5`: real merge of origin/main `59ad94de`, including #176 and #183. Kept main's agent-stream renderer, quiet final frame, borrowed-App transport API, room optimizations and both sides' controller tests, schedule/GitHub children and work guards. Adapted the owned delivery test caller to the merged helper signature. Locked metadata and all 15 tracked manifests parsed successfully.
+- `a4a91508`: real merge of the requested frozen review head `63c42b89`, retaining complete cache dependencies, Rails boost stripping/classification, release-safe digest and source-anchored mutation fixes.
+- `2de16803`: six owned manual runner-stop setups use `TestApp::without_job_runner()`; no queue assertion, runtime timer or test-thread limit was weakened.
+- `e598574a` and follow-ups: 31 additional destination, composer, attach-menu, boost and URL-card browser declarations, fixtures and specific served mutants. Retain real HTTP/Cable, source and storage assertions; make observation and form-focus readiness explicit.
+- `993311af`: fixed-card cache/CSRF fixture stops the provider consumer before rendering; retain detailed bytes/response diagnostics for a mount mismatch. This also matches the final frozen branch's independently added stopped-runner setup.
+- `e35a71ee`: real merge of the frozen branch's later `4c9ebb97` and `e7a88d5c` fixes. Keep projected rendered-room dependencies, resolved search icons, unrelated-post/unused-icon stability, existing-reply stability and parent count refresh; keep all new Rails vectors and regressions. The only conflict was the same CSRF fixture comment; the shared helper and local failure diagnostics both remain.
+- `8139bbbc`: pushed attribution ledger at 73 / 56 / 6.
+- `f84e536b`: browser listeners use assigned ports 52020/52021/52022 and still refuse occupied listeners. The paired frame flow and its mutant pass on these ports. Earlier inherited defaults used 52120-series ports; no other worker's listener was stopped.
 
-- `ace859e2` / `d7b2c234`: retain thread-create failure diagnostics, including real `.json` responses and actual pane/input state. No acceptance assertion or wait was weakened.
-- `a766e287`: restore the exact open-state assertion omitted from the pinned Rails `open_threads` helper before selecting New thread; assert that the completed name survives until submission. An earlier clean batch exposed two thread names lost before submission. No refilling, sleep or increased timeout.
-- `206add3f`: retain the unresolved existing stray-reentry flow as deferred, with its prior evidence and exact failure reason. Final inventory: 42 / 87 / 6.
+## Changes by file and contract
 
-Only reference tools and the named system ledger changed in these slices. Application source, response goldens, shell ownership, presenter inputs and production includes are unchanged from `9883d3fa`.
+The queue setup changes are in `controllers/messages/declaration_tests.rs`, `controllers/messages/provider_tests.rs`, `controllers/channel_threads/page_tests.rs` and `integrations/agent_jobs/message_controller_tests.rs`. `messages/csrf_tests.rs` adds the stopped consumer and preserves response/fragment mismatch artifacts.
 
-## Stable room seam
+New browser modules are `behavior-message-destinations.mjs`, `behavior-composer.mjs`, `behavior-attach-menu.mjs` and `behavior-boosts.mjs`. `behavior-search-forward.mjs` adds live URL-card/edited-marker coverage. `behavior.mjs`, `behavior-check.py`, `behavior-fixtures.rb` and `behavior-mutations.mjs` wire the exact declarations, real actors, seed modifications, storage checks and applied-mutant guards. `plans/ws8bm-system-cases.json` retains exact names, reference hashes and explicit pass/deferred/owner status.
 
-The shell/composer contract remains [ws8bm-integration.md](ws8bm-integration.md). `Presenter::messages(&records)` and `messages::Index { ctx, messages }` remain the scrolling-page entry point. The real shell mounts `Presenter::room_message_list(&records, divider.message_id, divider.count)` verbatim inside the shared fragment-cache scope. The viewer divider remains outside cached message fragments.
+Frozen review source changes remain in `controllers/presenters.rs`, `presenters/message_cache.rs`, `presenters/message_dependencies.rs`, `messages/payload.rs`, related controller/integration regressions and their Rails vectors. No new own production include outside crates was added. No Cargo dependency or lockfile edit was needed.
 
-The shell supplies request `ViewContext` with verified origin/viewer/assets/signer/CSRF scope, room ID/kind/name, ordered command names, Drive flow, request-owned `PendingTemplate`, and the actual schedule button. Root composers pass no thread; the pane passes its thread ID at `render_thread_schedule_control`. Keep the populated-list boundary, pending-template newline and footer indentation documented in the integration contract. The merged provider renderers remain in use; no provider markup was copied into this slice.
+The stable list/composer entry points and exact caller inputs are documented in [ws8bm-integration.md](ws8bm-integration.md). Preserve `Presenter::messages(&records)`, `messages::Index { ctx, messages }`, and the shell adapter `Presenter::room_message_list(&records, divider.message_id, divider.count)`. The shell supplies verified request origin/viewer/assets/signer/CSRF context, selected records and divider facts; room kind/name/ID, ordered commands, Drive flow, thread scope, real scheduled-message child and request-owned PendingTemplate for the composer. Mount list/template boundaries verbatim. WS15g's real GitHub renderer and the merged WS14e/M2 children remain in use. WS12 panes are not implemented here.
 
-## Behaviour scope and discrimination
+## New accepted scope and failing-first evidence
 
-The 20 message-list checks cover roving tab stops, arrow/Home/End movement, Turbo/direct-DOM replacement focus, removal focus handoff, refresh/late-autofocus protection, ContextMenu/Escape, edit failure feedback, pending metadata sharing/routing, cache-close cleanup, the live log, actual before-pagination, edit replacement and optimistic-send replacement. Synthetic streams/fetch gates reproduce the pinned deterministic regression bodies; they are not described as server broadcast checks. Pagination, edit and send use real HTTP/Cable on both apps.
+- Eight remaining unblocked message-list declarations: search/permalink/thread menu and focusability, padding scope, pinch-zoom metadata, normal/admin profile names and two reduced-motion flash controls.
+- All eleven composer declarations: autocomplete blur, stale response, encoding, combobox/listbox semantics, IME, loaded/unloaded reply links and tombstones, two identically named typers, room and thread drafts.
+- Seven attach-menu declarations: Drive/no-Drive choices, actual file-input clicks, keyboard/outside dismissal, original phone target/overflow bounds, device/paste/drop previews. No message/upload POST may occur; unchanged message rows and no new blobs other than tracked variants of seed blobs are required.
+- All four boost declarations: actual create/delete, retained unfinished input through another viewer's edit or boost, and exact persisted rows.
+- Live URL-card replacement after an edit, edited marker after reload, exact saved source and reference identity.
+- Existing thread-create re-entry restored after waiting for the real form focus handoff; assert the name before submit, persisted name/body and a broken re-entry implementation rejected. No sleep, refilling or enlarged wait.
 
-The four new Markdown flows cover real file upload as a reply with author notification disabled; mention selection without premature send followed by actual recipient mention delivery; rejected draft recovery/correction; and preserving a newer draft while the submitted source is in flight. The attachment filename, reply flags, 47 bytes and storage contents are checked in both databases. Mention/source/count assertions also check both databases. The recovery check clears the still-present editor before Restore draft, so a broken recovery method cannot pass by retaining the old text.
+There was no new security policy implementation in this continuation. Existing authorization/CSRF regressions remain in the seeded suite. New behaviour discrimination deliberately breaks the actual served implementation: it requires case readiness, an applied source-anchored mutation, an assertion/timeout from the named case and no real network failure. It never credits startup, an unapplied mutation or an unexpected adapter error. Failure-only mutant waits are short; positive waits and all pinned scroll/focus/quiet/target-size bounds are unchanged.
 
-Search navigates the empty state and `NOT` operator, then appends older results from 40 to 42 with no duplicate IDs. Forwarding uses the actual actions menu/destination dialog and checks tables/code on both viewers. Rails stores NULL `markdown_source` and `forwarded_markdown=1` on the copy; both applications must persist the exact original rendered ActionText body, rather than a copied Markdown source.
+The first mutation run rejected 52 and correctly reported 10 invalid/escaped. It exposed an SVG selected by a stylesheet prefix and service-worker navigation bypasses. CSS routes now select actual stylesheets; only mutation contexts block service workers, while positive acceptance keeps the real worker. The corrected list run rejected 26 with two invalid setup failures; the earlier complete run already supplied a valid rejection for the optimistic-announcement case. A zoom script mutant reached and rejected the actual metadata assertion. The original HTML zoom rewrite twice failed the Cable setup guard and was never credited.
 
-All five unread flows cover the first divider boundary, initial scrolling, jump-pill landing, an older off-page cursor through the actual around link, and Mark unread through the public endpoint/menu. The seven-unread fixture adds twelve already-read history posts and uses a 700px viewport to make scrolling necessary. The same pinned upper-half assertion remains unchanged. The short original fixture alone also passed with initial scrolling disabled; it was insufficient discrimination. Both apps pass the stronger setup and the disabled-scroll implementation is rejected.
+The reply fallback mutant escaped the original before-fetch observer through hover prefetch. An added Drive before-visit check then failed on pinned Rails because the link belongs to the messages Turbo Frame. The final check retains the original URL/no-highlight assertions and additionally requires the exact permalink in a non-prefetch frame fetch. Both apps pass; the navigation-blocking served mutant is rejected. Across the completed runs, **62 distinct credited declarations have valid specific rejections**; the run totals are not added because they overlap.
 
-Each of the 31 new cases must reject its own deliberately broken served asset or HTTP response. The check refuses to credit startup failure, an unapplied mutation, an unexpected adapter error or an actual network failure as mutant rejection. Failure-only mutation runs use short waits; positive acceptance waits and the pin's 50ms focus window, 500ms reconnect, 30ms quiet-after-insertion threshold and scroll bounds are unchanged. No concurrency or timing assertion was weakened.
-
-The first seventeen read-only list cases share one server fixture, with fresh browser contexts per case and saved message rows verified unchanged afterwards. Room reads retain their ordinary membership/read side effects. All writing/history/unread/search/forward cases get independent database/storage/server copies. Pinned Rails creates the extra fixture rows, then identical bytes are copied to the candidate. Seeds, binary, npm/Chromium and metadata are generated by the committed runner; no test requires an old `.scratch` or Cargo target.
-
-## Current verification
-
-The full Rust gate ran `python3 rust/reference-tools/messaging/fresh-check.py` from committed input `16fc4e3c27d9a255fd8035235dca92f7986b889a`. It created a new tracked-source clone with no prior scratch or Cargo target, generated both seeds, and ran locked metadata, the seeded workspace suite/doctests (excluding the third-party html5ever test crate), and all-target clippy with warnings denied. Eight test threads, two build jobs, pinned media/toolchain and the unchanged shared rustc throttle were used. **58 raw summaries: 3,353 passed / zero failed / 12 inherited ignores.** All current application/crate source, Cargo manifests and lockfile are unchanged from that tested input; subsequent commits change tools, ledger and this report only. No new production includes were added.
-
-The inherited `controllers::rooms::directs_rails_cases::the_last_member_out_destroys_the_group` passed in this run. Its known queue-observation race remains with the separate worker; no queue-observation test, implementation, concurrency or timing threshold was changed here. The three application ignores remain the reference recorder, Node/gateway-only suite and push-latency measurement. Other ignores are the existing reference export/rollback/ACME setup probes and two doctests. None was added in this run.
-
-Raw fresh-clone output (all test/doctest summary lines):
+The initial fresh Rust gate at `2de16803` reported one cache mount failure:
 
 ```text
-WS8bm fresh checkout: 16fc4e3c27d9a255fd8035235dca92f7986b889a; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-quf6uqai
+test result: FAILED. 1852 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1405.72s
+```
+
+The unchanged diagnostic passed, so it did not establish a deterministic production bug. The fixed-card fixture now stops queued provider execution before capture/mount, preserving cache identity, complete bytes, actual CSRF forms and all assertions. Focused results at `993311af`:
+
+```text
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1852 filtered out; finished in 1.57s
+```
+
+The full initial browser batch passed 61 complete paired/persistence checks, then failed the attach-menu storage invariant after its UI checks. Diagnostics showed pinned Rails generated `alpha-centuri.webp`, attached to `ActiveStorage::VariantRecord`, during room viewing. Only tracked derivatives of seed blobs may now add rows; actual unsent-upload/message POSTs remain forbidden. Initial phone measurements were 44px × 0.97 during the enter transform; await the actual transition's completion, without changing the 44–64px bounds. The profile adapter's unnecessary third viewer crashed; it now uses the original normal/admin visitors. The recorded ERR_NETWORK_CHANGED and Cable setup failures are invalid runs, never proof of parity or discrimination.
+
+**The reply-upload timeout remains unresolved and is returned to deferred.** The initial batch timed out waiting for the reply attachment, without identifying which application failed. An unchanged later diagnostic passed the full upload, flags, storage bytes and both viewers. That is not evidence of a fix. Default behaviour runs still attempt this declaration; only the explicitly logged mutation command excludes it. Do not claim system sign-off or a repaired upload race. No queue-observation race or timing test was fixed to obtain a green run.
+
+## Fresh-clone verification
+
+Ran `python3 rust/reference-tools/messaging/fresh-check.py` from committed input `f84e536bcc78bcd65fc7fe77f906678b4677ed47`. It cloned tracked sources with no pre-existing scratch or Cargo target, generated default/first_run seeds, ran locked metadata, the seeded workspace tests/doctests excluding third-party html5ever, and all-target clippy with warnings denied. Eight test threads, existing two build jobs, pinned processing/toolchain and the unchanged shared rustc flock throttle. **3,704 passed / zero failed / 12 inherited ignores; 58 raw summaries.** The scratch target was removed. The first failed gate is reported above; it is not represented as green. Subsequent report-only edits do not change these tested inputs.
+
+`the_last_member_out_destroys_the_group` and other queue-observation races remain with the separate worker; their tests were not modified here beyond retaining main's merged changes. No new ignore, extra build job or widened timing bound was introduced. Seeds and test binaries are generated by the committed tools; no runnable test depends on old `.scratch/` state or an old target.
+
+Raw fresh output:
+
+```text
+WS8bm fresh checkout: f84e536bcc78bcd65fc7fe77f906678b4677ed47; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-k0g37ovq
 WS8bm fresh concurrency: eight test threads; two build jobs; no timing threshold changes
+WS8bm pinned processing: campfire-toolchain; shared machine rustc flock slots
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 5m 46s
-test result: ok. 1700 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1640.57s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6m 01s
+test result: ok. 1859 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1349.40s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
-test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.90s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.16s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.37s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
-test result: ok. 951 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 140.51s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.47s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
+test result: ok. 1143 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 263.79s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.31s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
 test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.64s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.22s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.43s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.77s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.29s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.64s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.18s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 35.70s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.28s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.84s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.30s
-test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.63s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.18s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.22s
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.56s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.37s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -113,351 +134,312 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 44s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4m 08s
 WS8bm fresh target removed
 WS8bm fresh-check: committed inputs only; generated default/first_run seeds; workspace tests/doctests/clippy passed
 ```
 
-From that same clone, after the Rust helper removed its target, `python3 rust/reference-tools/messaging/behavior-check.py --keep-going` rebuilt the binary, seeds and npm/Chromium inputs and attempted all 43 mapped checks. The first batch at `16fc4e3c` exited 1 with two existing thread-create timeouts:
+## Paired browser commands and raw summaries
 
-```text
-WS8bm behaviour check: 41 named cases passed on Rails and Rust; 2 failed; no pixel checks
-WS8bm failed named checks:
-threads: browses active and closed threads and can join or leave a closed one
-threads: renders untrusted thread metadata as text
+All these commands ran inside the tracked-source fresh clone `ws8bm-fresh-wzo7i4nu`. Its initial input was `2de16803`; it was fast-forwarded to `993311af` for the complete attempted browser batch, to the committed harness fixes for the affected cases, to `e35a71ee` for the final frame controls and to `f84e536b` for assigned-port verification. It generates its own seeds/binary/npm/Chromium and copies pinned Rails fixtures unchanged to both apps. The final native fresh gate above includes all later production cache fixes and their exact Rails regressions. Passed checks from earlier inputs are scoped evidence, not a claim that an entire 73-case browser command completed green at the final SHA.
+
+The positive/persistence evidence union contains 73 distinct named cases; the negative union contains 62, all included in those 73. The intermittent upload is deliberately withheld. The partial/invalid run summaries below remain visible rather than being replaced with a fictitious global green browser result.
+
+Initial complete attempted batch; it aborted on the final attach-menu database invariant:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py --keep-going
 ```
 
-Diagnostics were committed in `ace859e2` / `d7b2c234` and fast-forwarded into the clean clone. The unchanged acceptance commands were rerun there individually:
+No final summary: the process aborted on the attach-menu database invariant after 61 distinct paired/persistence passes. Raw terminal error:
 
-- `python3 rust/reference-tools/messaging/behavior-check.py threads --case 'browses active and closed threads and can join or leave a closed one' --keep-going`: exit 0, including the closure, memberships and raw source rows.
-- `python3 rust/reference-tools/messaging/behavior-check.py threads --case 'renders untrusted thread metadata as text' --keep-going`: exit 1 on pinned Rails. The entered name was cleared; Rails returned HTTP 201 with `threadName: 'New thread'`. The same focused command at `a766e287`, after restoring the pinned helper's omitted panel-open state assertion and adding a stronger pre-submit assertion, exited 0 on both apps. No production behavior was changed.
+```text
+AssertionError: previews/pickers must not upload unsent files
+```
 
-Raw diagnostic summaries, in order:
+Profile visitors:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_list_a11y --case "profile message and ban buttons have accessible names"
+```
 
 ```text
 WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-WS8bm behaviour check: 0 named cases passed on Rails and Rust; 1 failed; no pixel checks
+```
+
+All four boost cases:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py boosting_messages --keep-going
+```
+
+```text
+WS8bm behaviour check: 4 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+Encoded-query observer:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer --case "mention queries are URL-encoded"
+```
+
+```text
 WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
 ```
 
-The full `--keep-going` batch was rerun once because that helper changed. Final input: `a766e287`; same clean checkout and unchanged application source. It exited 1: all 31 new flows passed, but the stronger assertion found the existing stray-reentry name field empty before submission. That assertion's trace did not identify which app's iteration failed; it is not claimed to be a Rust-only or Rails-only defect. Future failures label the responding app in `206add3f`. The earlier untrusted-name diagnostic was specifically Rails, as above. No network error appeared in these creation traces. The underlying cause of the cleared draft is unresolved. No further retry or refill was used to obtain a green batch. The stray-reentry declaration is explicitly **deferred**, and its earlier evidence is retained separately. This is **not a green browser/system gate**.
+Attach-menu database/POST checks: six passes, one startup network failure:
 
-Raw final browser acceptance lines:
-
-```text
-WS8bm behaviour: sending_messages: sending messages between two users: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: sending_messages: editing messages: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: sending_messages: deleting messages: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour source: test/system/sending_messages_test.rb SHA256 4c637558cc041e470c6378f43e67d9d5b5b483ed0aae746c50eb64221027d116
-WS8bm behaviour: workspace_markdown: Markdown messages reach other users and editing preserves the original source: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: workspace_markdown: desktop keyboard composition keeps line breaks and sends once after composition ends: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: workspace_markdown: untrusted markup stays inert in the delivered message: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: workspace_markdown: Markdown replies and file attachments remain usable: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: workspace_markdown: mention suggestions select a room member without sending the unfinished message: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: workspace_markdown: a rejected message can be recovered corrected and sent: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: workspace_markdown: sending preserves the submitted source and a newer draft: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour source: test/system/workspace_markdown_test.rb SHA256 b7b47897db51c2603fb733e90ecc7d2bf611a0f6d600926550ac80732e7b61fd
-WS8bm behaviour: threads: creates a thread from a channel message and keeps the channel draft separate: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: threads: the thread root counts its replies live and hides the count when none remain: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: threads: browses active and closed threads and can join or leave a closed one: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: threads: rejects an external thread deep link before fetching it: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: threads: renders untrusted thread metadata as text: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour source: test/system/threads_test.rb SHA256 e927613f9e78905aa072e0530339678b8443166b6f6d3c052d22cb3b797faafc
-WS8bm behaviour: message_list_a11y: the message list is a single tab stop with a roving tabindex: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: arrow keys move between messages: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: a stream replacing the focused message keeps focus and the tab stop on its replacement: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: a direct DOM swap of the focused message keeps focus and the tab stop on its replacement: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: deleting the focused message moves focus to the surviving tab stop: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: deleting an older focused message hands focus to its neighbour, not the newest: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: a focus move during a stream render survives Turbo's focus restore: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: a no-change room refresh does not yank focus back to the composer: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: the ContextMenu key opens the shared menu and Escape returns focus: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: a late composer autofocus does not steal focus from a message: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: up arrow from an empty composer still edits my last message: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: up-arrow-to-edit shows an error when the actions endpoint fails: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: forward reuses the menu-open metadata request instead of fetching again: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: a menu opened while an action waits does not redirect the pending action: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: the menu closes before Turbo caches the page: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: the main message list is a live log: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: paginated history stays quiet past the insert, then the live region comes back: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: an edit replacement is not announced as an addition: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_list_a11y: an own message is not re-announced when its broadcast replaces the pending copy: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour source: test/system/message_list_a11y_test.rb SHA256 9c17b5c9dccb9b10eb3c56e52aed5583c43e0a47166218ecfd9c0ec2bdd169fa
-WS8bm behaviour: search_forward_edit: search tolerates operators, shows an empty state and pages older results: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: search_forward_edit: forwarded Markdown keeps tables and code blocks: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour source: test/system/search_forward_edit_test.rb SHA256 60c7ecfe60cd0a51ec1235f547795c2400e8f02a830ef0991af9dea833d89366
-WS8bm behaviour: unread_divider: few unread render the divider above the first new message and keep the bottom scroll: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: unread_divider: many unread scroll the room to the divider: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: unread_divider: the jump pill shows while the divider is off-screen and returns to it: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: unread_divider: unread older than the last page keeps the last page and the pill links to the first unread: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: unread_divider: mark unread from the message menu points the divider at that message: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour source: test/system/unread_divider_test.rb SHA256 006147f6e9ffb9066a4e82e8b50e841f150ce7c079047833efcf560f93546a1e
-WS8bm behaviour check: 42 named cases passed on Rails and Rust; 1 failed; no pixel checks
-WS8bm failed named checks:
-threads: a stray create re-entry does not wipe the half-filled thread name
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer_attach_menu --keep-going
 ```
 
-`python3 rust/reference-tools/messaging/behavior-check.py --negative --keep-going` ran all 31 new served mutants from the clean clone at `16fc4e3c`, with unchanged new-flow acceptance code and fixtures. It exited 0. Subsequent helper changes apply only to the existing thread cases, which have no new mutation in this selection. Every selected mutant reached the actual case, was applied, had no recorded network failure, and was rejected. Raw discrimination lines:
-
 ```text
-WS8bm discrimination: workspace_markdown: Markdown replies and file attachments remain usable: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: workspace_markdown: mention suggestions select a room member without sending the unfinished message: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: workspace_markdown: a rejected message can be recovered corrected and sent: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: workspace_markdown: sending preserves the submitted source and a newer draft: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: the message list is a single tab stop with a roving tabindex: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: arrow keys move between messages: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: a stream replacing the focused message keeps focus and the tab stop on its replacement: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: a direct DOM swap of the focused message keeps focus and the tab stop on its replacement: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: deleting the focused message moves focus to the surviving tab stop: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: deleting an older focused message hands focus to its neighbour, not the newest: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: a focus move during a stream render survives Turbo's focus restore: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_list_a11y: a no-change room refresh does not yank focus back to the composer: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_list_a11y: the ContextMenu key opens the shared menu and Escape returns focus: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: a late composer autofocus does not steal focus from a message: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: up arrow from an empty composer still edits my last message: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: up-arrow-to-edit shows an error when the actions endpoint fails: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: forward reuses the menu-open metadata request instead of fetching again: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_list_a11y: a menu opened while an action waits does not redirect the pending action: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_list_a11y: the menu closes before Turbo caches the page: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: the main message list is a live log: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_list_a11y: paginated history stays quiet past the insert, then the live region comes back: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_list_a11y: an edit replacement is not announced as an addition: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_list_a11y: an own message is not re-announced when its broadcast replaces the pending copy: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: search_forward_edit: search tolerates operators, shows an empty state and pages older results: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: search_forward_edit: forwarded Markdown keeps tables and code blocks: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: unread_divider: few unread render the divider above the first new message and keep the bottom scroll: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: unread_divider: many unread scroll the room to the divider: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: unread_divider: the jump pill shows while the divider is off-screen and returns to it: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: unread_divider: unread older than the last page keeps the last page and the pill links to the first unread: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: unread_divider: mark unread from the message menu points the divider at that message: served mutant REJECTED (TimeoutError)
-WS8bm discrimination check: 31 named checks rejected their served mutants; 0 invalid or escaped
+WS8bm behaviour check: 6 named cases passed on Rails and Rust; 1 failed; no pixel checks
 ```
 
-`python3 rust/reference-tools/messaging/deferred-system-inventory.py` was rerun after updating the clone to committed `206add3f`. It checks every exact pinned name/source hash and the pass-evidence invariant. Raw inventory output:
+The remaining attach-menu case:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer_attach_menu --case "+ shows both attach options when Drive is available"
+```
 
 ```text
-test/system/boosting_messages_test.rb: 4 named declarations; 0 mapped behaviour passes; 4 deferred; 0 WS12 blocked
+WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+Stronger frame-permalink positive control on the merged cache code:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer --case "clicking a reply preview falls back to the permalink when the target is not loaded"
+```
+
+```text
+WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+Initial mutants, with the unresolved upload explicitly excluded:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py --negative --keep-going --exclude-case "Markdown replies and file attachments remain usable"
+```
+
+```text
+WS8bm discrimination check: 52 named checks rejected their served mutants; 10 invalid or escaped
+```
+
+Corrected list/navigation/CSS mutants; two setup failures remain invalid here:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_list_a11y --negative --keep-going
+```
+
+```text
+WS8bm discrimination check: 26 named checks rejected their served mutants; 2 invalid or escaped
+```
+
+Corrected frame-permalink mutant:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer --negative --case "clicking a reply preview falls back to the permalink when the target is not loaded"
+```
+
+```text
+WS8bm discrimination check: 1 named checks rejected their served mutants; 0 invalid or escaped
+```
+
+Zoom mutant delivered through the room script:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_list_a11y --negative --case "the viewport allows pinch zoom"
+```
+
+```text
+WS8bm discrimination check: 1 named checks rejected their served mutants; 0 invalid or escaped
+```
+
+Paired frame flow on the corrected assigned ports:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer --case "clicking a reply preview falls back to the permalink when the target is not loaded"
+```
+
+```text
+WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+Frame mutant on the corrected assigned ports:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer --negative --case "clicking a reply preview falls back to the permalink when the target is not loaded"
+```
+
+```text
+WS8bm discrimination check: 1 named checks rejected their served mutants; 0 invalid or escaped
+```
+
+## Controller reference and attribution
+
+Reran `python3 rust/reference-tools/messaging/check-controller-files.py`, using the original test archive from d7c7de92. Reference execution counts only; Rust attribution is [ws8bm-controller-cases.md](ws8bm-controller-cases.md). All native counterparts available in this branch are included in the fresh gate above.
+
+```text
+test/controllers/messages_controller_test.rb
+56 runs, 265 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/messages_drive_attachments_test.rb
+19 runs, 83 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/messages/cached_fragment_csrf_test.rb
+4 runs, 58 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/messages/legacy_presentation_cache_test.rb
+2 runs, 13 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/messages/boosts_controller_test.rb
+17 runs, 155 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/channel_threads_controller_test.rb
+24 runs, 206 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/channel_thread_messages_controller_test.rb
+12 runs, 65 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/channel_thread_messages_drive_attachments_test.rb
+13 runs, 57 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/message_forwards_controller_test.rb
+7 runs, 35 assertions, 0 failures, 0 errors, 0 skips
+test/controllers/message_forward_sources_controller_test.rb
+2 runs, 12 assertions, 0 failures, 0 errors, 0 skips
+WS8bm Rails controller reference: 10 files passed; reference counts only
+```
+
+| File | Rust mapped | WS12 blocked |
+| --- | ---: | ---: |
+| messages_controller_test.rb | 56 | 0 |
+| messages_drive_attachments_test.rb | 19 | 0 |
+| messages/cached_fragment_csrf_test.rb | 4 | 0 |
+| messages/legacy_presentation_cache_test.rb | 2 | 0 |
+| messages/boosts_controller_test.rb | 17 | 0 |
+| channel_threads_controller_test.rb | 14 | 10 |
+| channel_thread_messages_controller_test.rb | 12 | 0 |
+| channel_thread_messages_drive_attachments_test.rb | 13 | 0 |
+| message_forwards_controller_test.rb | 7 | 0 |
+| message_forward_sources_controller_test.rb | 2 | 0 |
+| Total | 146 | 10 |
+
+The ten blocked controller names remain explicit in the attribution file: work conversion/audit, owner eligibility/revocation, owner status/reassignment policy, removing work, omitted-owner protection, stale-instance events, eligible-agent assignment/notification, owner picker profiles, unauthorized agent assignment and ordinary/work-field separation. WS12 owns implementation; no matched-pass claim is made.
+
+## Exact remaining behaviour declarations
+
+Reran `python3 rust/reference-tools/messaging/deferred-system-inventory.py`; it verifies every exact name/order and source hash against the pin. Remaining lists below are the complete current ledger: 56 deferred and 6 WS12-blocked. The 56 are continuing WS8bm behaviour work; the full flow's owner components are noted where relevant. No pixel phase remains.
+
+```text
+test/system/boosting_messages_test.rb: 4 named declarations; 4 mapped behaviour passes; 0 deferred; 0 WS12 blocked
 test/system/code_highlighting_test.rb: 6 named declarations; 0 mapped behaviour passes; 6 deferred; 0 WS12 blocked
 test/system/sending_messages_test.rb: 3 named declarations; 3 mapped behaviour passes; 0 deferred; 0 WS12 blocked
-test/system/threads_test.rb: 15 named declarations; 5 mapped behaviour passes; 6 deferred; 4 WS12 blocked
-test/system/workspace_markdown_test.rb: 8 named declarations; 7 mapped behaviour passes; 1 deferred; 0 WS12 blocked
-test/system/composer_test.rb: 11 named declarations; 0 mapped behaviour passes; 11 deferred; 0 WS12 blocked
-test/system/composer_attach_menu_test.rb: 9 named declarations; 0 mapped behaviour passes; 9 deferred; 0 WS12 blocked
+test/system/threads_test.rb: 15 named declarations; 6 mapped behaviour passes; 5 deferred; 4 WS12 blocked
+test/system/workspace_markdown_test.rb: 8 named declarations; 6 mapped behaviour passes; 2 deferred; 0 WS12 blocked
+test/system/composer_test.rb: 11 named declarations; 11 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/composer_attach_menu_test.rb: 9 named declarations; 7 mapped behaviour passes; 2 deferred; 0 WS12 blocked
 test/system/message_interactions_test.rb: 10 named declarations; 0 mapped behaviour passes; 10 deferred; 0 WS12 blocked
 test/system/message_actions_mobile_test.rb: 2 named declarations; 0 mapped behaviour passes; 2 deferred; 0 WS12 blocked
 test/system/message_toolbar_test.rb: 13 named declarations; 0 mapped behaviour passes; 13 deferred; 0 WS12 blocked
-test/system/message_list_a11y_test.rb: 29 named declarations; 20 mapped behaviour passes; 8 deferred; 1 WS12 blocked
+test/system/message_list_a11y_test.rb: 29 named declarations; 28 mapped behaviour passes; 0 deferred; 1 WS12 blocked
 test/system/drive_attachments_test.rb: 3 named declarations; 0 mapped behaviour passes; 3 deferred; 0 WS12 blocked
 test/system/unread_divider_test.rb: 5 named declarations; 5 mapped behaviour passes; 0 deferred; 0 WS12 blocked
-test/system/search_forward_edit_test.rb: 3 named declarations; 2 mapped behaviour passes; 1 deferred; 0 WS12 blocked
+test/system/search_forward_edit_test.rb: 3 named declarations; 3 mapped behaviour passes; 0 deferred; 0 WS12 blocked
 test/system/motion_test.rb: 9 named declarations; 0 mapped behaviour passes; 9 deferred; 0 WS12 blocked
 test/system/mobile_layout_test.rb: 5 named declarations; 0 mapped behaviour passes; 4 deferred; 1 WS12 blocked
-WS8bm system inventory: 135 named declarations; 42 mapped behaviour passes; 87 deferred; 6 WS12 blocked; no pixel checks
+WS8bm system inventory: 135 named declarations; 73 mapped behaviour passes; 56 deferred; 6 WS12 blocked; no pixel checks
 ```
-
-The Rust helper removed its generated target. The browser runner demonstrably rebuilt it from that removed-target state; its generated target was then deleted after both acceptance/discrimination runs. Cleanup verification found no scratch targets; the normal worktree target was untouched:
-
-```text
-WS8bm cleanup: 0 scratch targets remain; normal worktree target untouched
-```
-
-The twelve inherited ignores and the failed browser traces above remain visible. No screenshots, pixel diffs, reduced test concurrency or widened acceptance timing threshold were used. The Python model server was not touched.
-
-
-## Exact remaining scope
-
-| Pinned system file | Named | Passed | Remaining | WS12 blocked |
-|---|---:|---:|---:|---:|
-| `boosting_messages_test.rb` | 4 | 0 | 4 | 0 |
-| `code_highlighting_test.rb` | 6 | 0 | 6 | 0 |
-| `sending_messages_test.rb` | 3 | 3 | 0 | 0 |
-| `threads_test.rb` | 15 | 5 | 6 | 4 |
-| `workspace_markdown_test.rb` | 8 | 7 | 1 | 0 |
-| `composer_test.rb` | 11 | 0 | 11 | 0 |
-| `composer_attach_menu_test.rb` | 9 | 0 | 9 | 0 |
-| `message_interactions_test.rb` | 10 | 0 | 10 | 0 |
-| `message_actions_mobile_test.rb` | 2 | 0 | 2 | 0 |
-| `message_toolbar_test.rb` | 13 | 0 | 13 | 0 |
-| `message_list_a11y_test.rb` | 29 | 20 | 8 | 1 |
-| `drive_attachments_test.rb` | 3 | 0 | 3 | 0 |
-| `unread_divider_test.rb` | 5 | 5 | 0 | 0 |
-| `search_forward_edit_test.rb` | 3 | 2 | 1 | 0 |
-| `motion_test.rb` | 9 | 0 | 9 | 0 |
-| `mobile_layout_test.rb` | 5 | 0 | 4 | 1 |
-| Total | 135 | 42 | 87 | 6 |
-
-
-The inventory remains `ws8bm-system-cases.json`, with every exact pinned name, source hash, status and scoped evidence. The following complete list is still unaccepted:
-
-
-## Remaining system declarations (87)
-
-### test/system/boosting_messages_test.rb
-
-- boosting a message
-- deleting a boost
-- message update preserves the input state
-- boost by another user preserves the input state
 
 ### test/system/code_highlighting_test.rb
 
-- language fences highlight common code without changing its text
-- unlabelled code is detected while text unknown languages and inline code stay literal
-- search results highlight code on initial load and after returning to the channel
-- code and copying remain available when the highlighter cannot load
-- editing a code block replaces its language colors and copied source
-- thread code stays readable in both themes and scrolls within a narrow screen
+- language fences highlight common code without changing its text — deferred.
+- unlabelled code is detected while text unknown languages and inline code stay literal — deferred.
+- search results highlight code on initial load and after returning to the channel — deferred.
+- code and copying remain available when the highlighter cannot load — deferred.
+- editing a code block replaces its language colors and copied source — deferred.
+- thread code stays readable in both themes and scrolls within a narrow screen — deferred.
 
 ### test/system/threads_test.rb
 
-- a stray create re-entry does not wipe the half-filled thread name — The final fresh-clone browser batch failed the stronger pre-submit name assertion: the field was empty after the pinned same-context re-entry. Earlier runs passed, but current acceptance is unresolved. Preserve the assertion and 30-second waits; do not refill the draft or change timing to get a pass.
-- keeps the thread drawer usable on a phone and preserves the channel
-- marks a joined thread read only while the conversation is visible
-- opens a shared thread message link around an older post
-- keeps an anchored older thread unread when a new reply arrives
-- discusses a pull request from its card
+- tracks work, assigns an owner, completes and reopens it without losing the conversation — WS12 owner-blocked.
+- shows work-thread guidance in the new-thread form and on the work page — WS12 owner-blocked.
+- keeps the new-thread guidance usable on a phone — WS12 owner-blocked.
+- shows work assignment activity to the owner and opens the exact thread — WS12 owner-blocked.
+- keeps the thread drawer usable on a phone and preserves the channel — deferred.
+- marks a joined thread read only while the conversation is visible — deferred.
+- opens a shared thread message link around an older post — deferred.
+- keeps an anchored older thread unread when a new reply arrives — deferred.
+- discusses a pull request from its card — deferred.
 
 ### test/system/workspace_markdown_test.rb
 
-- workspace follows the system theme and mobile navigation remains reachable
-
-### test/system/composer_test.rb
-
-- blurring an open autocomplete does not leave a zombie that swallows Enter
-- a stale icon response does not poison the suggestion commit
-- mention queries are URL-encoded
-- composer autocomplete exposes combobox semantics over a polite listbox
-- composing text does not commit a suggestion or send the message
-- clicking a reply preview scrolls to the loaded message instead of navigating
-- clicking a reply preview falls back to the permalink when the target is not loaded
-- deleting a replied-to message turns open reply previews into a tombstone
-- two typers with the same name do not merge
-- composer drafts persist per room and clear on send
-- thread drafts persist per thread without touching the channel draft
+- Markdown replies and file attachments remain usable — deferred.
+- workspace follows the system theme and mobile navigation remains reachable — deferred.
 
 ### test/system/composer_attach_menu_test.rb
 
-- + shows both attach options when Drive is available
-- From this device triggers the file input
-- From Google Drive starts the legacy picker flow
-- From Google Drive starts the enhanced share flow when sharing is configured
-- + opens the file picker directly without Drive
-- arrow keys move between items and Escape closes back onto +
-- a tap outside closes the menu
-- phone layout keeps the menu above the composer with no horizontal overflow
-- device files, paste, and drag-and-drop still preview uploads
+- From Google Drive starts the legacy picker flow — deferred.
+- From Google Drive starts the enhanced share flow when sharing is configured — deferred.
 
 ### test/system/message_interactions_test.rb
 
-- opens message actions from context menu and keyboard, and cancels a moving long press
-- a release click landing on the just-opened menu does not activate it
-- shows the message action menu as a bottom sheet on phones
-- edits through the normal composer and restores the saved draft on cancel and success
-- a duplicate delivery does not replace the message while its actions are open
-- keeps newer typing through an asynchronous edit and leaves failures in edit mode
-- replies with notify off and renders a tombstone when the target is deleted
-- copies message text and link and forwards to a server-provided thread destination
-- forwarding twice in a row submits only once
-- groups emoji reactions, updates the live count, and highlights the current user
+- opens message actions from context menu and keyboard, and cancels a moving long press — deferred.
+- a release click landing on the just-opened menu does not activate it — deferred.
+- shows the message action menu as a bottom sheet on phones — deferred.
+- edits through the normal composer and restores the saved draft on cancel and success — deferred.
+- a duplicate delivery does not replace the message while its actions are open — deferred.
+- keeps newer typing through an asynchronous edit and leaves failures in edit mode — deferred.
+- replies with notify off and renders a tombstone when the target is deleted — deferred.
+- copies message text and link and forwards to a server-provided thread destination — deferred.
+- forwarding twice in a row submits only once — deferred.
+- groups emoji reactions, updates the live count, and highlights the current user — deferred.
 
 ### test/system/message_actions_mobile_test.rb
 
-- message action menu is a bottom sheet with touch-sized targets on phones
-- message action menu stays a floating popover on desktop
+- message action menu is a bottom sheet with touch-sized targets on phones — deferred.
+- message action menu stays a floating popover on desktop — deferred.
 
 ### test/system/message_toolbar_test.rb
 
-- the toolbar stays hidden until hover or focus and labels every action
-- quick-react creates a boost from the toolbar
-- reply and thread buttons drive the composer and the thread panel
-- the more button opens the shared menu for its message
-- keyboard users reach the toolbar from a focused message
-- the emoji picker searches and reacts
-- the picker shows category tabs and switches between them
-- the picker loads its emoji data only on first open
-- the picker remembers recent reactions
-- the picker Custom tab reacts with a workspace icon
-- the picker reacts with a brand icon shortcode
-- picker arrows move through options, Enter selects, and Escape returns focus
-- picker tabs move with arrow keys and switch the grid
+- the toolbar stays hidden until hover or focus and labels every action — deferred.
+- quick-react creates a boost from the toolbar — deferred.
+- reply and thread buttons drive the composer and the thread panel — deferred.
+- the more button opens the shared menu for its message — deferred.
+- keyboard users reach the toolbar from a focused message — deferred.
+- the emoji picker searches and reacts — deferred.
+- the picker shows category tabs and switches between them — deferred.
+- the picker loads its emoji data only on first open — deferred.
+- the picker remembers recent reactions — deferred.
+- the picker Custom tab reacts with a workspace icon — deferred.
+- the picker reacts with a brand icon shortcode — deferred.
+- picker arrows move through options, Enter selects, and Escape returns focus — deferred.
+- picker tabs move with arrow keys and switch the grid — deferred.
 
 ### test/system/message_list_a11y_test.rb
 
-- search results keep their menus and focusability
-- the message-list top padding does not apply to search results
-- the standalone thread page keeps menus and focusability
-- the standalone message page keeps its menu and focusability
-- the viewport allows pinch zoom
-- profile message and ban buttons have accessible names
-- flash persists its 5-second minimum under reduced motion
-- flash dismisses on demand under reduced motion
+- text fields stay at 16px on touch devices without changing the desktop look — WS12 owner-blocked.
 
 ### test/system/drive_attachments_test.rb
 
-- attach Drive files from the picker, send textless, and remove through edit
-- edit a room message in the composer and remove one of two attachments
-- attach a Drive file from the thread composer
-
-### test/system/search_forward_edit_test.rb
-
-- editing to add a URL renders its card live and the edited marker on load
+- attach Drive files from the picker, send textless, and remove through edit — deferred.
+- edit a room message in the composer and remove one of two attachments — deferred.
+- attach a Drive file from the thread composer — deferred.
 
 ### test/system/motion_test.rb
 
-- motion is off by default in the test environment
-- mobile drawer animates in, lands in place, and returns focus with motion on
-- member selection mode moves no rows and resizes nothing
-- people directory bar shifts no rows when toggling
-- people directory bar stays stuck while scrolling
-- room menu measures at full scale when clamping to the viewport edge
-- mobile drawer keeps the room list scroll position across close and reopen
-- mobile drawer reveals a current room far down the list on first open
-- mobile drawer reopens on the current room when it is already in view
+- motion is off by default in the test environment — deferred.
+- mobile drawer animates in, lands in place, and returns focus with motion on — deferred.
+- member selection mode moves no rows and resizes nothing — deferred.
+- people directory bar shifts no rows when toggling — deferred.
+- people directory bar stays stuck while scrolling — deferred.
+- room menu measures at full scale when clamping to the viewport edge — deferred.
+- mobile drawer keeps the room list scroll position across close and reopen — deferred.
+- mobile drawer reveals a current room far down the list on first open — deferred.
+- mobile drawer reopens on the current room when it is already in view — deferred.
 
 ### test/system/mobile_layout_test.rb
 
-- the profile page fits phone widths without scrolling sideways
-- headers outside the workspace shell stay opaque over scrolled content
-- headers outside the workspace shell never cover the page or its scrollbar
-- pages outside the workspace shell show no drawer toggle that opens nothing
-## Owner-blocked system declarations (six WS12)
+- the profile page fits phone widths without scrolling sideways — deferred.
+- headers outside the workspace shell stay opaque over scrolled content — deferred.
+- headers outside the workspace shell never cover the page or its scrollbar — deferred.
+- pages outside the workspace shell show no drawer toggle that opens nothing — deferred.
+- every drawer destination has one toggle that opens the drawer on itself — WS12 owner-blocked.
 
-### test/system/threads_test.rb
+## Delivery limits
 
-- tracks work, assigns an owner, completes and reopens it without losing the conversation
-- shows work-thread guidance in the new-thread form and on the work page
-- keeps the new-thread guidance usable on a phone
-- shows work assignment activity to the owner and opens the exact thread
-
-### test/system/message_list_a11y_test.rb
-
-- text fields stay at 16px on touch devices without changing the desktop look — Pinned flow requires the authorized, flagged WS12 board/work page or activity inbox; WS12 has not started. No partial pass credited.
-
-### test/system/mobile_layout_test.rb
-
-- every drawer destination has one toggle that opens the drawer on itself — Pinned flow requires the authorized, flagged WS12 board/work page or activity inbox; WS12 has not started. No partial pass credited.
-
-## Owner-blocked controller declarations (unchanged: ten WS12)
-
-- converts a thread to work, assigns an eligible owner, and keeps an audit trail
-- work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable
-- assigned owner can change work status but cannot reassign it
-- only a thread manager can remove work tracking
-- the work model also protects conversion when the owner field is omitted
-- work status updates from separate stale instances produce one event per real change
-- a manager can assign an eligible agent and the agent is notified
-- the owner picker lists eligible agents with profiles and excludes ineligible ones
-- a member who cannot manage the thread cannot assign an agent
-- ordinary thread fields remain separate from work tracking
-
-Case attribution remains in `ws8bm-controller-cases.md`. No one-to-one controller test count is claimed. Keyboard shortcuts (14) and CSP (5) remain assigned to WS8b-r; timezone detection (2) to WS8br2, outside this 135-flow ledger.
-
-## Merge handoff
-
-All owned controller declarations are attributed; only ten WS12 declarations remain owner-blocked. The current system remainder is exactly 87 deferred declarations and six WS12-blocked declarations, enumerated above. The unresolved stray-reentry flow is part of those 87 and remains in the default runner so its failure is observable. Next user-impact priority is the remaining list/standalone/search-menu flows, composer/attach-menu/Drive cases and the edited URL-card flow, followed by reactions/toolbars and the rest of the listed thread/mobile/theme/motion cases. Preserve WS12's flagged activity/work/board seams.
-
-This continuation has not merged the independent PR #182 review-fix branch. Remote readback found `8cc1e939` (cached freshness/reply-source keys and Rails reaction classification, following that branch's own main merge). Those fixes must be retained when the lead merges PR #182 and this branch. This worker made no changes or pushes to the frozen branch. The reviewed branch's own report is separate from this run's verification; no results from it are substituted here.
-
-Partial delivery: three new-flow slices, diagnostic/pinned-helper corrections and the honest backlog update are pushed on `rust/ws8bm-messages-http`. Public list/presenter/composer seams remain stable. Behaviour system sign-off is still pending the listed declarations and the unresolved browser failure; no blanket E2E sign-off is claimed.
+Behaviour E2E is partial. Continue the 56 named cases, prioritize ordinary message interactions/reactions/toolbar, thread phone/read/anchor/PR-card and scheduling, then remaining highlighting/Drive/motion/mobile flows. Investigate the retained reply-upload timeout before crediting it. WS12's six system and ten controller declarations wait on activity/work/board implementation. Controller authorization and HTTP/render parity stay covered by the native Rails-vector suite. This continuation does not write to or open the frozen PR branch; it only merges its authorized review fixes.
