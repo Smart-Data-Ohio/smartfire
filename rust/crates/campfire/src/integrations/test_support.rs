@@ -198,6 +198,7 @@ impl FakeServer {
     }
 
     pub async fn on_listener(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, listener: TcpListener) -> Self {
+
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
@@ -351,8 +352,9 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
     stream.shutdown().await
 }
 
-/// Also acknowledges the first response byte, so a paused-time test can wait for real I/O
-/// before advancing its clock.
+/// A server that answers every request with `head` and then a byte of body every 50 ms, until
+/// the client hangs up. Acknowledges the first byte, so a paused-time test can wait for real
+/// I/O before advancing its clock.
 pub async fn trickling_server_with_ready(
     head: &'static str,
 ) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
