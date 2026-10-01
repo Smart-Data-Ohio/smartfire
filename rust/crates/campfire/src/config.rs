@@ -62,8 +62,6 @@ pub struct Config {
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
     pub admin_session_idle_timeout: jiff::SignedDuration,
     pub public_policy: crate::public_policy::PublicPolicy,
-    /// WS14g display seam: Google::Client.configured?, separate from Workspace sign-in.
-    pub profile_google_calendar_configured: bool,
     /// WS14g display seam: normalized domains only when Google::SignIn.configured?. OAuth
     /// start/callback and provider adapters remain with WS14g; parsing reuses WS1's contract.
     pub sign_in_google_domains: Vec<String>,
@@ -174,7 +172,6 @@ impl Config {
             google_picker: crate::picker_configuration::picker(&get),
             admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
             public_policy: crate::public_policy::PublicPolicy::from_lookup(&get),
-            profile_google_calendar_configured: google_client_configured,
             sign_in_google_domains,
             google_client: crate::integrations::google::api::Config {
                 client_id: get("GOOGLE_CLIENT_ID").unwrap_or_default(),
