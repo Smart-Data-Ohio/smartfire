@@ -1,4 +1,10 @@
+import contextlib
+import io
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
 import unittest
+from unittest import mock
 import huddle_discrimination as runner
 
 
@@ -18,6 +24,25 @@ class MutationCatalogueTest(unittest.TestCase):
         self.assertTrue(errors[0].startswith('first:'))
         self.assertTrue(errors[1].startswith('second:'))
         self.assertEqual(path.read_text(), original)
+
+    def test_failing_or_empty_baselines_never_edit_sources(self):
+        path = runner.H
+        original = path.read_text()
+        entry = ('baseline-guard', path, lambda source: source + '\n// mutation\n', 'campfire', 'baseline-test')
+        for result in [
+            SimpleNamespace(returncode=101, stdout='panicked at baseline\ntest result: FAILED. 0 passed; 1 failed;\n', stderr=''),
+            SimpleNamespace(returncode=0, stdout='test result: ok. 0 passed; 0 failed;\n', stderr=''),
+        ]:
+            with self.subTest(result=result.returncode), tempfile.TemporaryDirectory(dir=runner.SCRATCH) as temporary:
+                observed = []
+                def run(*args, **kwargs):
+                    observed.append(path.read_text())
+                    return result
+                with mock.patch.object(runner, 'mutations', [entry]), mock.patch.object(runner.sys, 'argv', ['huddle_discrimination.py']), mock.patch.object(runner, 'SCRATCH', Path(temporary)), mock.patch.object(runner.subprocess, 'run', side_effect=run), contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaises(SystemExit):
+                        runner.main()
+                self.assertEqual(observed, [original])
+                self.assertEqual(path.read_text(), original)
 
 
 if __name__ == '__main__':

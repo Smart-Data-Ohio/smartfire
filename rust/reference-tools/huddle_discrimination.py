@@ -177,6 +177,14 @@ def preflight(entries):
     return errors
 
 
+def test_command(package, test):
+    command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "2",
+               "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", package]
+    if package == "campfire":
+        command += ["--bin", "campfire"]
+    return command + [test, "--", "--nocapture", "--test-threads=8"]
+
+
 def main():
     global mutations
     environment = dict(os.environ, TMPDIR=str(ROOT / ".scratch"), CARGO_TARGET_DIR=os.environ.get("CARGO_TARGET_DIR", str(ROOT / "rust/target")),
@@ -197,16 +205,28 @@ def main():
         raise SystemExit(f"WS13 preflight: {len(errors)} invalid mutations; no sources changed")
     failures = []
     rejected = 0
+    unhealthy = set()
+    # A failing baseline is not mutation discrimination. Check each selected
+    # regression once, before changing any source, including that it ran tests.
+    for package, test in dict.fromkeys((package, test) for _, _, _, package, test in mutations):
+        result = subprocess.run(test_command(package, test), cwd=ROOT, env=environment, capture_output=True, text=True)
+        output = result.stdout + result.stderr
+        (SCRATCH / f"baseline-{package}-{test}.log").write_text(output)
+        passed = re.findall(r"^test result: ok\. (\d+) passed;", output, re.M)
+        if result.returncode != 0 or not passed or not any(int(count) for count in passed):
+            unhealthy.add((package, test))
+            print(f"UNHEALTHY BASELINE: {package} {test}: {output[-5000:]}", flush=True)
+        else:
+            print(f"BASELINE PASSED: {package} {test}", flush=True)
     for name, path, mutate, package, test in mutations:
+        if (package, test) in unhealthy:
+            failures.append(name)
+            print(f"NOT REJECTED: {name}: selected regression failed before mutation", flush=True)
+            continue
         original = path.read_text()
         try:
             path.write_text(mutate(original))
-            command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "2",
-                       "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", package]
-            if package == "campfire":
-                command += ["--bin", "campfire"]
-            command += [test, "--", "--nocapture", "--test-threads=8"]
-            result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
+            result = subprocess.run(test_command(package, test), cwd=ROOT, env=environment, capture_output=True, text=True)
             output = result.stdout + result.stderr
             (SCRATCH / f"{name}.log").write_text(output)
             summaries = re.findall(r"^test result: FAILED\..*$", output, re.M)
