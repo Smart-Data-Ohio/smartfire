@@ -44,7 +44,7 @@ struct Brand {
 const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
 static BRANDS: LazyLock<Vec<Brand>> =
     LazyLock::new(|| serde_yaml::from_str(ICON_CONFIG).expect("vendored config/icons.yml"));
-fn icons(conn: &Connection) -> Result<IconCatalog, String> {
+pub(crate) fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     let mut icons = IconCatalog::default();
     for brand in BRANDS.iter() {
         let icon = Icon::Brand {
@@ -75,6 +75,17 @@ fn icons(conn: &Connection) -> Result<IconCatalog, String> {
         );
     }
     Ok(icons)
+}
+
+/// WS8br seam: reuse WS5's data resolver for Room#icon_name_must_resolve, on the
+/// caller's transaction connection; this does not render or alter rich-text fragments.
+pub(crate) fn room_icon_resolves(conn: &Connection, name: &str) -> campfire_db::Result<bool> {
+    Ok(icons(conn).map_err(campfire_db::Error::Other)?.find_normalized(name).is_some())
+}
+
+/// `MessagesHelper#markdown_message_presentation`, using the same icon catalog as writes.
+pub(crate) fn markdown_presentation(conn: &Connection, body: &str, ctx: &RenderContext<'_>) -> Result<String, String> {
+    markdown::presentation(body, ctx, &icons(conn)?, None).map_err(|error| error.to_string())
 }
 
 impl RichText for AppRichText {

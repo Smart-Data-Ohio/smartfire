@@ -15,7 +15,9 @@ async fn show_renders_the_room_and_remembers_it() {
     let html = reply.text();
     assert!(html.contains("<title>All Talk</title>"), "{html}");
     assert!(html.contains(r#"<meta name="current-room-id" content="486777696">"#));
-    assert_eq!(html.matches(r#"data-controller="reply""#).count(), 40, "the last page");
+    assert_eq!(html.matches(r#"data-controller="reply""#).count(), 40, "native owner list mounts the selected last page");
+    let messages=app.db().read(|conn|crate::controllers::presenters::room_shell::find_messages(conn,ALL_TALK,None)).await.unwrap();
+    assert_eq!(messages.len(),40,"the shell gathers the last page for its owner");
     assert!(reply.headers.get_all("set-cookie").iter().any(|c| c.to_str().unwrap().starts_with(&format!("last_room={ALL_TALK}"))));
     assert_eq!(reply.header("x-version"), Some("parity"));
 }
@@ -31,7 +33,10 @@ async fn show_at_a_message_pages_around_it() {
     let reply = app.david().get(&format!("/rooms/{ALL_TALK}/@{}", first.id)).await;
     assert_eq!(reply.status, StatusCode::OK);
     // The first message and the 40 after it.
-    assert_eq!(reply.text().matches(r#"data-controller="reply""#).count(), 41);
+    assert_eq!(reply.text().matches(r#"data-controller="reply""#).count(), 41,"native owner list mounts the root anchor page");
+    let messages=app.db().read(move |conn|crate::controllers::presenters::room_shell::find_messages(conn,ALL_TALK,Some(first.id))).await.unwrap();
+    assert_eq!(messages.len(),41,"root anchor gathers the first message and forty after it");
+    assert_eq!(messages.first().unwrap().id,first.id);
 }
 
 #[tokio::test]
@@ -63,8 +68,10 @@ async fn undeclared_actions() {
     assert_eq!(david.get("/rooms/new").await.status, StatusCode::NOT_FOUND);
     assert_eq!(david.get(&format!("/rooms/{ALL_TALK}/edit")).await.status, StatusCode::NOT_FOUND);
     let direct = david.get(&format!("/rooms/directs/{DIRECT_DAVID_JASON}")).await;
-    assert_eq!(direct.status, StatusCode::FOUND);
-    assert!(direct.header("location").unwrap().ends_with(&format!("/rooms/{DIRECT_DAVID_JASON}")));
+    // Our fork inherits show without set_room; the pinned callback failure replaces
+    // the upstream redirect (see vectors/room_coercions.json).
+    assert_eq!(direct.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(direct.location(), None);
     let reply = david.write(Req::new(Method::DELETE, &format!("/rooms/opens/{HQ}"))).await;
     assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
 }
@@ -148,7 +155,7 @@ async fn direct_rooms_are_found_or_created() {
     assert_eq!(david.get(&format!("/rooms/directs/{room_id}/edit")).await.status, StatusCode::OK);
     let destroyed = david.write(Req::new(Method::DELETE, &format!("/rooms/directs/{room_id}"))).await;
     assert_eq!(destroyed.location(), Some("http://campfire.test/"));
-    assert!(app.db().read(move |conn| Room::find_by_id(conn, room_id)).await.unwrap().is_none());
+    assert!(app.db().read(move |conn| Ok(Room::find(conn, room_id)?.deleted_at.is_some())).await.unwrap());
 }
 
 #[tokio::test]
@@ -181,11 +188,11 @@ async fn involvement_is_shown_and_changed() {
     let invalid = david.write(Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/involvement")).form(&[("involvement", "loud")])).await;
     assert_eq!(invalid.status, StatusCode::INTERNAL_SERVER_ERROR);
 
-    // A missing (or blank) involvement is stored as nil, like the enum casts it.
+    // Our fork requires a nonblank involvement.
     let missing = david.write(Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/involvement"))).await;
-    assert_eq!(missing.status, StatusCode::FOUND);
+    assert_eq!(missing.status, StatusCode::BAD_REQUEST);
     let membership = app.db().read(|conn| Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)).await.unwrap().unwrap();
-    assert_eq!(membership.involvement, None);
+    assert_eq!(membership.involvement, Some(campfire_db::Involvement::Invisible));
 }
 
 #[tokio::test]
@@ -194,7 +201,7 @@ async fn rooms_are_destroyed_by_administrators() {
     let mut david = app.david();
     let reply = david.write(Req::new(Method::DELETE, &format!("/rooms/{QUIET_CORNER}"))).await;
     assert_eq!(reply.location(), Some("http://campfire.test/"));
-    assert!(app.db().read(|conn| Room::find_by_id(conn, QUIET_CORNER)).await.unwrap().is_none());
+    assert!(app.db().read(|conn| Ok(Room::find(conn, QUIET_CORNER)?.deleted_at.is_some())).await.unwrap());
 }
 
 #[tokio::test]
@@ -224,7 +231,7 @@ async fn the_last_room_cookie_is_set_only_when_it_changes() {
 /// `csrf-token` meta tag's, or a form's, with the path and method the form submits to) or a CSP
 /// nonce.
 #[derive(Debug)]
-enum SessionBound {
+pub(super) enum SessionBound {
     Token { value: String, path: String, method: String },
     Nonce(String),
 }
@@ -238,7 +245,7 @@ impl SessionBound {
 }
 
 /// Every session-bound value on `html`, a page served for `page_path`, in page order.
-fn session_bound(html: &str, page_path: &str) -> Vec<SessionBound> {
+pub(super) fn session_bound(html: &str, page_path: &str) -> Vec<SessionBound> {
     let meta = regex::Regex::new(r#"<meta name="csrf-token" content="([^"]*)""#).unwrap();
     let form = regex::Regex::new(r#"(?s)<form\b([^>]*)>(.*?)</form>"#).unwrap();
     let attribute = |name: &str| regex::Regex::new(&format!(r#"\s{name}="([^"]*)""#)).unwrap();
@@ -308,8 +315,14 @@ async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
         .unwrap();
     // The existing seed's boosts are all counted reactions. Add one free-text boost to this
     // test's private database so the legacy delete form's tokenlessness is still exercised.
-    let newest_id = newest.id;
-    app.db().write(move |tx| campfire_db::Boost::create(tx, newest_id, DAVID, "Hello")).await.unwrap();
+    let latest_id = newest.id;
+    let boost_id=app.db().read(move |conn| {
+        let latest=campfire_db::Message::find(conn,latest_id)?;
+        Ok(campfire_db::Message::page_before(conn,campfire_db::Timeline::Room(ALL_TALK),&latest)?.last().unwrap().id)
+    }).await.unwrap();
+    // Exercise the legacy tokenless form in the owned pagination endpoint while the shell's
+    // main list mounts the actual message-owner collection.
+    app.db().write(move |tx| campfire_db::Boost::create(tx, boost_id, DAVID, "Hello")).await.unwrap();
     let room = format!("/rooms/{ALL_TALK}");
     let older = format!("/rooms/{ALL_TALK}/messages?before={}", newest.id);
     let mut david = app.sign_in(DAVID).await;

@@ -1,0 +1,447 @@
+{
+  "reference": "d7c7de92",
+  "creates": [
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 1,
+      "user_ids": [
+        127326141
+      ],
+      "input": [
+        [
+          149087659,
+          712064548
+        ]
+      ]
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141
+      ],
+      "input": [
+        [
+          149087659
+        ],
+        [
+          712064548
+        ]
+      ]
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448334",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 1,
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548
+      ],
+      "input": [
+        149087659,
+        149087659,
+        712064548
+      ]
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/186869642",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "input": 149087659.75
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141
+      ],
+      "input": null
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141
+      ],
+      "input": true
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141
+      ],
+      "input": false
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141
+      ],
+      "input": {
+        "id": 149087659
+      }
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141
+      ],
+      "input": [
+        {
+          "id": 149087659
+        }
+      ]
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/186869642",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "input": [
+        null,
+        149087659
+      ]
+    },
+    {
+      "status": 302,
+      "location": "http://campfire.test/rooms/186869642",
+      "flash": {},
+      "next_flash": {},
+      "count_delta": 0,
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "input": "149087659junk"
+    }
+  ],
+  "additions": [
+    {
+      "input": [
+        [
+          773523953
+        ]
+      ],
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448335/edit",
+      "flash": {
+        "notice": "Added JZ to the group."
+      },
+      "next_flash": {
+        "notice": "Added JZ to the group."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548,
+        773523953
+      ],
+      "notes": [
+        "added JZ to the group"
+      ],
+      "audits": [
+        [
+          "room.membership.change",
+          {
+            "granted": [
+              "JZ"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "input": [
+        [
+          773523953,
+          394959859
+        ]
+      ],
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448336/edit",
+      "flash": {
+        "notice": "Added Bender Bot and JZ to the group."
+      },
+      "next_flash": {
+        "notice": "Added Bender Bot and JZ to the group."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953
+      ],
+      "notes": [
+        "added Bender Bot and JZ to the group"
+      ],
+      "audits": [
+        [
+          "room.membership.change",
+          {
+            "granted": [
+              "Bender Bot",
+              "JZ"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "input": [
+        null,
+        773523953
+      ],
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448337/edit",
+      "flash": {
+        "notice": "Added JZ to the group."
+      },
+      "next_flash": {
+        "notice": "Added JZ to the group."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548,
+        773523953
+      ],
+      "notes": [
+        "added JZ to the group"
+      ],
+      "audits": [
+        [
+          "room.membership.change",
+          {
+            "granted": [
+              "JZ"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "input": {
+        "id": 773523953
+      },
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448338/edit",
+      "flash": {
+        "notice": "Added JZ to the group.",
+        "alert": "Select at least one new member to add."
+      },
+      "next_flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548
+      ],
+      "notes": [],
+      "audits": []
+    },
+    {
+      "input": [
+        {
+          "id": 773523953
+        }
+      ],
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448339/edit",
+      "flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "next_flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548
+      ],
+      "notes": [],
+      "audits": []
+    },
+    {
+      "input": null,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448340/edit",
+      "flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "next_flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548
+      ],
+      "notes": [],
+      "audits": []
+    },
+    {
+      "input": true,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448341/edit",
+      "flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "next_flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548
+      ],
+      "notes": [],
+      "audits": []
+    },
+    {
+      "input": false,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448342/edit",
+      "flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "next_flash": {
+        "alert": "Select at least one new member to add."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548
+      ],
+      "notes": [],
+      "audits": []
+    },
+    {
+      "input": [
+        773523953,
+        773523953
+      ],
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448343/edit",
+      "flash": {
+        "alert": "Select at least one new member to add.",
+        "notice": "Added JZ to the group."
+      },
+      "next_flash": {
+        "notice": "Added JZ to the group."
+      },
+      "user_ids": [
+        127326141,
+        149087659,
+        712064548,
+        773523953
+      ],
+      "notes": [
+        "added JZ to the group"
+      ],
+      "audits": [
+        [
+          "room.membership.change",
+          {
+            "granted": [
+              "JZ"
+            ]
+          }
+        ]
+      ]
+    }
+  ],
+  "predicates": [
+    {
+      "input": [
+        [
+          127326141,
+          149087659
+        ]
+      ],
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (127326141, 149087659)"
+    },
+    {
+      "input": [
+        [
+          127326141
+        ],
+        149087659
+      ],
+      "user_ids": [
+        149087659
+      ],
+      "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (149087659)"
+    },
+    {
+      "input": [
+        [
+          127326141
+        ],
+        [
+          149087659
+        ]
+      ],
+      "user_ids": [],
+      "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (NULL)"
+    },
+    {
+      "input": [
+        [
+          [
+            127326141,
+            149087659
+          ]
+        ]
+      ],
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (127326141, 149087659)"
+    }
+  ]
+}

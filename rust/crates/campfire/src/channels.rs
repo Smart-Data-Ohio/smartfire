@@ -10,6 +10,7 @@
 pub mod activity;
 pub mod agents;
 pub mod broadcasts;
+pub(crate) mod message_features;
 mod github_notifier;
 mod github_cards;
 mod connection;
@@ -19,6 +20,7 @@ mod read_rooms;
 pub mod revocation;
 mod room;
 mod room_messages;
+mod rooms_directory;
 pub mod sink;
 pub mod threads;
 mod typing_notifications;

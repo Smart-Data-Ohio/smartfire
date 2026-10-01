@@ -199,8 +199,8 @@ jobs:
 
       # The app has no integration-test target, so nextest builds its test harness but not its
       # normal executable. Retain that cfg(not(test))/link coverage, without building extra targets.
-      - name: Build application binaries
-        run: bash rust/ci/cargo.sh build --locked --workspace --bins
+      - name: Build application binaries with production inputs
+        run: bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
 
       # Build with the same workspace/features as clippy and the following nextest run, then run
       # only the blocking database tests. The workspace filter below avoids executing them twice.

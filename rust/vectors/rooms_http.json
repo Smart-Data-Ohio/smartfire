@@ -1,0 +1,205 @@
+{
+  "reference": "d7c7de92",
+  "cases": {
+    "group_delete_base": {
+      "status": 403
+    },
+    "group_delete_direct": {
+      "status": 403
+    },
+    "Rooms::Voice_opens": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Voice_closeds": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Stage_opens": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Stage_closeds": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Board_opens": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Board_closeds": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "category_create": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_update": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_state": {
+      "name": "Squad",
+      "collapsed": true,
+      "position": 1
+    },
+    "category_list": {
+      "status": 200,
+      "json": [
+        {
+          "id": 2,
+          "name": "Squad"
+        }
+      ]
+    },
+    "category_invalid": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_invalid_state": "Squad",
+    "category_false_name": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_false_name_state": "false",
+    "category_cross_user": {
+      "status": 404,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      }
+    },
+    "category_assignment": {
+      "status": 200
+    },
+    "direct_category_assignment": {
+      "status": 422
+    },
+    "inbound_rotation": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696/edit"
+    },
+    "direct_inbound": {
+      "status": 404
+    },
+    "favorite_create": {
+      "status": 200
+    },
+    "favorite_repeat": {
+      "status": 200
+    },
+    "favorite_move": {
+      "status": 200
+    },
+    "favorite_state": 0,
+    "favorite_destroy": {
+      "status": 200
+    },
+    "mute_json": {
+      "status": 200
+    },
+    "mute_state": {
+      "unread": false,
+      "pointer": true
+    },
+    "missing_involvement": {
+      "status": 400,
+      "json": {
+        "status": 400,
+        "error": "Bad Request"
+      }
+    },
+    "group_rename": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448333/edit"
+    },
+    "group_add": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448333/edit"
+    },
+    "group_leave": {
+      "status": 200,
+      "json": {
+        "left": true,
+        "room_id": 699448333
+      }
+    },
+    "group_note_texts": [
+      "renamed the group to Weekend",
+      "added Extra to the group",
+      "left the group"
+    ],
+    "pair_add_rejected": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/186869642/edit"
+    },
+    "inactive_huddle_create": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/186869642?huddle=start"
+    },
+    "capped_before_query": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448337"
+    },
+    "solo_member_ids": [
+      127326141
+    ],
+    "last_direct_leave": {
+      "status": 200,
+      "json": {
+        "left": true,
+        "room_id": 699448337
+      }
+    },
+    "last_direct_state": {
+      "deleted": true,
+      "memberships": 0
+    },
+    "over_capacity_create": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/new"
+    },
+    "plain_leave": {
+      "status": 200,
+      "json": {
+        "left": true,
+        "room_id": 699448338
+      }
+    },
+    "plain_leave_state": {
+      "deleted": false,
+      "memberships": 0
+    },
+    "deleted_involvement": {
+      "status": 404,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      }
+    },
+    "destroy_json": {
+      "status": 200,
+      "json": {
+        "deleted": true,
+        "room_id": 486777696
+      }
+    },
+    "destroy_rows": {
+      "deleted": true,
+      "memberships": 0,
+      "audit_action": "room.destroy"
+    },
+    "audit_failure": {
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      }
+    },
+    "audit_failure_state": {
+      "deleted": true,
+      "enqueued": true
+    }
+  }
+}

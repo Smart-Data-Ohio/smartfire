@@ -1,0 +1,132 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "first": {
+      "cancelled": 1,
+      "suspended": true,
+      "working_presence": null,
+      "working_presence_expires_at": null,
+      "grants_revoked": [
+        true
+      ],
+      "messages": [
+        {
+          "id": 900090001,
+          "streaming": false,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "streaming_updated_at": "2026-03-02T16:00:00.000Z"
+        },
+        {
+          "id": 900090002,
+          "streaming": false,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "streaming_updated_at": "2026-03-02T16:00:00.000Z"
+        }
+      ],
+      "thread_count": 1,
+      "approvals": [
+        {
+          "id": 900090100,
+          "status": "cancelled"
+        },
+        {
+          "id": 900090101,
+          "status": "expired"
+        },
+        {
+          "id": 900090102,
+          "status": "approved"
+        }
+      ],
+      "event_count": 0,
+      "audits": [
+        {
+          "action": "agent.suspend",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_label": "Agent Bender Bot",
+          "details": {}
+        },
+        {
+          "action": "agent.kill_switch",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_label": "Agent Bender Bot",
+          "details": {
+            "pending_approvals_cancelled": 1
+          }
+        }
+      ]
+    },
+    "second": {
+      "cancelled": 0,
+      "suspended": true,
+      "working_presence": null,
+      "working_presence_expires_at": null,
+      "grants_revoked": [
+        true
+      ],
+      "messages": [
+        {
+          "id": 900090001,
+          "streaming": false,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "streaming_updated_at": "2026-03-02T16:00:00.000Z"
+        },
+        {
+          "id": 900090002,
+          "streaming": false,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "streaming_updated_at": "2026-03-02T16:00:00.000Z"
+        }
+      ],
+      "thread_count": 1,
+      "approvals": [
+        {
+          "id": 900090100,
+          "status": "cancelled"
+        },
+        {
+          "id": 900090101,
+          "status": "expired"
+        },
+        {
+          "id": 900090102,
+          "status": "approved"
+        }
+      ],
+      "event_count": 0,
+      "audits": [
+        {
+          "action": "agent.suspend",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_label": "Agent Bender Bot",
+          "details": {}
+        },
+        {
+          "action": "agent.kill_switch",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_label": "Agent Bender Bot",
+          "details": {
+            "pending_approvals_cancelled": 1
+          }
+        },
+        {
+          "action": "agent.kill_switch",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_label": "Agent Bender Bot",
+          "details": {
+            "pending_approvals_cancelled": 0
+          }
+        }
+      ]
+    },
+    "quiet_again": [
+      false,
+      false
+    ]
+  }
+}

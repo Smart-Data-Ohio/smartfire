@@ -1,0 +1,301 @@
+{
+  "reference": "d7c7de92",
+  "source_id": 935962058,
+  "thread_id": 9,
+  "locked_id": 10,
+  "stale_id": 11,
+  "child_id": 935962059,
+  "board_id": 699448333,
+  "copy_id": 935962060,
+  "nested_copy_id": 935962061,
+  "rows": [
+    {
+      "name": "destinations",
+      "method": "get",
+      "path": "/rooms/486777696/messages/935962058/forwards/destinations.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"destinations\":[{\"room_id\":186869642,\"name\":\"Jason\",\"direct\":true,\"threads\":[]},{\"room_id\":699448325,\"name\":\"Kevin\",\"direct\":true,\"threads\":[]},{\"room_id\":699448329,\"name\":\"Jason, JZ, and Kevin\",\"direct\":true,\"threads\":[]},{\"room_id\":104393281,\"name\":\"All Pets\",\"direct\":false,\"threads\":[]},{\"room_id\":486777696,\"name\":\"All Talk\",\"direct\":false,\"threads\":[{\"id\":9,\"name\":\"Forward open\",\"status\":\"active\"},{\"id\":11,\"name\":\"Forward stale\",\"status\":\"closed\"}]},{\"room_id\":699448327,\"name\":\"Archive\",\"direct\":false,\"threads\":[]},{\"room_id\":699448328,\"name\":\"Broken\",\"direct\":false,\"threads\":[]},{\"room_id\":654632876,\"name\":\"Designers\",\"direct\":false,\"threads\":[{\"id\":8,\"name\":\"Pull request review\",\"status\":\"active\"},{\"id\":2,\"name\":\"Completed discussion\",\"status\":\"closed\"},{\"id\":1,\"name\":\"Launch review\",\"status\":\"active\"}]},{\"room_id\":201306877,\"name\":\"HQ\",\"direct\":false,\"threads\":[]},{\"room_id\":699448326,\"name\":\"Quiet Corner\",\"direct\":false,\"threads\":[]},{\"room_id\":699448331,\"name\":\"Release stage\",\"direct\":false,\"threads\":[]},{\"room_id\":699448330,\"name\":\"Team lounge\",\"direct\":false,\"threads\":[]}]}",
+      "message_count": 189
+    },
+    {
+      "name": "global_destinations",
+      "method": "get",
+      "path": "/messages/935962058/forwards/destinations.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"destinations\":[{\"room_id\":186869642,\"name\":\"Jason\",\"direct\":true,\"threads\":[]},{\"room_id\":699448325,\"name\":\"Kevin\",\"direct\":true,\"threads\":[]},{\"room_id\":699448329,\"name\":\"Jason, JZ, and Kevin\",\"direct\":true,\"threads\":[]},{\"room_id\":104393281,\"name\":\"All Pets\",\"direct\":false,\"threads\":[]},{\"room_id\":486777696,\"name\":\"All Talk\",\"direct\":false,\"threads\":[{\"id\":9,\"name\":\"Forward open\",\"status\":\"active\"},{\"id\":11,\"name\":\"Forward stale\",\"status\":\"closed\"}]},{\"room_id\":699448327,\"name\":\"Archive\",\"direct\":false,\"threads\":[]},{\"room_id\":699448328,\"name\":\"Broken\",\"direct\":false,\"threads\":[]},{\"room_id\":654632876,\"name\":\"Designers\",\"direct\":false,\"threads\":[{\"id\":8,\"name\":\"Pull request review\",\"status\":\"active\"},{\"id\":2,\"name\":\"Completed discussion\",\"status\":\"closed\"},{\"id\":1,\"name\":\"Launch review\",\"status\":\"active\"}]},{\"room_id\":201306877,\"name\":\"HQ\",\"direct\":false,\"threads\":[]},{\"room_id\":699448326,\"name\":\"Quiet Corner\",\"direct\":false,\"threads\":[]},{\"room_id\":699448331,\"name\":\"Release stage\",\"direct\":false,\"threads\":[]},{\"room_id\":699448330,\"name\":\"Team lounge\",\"direct\":false,\"threads\":[]}]}",
+      "message_count": 189
+    },
+    {
+      "name": "nested_destinations",
+      "method": "get",
+      "path": "/rooms/486777696/threads/9/messages/935962059/forwards/destinations.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"destinations\":[{\"room_id\":186869642,\"name\":\"Jason\",\"direct\":true,\"threads\":[]},{\"room_id\":699448325,\"name\":\"Kevin\",\"direct\":true,\"threads\":[]},{\"room_id\":699448329,\"name\":\"Jason, JZ, and Kevin\",\"direct\":true,\"threads\":[]},{\"room_id\":104393281,\"name\":\"All Pets\",\"direct\":false,\"threads\":[]},{\"room_id\":486777696,\"name\":\"All Talk\",\"direct\":false,\"threads\":[{\"id\":9,\"name\":\"Forward open\",\"status\":\"active\"},{\"id\":11,\"name\":\"Forward stale\",\"status\":\"closed\"}]},{\"room_id\":699448327,\"name\":\"Archive\",\"direct\":false,\"threads\":[]},{\"room_id\":699448328,\"name\":\"Broken\",\"direct\":false,\"threads\":[]},{\"room_id\":654632876,\"name\":\"Designers\",\"direct\":false,\"threads\":[{\"id\":8,\"name\":\"Pull request review\",\"status\":\"active\"},{\"id\":2,\"name\":\"Completed discussion\",\"status\":\"closed\"},{\"id\":1,\"name\":\"Launch review\",\"status\":\"active\"}]},{\"room_id\":201306877,\"name\":\"HQ\",\"direct\":false,\"threads\":[]},{\"room_id\":699448326,\"name\":\"Quiet Corner\",\"direct\":false,\"threads\":[]},{\"room_id\":699448331,\"name\":\"Release stage\",\"direct\":false,\"threads\":[]},{\"room_id\":699448330,\"name\":\"Team lounge\",\"direct\":false,\"threads\":[]}]}",
+      "message_count": 189
+    },
+    {
+      "name": "empty",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": []
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Choose between 1 and 5 destinations\"}",
+      "message_count": 189
+    },
+    {
+      "name": "too_many",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            {
+              "room_id": 486777696
+            },
+            {
+              "room_id": 486777696
+            },
+            {
+              "room_id": 486777696
+            },
+            {
+              "room_id": 486777696
+            },
+            {
+              "room_id": 486777696
+            },
+            {
+              "room_id": 486777696
+            }
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Choose between 1 and 5 destinations\"}",
+      "message_count": 189
+    },
+    {
+      "name": "missing_room",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            {}
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"A destination room is required\"}",
+      "message_count": 189
+    },
+    {
+      "name": "unreachable",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            {
+              "room_id": 340026324
+            }
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"You cannot forward to that room\"}",
+      "message_count": 189
+    },
+    {
+      "name": "locked",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            {
+              "room_id": 486777696,
+              "thread_id": 10
+            }
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"That thread is locked\"}",
+      "message_count": 189
+    },
+    {
+      "name": "wrong_thread",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            {
+              "room_id": 699448326,
+              "thread_id": 9
+            }
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"That thread is unavailable\"}",
+      "message_count": 189
+    },
+    {
+      "name": "board",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            {
+              "room_id": 699448333
+            }
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"You cannot forward to a board\"}",
+      "message_count": 189
+    },
+    {
+      "name": "duplicate",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            {
+              "room_id": 486777696
+            },
+            {
+              "room_id": 486777696
+            }
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Destinations must be unique\"}",
+      "message_count": 189
+    },
+    {
+      "name": "filtered_scalar",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            "room"
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Choose between 1 and 5 destinations\"}",
+      "message_count": 189
+    },
+    {
+      "name": "null",
+      "method": "post",
+      "path": "/rooms/486777696/messages/935962058/forwards.json",
+      "input": {
+        "forward": {
+          "destinations": [
+            null
+          ]
+        }
+      },
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Choose between 1 and 5 destinations\"}",
+      "message_count": 189
+    },
+    {
+      "name": "source_visible",
+      "method": "get",
+      "path": "/rooms/699448326/messages/935962060/forward_source.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"source\":{\"url\":\"http://campfire.test/rooms/486777696/@935962058\"}}",
+      "message_count": 189
+    },
+    {
+      "name": "source_global",
+      "method": "get",
+      "path": "/messages/935962060/forward_source.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"source\":{\"url\":\"http://campfire.test/rooms/486777696/@935962058\"}}",
+      "message_count": 189
+    },
+    {
+      "name": "nested_source",
+      "method": "get",
+      "path": "/rooms/486777696/threads/9/messages/935962061/forward_source.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"source\":{\"url\":\"http://campfire.test/rooms/486777696?message_id=935962059&thread=9\"}}",
+      "message_count": 189
+    },
+    {
+      "name": "not_forwarded",
+      "method": "get",
+      "path": "/messages/935962058/forward_source.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"source\":null}",
+      "message_count": 189
+    },
+    {
+      "name": "source_inaccessible",
+      "method": "get",
+      "path": "/messages/935962060/forward_source.json",
+      "input": {},
+      "status": 200,
+      "cache_control": "no-store",
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"source\":null}",
+      "message_count": 189
+    }
+  ]
+}

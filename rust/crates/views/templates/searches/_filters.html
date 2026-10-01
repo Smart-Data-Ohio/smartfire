@@ -1,0 +1,7 @@
+{% if !chips.is_empty() %}  <ul class="search-filters" aria-label="Active filters">
+{% for chip in chips %}      <li class="search-filter-chip">
+        <span class="search-filter-chip__label">{{ chip.label }}</span>
+        {% filter link_to(crate::searches::search_path(&chip.remove_query).as_str(), h::attrs().class("search-filter-chip__remove").aria("label", format!("Remove {} filter", chip.label))) %}
+          {{ h::image_tag(ctx,"remove.svg",h::attrs().aria("hidden","true").size(12).class("colorize--black")) }}
+{% endfilter %}      </li>
+{% endfor %}  </ul>{{ "\n" }}{% endif %}

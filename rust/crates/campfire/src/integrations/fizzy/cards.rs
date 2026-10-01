@@ -51,6 +51,17 @@ impl Card {
             .query_map([message], Self::from_row)?
             .collect::<std::result::Result<_, _>>()?)
     }
+    /// Read-only page preload seam; preserve the single-message card ordering.
+    pub fn for_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
+        let mut result: std::collections::HashMap<i64, Vec<Self>> = ids.iter().map(|id| (*id, Vec::new())).collect();
+        if ids.is_empty() { return Ok(result); }
+        let slots = vec!["?"; ids.len()].join(",");
+        let mut query = conn.prepare(&format!("SELECT c.*, r.message_id AS referenced_message_id FROM fizzy_cards c JOIN fizzy_card_references r ON r.fizzy_card_id=c.id WHERE r.message_id IN ({slots}) ORDER BY r.message_id,c.account_id,c.number"))?;
+        for row in query.query_map(rusqlite::params_from_iter(ids), |row| Ok((row.get::<_, i64>("referenced_message_id")?, Self::from_row(row)?)))? {
+            let (id, card) = row?; result.entry(id).or_default().push(card);
+        }
+        Ok(result)
+    }
     pub fn web_url(&self) -> String {
         format!(
             "{}/{}/cards/{}",

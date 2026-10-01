@@ -1,0 +1,196 @@
+{
+  "reference": "d7c7de92",
+  "message_id": 935962058,
+  "steps": [
+    {
+      "method": "post",
+      "path": "/saved",
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-02T17:00:00.123Z"
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-02T17:00:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/saved",
+      "input": {
+        "message_id": 935962058,
+        "remind_at": "2026-03-02T18:00:00Z"
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-02T18:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "patch",
+      "path": "/saved/3",
+      "input": {
+        "saved_item": {
+          "status": "done"
+        }
+      },
+      "status": 200,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"done\",\"remind_at\":\"2026-03-02T18:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "patch",
+      "path": "/saved/3",
+      "input": {
+        "saved_item": {
+          "status": "in_progress"
+        }
+      },
+      "status": 200,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-02T18:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "patch",
+      "path": "/saved/3",
+      "input": {
+        "saved_item": {
+          "status": "archived"
+        }
+      },
+      "status": 422,
+      "body": "{\"error\":\"Status must be in progress or done\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/saved",
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "not a time"
+        }
+      },
+      "status": 422,
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/saved",
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-02T15:59:00Z"
+        }
+      },
+      "status": 422,
+      "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/saved",
+      "input": {
+        "message_id": 935962058
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "delete",
+      "path": "/saved/3",
+      "input": {},
+      "status": 204,
+      "body": "",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/saved",
+      "input": {
+        "message_id": 935962058
+      },
+      "status": 201,
+      "body": "{\"id\":4,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/4.json\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "delete",
+      "path": "/saved/4",
+      "input": {},
+      "status": 204,
+      "body": "",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    }
+  ],
+  "html": [
+    {
+      "zone": "UTC",
+      "state": {
+        "status": "in_progress",
+        "remind_at": null,
+        "reminded_at": null
+      },
+      "html": "<article id=\"saved_item_3\" class=\"saved-item saved-item--in-progress\">\n  <div class=\"saved-item__meta\">\n    <span class=\"saved-item__kind\">In progress</span>\n    <time class=\"saved-item__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"saved-item__content\">\n    <h2 class=\"saved-item__title\">All Talk</h2>\n    <p class=\"saved-item__author\">David</p>\n    <p class=\"saved-item__body\">Saved  &amp; example</p>\n  </div>\n\n  <div class=\"saved-item__actions\">\n    <a class=\"btn btn--primary\" href=\"http://campfire.test/rooms/486777696/@935962058\">Open</a>\n      <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark done</button><input type=\"hidden\" name=\"saved_item[status]\" value=\"done\" /></form>\n    <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain\" type=\"submit\">Remove</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "UTC",
+      "state": {
+        "status": "in_progress",
+        "remind_at": "2026-03-03T17:00:00.000Z",
+        "reminded_at": null
+      },
+      "html": "<article id=\"saved_item_3\" class=\"saved-item saved-item--in-progress\">\n  <div class=\"saved-item__meta\">\n    <span class=\"saved-item__kind\">In progress</span>\n    <time class=\"saved-item__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"saved-item__content\">\n    <h2 class=\"saved-item__title\">All Talk</h2>\n    <p class=\"saved-item__author\">David</p>\n    <p class=\"saved-item__body\">Saved  &amp; example</p>\n      <p class=\"saved-item__reminder\">\n          Reminds <time datetime=\"2026-03-03T17:00:00Z\" data-local-time-target=\"time\"></time>.\n      </p>\n  </div>\n\n  <div class=\"saved-item__actions\">\n    <a class=\"btn btn--primary\" href=\"http://campfire.test/rooms/486777696/@935962058\">Open</a>\n      <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark done</button><input type=\"hidden\" name=\"saved_item[status]\" value=\"done\" /></form>\n    <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain\" type=\"submit\">Remove</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "UTC",
+      "state": {
+        "status": "done",
+        "remind_at": "2026-03-03T17:00:00.000Z",
+        "reminded_at": "2026-03-03T17:00:00.000Z"
+      },
+      "html": "<article id=\"saved_item_3\" class=\"saved-item saved-item--done\">\n  <div class=\"saved-item__meta\">\n    <span class=\"saved-item__kind\">Done</span>\n    <time class=\"saved-item__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"saved-item__content\">\n    <h2 class=\"saved-item__title\">All Talk</h2>\n    <p class=\"saved-item__author\">David</p>\n    <p class=\"saved-item__body\">Saved  &amp; example</p>\n      <p class=\"saved-item__reminder\">\n          Reminded <time datetime=\"2026-03-03T17:00:00Z\" data-local-time-target=\"time\"></time>.\n      </p>\n  </div>\n\n  <div class=\"saved-item__actions\">\n    <a class=\"btn btn--primary\" href=\"http://campfire.test/rooms/486777696/@935962058\">Open</a>\n      <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Reopen</button><input type=\"hidden\" name=\"saved_item[status]\" value=\"in_progress\" /></form>\n    <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain\" type=\"submit\">Remove</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "Hawaii",
+      "state": {
+        "status": "in_progress",
+        "remind_at": null,
+        "reminded_at": null
+      },
+      "html": "<article id=\"saved_item_3\" class=\"saved-item saved-item--in-progress\">\n  <div class=\"saved-item__meta\">\n    <span class=\"saved-item__kind\">In progress</span>\n    <time class=\"saved-item__time\" datetime=\"2026-03-02T06:00:00-10:00\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"saved-item__content\">\n    <h2 class=\"saved-item__title\">All Talk</h2>\n    <p class=\"saved-item__author\">David</p>\n    <p class=\"saved-item__body\">Saved  &amp; example</p>\n  </div>\n\n  <div class=\"saved-item__actions\">\n    <a class=\"btn btn--primary\" href=\"http://campfire.test/rooms/486777696/@935962058\">Open</a>\n      <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark done</button><input type=\"hidden\" name=\"saved_item[status]\" value=\"done\" /></form>\n    <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain\" type=\"submit\">Remove</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "Hawaii",
+      "state": {
+        "status": "in_progress",
+        "remind_at": "2026-03-03T17:00:00.000Z",
+        "reminded_at": null
+      },
+      "html": "<article id=\"saved_item_3\" class=\"saved-item saved-item--in-progress\">\n  <div class=\"saved-item__meta\">\n    <span class=\"saved-item__kind\">In progress</span>\n    <time class=\"saved-item__time\" datetime=\"2026-03-02T06:00:00-10:00\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"saved-item__content\">\n    <h2 class=\"saved-item__title\">All Talk</h2>\n    <p class=\"saved-item__author\">David</p>\n    <p class=\"saved-item__body\">Saved  &amp; example</p>\n      <p class=\"saved-item__reminder\">\n          Reminds <time datetime=\"2026-03-03T07:00:00-10:00\" data-local-time-target=\"time\"></time>.\n      </p>\n  </div>\n\n  <div class=\"saved-item__actions\">\n    <a class=\"btn btn--primary\" href=\"http://campfire.test/rooms/486777696/@935962058\">Open</a>\n      <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark done</button><input type=\"hidden\" name=\"saved_item[status]\" value=\"done\" /></form>\n    <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain\" type=\"submit\">Remove</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "Hawaii",
+      "state": {
+        "status": "done",
+        "remind_at": "2026-03-03T17:00:00.000Z",
+        "reminded_at": "2026-03-03T17:00:00.000Z"
+      },
+      "html": "<article id=\"saved_item_3\" class=\"saved-item saved-item--done\">\n  <div class=\"saved-item__meta\">\n    <span class=\"saved-item__kind\">Done</span>\n    <time class=\"saved-item__time\" datetime=\"2026-03-02T06:00:00-10:00\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"saved-item__content\">\n    <h2 class=\"saved-item__title\">All Talk</h2>\n    <p class=\"saved-item__author\">David</p>\n    <p class=\"saved-item__body\">Saved  &amp; example</p>\n      <p class=\"saved-item__reminder\">\n          Reminded <time datetime=\"2026-03-03T07:00:00-10:00\" data-local-time-target=\"time\"></time>.\n      </p>\n  </div>\n\n  <div class=\"saved-item__actions\">\n    <a class=\"btn btn--primary\" href=\"http://campfire.test/rooms/486777696/@935962058\">Open</a>\n      <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Reopen</button><input type=\"hidden\" name=\"saved_item[status]\" value=\"in_progress\" /></form>\n    <form class=\"saved-item__action-form\" method=\"post\" action=\"/saved/3?status=all\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain\" type=\"submit\">Remove</button></form>\n  </div>\n</article>\n"
+    }
+  ],
+  "empty": "\n\n\n<section class=\"saved-items__page\" aria-labelledby=\"saved-items-title\">\n  <header class=\"saved-items__header\">\n    <div>\n      <p class=\"saved-items__kicker\">Your saved messages</p>\n      <p class=\"saved-items__description\">Messages you saved for later, with any reminders you set. Items disappear if you lose access to their channel.</p>\n    </div>\n  </header>\n\n  <nav class=\"saved-items__filters\" aria-label=\"Saved filters\">\n    <a class=\"btn saved-items__filter is-active\" aria-current=\"page\" href=\"/saved?status=all\">All</a>\n    <a class=\"btn saved-items__filter\" href=\"/saved?status=in_progress\">In progress</a>\n    <a class=\"btn saved-items__filter\" href=\"/saved?status=done\">Done</a>\n  </nav>\n\n  <div id=\"saved-items-list\" class=\"saved-items__list\">\n      <p class=\"saved-items__empty\">\n        <span class=\"saved-items__empty-title\">Nothing saved here yet.</span>\n        Save a message from its menu to find it again here.\n      </p>\n  </div>\n</section>\n"
+}

@@ -67,6 +67,6 @@ tower = { workspace = true, features = ["util"] }
 tokio-tungstenite.workspace = true
 futures-util.workspace = true
 tempfile.workspace = true
-rusqlite.workspace = true
+rusqlite = { workspace = true, features = ["limits"] }
 
 ring.workspace = true
