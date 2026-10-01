@@ -1,5 +1,4 @@
-//! Full-router security checks for the owned shared forms. Poll and room-shell
-//! integration remain explicitly assigned to M2 and WS8b-r in the case inventory.
+//! Real room/thread header security checks for every merged shared message form.
 use std::sync::Arc;
 use axum::http::{Method, StatusCode};
 use campfire_db::{Boost, ChannelThread, Message, NewChannelThread, NewMessage, ThreadMembership};
@@ -74,38 +73,83 @@ async fn cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_acros
 
 #[tokio::test]
 async fn cached_owned_forms_submit_with_real_page_header_and_reject_foreign_or_missing_tokens() {
+    submit_cached_forms(false).await;
+}
+
+#[tokio::test]
+async fn every_cached_form_submits_with_real_room_header_and_live_log_after_owner_merge() {
+    submit_cached_forms(true).await;
+}
+
+#[tokio::test]
+async fn merged_room_shell_mounts_the_shared_collection_fragment_instead_of_rebuilding_it() {
+    let app=fixture().await;
+    let runtime=app.booted.app.clone();
+    let id=oracle()["card_id"].as_i64().unwrap();
+    let cached=app.db().read(move |conn| {
+        let p=Presenter::new(conn,&runtime,None);
+        let message=Message::find(conn,id)?;
+        let key=campfire_views::messages::collection_fragment_key(&p.message_collection_cache_key(&message)?,"http://campfire.test");
+        // A valid tokenless cache value with an inert witness distinguishes reuse
+        // from a byte-identical fresh render. No production renderer is mutated.
+        let html=oracle()["fragments"][0]["html"].as_str().unwrap().to_owned();
+        Ok(runtime.fragment_cache.fetch_value(&key,||Arc::new(format!("<!-- cached collection witness -->{html}"))))
+    }).await.unwrap();
+    for viewer in [DAVID,JASON] {
+        let response=app.sign_in(viewer).await.get(&format!("/rooms/{ALL_TALK}")).await;
+        assert_eq!(response.status,StatusCode::OK);
+        assert!(response.text().contains(cached.as_str()),"real room shell must mount the collection cache value verbatim");
+        let after=fragments(&app,vec![id]).await;
+        assert!(Arc::ptr_eq(&cached,&after[0]));
+    }
+}
+
+async fn submit_cached_forms(room_shell: bool) {
+    let oracle=if room_shell {serde_json::from_str::<Value>(include_str!("../../../../../vectors/messaging/room-csrf.json")).unwrap()} else {oracle()};
     let app=fixture().await;
     let mut first=app.david();let foreign=first.authenticity_token().await;
     assert_eq!(first.get(&format!("/rooms/{ALL_TALK}/messages")).await.status,StatusCode::OK);
     let mut viewer=app.sign_in(JASON).await;
-    let page=viewer.get(&format!("/rooms/{ALL_TALK}/threads/{}",oracle()["thread_id"])).await;
+    let path=if room_shell {format!("/rooms/{ALL_TALK}")} else {format!("/rooms/{ALL_TALK}/threads/{}",oracle["thread_id"])};
+    let page=viewer.get(&path).await;
     assert_eq!(page.status,StatusCode::OK);
+    if room_shell {
+        let region=regex::Regex::new(&format!(r#"<div\b[^>]*id="{}"[^>]*>"#,oracle["live_region_id"].as_str().unwrap())).unwrap();
+        let body=page.text();
+        let regions=region.find_iter(&body).collect::<Vec<_>>();
+        assert_eq!(regions.len(),oracle["live_regions"].as_u64().unwrap() as usize);
+        for attr in [r#"role="log""#,r#"aria-live="polite""#,r#"aria-relevant="additions""#] {assert!(regions[0].as_str().contains(attr),"{attr}");}
+    }
     let token=page.text().split("<meta name=\"csrf-token\" content=\"").nth(1).unwrap().split('"').next().unwrap().to_owned();
     assert!(viewer.real_authenticity_token().unwrap().is_valid(&token,"/anything","post"));
     assert_eq!(viewer.get(&format!("/rooms/{ALL_TALK}/messages")).await.status,StatusCode::OK);
-    assert_eq!(viewer.get(&format!("/rooms/{ALL_TALK}/threads/{}/messages",oracle()["thread_id"])).await.status,StatusCode::OK);
-    let ids=["card_id","boosted_id","reply_id"].map(|key|oracle()[key].as_i64().unwrap()).to_vec();
+    assert_eq!(viewer.get(&format!("/rooms/{ALL_TALK}/threads/{}/messages",oracle["thread_id"])).await.status,StatusCode::OK);
+    let keys=if room_shell {vec!["card_id","poll_message_id","boosted_id","reply_id"]} else {vec!["card_id","boosted_id","reply_id"]};
+    let ids=keys.into_iter().map(|key|oracle[key].as_i64().unwrap()).collect();
     let html=fragments(&app,ids).await.into_iter().map(|s|s.to_string()).collect::<String>();
     let forms=regex::Regex::new(r#"(?s)<form\b[^>]*action="([^"]+)"[^>]*>(.*?)</form>"#).unwrap();
     let hidden=regex::Regex::new(r#"<input[^>]*type="hidden"[^>]*name="([^"]+)"[^>]*value="([^"]*)"[^>]*>"#).unwrap();
+    let option=regex::Regex::new(r#"<input[^>]*type="(?:radio|checkbox)"[^>]*name="([^"]+)"[^>]*value="([^"]*)"[^>]*>"#).unwrap();
     let rendered=forms.captures_iter(&html).map(|form| {
-        let params=hidden.captures_iter(&form[2]).map(|field|(field[1].to_owned(),field[2].to_owned())).collect::<std::collections::BTreeMap<_,_>>();
+        let mut params=hidden.captures_iter(&form[2]).map(|field|(field[1].to_owned(),field[2].to_owned())).collect::<std::collections::BTreeMap<_,_>>();
+        if let Some(option)=option.captures(&form[2]) {params.insert(option[1].to_owned(),option[2].to_owned());}
         (form[1].to_owned(),params)
     }).collect::<Vec<_>>();
-    assert_eq!(rendered.len(),oracle()["forms"].as_array().unwrap().len(),"all real rendered forms exercised");
-    for ((action,mut params),expected) in rendered.into_iter().zip(oracle()["forms"].as_array().unwrap()) {
+    assert_eq!(rendered.len(),oracle["forms"].as_array().unwrap().len(),"all real rendered forms exercised");
+    for ((action,mut params),expected) in rendered.into_iter().zip(oracle["forms"].as_array().unwrap()) {
         assert!(!params.contains_key("authenticity_token"));
         let method=params.remove("_method").unwrap_or("post".into());
         assert_eq!(action,expected["action"].as_str().unwrap());assert_eq!(method,expected["method"].as_str().unwrap());
-        assert_eq!(serde_json::to_value(&params).unwrap(),expected["params"]);
+        let actual=params.iter().map(|(key,value)| (key.clone(),if key.ends_with("[]") {serde_json::json!([value])} else {serde_json::json!(value)})).collect::<serde_json::Map<_,_>>();
+        assert_eq!(Value::Object(actual),expected["params"]);
         let pairs=params.iter().map(|(k,v)|(k.as_str(),v.as_str())).collect::<Vec<_>>();
         let request=|| Req::new(Method::from_bytes(method.to_uppercase().as_bytes()).unwrap(),&action).form(&pairs).header("accept","text/vnd.turbo-stream.html, text/html, application/xhtml+xml");
-        let before=app.db().read(|conn| Ok((Message::count(conn)?,conn.query_row("SELECT COUNT(*) FROM boosts",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM channel_threads",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
+        let before=app.db().read(|conn| Ok((Message::count(conn)?,conn.query_row("SELECT COUNT(*) FROM boosts",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM channel_threads",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM poll_votes",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
         for csrf in [None,Some(foreign.as_str())] {
             let mut req=request();if let Some(csrf)=csrf {req=req.header("x-csrf-token",csrf);}
             assert_eq!(viewer.send(req).await.status,StatusCode::UNPROCESSABLE_ENTITY,"{method} {action}");
         }
-        let after=app.db().read(|conn| Ok((Message::count(conn)?,conn.query_row("SELECT COUNT(*) FROM boosts",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM channel_threads",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
+        let after=app.db().read(|conn| Ok((Message::count(conn)?,conn.query_row("SELECT COUNT(*) FROM boosts",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM channel_threads",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM poll_votes",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
         assert_eq!(before,after,"forgery refusals do not write");
         let response=viewer.send(request().header("x-csrf-token",&token)).await;
         assert_eq!(response.status.as_u16(),expected["status"].as_u64().unwrap() as u16,"{method} {action}: {}",response.text());

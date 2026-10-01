@@ -1,10 +1,10 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 143 of 156 declarations have scoped evidence; the remaining 13 are blocked only on other owners. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 146 of 156 declarations have scoped evidence; the remaining 10 work declarations are blocked only on WS12. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not new one-to-one Rust tests. No one-to-one port count is claimed. Behaviour browser execution has a separate 135-case named ledger in `ws8bm-system-cases.json`; no pixel sign-off is claimed.
 
 ## test/controllers/messages_controller_test.rb
 
-56 named declarations; 54 have scoped Rust evidence below; the remaining 2 are blocked on WS8b-r and WS14e. Reference execution counts are in the main report.
+56 named declarations have scoped Rust evidence below; WS8b-r and WS14e integration is merged. Reference execution counts are in the main report.
 
 - index returns the last page by default — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (complete pinned Rails page/response comparisons).
 - index is not found for a soft-deleted room — WS8bm. Attributed to `messages::http_tests::deleted_room_is_inaccessible_even_with_a_lingering_membership` (actual requests with retained membership).
@@ -16,7 +16,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - index etag changes when an author is renamed — WS8bm. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (author cache stamp invalidates the existing validator).
 - index etag changes when the older of two pins is removed — WS8b-m2; WS8bm cache integration. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (actual older-pin removal invalidates the prior HTTP validator; M2 owns pin endpoints).
 - get renders a single message belonging to the user — WS8bm. Attributed to `messages::root_tests::standalone_message_wrapper_matches_rails_bytes` (four complete standalone Rails view bodies).
-- room message list announces live appends — WS8b-r; WS8bm list integration. BLOCKED on the owner room show route/container (role=log, aria-live=polite, aria-relevant=additions); owned list/publisher bytes are covered.
+- room message list announces live appends — WS8b-r shell; WS8bm list integration. `every_cached_form_submits_with_real_room_header_and_live_log_after_owner_merge` checks the actual room GET has exactly one matching Rails message container with role=log, aria-live=polite and aria-relevant=additions. The cache witness regression checks the shell mounts the shared collection value verbatim.
 - image attachments use the filename as alt text — WS8bm. Attributed to `messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits` (complete square/wide/unrepresentable image HTML on cold and warm caches).
 - creating a message broadcasts the message to the room — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (real HTTP POST to guarded WS7 socket; complete Rails append frame).
 - broadcast message actions preserve a nonstandard request port — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (create/update/delete requests carry campfire.test:3443; full Rails frame bytes).
@@ -32,7 +32,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - a legacy body update clears stale Markdown mode — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (legacy conversion and clearing state).
 - editing a message to add a PR URL broadcasts the new card — WS15g / WS15e; WS8bm render integration. `provider_edit_replacements_match_all_rails_bytes_and_reference_rows`: actual root PATCH; complete real GitHub card through WS7 and exact references.
 - editing a message to remove a PR URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration. Same provider socket regression: actual root PATCH; complete empty GitHub replacement and empty reference rows.
-- legacy rich-text edits re-sync card references — WS15g / WS15e / WS14e; WS8bm render integration. GitHub/Twitter are covered by the provider socket regression. BLOCKED on WS14e event-reference synchronization: the committed real-HTTP probe `messages::provider_tests::legacy_rich_text_edit_synchronizes_event_reference_through_ws14e` fails with [] versus Rails [390339825] and is explicitly owner-flagged; no full declaration pass is claimed.
+- legacy rich-text edits re-sync card references — WS15g / WS15e / WS14e; WS8bm render integration. GitHub/Twitter retain their provider socket regression. The enabled real-HTTP `legacy_rich_text_edit_synchronizes_event_reference_through_ws14e` now compares the legacy PATCH status, location and exact Rails event reference [390339825] through the merged callback.
 - messages render empty card containers for future broadcasts — WS15g / WS15e; WS8bm render integration. Same provider socket regression: actual root SHOW mounts the exact empty GitHub/Twitter container bytes from Rails replacement fixtures.
 - admin cannot update a message belonging to another user — WS8bm. Attributed to `messages::http_tests::author_only_edits_even_for_an_administrator` (admin edit/update denied).
 - destroy destroys a message belonging to the user — WS8bm. Attributed to `messages::paging_tests::root_formats_and_destroy_side_effects_match_rails` (own deletes across Rails formats remove rows).
@@ -88,12 +88,12 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/messages/cached_fragment_csrf_test.rb
 
-4 named declarations; 3 have scoped cache/security evidence; the all-form submission declaration remains owner-blocked. Reference execution counts are in the main report.
+4 named declarations have scoped cache/security evidence through the merged room shell and all six forms. Reference execution counts are in the main report.
 
 - a cached message page serves no viewer's tokens to the next — WS8bm. `messages::csrf_tests::cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_across_sessions`: actual two-viewer HTTP, pointer-identical cache hits, exact Rails reaction/legacy/poll/GitHub fragments, no session-bound values. Production token-leak mutation rejected.
 - a cached refresh serves no viewer's tokens to the next — WS8bm. Same actual two-viewer refresh/cache/byte assertions in `messages::csrf_tests`.
 - a cached thread page serves no viewer's tokens to the next — WS8bm. Same actual two-viewer thread index/cache/byte assertions in `messages::csrf_tests`.
-- every form in a cached message submits with the page's header token — WS8bm integration; BLOCKED on M2 poll endpoints and WS8b-r room-shell header. `cached_owned_forms_submit_with_real_page_header_and_reject_foreign_or_missing_tokens` covers all four rendered reaction/legacy/GitHub forms with a real thread-page header, exact Rails statuses, missing/foreign token refusal and unchanged row counts; production CSRF-bypass mutation rejected. This is scoped evidence, not all-form signoff.
+- every form in a cached message submits with the page's header token — WS8bm integration. `every_cached_form_submits_with_real_room_header_and_live_log_after_owner_merge` exercises all six real cached GitHub, poll vote/retract, reaction and legacy-delete forms with the actual room header and exact Rails action/method/params/status. Missing/foreign tokens return 422 without changing message/boost/thread/vote counts. The earlier four-form real thread-header regression and cache/tokenless assertions remain.
 
 ## test/controllers/messages/legacy_presentation_cache_test.rb
 

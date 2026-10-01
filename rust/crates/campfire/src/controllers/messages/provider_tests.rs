@@ -22,10 +22,8 @@ pub(crate) async fn assert_references(app:&TestApp,row:&Value) {
     assert_eq!(refs["github"],row["github"]);assert_eq!(refs["twitter"],row["twitter"]);
 }
 
-// WS14e owns event reference synchronization; this real-controller probe is
-// enabled when that owner's callback lands. GitHub/Twitter remain covered above.
+// WS14e's merged callback must also run through the shared legacy edit path.
 #[tokio::test]
-#[ignore = "WS14e event-reference callback is not merged; real HTTP probe fails on the missing reference"]
 async fn legacy_rich_text_edit_synchronizes_event_reference_through_ws14e() {
     use axum::http::Method;
     use campfire_kit::clock::FrozenClock;

@@ -60,14 +60,20 @@ pub(crate) fn load(conn: &campfire_db::Connection, app: &crate::app::AppState,
     let room_gid = crate::channels::room_gid(room).to_param();
     let drive=presenter.composer_drive_flow(user,app.config.google_picker.is_some() && !user.is_bot())?;
     let composer=presenter.composer_facts(room,user,None,drive)?;
-    let list=super::room_native::message_list(&presenter,&messages,divider.message_id,divider.count)?;
+    // The mounted list and its message facts must read the same shared collection
+    // cache. Rendering the list before entering this scope silently rebuilt it.
+    let (list, items)=campfire_views::fragment_cache::with(&app.fragment_cache, || {
+        Ok::<_,campfire_db::Error>((
+            message_list(&presenter,&messages,divider.message_id,divider.count)?,
+            presenter.messages(&messages)?,
+        ))
+    })?;
     let show = campfire_views::rooms::ShowView {
         shell:campfire_views::rooms::ShellComponents{message_list:Some(list),pins_count:campfire_db::MessagePin::count_for_room(conn,room.id)?,thread_panel_name:Some(presenter.room_display_name(room,None)?),..Default::default()},scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
         room: presenter.room_view(room, user)?,
         updated_at: room.updated_at.jiff(),
         user: super::user_view(&app.secrets, user),
-        // The page's message fragments come from the store the render then uses.
-        messages: campfire_views::fragment_cache::with(&app.fragment_cache, || presenter.messages(&messages))?,
+        messages: items,
         invitation: original && !Message::paged(conn, Timeline::Room(room.id))?,
         join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
         messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),

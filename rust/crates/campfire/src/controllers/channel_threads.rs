@@ -122,12 +122,17 @@ pub async fn content(c: &mut Ctx) -> Result {
         p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, picker_available && !viewer.is_bot())?)?))).await?;
     c.set_header("x-thread-content-at-latest", if anchor.is_none() {"true"} else {"false"});
     page::bare(c, StatusCode::OK, &format::HTML, |ctx| {
-        let scheduled_control = campfire_views::helpers::raw(campfire_views::scheduled_messages::ComposerButton {
-            ctx, room_id: composer.room_id, thread_id: Some(id),
-        }.render()?);
+        let scheduled_control = render_thread_schedule_control(ctx, composer.room_id, id)?;
         campfire_views::channel_threads::Conversation {ctx, thread_id: id,
             room_updated_at: updated_at, anchor, messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()
     }).await
+}
+
+/// Stable M2 provider seam: room and thread scope must both reach the schedule child.
+fn render_thread_schedule_control(ctx: &campfire_views::ViewContext<'_>, room_id: i64, thread_id: i64) -> askama::Result<campfire_views::helpers::Html> {
+    Ok(campfire_views::helpers::raw(campfire_views::scheduled_messages::ComposerButton {
+        ctx, room_id, thread_id: Some(thread_id),
+    }.render()?))
 }
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
