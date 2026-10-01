@@ -1,6 +1,6 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 106 of 156 declarations have scoped evidence; 50 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 111 of 156 declarations have scoped evidence; 45 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
@@ -125,7 +125,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - the reaction tooltip lists reactors as plain text, never interactive content — WS8bm; the same test's complete `index_hostile_name` component escapes an interactive-looking reactor name. Merged room HTTP/browser signoff remains pending; this component comparison alone is not that signoff.
 ## test/controllers/channel_threads_controller_test.rb
 
-24 named declarations; 9 have scoped Rust evidence below, and 15 await attribution/signoff. Reference execution counts are in the main report.
+24 named declarations; 14 have scoped Rust evidence below; the remaining 10 work declarations are blocked on WS12. Reference execution counts are in the main report.
 
 - creation accepts nested thread message parameters and joins only the creator — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (nested_create request and complete persisted members/messages match Rails).
 - retried creation with the same first-message client id returns the existing thread — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
@@ -133,24 +133,24 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - browsing does not join and stale threads show as closed without writes — WS8bm. Attributed to `channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes` (stale show JSON/body, all listed reads leave the viewer unjoined).
 - explicitly closing an already-stale thread persists closed_at — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (stale_close request and exact persisted closed_at).
 - reopening a time-stale thread restarts its archive clock instead of leaving it closed — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (stale_reopen request and exact persisted last_activity_at/closed_at).
-- unlocking a time-stale thread reopens it instead of leaving it closed — WS8bm.
-- posting to a thread persists closed_at for its stale siblings — WS8bm.
-- thread index costs a constant number of queries as threads grow — WS8bm.
+- unlocking a time-stale thread reopens it instead of leaving it closed — WS8bm. `channel_threads::declaration_tests::stale_unlock_resets_archive_clock_and_post_sweeps_stale_siblings`: actual seeded HTTP/rows and per-database reader SQL capture. Closed JSON is byte-identical to the pinned Rails request oracle. Index growth regression failed 33 versus 69 queries before batching; see report for current verification.
+- posting to a thread persists closed_at for its stale siblings — WS8bm. `channel_threads::declaration_tests::stale_unlock_resets_archive_clock_and_post_sweeps_stale_siblings`: actual seeded HTTP/rows and per-database reader SQL capture. Closed JSON is byte-identical to the pinned Rails request oracle. Index growth regression failed 33 versus 69 queries before batching; see report for current verification.
+- thread index costs a constant number of queries as threads grow — WS8bm. `channel_threads::declaration_tests::thread_index_query_count_stays_constant_as_threads_grow`: actual seeded HTTP/rows and per-database reader SQL capture. Closed JSON is byte-identical to the pinned Rails request oracle. Index growth regression failed 33 versus 69 queries before batching; see report for current verification.
 - joining accepts only thread notification preferences and preserves an existing preference when omitted — WS8bm. Attributed to `channel_threads::tests::joins_reads_and_leaves_match_rails_json_redirects_and_rows` (join/preference/rejoin request oracle and exact persisted membership fields).
-- closed state contains locked threads and direct rooms reject thread creation — WS8bm.
-- closed listing finds stale threads in SQL with one threads query — WS8bm.
+- closed state contains locked threads and direct rooms reject thread creation — WS8bm. `channel_threads::declaration_tests::closed_listing_uses_one_thread_query_including_locked_and_stale_without_writes`: actual seeded HTTP/rows and per-database reader SQL capture. Closed JSON is byte-identical to the pinned Rails request oracle. Index growth regression failed 33 versus 69 queries before batching; see report for current verification.
+- closed listing finds stale threads in SQL with one threads query — WS8bm. `channel_threads::declaration_tests::closed_listing_uses_one_thread_query_including_locked_and_stale_without_writes`: actual seeded HTTP/rows and per-database reader SQL capture. Closed JSON is byte-identical to the pinned Rails request oracle. Index growth regression failed 33 versus 69 queries before batching; see report for current verification.
 - a deleted starter is represented explicitly so open clients clear its preview — WS8bm. Attributed to `channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes` (show_deleted_parent exact JSON and complete owned HTML body).
 - content anchors only a message in the requested thread — WS8bm. Attributed to `channel_threads::content_tests::content_scopes_room_and_anchor_without_joining_and_denies_bots` (HTTP cross-thread/cross-room anchors denied and membership unchanged).
-- converts a thread to work, assigns an eligible owner, and keeps an audit trail — WS12 / WS11; WS8bm HTTP seam.
-- work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable — WS12 / WS11; WS8bm HTTP seam.
-- assigned owner can change work status but cannot reassign it — WS12 / WS11; WS8bm HTTP seam.
-- only a thread manager can remove work tracking — WS12 / WS11; WS8bm HTTP seam.
-- the work model also protects conversion when the owner field is omitted — WS12 / WS11; WS8bm HTTP seam.
-- work status updates from separate stale instances produce one event per real change — WS12 / WS11; WS8bm HTTP seam.
-- a manager can assign an eligible agent and the agent is notified — WS12 / WS11; WS8bm HTTP seam.
-- the owner picker lists eligible agents with profiles and excludes ineligible ones — WS12 / WS11; WS8bm HTTP seam.
-- a member who cannot manage the thread cannot assign an agent — WS12 / WS11; WS8bm HTTP seam.
-- ordinary thread fields remain separate from work tracking — WS12 / WS11; WS8bm HTTP seam.
+- converts a thread to work, assigns an eligible owner, and keeps an audit trail — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- assigned owner can change work status but cannot reassign it — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- only a thread manager can remove work tracking — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- the work model also protects conversion when the owner field is omitted — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- work status updates from separate stale instances produce one event per real change — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- a manager can assign an eligible agent and the agent is notified — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- the owner picker lists eligible agents with profiles and excludes ineligible ones — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- a member who cannot manage the thread cannot assign an agent — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- ordinary thread fields remain separate from work tracking — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
 ## test/controllers/channel_thread_messages_controller_test.rb
 
 12 named declarations; 8 have scoped Rust evidence below, and 4 await attribution/signoff. Reference execution counts are in the main report.
@@ -191,8 +191,8 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 - destinations returns reachable rooms and unlocked threads without caching — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (destinations/global_destinations exact body and no-store response).
 - nested destination endpoint supports a thread message — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (nested_destinations exact response body/headers).
-- destinations excludes board rooms — WS12 / WS11; WS8bm HTTP seam.
-- create refuses board destinations on the server — WS12 / WS11; WS8bm HTTP seam. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (board request rejected with exact Rails body and unchanged message count; WS12 still owns board panes).
+- destinations excludes board rooms — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- create refuses board destinations on the server — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim). Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (board request rejected with exact Rails body and unchanged message count; WS12 still owns board panes).
 - direct destinations use the other participant's display name — WS8bm.
 - destinations show stale threads as closed without writing — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (stale picker status in exact body; closed_at remains NULL after all requests).
 - destinations cost a constant number of queries as reachable rooms grow — WS8bm.

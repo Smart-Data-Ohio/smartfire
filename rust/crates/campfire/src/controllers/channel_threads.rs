@@ -13,6 +13,8 @@ mod content_tests;
 mod github_tests;
 #[cfg(test)]
 mod chrome_tests;
+#[cfg(test)]
+mod declaration_tests;
 
 use askama::Template;
 use campfire_db::{ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, Timestamp};
@@ -48,19 +50,25 @@ pub async fn index(c: &mut Ctx) -> Result {
         return render_json(c, StatusCode::OK, &payload);
     }
     let (room_name, rows) = messages::present(c, move |p| {
-        let rows = threads.iter().map(|thread| {
-            let owner = thread.work_owner_id.map(|id| p.user(id)).transpose()?;
-            let payload = messages::payload::thread(p, thread, &viewer, &base)?;
-            let owner_label = match &owner {
-                None => "Unassigned".into(),
-                Some(owner) if payload["work_owner_active"] == true => owner.name.clone(),
-                Some(owner) => format!("Owner unavailable ({})", owner.name),
+        // The index displays only these facts. Loading a full per-thread JSON
+        // payload here made its query cost grow with each row.
+        let owner_ids=threads.iter().filter_map(|thread|thread.work_owner_id).collect::<std::collections::BTreeSet<_>>().into_iter().collect::<Vec<_>>();
+        let owners=campfire_db::User::where_ids(p.conn,&owner_ids)?.into_iter().map(|user|(user.id,user)).collect::<std::collections::HashMap<_,_>>();
+        let members=p.conn.prepare("SELECT user_id FROM memberships WHERE room_id=?")?.query_map([room.id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<std::collections::HashSet<_>>>()?;
+        let eligible_agents=p.conn.prepare("SELECT agents.user_id FROM agents WHERE agents.suspended_at IS NULL AND (NOT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=agents.id) OR EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=agents.id AND revoked_at IS NULL AND capability='post_messages' AND (room_id IS NULL OR room_id=?)))")?.query_map([room.id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<std::collections::HashSet<_>>>()?;
+        let counts=p.conn.prepare("SELECT thread_id,COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NOT NULL GROUP BY thread_id")?.query_map([room.id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,i64>(1)?)))?.collect::<rusqlite::Result<std::collections::HashMap<_,_>>>()?;
+        let rows=threads.iter().map(|thread| {
+            let owner=thread.work_owner_id.and_then(|id|owners.get(&id));
+            let active=owner.is_some_and(|owner|owner.is_active()&&members.contains(&owner.id)&&(!owner.is_bot()||room.deleted_at.is_none()&&eligible_agents.contains(&owner.id)));
+            let owner_label=match owner {
+                None=>"Unassigned".into(),
+                Some(owner) if active=>owner.name.clone(),
+                Some(owner)=>format!("Owner unavailable ({})",owner.name),
             };
-            Ok(campfire_views::channel_threads::ListRow { id: thread.id, name: thread.name.clone(),
-                status: thread.status(p.conn, Timestamp::from_jiff(p.now))?.name().into(),
-                message_count: thread.message_count(p.conn)?, work_label: work_status_label(thread.work_status.as_deref()).map(str::to_string),
-                owner_label, agent: owner.is_some_and(|owner| owner.is_bot()) })
-        }).collect::<campfire_db::Result<Vec<_>>>()?;
+            campfire_views::channel_threads::ListRow {id:thread.id,name:thread.name.clone(),status:thread.status_in_room(&room,Timestamp::from_jiff(p.now)).name().into(),
+                message_count:counts.get(&thread.id).copied().unwrap_or(0),work_label:work_status_label(thread.work_status.as_deref()).map(str::to_string),
+                owner_label,agent:owner.is_some_and(|owner|owner.is_bot())}
+        }).collect::<Vec<_>>();
         Ok((p.room_display_name(&room, Some(&viewer))?, rows))
     }).await?;
     page::titled_content(c, StatusCode::OK, &format!("Threads in {room_name}"), |ctx| campfire_views::channel_threads::Index { ctx, room_id, room_name: &room_name, threads: &rows }.render()).await
