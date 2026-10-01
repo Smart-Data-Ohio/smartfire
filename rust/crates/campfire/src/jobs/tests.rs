@@ -744,6 +744,7 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     let retention = expected.pop().unwrap();
     expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
     expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"slack imports","seconds":30}));
     expected.push(retention);
     let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
     expected.push(ws17["presence_task"].clone());
