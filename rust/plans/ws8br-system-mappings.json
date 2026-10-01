@@ -1,0 +1,20 @@
+{
+  "reference": "d7c7de92",
+  "counting": "Mapped original interactions executed with Playwright on Rails and Rust; these are not executions of Rails Minitest.",
+  "files": [
+    {
+      "file": "test/system/quick_switcher_test.rb",
+      "runner": "rust/reference-tools/rooms/room_browser.py",
+      "original_cases": [
+        "keyboard-only room jump filters and opens with enter",
+        "arrow keys move the active option",
+        "escape closes the switcher",
+        "empty query leads with recent rooms",
+        "choosing a person without a DM opens a new one"
+      ],
+      "database_assertion": "Global Room.count increases by exactly one on each target, checked on the actual server databases after all five interactions; sidebar accessible-room count is also checked.",
+      "status": "pending current fresh-clone execution"
+    }
+  ],
+  "partial": "Existing phone/header/member/pins probes remain partial original-file mappings because the original header setup requires WS13 configured huddles. The eight WS13 controller/sidebar cases remain deferred. Other per-declaration ownership is in ws8br-rails-cases.json."
+}
