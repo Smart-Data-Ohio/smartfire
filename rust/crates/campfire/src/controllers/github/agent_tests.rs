@@ -175,7 +175,7 @@ async fn github_agent_http_authorization_actions_replay_budgets_and_throttle_mat
     }
 }
 #[tokio::test]
-async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() {
+async fn github_agent_http_races_committed_fanout_expiry_and_real_approved_job() {
     let c = json!({});
     let fresh = fixture(&c).await;
     let path = "/rooms/815/agents/github/pull_request_actions";
@@ -205,7 +205,8 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
     fresh.app.db.write(|tx|{tx.conn().execute_batch("CREATE TRIGGER reject_approval_inbox BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' BEGIN SELECT RAISE(ABORT,'inbox unavailable'); END;")?;Ok(())}).await.unwrap();
     let mut other = body.clone();
     other["external_id"] = json!("rollback");
-    // Error pages are HTML; this request asserts the entire HTTP write rolled back.
+    // Pinned HTTP oracle: views/agents_ui/github_request_boundaries.rb.
+    // The approval commits before after_create_commit fan-out, even on HTTP 500.
     let response = fresh
         .router
         .clone()
@@ -214,7 +215,10 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
                 .method("POST")
                 .uri(path)
                 .header("Host", "example.org")
-                .header("Authorization", format!("{} {}", "Bearer", "fixture-agent-secret"))
+                .header(
+                    "Authorization",
+                    format!("{} {}", "Bearer", "fixture-agent-secret"),
+                )
                 .header("Content-Type", "application/json")
                 .body(Body::from(other.to_string()))
                 .unwrap(),
@@ -222,7 +226,7 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
         .await
         .unwrap();
     assert_eq!(response.status().as_u16(), 500);
-    fresh
+    let committed_id = fresh
         .app
         .db
         .write(|tx| {
@@ -232,16 +236,28 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
                     [],
                     |r| r.get::<_, i64>(0)
                 )?,
-                0
+                1
             );
+            let id: i64 = tx.conn().query_row("SELECT id FROM agent_approvals WHERE external_id='rollback'", [], |r| r.get(0))?;
+            assert_eq!(AgentApproval::find(tx.conn(), id)?.unwrap().status, "pending");
+            assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=?", [id], |r| r.get::<_, i64>(0))?, 0);
             tx.conn()
                 .execute_batch("DROP TRIGGER reject_approval_inbox")?;
-            Ok(())
+            Ok(id)
         })
         .await
         .unwrap();
-    let (_, _, created) = post(&fresh, path, other, "fixture-agent-secret").await;
+    let (status, _, created) = post(&fresh, path, other, "fixture-agent-secret").await;
+    assert_eq!(
+        status, 200,
+        "the failed fan-out still left an idempotency winner"
+    );
     let approval_id = created["id"].as_i64().unwrap();
+    assert_eq!(approval_id, committed_id);
+    fresh.app.db.read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=?", [approval_id], |r| r.get::<_, i64>(0))?, 0, "Rails replay does not repair fan-out");
+        Ok(())
+    }).await.unwrap();
     fresh.app.db.write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_approval_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::PerformAgentActionJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;Ok(())}).await.unwrap();
     let rejected = fresh
         .app

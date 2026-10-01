@@ -5,7 +5,7 @@ use crate::{
     concerns::{self, Before},
     integrations::github::{
         accounts::{Account, AccountInput},
-        client::{ErrorKind, WriteClient},
+        client::ErrorKind,
     },
 };
 use campfire_db::{
@@ -29,27 +29,29 @@ pub async fn create(c: &mut Ctx) -> Result {
     if campfire_richtext::ruby::is_blank(token) {
         return redirect(c, bot.id, "Paste a token to connect GitHub.", false);
     }
-    let login =
-        match WriteClient::with_network(token.to_owned(), c.app().subscription_network.clone())
-            .authenticated_login()
-            .await
-        {
-            Ok(login) => login,
-            Err(error) => {
-                return match error.kind {
-                    ErrorKind::Unauthorized => redirect(
-                        c,
-                        bot.id,
-                        "GitHub rejected that token. Check it and try again.",
-                        false,
-                    ),
-                    ErrorKind::Refused | ErrorKind::Other => {
-                        redirect(c, bot.id, "Could not reach GitHub. Try again.", false)
-                    }
-                    _ => Err(Error::internal(error)),
-                };
-            }
-        };
+    let login = match c
+        .app()
+        .github_accounts
+        .write_client(token.to_owned())
+        .authenticated_login()
+        .await
+    {
+        Ok(login) => login,
+        Err(error) => {
+            return match error.kind {
+                ErrorKind::Unauthorized => redirect(
+                    c,
+                    bot.id,
+                    "GitHub rejected that token. Check it and try again.",
+                    false,
+                ),
+                ErrorKind::Refused | ErrorKind::Other => {
+                    redirect(c, bot.id, "Could not reach GitHub. Try again.", false)
+                }
+                _ => Err(Error::internal(error)),
+            };
+        }
+    };
     let token = token.to_owned();
     let crypto = c.app().ar_encryption.clone();
     let context = super::audit_context(c)?;
