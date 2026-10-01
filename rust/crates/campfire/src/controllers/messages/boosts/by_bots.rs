@@ -4,7 +4,7 @@
 use campfire_db::{Boost, Message, Room};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
 
-use super::{broadcast_create, destroy_boost, set_boost};
+use super::{broadcast_reactions, destroy_boost, set_boost};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::messages::by_bots::{deny_bot_reply_token, is_blank, raw_request_body};
@@ -31,7 +31,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         Err(campfire_db::Error::RecordInvalid(errors))=>return Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY,&format::JSON,serde_json::json!({"errors":errors.full_messages()}).to_string())),
         Err(error)=>return Err(db_error(error)),
     };
-    broadcast_create(c, &message, &boost).await?;
+    broadcast_reactions(c, &message).await?;
 
     // render :show, status: :created
     c.respond_to(&[&format::JSON])?;

@@ -10,6 +10,7 @@ pub mod approvals;
 pub mod pending;
 pub mod conversations;
 mod reads;
+mod reactions;
 mod pins;
 mod polls;
 pub mod integrations;

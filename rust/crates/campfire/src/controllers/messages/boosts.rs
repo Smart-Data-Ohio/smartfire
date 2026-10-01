@@ -75,13 +75,11 @@ pub(crate) async fn create_boost(c: &Ctx, message: &Message, content: Option<Str
     c.app().db.write(move |tx| Boost::create(tx, message_id, booster_id, &content)).await.map_err(db_error)
 }
 
-/// `@boost.destroy!` then `broadcast_remove`.
+/// `@boost.destroy!` then `Message#broadcast_reactions_replace`.
 pub(crate) async fn destroy_boost(c: &Ctx, message: &Message, boost: Boost) -> Result<()> {
     let destroyed = boost.clone();
     c.app().db.write(move |tx| destroyed.destroy(tx)).await.map_err(db_error)?;
-    let room_id = message.room_id;
-    let room = c.app().db.read(move |conn| Room::find(conn, room_id)).await.map_err(db_error)?;
-    c.app().broadcasts.boost_remove(&room, message, &boost);
+    broadcast_reactions(c, message).await?;
     Ok(())
 }
 
@@ -103,4 +101,19 @@ pub(crate) async fn broadcast_create(c: &Ctx, message: &Message, boost: &Boost) 
         })
         .await
         .map_err(db_error)
+}
+
+/// `Message#broadcast_reactions_replace`, rendered without session-bound state.
+pub(crate) async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
+    let (app,message)=(c.app().clone(),message.clone());
+    let base_url=page::renderer_base_url(c);
+    c.app().db.read(move |conn| {
+        let presenter=crate::controllers::presenters::Presenter::new(conn,&app,None);
+        let view=presenter.message(&message)?;
+        let account=campfire_db::Account::first(conn)?;
+        let html=page::render_detached_at(&app,account.as_ref(),&base_url,|ctx|views::ReactionsPartial {ctx,message:&view}.render()).map_err(|error|campfire_db::Error::Other(error.to_string()))?;
+        let room=Room::find(conn,message.room_id)?;
+        app.broadcasts.message_reactions_replace(&room,&message,&html);
+        Ok(())
+    }).await.map_err(db_error)
 }

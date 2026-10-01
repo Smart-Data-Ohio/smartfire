@@ -1069,3 +1069,6 @@ mod agent_pins_tests;
 
 #[cfg(test)]
 mod agent_polls_tests;
+
+#[cfg(test)]
+mod agent_reactions_tests;

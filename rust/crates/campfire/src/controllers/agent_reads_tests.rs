@@ -13,6 +13,10 @@ pub(super) async fn check(case: &Value) {
             tx.conn().execute("INSERT INTO agent_grants(agent_id,capability,room_id,granted_by_id,revoked_at,created_at,updated_at) VALUES(?,?,?,127326141,?,?,?)",rusqlite::params![AGENT,cap.as_str(),config["grant_room"].as_i64(),if config["revoked"]==true {Some(tx.now())} else {None},tx.now(),tx.now()])?;
         }
         tx.conn().execute("UPDATE agents SET owner_id=127326141 WHERE id=?",[AGENT])?;
+        if config["bot_key"]==true {
+            use sha2::{Digest,Sha256};
+            tx.conn().execute("UPDATE users SET bot_token_digest=? WHERE id=394959859",[format!("{:x}",Sha256::digest("BenderToken1"))])?;
+        }
         tx.conn().execute("UPDATE sqlite_sequence SET seq=1900700000 WHERE name='messages'",[])?;
         for (creator,source,client) in [(127326141,"Source α & β","read-source"),(394959859,"Agent","read-agent")] {
             Message::create(tx,NewMessage{room_id:486777696,creator_id:creator,markdown_source:Some(source.into()),client_message_id:Some(client.into()),..Default::default()})?;
@@ -40,7 +44,24 @@ pub(super) async fn check(case: &Value) {
                 let options=poll.options(tx.conn())?;
                 for (user,option) in [(394959859,0),(127326141,0),(149087659,1)]{campfire_db::PollVote::create(tx,poll.id,options[option].id,user)?;}
             }
-            if config["closed"]==true {tx.conn().execute("UPDATE polls SET closed_at=? WHERE id=?",rusqlite::params![tx.now(),poll.id])?;}
+        if config["closed"]==true {tx.conn().execute("UPDATE polls SET closed_at=? WHERE id=?",rusqlite::params![tx.now(),poll.id])?;}
+        }
+        tx.conn().execute("UPDATE sqlite_sequence SET seq=1900900000 WHERE name='boosts'",[])?;
+        if let Some(content)=config["prior"].as_str() {
+            campfire_db::Boost::create(tx,1900700001,394959859,content)?;
+        }
+        if config["polling"]==true {
+            tx.conn().execute("DELETE FROM agent_events WHERE agent_id=?",[AGENT])?;
+            tx.conn().execute("UPDATE sqlite_sequence SET seq=1900950000 WHERE name='agent_events'",[])?;
+            if config["drive"]==true {
+                for file in ["1AbcDefGhIjKlMnOpQrSt","2BcdEfgHiJkLmNoPqRsTu"] {
+                    tx.conn().execute("INSERT INTO drive_attachments(message_id,file_id,created_at) VALUES(1900700001,?,?)",rusqlite::params![file,tx.now()])?;
+                }
+            }
+            campfire_db::models::agent_delivery::AgentEvent::create(tx,campfire_db::models::agent_delivery::NewEvent {
+                agent_id:AGENT, room_id:Some(486777696), message_id:Some(1900700001), actor_id:Some(127326141),
+                event_type:"mention".into(), outcome:Some("delivered".into()), metadata:serde_json::json!({"hop":0}), ..Default::default()
+            })?;
         }
         Ok(())
     }).await.unwrap();
@@ -50,8 +71,9 @@ pub(super) async fn check(case: &Value) {
             case["path"].as_str().unwrap(),
         )
         .header("accept", "application/json")
-        .header("content-type", "application/json")
-        .header("authorization", &["Bearer", SECRET].join(" "));
+        .header("content-type",case["setup"]["content_type"].as_str().unwrap_or("application/json"))
+        ;
+        if case["setup"]["bot_key"]!=true {req=req.header("authorization", &["Bearer", SECRET].join(" "));}
         if let Some(body) = case["body"].as_str() {
             req = req.body(body);
         }
@@ -60,6 +82,7 @@ pub(super) async fn check(case: &Value) {
     for _ in 0..case["setup"]["repeat"].as_u64().unwrap_or(0) {
         app.anonymous().send(request()).await;
     }
+    let mut cable=if case["broadcasts"].is_array() {Some(super::agent_reactions_tests::subscribe(&app).await)} else {None};
     let reply = app.anonymous().send(request()).await;
     let name = case["name"].as_str().unwrap();
     assert_eq!(
@@ -75,6 +98,23 @@ pub(super) async fn check(case: &Value) {
     );
     for (key, expected) in case["response_headers"].as_object().unwrap() {
         assert_eq!(reply.header(key), expected.as_str(), "{name}: {key}");
+    }
+    if let Some(expected)=case.get("attachment_state") {
+        let actual=app.db().read(|conn| {
+            let count:i64=conn.query_row("SELECT COUNT(*) FROM messages WHERE id>=1900700004",[],|row|row.get(0))?;
+            let id:Option<i64>=conn.query_row("SELECT MAX(id) FROM messages WHERE id>=1900700004",[],|row|row.get(0))?;
+            let message=id.map(|id|Message::find(conn,id)).transpose()?;
+            let blob=if let Some(message)=&message {campfire_storage::Blob::attached(conn,"Message",message.id,"attachment").map_err(|error|campfire_db::Error::Other(error.to_string()))?} else {None};
+            Ok(serde_json::json!({"messages":count,"markdown_source":message.and_then(|message|message.markdown_source),"attachment":blob.map(|blob|serde_json::json!({"filename":blob.filename.to_string(),"content_type":blob.content_type,"byte_size":blob.byte_size,"checksum":blob.checksum}))}))
+        }).await.unwrap();
+        assert_eq!(&actual,expected,"{name}: persisted attachment state");
+    }
+    if let Some((_,client))=&mut cable {
+        for expected in case["broadcasts"].as_array().unwrap() {
+            let frame:Value=serde_json::from_str(&client.next_text().await).unwrap();
+            assert_eq!(frame["message"],*expected,"{name}: reaction broadcast bytes");
+        }
+        client.assert_silent().await;
     }
     eprintln!("WS11-api read wire case {name}: 1 passed; 0 failed");
 }

@@ -844,6 +844,14 @@ pub struct BoostsPartial<'a> {
     pub message: &'a MessageView,
 }
 
+/// The grouped frame shared by human, bot and MCP reaction broadcasts.
+#[derive(Template)]
+#[template(path = "messages/boosts/_reactions.html")]
+pub struct ReactionsPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
 /// `messages/boosts/index`.
 #[derive(Template)]
 #[template(path = "messages/boosts/index.html")]

@@ -1,0 +1,289 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "bot_reactions_content_0",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": "👍",
+      "setup": {
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900900001,\"content\":\"👍\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900700001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900700001\"}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_content_1",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": ":thumbsup:",
+      "setup": {
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900900001,\"content\":\"👍\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900700001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900700001\"}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_content_2",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": ":gpt:",
+      "setup": {
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900900001,\"content\":\":openai:\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900700001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900700001\"}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\":openai:\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"OpenAI\" aria-label=\"OpenAI: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\":openai:\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\"><img class=\"icon icon--brand\" alt=\":openai:\" draggable=\"false\" src=\"/assets/icons/brands/openai-a0bb8578.svg\" /></span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">OpenAI</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_content_3",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": ":unknown:",
+      "setup": {
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900900001,\"content\":\":unknown:\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900700001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900700001\"}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted :unknown:\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">:unknown:</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_content_4",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": "Free α & β",
+      "setup": {
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900900001,\"content\":\"Free α \\u0026 β\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900700001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900700001\"}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted Free α &amp; β\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">Free α &amp; β</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_content_5",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": " ",
+      "setup": {
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 422,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_content_6",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": "\u0000",
+      "setup": {
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900900001,\"content\":\"\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900700001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900700001\"}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted \" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\"></span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_repeat",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": "👍",
+      "setup": {
+        "repeat": 1,
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900900002,\"content\":\"👍\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900700001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900700001\"}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_destroy",
+      "method": "delete",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts/1900900001",
+      "body": null,
+      "setup": {
+        "prior": "👍",
+        "bot_key": true
+      },
+      "status": 204,
+      "response_body": "",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": null,
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_destroy_missing",
+      "method": "delete",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts/0",
+      "body": null,
+      "setup": {
+        "bot_key": true
+      },
+      "status": 404,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_authority_0",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": "👍",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks react capability\"}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_authority_1",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": "👍",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "revoked": true,
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks react capability\"}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "bot_reactions_authority_2",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages/1900700001/boosts",
+      "body": "👍",
+      "setup": {
+        "remove_member": true,
+        "content_type": "text/plain",
+        "bot_key": true
+      },
+      "status": 404,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    }
+  ]
+}

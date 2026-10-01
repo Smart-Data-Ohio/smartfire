@@ -54,6 +54,7 @@ async fn dispatch(
     rest: bool,
 ) -> Result<ServiceResult> {
     match operation {
+        "react" => return super::reactions::operation(c,agent_id,args).await,
         "start_stream" | "append_stream" | "finalize_stream" => {
             return super::conversations::stream(c, agent_id, operation, args, rest).await;
         }
