@@ -1,76 +1,73 @@
-# WS8br2 report — PR #177 review fixes
+# WS8br2 report — #175 merge verification
 
-Verified implementation: `667eba33720637739d18529cb182a3766d395917`.
-Main merge: `3f80a64b` imports `ae43b34d` (#174 Events), with a merge commit. Locked metadata passed after the merge and in the fresh clone. Both sides' controller routes, socket producers and tests are retained.
+Verified implementation: `0b009d1087c25cb2d72b20c77663108151d9a29a`.
+Merge commit: `9380d068139e5123c1e90049a03a1ee40e5cf25b`, parents `ad32fff5` and main `434d1c14` (#175). The following test-only commits retain Astra's owner-list precedence probe and remove an automatically duplicated fixture initializer. Locked metadata passes after the merge and in the fresh clone.
 
-**Review scope complete:** all three Astra findings have pinned Rails regressions that fail against `739a60562ea55295181aacb3cc1868d6968bc0fa`. Broader WS8br2 remains **partial: 14 original criteria remain**, with the owner seams below. No pixel-diff work.
+**Requested merge scope complete.** Both sides' behavior and tests remain. Broader WS8br2 is **partial: 14 original criteria remain**, listed below. No pixel-diff work.
 
-## Changes by file
+## Notable conflict resolutions
 
-| Files under `rust/` | Change |
+| Boundary | Resolution |
 |---|---|
-| `crates/views/src/users/agent_profile.rs` | Send room labels through `link_to_text(name, url, attrs)`. Stored markup becomes text, exactly as Rails does. Applies to all room display-name strings. |
-| `plans/ws8br2-escaping-review.md`; `reference-tools/users/{agent_profiles,people,profile_page,account_views,icons,audit_logs}.rb`; corresponding vectors and controller tests | Sweep every owned raw/HTML-trusting boundary and trace its input. Add actual tag/ampersand/quote vectors for names, bios, statuses, agent provider/runtime/description/note, account/membership names, DND person/title, member email, icon title/creator/form values, audit labels/details/IP/user-agent and textarea-closing custom CSS. Complete bodies/navs/profile application page/CSV remain compared without masks. The agent-room label was the only direct stored-text-to-trusting-helper sink found. Rendered owner fragments remain typed trusted HTML; Rails deliberately renders application custom CSS raw, while its editor escapes it. |
-| `crates/campfire/src/controllers/accounts/icons.rs` | Commit the icon/attachment create or deletion and durable callbacks first, then record the audit. Audit failure returns 500 and retains the mutation. Validation/unique-index errors still return 422 and roll back. Normal audit actor/target/action/details and exactly-once checks stay intact. No duplicate shared attachment or WS9 producer. |
-| `reference-tools/users/account_audit_failures.rb`, `vectors/users_account_audit_failures.json`, `controllers/accounts/{icons/tests,attachment_tests}.rs` | Extend the existing five production account failures with icon create/delete. Compare status/location, persisted name/title/creator, blob filename/MIME/size/checksum/metadata, zero audits and analysis/purge queue counts. The create uses a real signed PNG blob; the delete removes an attached PNG icon. Rails runs outside any wrapping transaction; a guard rejects a create that fails before its audit. Rust workers stop before setup to match Rails' non-performing test queue adapter, while real synchronous callbacks and durable enqueues remain active. Attachment helpers become visible only to sibling tests. |
-| `crates/campfire/src/controllers/rooms.rs`, `crates/views/src/rooms.rs`, `crates/views/templates/messages/_unread_divider.html`, `crates/views/tests/room_shell.rs` | Resolve the divider position from numeric domain IDs before making cached message fragments. Insert the Rails partial before the first unread message, outside the shared cache; preserve the real-message fallback and optional owner whole-list override. Match the partial and surrounding whitespace exactly, including Askama's explicit trailing newline. |
-| `reference-tools/rooms/unread_shell.rb`, `vectors/room_shell_unread.json`, `controllers/rooms/parity_tests.rs` | Retain eight boundary-fact scenarios and add actual authenticated Rails/Rust room GETs. Check six/five/three unread, legacy/deleted pointers, off-page and absent boundaries; exact divider bytes, prefix/suffix whitespace, neighboring message IDs, scroll flag and complete jump control. Run every state twice through one cache to catch viewer-local data leaking into shared fragments. |
-| `reference-tools/users/{run_oracles,verify_goldens,file_counts}` | Regenerate 33 owned oracles, shared source/core/routes/sidebar/auth files; assert 148 executed owned Rust groups and retain original 194-criterion accounting. |
-| `crates/campfire/src/{controllers,channels/sink}.rs` and imported main files | Resolve the main merge by retaining the owned user route/socket paths and main's Events routes/message/card producers. No tests removed or weakened. |
+| `controllers/rooms.rs`, `presenters/room_native.rs`, `views/src/rooms.rs`, `templates/rooms/show.html` | Use #175's native room load/render path and owner whole-list slot. Initialize `ShowView.unread_divider_index` from numeric domain message IDs before presentation. Retain the cached-message fallback; a supplied whole list wins immediately. The divider is request/viewer state outside shared message fragments, with the same Rails partial and surrounding whitespace. |
+| Native composer and owner panels | Keep Schedule send, the pending template, thread/poll/pins panels and GitHub thread provider. No request-local composer or viewer facts enter shared message caches. Four complete populated pages, four empty HTTP responses and the owner component corpora are compared with Rails. |
+| `channels/sink.rs` | Keep main's centralized message-feature dispatcher and general domain-partial fallback, including Events. Remove the older duplicate message/Event dispatch branches and duplicate status dispatch entries. No producer or audit callback is added. |
+| `controllers.rs`, `presenters.rs`, `views/src/users.rs`, `users/summary.rs` | Union controller routes/test endpoint coverage and presenter/view modules. Keep the owned profiles, status popup, account/icon/audit controllers, Google identity controls and escaping fix, with main's room/message/thread features. Route the status update once. Account/icon commit-before-audit ordering and exactly-once producer checks remain unchanged. |
+| `presenters/view_context.rs`, `rich_text.rs` | Preserve the owned persisted notification/Calendar/Drive projection and request-local unsaved settings, while filling main's configured Google Picker and searches-controller query. Main's icon-name entry point delegates to the canonical brand/alias/database registry, avoiding a duplicate unused implementation. |
+| Direct picker controller/model/template | Keep main's `DirectPickerUser` adapter and picker/settings template. Adapt the owned tests to that plain view model, retaining every assertion and all four exact Rails picker bodies. People/cards retain their richer owned presentation model. |
+| Test helpers and modules | Retain the union of test modules, frozen clocks, configured app boot and failure artifact helpers. Consolidate duplicate frozen-clock helpers. The first fresh build rejected an auto-merged duplicate `ooo_notice_members` fixture field; remove only the repeated empty initialization, retaining both parents' assertions. |
 
-## Rails pin and #175
+## Review regressions retained
 
-Everything remains on `d7c7de9264c63015be398001d7a1094e7695a6db`, except the ten approved #163 status/controller/layout inputs from `2e20b24c3f2be9db8a646a1352c159b4afacad0e`. The status-image check verifies all 2076 inputs and exactly that overlay. Board-only drift remains with its owners.
+The original escaping, icon-create audit failure, icon-delete audit failure and unread-divider regressions remain unchanged. Their failing-first proof against `739a6056` is historical evidence in the report committed at `ad32fff5`; this run verifies their merged implementations, rather than claiming a new baseline run.
 
-The owned upstream controller re-diff returns only `app/controllers/users/statuses_controller.rb`.
+Both independent Astra probes are now committed:
 
-#175 (`rust/ws8br-rooms-http`) was checked before the fix and again at the end: **OPEN**, merge commit null. Its current `room_message_list` returns the optional owner fragment or an empty value; it does not provide the divider. It is therefore not merged here. The corrected real-message fallback must survive its eventual merge. The owning message-list integration still needs to supply the same boundary facts when it supplies the complete list.
+- `controllers/rooms/review_cache_tests.rs`: David has six unread and Jason two, interleaved through six warm-cache HTTP requests. Each page has exactly one divider directly before its own first unread message. Every shared fragment remains divider-free. Clearing Jason's unread boundary produces zero dividers for Jason while David still has one.
+- `views/tests/room_shell.rs`: #175's real owner-list renderer wins over intentionally conflicting fallback index/count values. Each message renders once, and the list contains one divider or none according to its owner facts.
 
-## Failing-first evidence
+The original eight HTTP divider cases still compare the exact Rails partial, indentation, neighboring messages, scrolling flag and jump control, cold and cached. No expectations, masks or assertions were weakened.
 
-Baseline clone: `.scratch/main-integration-clone`, actual HEAD `739a60562ea55295181aacb3cc1868d6968bc0fa`. Only the declared regression/helper/vector overlay was copied in; the four production implementations remained from that commit. Final regression predicates and vectors were rerun there after the whitespace assertions were added. Overlay SHA256 hashes were checked before restoring only those copies. No stash.
+## Rails provenance and owner goldens
 
-With the documented native environment, run:
+Everything stays pinned to `d7c7de9264c63015be398001d7a1094e7695a6db`, with exactly the ten approved #163 status/controller/layout inputs from `2e20b24c3f2be9db8a646a1352c159b4afacad0e`. The status image validator checks all 2076 source/fixture/gem inputs. The owned upstream controller re-diff to merged main `434d1c14` returns only `app/controllers/users/statuses_controller.rb`. Board-only approved drift remains with its owners.
 
-```sh
-WS8BR2_DIFF_DIR="$PWD/../review-fixes/baseline-diffs" CARGO_BUILD_JOBS=2 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire review_ -- --nocapture --test-threads=4
-```
+`verify_room_merge.py` reruns the existing room/message/Event owners' recorders in worker-private containers. Complete JSON values and every rendered string compare unchanged; it does not rewrite a golden. Event recorders load fixtures into the declared empty `first_run` seed, matching their original empty-database harness. Loading those fixtures over the populated seed was diagnosed as foreign-key violations and corrected in the harness without altering the recorder or expected bytes.
 
-Raw summary:
+## Fresh-clone commands
 
-```text
-test result: FAILED. 25 passed; 4 failed; 0 ignored; 0 measured; 1081 filtered out; finished in 17.03s
-```
+The new GitHub clone is `.scratch/merge175-fresh`. It was fast-forwarded through the pushed test-only corrections to the verified SHA above before the successful workspace run. Tracked sources and unexpected untracked inputs are clean. Seeds, the archived pin and native media tools/libraries were generated afresh. Only the compiler target cache is shared with the worker's preflight; no fixture inputs were copied from an earlier run. `CI=1` prevents missing-seed skips. Two Cargo jobs, four test threads and one extra compiler target were used.
 
-The four failures:
-
-- `review_agent_markup_matches_rails`: Rust emitted `<a ...><b>Room & "</b></a>`; Rails emitted `&lt;b&gt;Room &amp; &quot;&lt;/b&gt;` as the label.
-- `review_icon_create_audit_failure_matches_rails`: both responses are 500, but reviewed Rust has no saved icon/blob/job; Rails retains the icon, identified PNG and one queued analysis job.
-- `review_icon_destroy_audit_failure_matches_rails`: reviewed Rust keeps the icon/attachment and queues no purge; Rails removes them and queues one purge.
-- `review_unread_divider_render_and_cached_page_match_rails`: six-unread scroll is enabled, but reviewed Rust has no divider; Rails does.
-
-Markup-bearing card and complete-profile controls already pass against the reviewed commit. With the fixes applied, the same filter passes:
-
-```text
-test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 1081 filtered out; finished in 22.09s
-```
-
-Logs and raw differences: `.scratch/review-fixes/{baseline-head.txt,baseline-tests.log,baseline-diffs,agent-markup-before.diff,fixed-regressions.log}`. All four also pass in the complete fresh-clone suite below.
-
-## Fresh-clone verification
-
-A **new GitHub clone** of the pushed branch was made at `.scratch/review-fresh`, HEAD `667eba33720637739d18529cb182a3766d395917`; tracked source and unexpected untracked inputs are clean. Its declared `.scratch/` contains only generated runtime media/tmp/oracle outputs, locally excluded. Tests read committed vectors or their freshly generated private inputs. Seeds and the archived pin were rebuilt in this new clone, not copied from the baseline clone. The existing compiled target cache was reused; fixture inputs were not.
-
-The clone command ran from the worker worktree; subsequent commands ran from that new clone. Logs are in `.scratch/review-fixes/` in the worker worktree. No extra Cargo jobs, no release build, at most four test threads.
+From the worker worktree:
 
 ```sh
-git clone --single-branch --branch rust/ws8br2-users-accounts https://github.com/Smart-Data-Ohio/smartfire.git .scratch/review-fresh
+git clone --single-branch --branch rust/ws8br2-users-accounts https://github.com/Smart-Data-Ohio/smartfire.git .scratch/merge175-fresh
+```
+
+From the new clone:
+
+```sh
+git pull --ff-only origin rust/ws8br2-users-accounts
 PARITY_IMAGE=ws8br2-reference:d7c7de92 bash rust/parity/bin/ci-seed prepare
-CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" PARITY_IMAGE=ws8br2-reference:d7c7de92 PARITY_NAMESPACE=ws8br2-review-seed PARITY_OWNER=ws8br2 PARITY_RUNTIME=docker rust/parity/bin/seed build default first_run
+CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" PARITY_IMAGE=ws8br2-reference:d7c7de92 PARITY_NAMESPACE=ws8br2-merge-seed PARITY_OWNER=ws8br2 PARITY_RUNTIME=docker rust/parity/bin/seed build default first_run
 PARITY_IMAGE=ws8br2-reference:d7c7de92 bash rust/reference-tools/users/media_runtime.sh
+export CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/../merge175/target" CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" TMPDIR="$PWD/.scratch/tmp" CI=1 MAIL_TEST_PORT_RANGE=52640-52669 CABLE_TEST_PORT_RANGE=52670-52699
+export PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs"
+mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 --manifest-path rust/Cargo.toml
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever --no-fail-fast -- --nocapture --test-threads=4
+mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever --all-targets -- -D warnings
+bash rust/ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo build --locked --bin campfire
+python3 rust/reference-tools/users/verify_goldens.py
+python3 rust/reference-tools/users/verify_room_merge.py
+python3 rust/reference-tools/users/file_counts.py ../merge175/fresh-workspace-tests.log
+python3 rust/reference-tools/users/deferred_inventory.py
 ```
 
-Raw summaries:
+The release-input guard copies only Docker builder source and declared asset inputs, without vectors, parity files or reference tools, and builds the normal binary. It passed without additional Cargo jobs or an optimized release build. Fixed render-only tokens are lent identically to both renderers; real HTTP tests retain real sessions/CSRF. No startup timeout recurred. The 11 existing explicit ignores remain; no inherited-failure exception was used.
+
+## Raw verification summaries
+
+Pin, fresh seeds and native runtime:
 
 ```text
 pin=d7c7de9264c63015be398001d7a1094e7695a6db
@@ -83,34 +80,85 @@ seed: first_run -> parity/.seed/first_run (1.5M)
 WS8br2 pinned media runtime: image ws8br2-reference:d7c7de92; libvips, FFmpeg tools and libraries extracted; no host libraries changed
 ```
 
-Native environment, generated afresh from the declared image and seeds (the target path is the one reused compiler cache):
-
-```sh
-export CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/../main-integration-clone/rust/target" CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" TMPDIR="$PWD/.scratch/tmp" CI=1 MAIL_TEST_PORT_RANGE=52640-52669 CABLE_TEST_PORT_RANGE=52670-52699
-export PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs"
-mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 --manifest-path rust/Cargo.toml
-mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever --no-fail-fast -- --nocapture --test-threads=4
-mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever --all-targets -- -D warnings
-```
-
-Locked metadata exited 0. Raw application/database test and clippy summary lines, plus counted workspace total:
+Locked metadata exited 0 (361 resolved packages). Every workspace target summary follows, unchanged from the log:
 
 ```text
-test result: ok. 1128 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 452.94s
-test result: ok. 694 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 56.15s
-WS8br2 fresh-clone workspace totals: 2517 passed; 0 failed; 11 ignored; 53 targets
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 13s
+test result: ok. 1576 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 695.85s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.52s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.82s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 739 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 90.53s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.78s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.21s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.22s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.48s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.14s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.86s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.04s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.95s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.26s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.32s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+WS8br2 fresh-clone workspace totals: 3015 passed; 0 failed; 11 ignored; 58 targets
 ```
 
-All 53 test-result lines are preserved in `final-workspace-tests.log`. The 11 explicit ignores are the existing reference/export/rollback hooks, measurement, ACME fixture and ignored doctests; no seeded test silently skips (`CI=1`). The expected `missing_seed_fails_in_ci` panic passes. No startup timeout or other failure recurred. No inherited-failure exception was used.
+Clippy:
 
-```sh
-python3 rust/reference-tools/users/verify_goldens.py
-python3 rust/reference-tools/users/file_counts.py ../review-fixes/final-workspace-tests.log
-python3 rust/reference-tools/users/deferred_inventory.py
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 29s
 ```
 
-Raw regeneration/accounting summaries:
+Release-input build guard:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 08s
+```
+
+The sole local skip message and expected CI panic belong to the passing `missing_seed_may_skip_locally` / `missing_seed_fails_in_ci` harness tests, which deliberately use an empty temporary root. All seeded application tests ran with the fresh seeds and `CI=1`. No runtime test skipped for missing input.
+
+Rails regeneration summaries:
 
 ```text
 WS8br2 status asset source verification: both Rust asset inputs match the approved Rails bytes
@@ -124,6 +172,24 @@ WS8br2 shared recognition verification: complete generated JSON matches byte for
 WS8br2 shared sidebar verification: complete generated JSON matches byte for byte
 WS8br2 shared WS9 verification: all 15 complete auth pages match byte for byte
 WS8br2 golden verification: sources, both fresh seeds, 33 owned oracles and shared core/routes/sidebar/auth pages passed; no masks or normalization
+WS8br2 room merge sources: 10 pinned/approved files verified
+WS8br2 room merge oracle full-pages: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle empty-shell: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle panels: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle pins: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle pr-thread: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle picker: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle direct-forms: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle native-components: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle event-pages: all recorded values and rendered bytes unchanged
+WS8br2 room merge oracle event-fragments: all recorded values and rendered bytes unchanged
+WS8br2 room merge goldens: 10 owner corpora passed; rendered bytes identical; no masks or normalization
+```
+
+Per-file executed owned test counts:
+
+```text
+controllers/rooms/review_cache_tests.rs (Astra single-divider/two-viewer cache probe): 1 passed; 0 failed; 0 ignored
 controllers/rooms/parity_tests.rs (new list-rendering regression): 1 passed; 0 failed; 0 ignored
 app/round_four_security_tests.rs (new production failure oracle): 1 passed; 0 failed; 0 ignored
 controllers/users/fizzy_profile_tests.rs: 6 passed; 0 failed; 0 ignored
@@ -150,11 +216,8 @@ controllers/accounts/view_tests.rs: 4 passed; 0 failed; 0 ignored
 controllers/users/people_tests.rs: 13 passed; 0 failed; 0 ignored
 controllers/users/profile_settings_tests.rs: 4 passed; 0 failed; 0 ignored
 controllers/accounts/mutation_tests.rs: 12 passed; 0 failed; 0 ignored
-WS8br2 file accounting: 148 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 4 icon bodies/navs, 9 logo PNG responses; 14 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 24 account/ban cases, 9 individual exactly-one audit checks and one owner-removal with exactly two distinct Rails audits, 14 account rows, 2 account bodies/navs/footers, 2 invites, 3 CSS bodies; 11 complete bot profile HTML/nav cases; 6 complete Fizzy fragments and real profile HTTP/side-effect cases; 10 signed icon/logo assignments, durable rollback and 3 NullAnalyzer/audit after-commit states; 5 production account and 2 icon audit-failure states; 2 complete profile pages (seed and markup); 8 unread HTTP list states, each cold and cached
-
+WS8br2 file accounting: 149 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 4 icon bodies/navs, 9 logo PNG responses; 14 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 24 account/ban cases, 9 individual exactly-one audit checks and one owner-removal with exactly two distinct Rails audits, 14 account rows, 2 account bodies/navs/footers, 2 invites, 3 CSS bodies; 11 complete bot profile HTML/nav cases; 6 complete Fizzy fragments and real profile HTTP/side-effect cases; 10 signed icon/logo assignments, durable rollback and 3 NullAnalyzer/audit after-commit states; 5 production account and 2 icon audit-failure states; 2 complete profile pages (seed and markup); 8 unread HTTP list states, each cold and cached; exactly one divider for each of two viewers across six warm requests, then zero for the read viewer and one for the unread viewer, with divider-free shared fragments
 ```
-
-The oracle verification checks the approved overlay, both fresh seeds, 33 owned files, 29 shared core files, routes/recognition/sidebar and 15 complete WS9 auth pages byte for byte. Render-only comparisons lend the same explicit `GLOBAL`, `method:path` and `NONCE`; production HTTP keeps real sessions/CSRF. Neither screenshots nor browser pixel diffs were run. Prior slice browser observations are historical and are not claimed as rerun in this review fix.
 
 ## Flagged owner seams
 
@@ -164,10 +227,10 @@ The oracle verification checks the approved overlay, both fresh seeds, 33 owned 
 | WS15g | Direct merged `presenters::github::connection` and `campfire_views::github::connections::profile`. The previous placeholder call site is closed. Other GitHub APIs use imported owner code; this worker does not claim new live GitHub acceptance. |
 | WS15e | Fizzy profile usable-token/decryption/disconnection seam is closed through its model. Slack import link renders, but no merged Slack import backend was found in this checkout; live import remains flagged. |
 | WS17 | Profile status/effective OOO and push-notification form/save seams use merged APIs directly. Unsaved invalid values render. `layout_preferences::fill` still projects cached ISO windows; broader `Time.zone.parse` grammar and live cable partial delivery remain unproved here. Seed full-page/fragment/browser status checks do not prove live push delivery. |
-| WS14g | Raw Google account/scopes/configuration, identity-email and `fetch_error` cache projections in `profile_sections.rs`/`profiles.rs` need owner APIs. Configured sign-in/Calendar/Drive metadata display is covered; OAuth start/callback, grants/refresh, unusable-token handling, live Calendar, and `Chrome::google_picker` remain flagged. |
+| WS14g | Raw Google account/scopes/configuration, identity-email and `fetch_error` cache projections in `profile_sections.rs`/`profiles.rs` need owner APIs. Configured sign-in/Calendar/Drive metadata display is covered; OAuth start/callback, grants/refresh, unusable-token handling and live Calendar remain flagged. Main now supplies `Chrome::google_picker` from its typed public configuration; eight configured root-composer goldens cover this integration. |
 | WS11 | Agent user-profile facts, owner/admin visibility and the specific owner-deactivation lifecycle are covered. Inbox preferences, agent approval/work projections, three read-only budget aggregates and lifecycle snapshot validation still need owner API consolidation. Broad agent REST/UI revocation acceptance is not claimed. |
 | WS13 | Call mode/key/error fields render from profile settings. Actual global `Chrome::huddle_configured`, live huddle/ringing/transport and group-huddle criteria remain flagged. |
-| WS8b-m / WS8br | Optional whole `show.shell.message_list`/composer override, `/rooms/:id/members.json` (501), member panel, group rename/add/leave timeline and room icon/composer flows remain flagged. Existing messages and the viewer-local unread divider now render through the cached-message fallback; actual author-card DM/focus flow is covered. Do not equate directory/card coverage with member-panel coverage. |
+| WS8b-m / WS8br | The native whole message list, composer/Schedule send, pending template, thread/poll/pins panels, member JSON and group mutation routes now use the merged owners directly. Four complete populated pages, four empty HTTP pages, owner panel/PR-thread/Picker corpora and the two-viewer cache probe verify these seams. The 14 original browser interaction criteria below remain unclaimed; do not equate HTTP and directory/card coverage with member-panel browser coverage. |
 | WS12 | Four star/member-row/phone criteria remain. Star mutations/room-member integration are owner work. Board-only approved drift is not imported into this owned oracle. |
 
 Broader Ruby `Date.parse` grammar and Expat versus Nokogiri XML syntax/encoding outside the committed oracle inputs remain unproved. No new policy decision needs a user answer. No pixel work is pending. These boundaries are not counted as additional completed criteria.
@@ -229,10 +292,14 @@ Broader Ruby `Date.parse` grammar and Expat versus Nokogiri XML syntax/encoding 
 Deferred inventory: 14 named Rails controller/system cases remain from the original 194; 180 criteria now have equivalent Rust coverage. This is a criterion mapping, not a claim that the Ruby test files or browser system tests ran.
 
 
-The three review findings are closed; the original 14 criteria and listed integration seams are still partial. The compiler target cache and the small parity-output `target` directory generated by the tests were deleted after verification. Paths and process/container ownership were checked first; no other output or source was removed.
-
-## Cleanup
+## Cleanup and evidence
 
 ```text
-WS8br2 cleanup: deleted .scratch/main-integration-clone/rust/target (18G build cache) and .scratch/review-fresh/rust/target (40K generated parity outputs); 0 scratch target directories; 0 owned active target processes; 0 owned running containers
+Deleted target: 26G	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br2/.scratch/merge175/target
+Deleted target: 40K	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br2/.scratch/merge175-fresh/rust/target
+WS8br2 cleanup: 0 scratch target directories; 0 owned active native build/app/media processes; 0 running owner-labeled containers
 ```
+
+Only the two listed regenerable targets were deleted, after verifying process/container ownership and exact paths. The fresh clone and raw logs remain. Docker containers with other owners were left alone.
+
+Current evidence is in `.scratch/merge175/`: `fresh-head.txt`, `fresh-metadata.json`, `fresh-workspace-tests.log`, `fresh-workspace-totals.log`, `fresh-clippy.log`, `fresh-release-input-build.log`, `fresh-owned-goldens.log`, `fresh-room-goldens.log`, `fresh-file-counts.log`, `fresh-inventory.log`, `fresh-owned-rediff.log`, `fresh-source-clean.log`, and `fresh-cleanup.log`. The rejected duplicate-field build is preserved separately as `fresh-workspace-tests-duplicate-fixture.log`; it is not included in passing counts. The external report and its tracked mirror contain identical bytes.
