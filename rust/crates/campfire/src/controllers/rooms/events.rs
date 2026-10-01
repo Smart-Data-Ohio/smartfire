@@ -338,7 +338,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     match c
         .app()
         .db
-        .write({
+        .write_scoped(move || page::enter_time_zone(campfire_views::time::Zone::for_user(Some(&viewer_zone))), {
             let a = a.clone();
             move |tx| {
                 // Rails save returns false for event validation, but exceptions from the
@@ -386,7 +386,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     match c
         .app()
         .db
-        .write({
+        .write_scoped(move || page::enter_time_zone(campfire_views::time::Zone::for_user(Some(&viewer_zone))), {
             let changes = changes.clone();
             move |tx| CalendarEvent::update_with_scope(tx, id, changes, &scope, Some(actor))
         })
@@ -407,11 +407,13 @@ pub async fn cancel(c: &mut Ctx) -> Result {
     ensure_manager(c, &e, true)?;
     let scope = c.param_str("cancel_scope").unwrap_or_default().to_string();
     let actor = require_current_user(c)?.id;
+    let viewer_zone = viewer_zone(c, actor).await?;
     let id = e.id;
     let cancelled = c
         .app()
         .db
-        .write(move |tx| CalendarEvent::cancel_with_scope(tx, id, &scope, Some(actor)))
+        .write_scoped(move || page::enter_time_zone(campfire_views::time::Zone::for_user(Some(&viewer_zone))),
+            move |tx| CalendarEvent::cancel_with_scope(tx, id, &scope, Some(actor)))
         .await
         .map_err(db_error)?;
     redirect_event(

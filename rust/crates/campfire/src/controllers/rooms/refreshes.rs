@@ -18,6 +18,7 @@ pub async fn show(c: &mut Ctx) -> Result {
 
     let app = c.app().clone();
     let request_host = Some(c.request.host());
+    let viewer_id = concerns::require_current_user(c)?.id;
     let refresh = c
         .app()
         .db
@@ -27,7 +28,8 @@ pub async fn show(c: &mut Ctx) -> Result {
             let updated_messages = Message::page_updated_since(conn, Timeline::Room(room.id), last_updated_at, &new_ids)?;
             let pins_changed = room.pins_changed_at.is_some_and(|stamp| stamp > last_updated_at);
             if new_messages.is_empty() && updated_messages.is_empty() && !pins_changed { return Ok(None); }
-            let presenter = Presenter::new(conn, &app, request_host);
+            let mut presenter = Presenter::new(conn, &app, request_host);
+            presenter.use_viewer_zone(viewer_id)?;
             let refresh = campfire_views::fragment_cache::with(&app.fragment_cache, || {
                 Ok::<_, campfire_db::Error>(RefreshView {
                     room_id: room.id,
