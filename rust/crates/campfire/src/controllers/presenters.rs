@@ -588,12 +588,16 @@ pub fn user_summary(secrets: &Secrets, user: &User) -> campfire_views::users::Us
         },
         avatar_path: avatar_path(secrets, user),
         two_factor_enabled: false,
+        google_identity_email: None,
+        google_link_untrusted: false,
     }
 }
 
 /// The account list additionally offers administrator recovery for enrolled humans.
 pub fn account_user_summary(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db::Result<campfire_views::users::UserSummary> {
-    Ok(campfire_views::users::UserSummary { two_factor_enabled: user.two_factor_enabled(conn)?, ..user_summary(secrets,user) })
+    let google_identity_email = campfire_db::models::google_identity::GoogleIdentity::for_user(conn, user.id)?.map(|identity| identity.email);
+    let google_link_untrusted = conn.query_row("SELECT email_self_changed_at IS NOT NULL OR NOT google_email_link_allowed FROM users WHERE id=?", [user.id], |row| row.get(0))?;
+    Ok(campfire_views::users::UserSummary { two_factor_enabled: user.two_factor_enabled(conn)?, google_identity_email, google_link_untrusted, ..user_summary(secrets,user) })
 }
 
 /// `to_fs(:epoch)` as a string (milliseconds).

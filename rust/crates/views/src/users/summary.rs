@@ -40,11 +40,29 @@ pub struct UserSummary {
     /// `fresh_user_avatar_path(user)`.
     pub avatar_path: String,
     pub two_factor_enabled: bool,
+    /// Account-list controls; Calendar grants do not establish a login identity.
+    pub google_identity_email: Option<String>,
+    pub google_link_untrusted: bool,
 }
 
 impl UserSummary {
     pub fn two_factor_reset_confirmation(&self) -> String {
         format!("Reset two-step sign-in for {}? They will sign out everywhere and set it up again at next sign-in.",self.name)
+    }
+    pub fn google_unlink_title(&self) -> String {
+        format!("Unlink Google sign-in ({})", self.google_identity_email.as_deref().unwrap_or_default())
+    }
+    pub fn google_unlink_confirmation(&self) -> String {
+        format!("Unlink Google sign-in from {}? That Google account will no longer sign in as them.", self.name)
+    }
+    pub fn google_allow_title(&self) -> String {
+        format!("Allow Google sign-in to link {}", self.email_address.as_deref().unwrap_or_default())
+    }
+    pub fn google_allow_confirmation(&self) -> String {
+        format!("{} chose the email {} themselves. Allow the Google account with that address to sign in as them?", self.name, self.email_address.as_deref().unwrap_or_default())
+    }
+    pub fn google_allow_link(&self) -> bool {
+        self.google_link_untrusted && self.email_address.as_ref().is_some_and(|email| !h::is_blank(email))
     }
     pub fn active(&self) -> bool { self.status == Status::Active }
     pub fn banned(&self) -> bool { self.status == Status::Banned }

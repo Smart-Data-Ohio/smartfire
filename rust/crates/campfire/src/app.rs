@@ -599,3 +599,6 @@ mod google_consumer_tests;
 
 #[cfg(test)]
 mod google_lifecycle_tests;
+
+#[cfg(test)]
+mod google_admin_tests;

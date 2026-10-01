@@ -1,0 +1,321 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "spec": {
+        "name": "allow",
+        "actor": "david",
+        "target": "kevin",
+        "method": "post"
+      },
+      "actor_id": 127326141,
+      "target_id": 712064548,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "changed_at": null,
+      "allowed": true,
+      "identity_count": 1,
+      "audits": [
+        {
+          "action": "google.sign_in.link_allow",
+          "actor_id": 127326141,
+          "target_id": 712064548,
+          "target_type": "User",
+          "target_label": "Kevin <kevin@smartdata.net>",
+          "details": {
+            "email_address": "kevin@smartdata.net"
+          }
+        }
+      ],
+      "forms": []
+    },
+    {
+      "spec": {
+        "name": "allow_again",
+        "actor": "david",
+        "target": "kevin",
+        "method": "post",
+        "allowed": true
+      },
+      "actor_id": 127326141,
+      "target_id": 712064548,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "changed_at": null,
+      "allowed": true,
+      "identity_count": 1,
+      "audits": [],
+      "forms": []
+    },
+    {
+      "spec": {
+        "name": "unlink",
+        "actor": "david",
+        "target": "jz",
+        "method": "delete"
+      },
+      "actor_id": 127326141,
+      "target_id": 773523953,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "changed_at": "2026-03-01T16:00:00Z",
+      "allowed": false,
+      "identity_count": 0,
+      "audits": [
+        {
+          "action": "google.sign_in.unlink",
+          "actor_id": 127326141,
+          "target_id": 773523953,
+          "target_type": "User",
+          "target_label": "JZ <jz@37signals.com>",
+          "details": {}
+        }
+      ],
+      "forms": []
+    },
+    {
+      "spec": {
+        "name": "unlink_again",
+        "actor": "david",
+        "target": "jz",
+        "method": "delete",
+        "linked": false
+      },
+      "actor_id": 127326141,
+      "target_id": 773523953,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "changed_at": "2026-03-01T16:00:00Z",
+      "allowed": false,
+      "identity_count": 0,
+      "audits": [],
+      "forms": []
+    },
+    {
+      "spec": {
+        "name": "member_allow",
+        "actor": "jz",
+        "target": "kevin",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "target_id": 712064548,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 403,
+      "location": null,
+      "changed_at": "2026-03-01T16:00:00Z",
+      "allowed": false,
+      "identity_count": 1,
+      "audits": [],
+      "forms": []
+    },
+    {
+      "spec": {
+        "name": "member_unlink",
+        "actor": "jz",
+        "target": "jz",
+        "method": "delete"
+      },
+      "actor_id": 773523953,
+      "target_id": 773523953,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 403,
+      "location": null,
+      "changed_at": "2026-03-01T16:00:00Z",
+      "allowed": false,
+      "identity_count": 1,
+      "audits": [],
+      "forms": []
+    },
+    {
+      "spec": {
+        "name": "bot_target",
+        "actor": "david",
+        "target": "bender",
+        "method": "post"
+      },
+      "actor_id": 127326141,
+      "target_id": 394959859,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 404,
+      "location": null,
+      "changed_at": "2026-03-01T16:00:00Z",
+      "allowed": false,
+      "identity_count": 1,
+      "audits": [],
+      "forms": []
+    },
+    {
+      "spec": {
+        "name": "admin_controls",
+        "actor": "david",
+        "method": "get"
+      },
+      "actor_id": 127326141,
+      "target_id": null,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 200,
+      "location": null,
+      "changed_at": "2026-03-01T16:00:00Z",
+      "allowed": false,
+      "identity_count": 1,
+      "audits": [],
+      "forms": [
+        "/account/users/773523953/google_link",
+        "/account/users/712064548/google_link",
+        "/account/users/773523958/google_link",
+        "/account/users/773523959/google_link"
+      ]
+    },
+    {
+      "spec": {
+        "name": "member_controls",
+        "actor": "jz",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "target_id": null,
+      "kevin_id": 712064548,
+      "jz_id": 773523953,
+      "status": 200,
+      "location": null,
+      "changed_at": "2026-03-01T16:00:00Z",
+      "allowed": false,
+      "identity_count": 1,
+      "audits": [],
+      "forms": []
+    }
+  ],
+  "control_rows": [
+    {
+      "id": 127326141,
+      "name": "David",
+      "email": "david@37signals.com",
+      "role": "administrator",
+      "status": "active",
+      "google_identity_email": null,
+      "untrusted": false,
+      "forms": []
+    },
+    {
+      "id": 149087659,
+      "name": "Jason",
+      "email": "jason@37signals.com",
+      "role": "administrator",
+      "status": "active",
+      "google_identity_email": null,
+      "untrusted": false,
+      "forms": []
+    },
+    {
+      "id": 394959859,
+      "name": "Bender Bot",
+      "email": null,
+      "role": "bot",
+      "status": "active",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": []
+    },
+    {
+      "id": 712064548,
+      "name": "Kevin",
+      "email": "kevin@smartdata.net",
+      "role": "member",
+      "status": "active",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": [
+        "<form class=\"button_to\" method=\"post\" action=\"/account/users/712064548/google_link\"><button class=\"btn txt-small flex-item-no-shrink btn--reversed\" title=\"Allow Google sign-in to link kevin@smartdata.net\" data-turbo-confirm=\"Kevin chose the email kevin@smartdata.net themselves. Allow the Google account with that address to sign in as them?\" type=\"submit\">\n          <img aria-hidden=\"true\" src=\"/assets/link-e546a5df.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Allow Google sign-in for Kevin</span>\n</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/users/712064548/google_link\" /></form>"
+      ]
+    },
+    {
+      "id": 773523953,
+      "name": "JZ",
+      "email": "jz@37signals.com",
+      "role": "member",
+      "status": "active",
+      "google_identity_email": "jz@smartdata.net",
+      "untrusted": false,
+      "forms": [
+        "<form class=\"button_to\" method=\"post\" action=\"/account/users/773523953/google_link\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn txt-small flex-item-no-shrink\" title=\"Unlink Google sign-in (jz@smartdata.net)\" data-turbo-confirm=\"Unlink Google sign-in from JZ? That Google account will no longer sign in as them.\" type=\"submit\">\n          <img aria-hidden=\"true\" src=\"/assets/link-e546a5df.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Unlink Google sign-in from JZ</span>\n</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/users/773523953/google_link\" /></form>"
+      ]
+    },
+    {
+      "id": 773523954,
+      "name": "Rita Lopez",
+      "email": "rita-deactivated-00000000-0000-4000-8000-000000000000@37signals.com",
+      "role": "member",
+      "status": "deactivated",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": []
+    },
+    {
+      "id": 773523955,
+      "name": "Mallory Banned",
+      "email": "mallory@example.com",
+      "role": "member",
+      "status": "banned",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": []
+    },
+    {
+      "id": 773523956,
+      "name": "Deploy Bot",
+      "email": null,
+      "role": "bot",
+      "status": "active",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": []
+    },
+    {
+      "id": 773523957,
+      "name": "Old Bot",
+      "email": null,
+      "role": "bot",
+      "status": "deactivated",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": []
+    },
+    {
+      "id": 773523958,
+      "name": "Lonely Lou",
+      "email": "lou@37signals.com",
+      "role": "member",
+      "status": "active",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": [
+        "<form class=\"button_to\" method=\"post\" action=\"/account/users/773523958/google_link\"><button class=\"btn txt-small flex-item-no-shrink btn--reversed\" title=\"Allow Google sign-in to link lou@37signals.com\" data-turbo-confirm=\"Lonely Lou chose the email lou@37signals.com themselves. Allow the Google account with that address to sign in as them?\" type=\"submit\">\n          <img aria-hidden=\"true\" src=\"/assets/link-e546a5df.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Allow Google sign-in for Lonely Lou</span>\n</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/users/773523958/google_link\" /></form>"
+      ]
+    },
+    {
+      "id": 773523959,
+      "name": "New member",
+      "email": "enrolling@example.com",
+      "role": "member",
+      "status": "active",
+      "google_identity_email": null,
+      "untrusted": true,
+      "forms": [
+        "<form class=\"button_to\" method=\"post\" action=\"/account/users/773523959/google_link\"><button class=\"btn txt-small flex-item-no-shrink btn--reversed\" title=\"Allow Google sign-in to link enrolling@example.com\" data-turbo-confirm=\"New member chose the email enrolling@example.com themselves. Allow the Google account with that address to sign in as them?\" type=\"submit\">\n          <img aria-hidden=\"true\" src=\"/assets/link-e546a5df.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Allow Google sign-in for New member</span>\n</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/users/773523959/google_link\" /></form>"
+      ]
+    }
+  ]
+}
