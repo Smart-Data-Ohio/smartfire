@@ -38,10 +38,48 @@ client_deferred = {
  'history fixtures arrive newest-first like conversations.history': 'Fixture byte identity is covered; explicit ordering assertion still needed.',
  'on_request fires once per attempt for api call counts': 'Callback counts tested for failed retries; recovery sequence still needed.',
 }
+job_ports = {
+ 'dry run writes nothing except the run row and its issues': 'slack_sql_store_dry_run_collects_samples_without_domain_rows_or_reply_fetches',
+ 'workspace import creates rooms, memberships, messages, threads, boosts and pins': 'slack_sequence_matches_rails_import_undo_reimport_database_rows: every field in 89 tables',
+ 'tiny step budget spans several steps for one conversation': 'slack_runner_zero_budget_stops_after_page_and_preserves_reply_cursor plus actual fixture completion',
+ 'a second import creates zero duplicates': 'slack_undo_actual_overlapping_imports_require_lifo_and_name_later_importer',
+ 'undo is last-in, first-out per conversation': 'slack_undo_actual_overlapping_imports_require_lifo_and_name_later_importer',
+ 'message timestamps keep exact microseconds': 'slack_writer_timestamp_microseconds_do_not_round_through_float plus full Rails row differential',
+ 'undo removes exactly what the run created and leaves the rest': 'slack_undo_deletes_data_search_and_mappings_then_reimports_fixture plus kept-content tests and Rails differential',
+ 'undo keeps a created room that gained foreign messages and records an issue': 'slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies',
+ 'undo keeps threads and rooms with real activity, with members and mappings': 'slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies',
+ 'undo keeps imported messages holding a poll, a saved item or someone else\'s pin': 'slack_undo_keeps_poll_saved_item_foreign_pin_and_pending_root_reply',
+ 'undo keeps a thread with a pending scheduled reply, and the message it quotes': 'slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies',
+ 'import stays silent: no foreign jobs, broadcasts, unread or inbox items': 'slack_writer_history_replies_pins_reactions_are_quiet_and_keep_microseconds; rejecting broadcast sink and real job queue',
+ 'imported messages are searchable': 'slack_writer_history_replies_pins_reactions_are_quiet_and_keep_microseconds; message_search_index included in both Rails differentials',
+ 'users map by email, placeholders fill in, guests stay deactivated': 'slack_users_preview_import_repeat_match_pinned_rails_fixture_rows',
+ 'placeholder Google-link eligibility follows the allowed domains': 'slack_users_humans_receive_open_rooms_bots_guests_and_unknown_authors_do_not plus Rails user vector',
+ 'channels merge into same-name rooms without touching memberships': 'slack_conversations_only_public_workspace_channels_auto_merge',
+ 'room targets force new, skip and explicit rooms, and reject bad ids': 'slack_conversations_explicit_merge_leaves_memberships_and_invalid_target_reports',
+ 'room target id must be an alive Open or Closed room': 'slack_conversations_explicit_merge_leaves_memberships_and_invalid_target_reports',
+ 'workspace runs never auto-merge a private channel by name': 'slack_conversations_only_public_workspace_channels_auto_merge',
+ 'workspace runs merge a private channel only into its room target': 'slack_conversations_explicit_merge_leaves_memberships_and_invalid_target_reports',
+ 'personal runs never merge a private channel into an existing room': 'slack_conversations_only_public_workspace_channels_auto_merge',
+ 'personal run imports DMs, group DMs and private channels': 'slack_sequence_personal_matches_rails_import_undo_reimport_database_rows: every field in 89 tables',
+ 'personal run skips self DMs and Slackbot DMs': 'slack_conversations_directs_reuse_member_sets_skip_self_and_slackbot',
+ 'personal run dedupes a DM another member already imported': 'slack_conversations_directs_reuse_member_sets_skip_self_and_slackbot',
+ 'cancel stops the run at the next step boundary': 'slack_sql_store_rejects_cancelled_or_replaced_lease_before_domain_writes',
+ 'a cancel observed mid-step stops the next page from being written': 'slack_runner_cancelled_during_fetch_does_not_commit_page_or_progress',
+ 'HTTP 429 reschedules the run after Retry-After': 'slack_job_retry_after_commits_heartbeat_and_delayed_job_atomically',
+ 'auth errors fail the run and flag the connection': 'slack_job_cancel_during_auth_error_preserves_cancel_and_disconnects plus client error vectors',
+ 'two queued runs run one at a time': 'slack_job_live_lease_and_lost_run_claim_never_execute_callback plus registered serial worker',
+}
+job_partial = {
+ 'date bounds keep every row in range and are sent to Slack': 'Client query tests and 18 Rails boundary vectors cover this seam; exact original full bounded fixture scenario remains.',
+ 'scope errors fail with the missing scope and leave the connection': 'Client vector plus shared job failure branch; direct job scope-failure scenario remains.',
+ 'transient failures past the retry budget fail the run': 'Client exhaustion/protocol guards implemented; exact non-Slack Ruby exception class text remains.',
+ 'undo keeps mappings for kept placeholders, so re-import creates no duplicates': 'Claimed-user mapping and kept-root reimport covered; all original session/Google/authorship variants remain.',
+ 'undo is blocked while another run is queued': 'Domain blocking and actual LIFO guarded; original controller response remains.',
+}
 paths = sorted(set(root.glob('test/models/*slack*_test.rb')) | set(root.glob('test/models/slack/*_test.rb')) | set(root.glob('test/jobs/slack_import/*_test.rb')) | set(root.glob('test/controllers/slack/*_test.rb')) | set(root.glob('test/controllers/accounts/*slack*_test.rb')) | {root / 'test/system/slack_import_test.rb'})
 lines = ['# WS16 Rails test inventory — partial', '',
  'Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.', '',
- 'Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Controller, job and real Message-save tests remain deferred.', '']
+ 'Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. HTTP/OAuth and remaining fault/large-history cases are deferred below.', '']
 counts = {'covered': 0, 'partial': 0, 'deferred': 0}
 for path in paths:
     tests = re.findall(r'^\s*test "((?:[^"\\]|\\.)*)"', path.read_text(), re.M)
@@ -59,8 +97,10 @@ for path in paths:
             state, note = 'covered', 'Database lifecycle tests; independent writers for claims, leases, undo and sweeps.'
         elif path.name == 'slack_import_test.rb' and path.parent.name == 'models' and name.startswith('start! creates'):
             state, note = 'partial', 'Creation/enqueue covered; options normalization remains deferred.'
-        elif path.name == 'workspace_import_test.rb' and name == 'undo is last-in, first-out per conversation':
-            state, note = 'partial', 'Eligibility/blocking checked in DB; actual import and destructive undo not implemented.'
+        elif path.parent.name == 'slack_import' and name in job_ports:
+            state, note = 'covered', job_ports[name]
+        elif path.parent.name == 'slack_import' and name in job_partial:
+            state, note = 'partial', job_partial[name]
         elif 'undo is blocked' in name or 'later import' in name:
             note = 'WS16 continuation: controller behavior deferred; domain overlap/naming checks exist.'
         counts[state] += 1

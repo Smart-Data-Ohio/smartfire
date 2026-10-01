@@ -9,3 +9,6 @@ pub mod conversations;
 pub mod writer;
 pub mod store;
 pub mod undoer;
+
+#[cfg(test)]
+mod sequence_tests;

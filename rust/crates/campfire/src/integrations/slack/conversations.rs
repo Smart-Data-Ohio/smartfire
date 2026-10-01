@@ -124,17 +124,28 @@ fn record_memberships(
     let mut keys: Vec<_> = users.keys().collect();
     keys.sort();
     let slack_by_user: HashMap<_, _> = keys.into_iter().map(|key| (users[key].id, key)).collect();
-    for membership in room.memberships(tx.conn())? {
+    // Match Rails pluck(:id, :user_id): its covering room/user index orders the
+    // mapping rows, including inactive Slack members appended after the active grant.
+    let mut q = tx
+        .conn()
+        .prepare("SELECT id,user_id FROM memberships WHERE room_id=?")?;
+    let memberships = q
+        .query_map([room.id], |r| {
+            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    drop(q);
+    for (membership_id, user_id) in memberships {
         let key = if channel {
             slack_by_user
-                .get(&membership.user_id)
+                .get(&user_id)
                 .filter(|key| members.contains(**key))
                 .map_or_else(
-                    || format!("{}:user-{}", string(&c["id"]), membership.user_id),
+                    || format!("{}:user-{}", string(&c["id"]), user_id),
                     |key| format!("{}:{key}", string(&c["id"])),
                 )
         } else {
-            format!("{}:user-{}", string(&c["id"]), membership.user_id)
+            format!("{}:user-{}", string(&c["id"]), user_id)
         };
         // Rails insert_all ignores an existing unique mapping, unlike record_conversation.
         if users::mapped_id(tx.conn(), run.slack_workspace_id, "membership", &key)?.is_none() {
@@ -144,7 +155,7 @@ fn record_memberships(
                 "membership",
                 &key,
                 "Membership",
-                membership.id,
+                membership_id,
                 true,
             )?;
         }
@@ -362,12 +373,17 @@ pub fn resolve(
             }
             let room = Room::create(tx, room_type(c), Some(&channel_name(c)), run.user_id)?;
             let members = mapped_members(member_ids, users);
-            let mut grants = members.clone();
-            if room.open() {
-                for user in User::active(tx.conn())? {
-                    if !grants.contains(&user.id) {
-                        grants.push(user.id);
-                    }
+            let mut grants = if room.open() {
+                User::active(tx.conn())?
+                    .into_iter()
+                    .map(|u| u.id)
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            for member in &members {
+                if !grants.contains(member) {
+                    grants.push(*member);
                 }
             }
             room.grant_to(tx, &grants)?;

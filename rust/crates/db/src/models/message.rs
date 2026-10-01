@@ -487,7 +487,7 @@ impl Message {
         let client_message_id = attributes
             .client_message_id
             .clone()
-            .unwrap_or_else(sql::uuid);
+            .unwrap_or_else(|| tx.env().message_uuid());
         // `before_save :touch_streaming_activity, if: :streaming?`
         let streaming_updated_at = attributes.streaming.then_some(now);
         let id: i64 = tx.conn().query_row_cached(

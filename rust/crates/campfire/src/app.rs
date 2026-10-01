@@ -242,6 +242,7 @@ async fn open_database(
         bcrypt_cost: 12,
         message_reference_syncs: vec![crate::integrations::github::references::sync],
         user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
+        ..Default::default()
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }

@@ -251,3 +251,20 @@ fn slack_writer_timestamp_microseconds_do_not_round_through_float() {
     assert_eq!(slack_time("-0.0000001").unwrap().as_microsecond(), -1);
     assert!(slack_time("NaN").is_err());
 }
+
+#[test]
+fn slack_writer_bounds_match_actual_rails_rational_float_comparisons() {
+    let vector: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/sequence.json"
+    ))
+    .unwrap();
+    for case in array(&vector["bounds"]) {
+        assert_eq!(
+            Bounds::from_value(&case["bounds"])
+                .contains(case["ts"].as_str().unwrap())
+                .unwrap(),
+            case["contains"].as_bool().unwrap(),
+            "{case}"
+        );
+    }
+}

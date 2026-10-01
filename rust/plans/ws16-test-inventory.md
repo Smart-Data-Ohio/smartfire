@@ -2,7 +2,7 @@
 
 Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.
 
-Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Controller, job and real Message-save tests remain deferred.
+Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. HTTP/OAuth and remaining fault/large-history cases are deferred below.
 
 ## test/controllers/accounts/slack_import_runs_controller_test.rb
 
@@ -124,15 +124,15 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| users map by email, placeholders fill in, guests stay deactivated | deferred | WS16 continuation: implement and exercise the original behavior. |
+| users map by email, placeholders fill in, guests stay deactivated | covered | slack_users_preview_import_repeat_match_pinned_rails_fixture_rows |
 | mentions of mapped users outside the channel render as tokens, unknown ids fall back | deferred | WS16 continuation: implement and exercise the original behavior. |
-| placeholder Google-link eligibility follows the allowed domains | deferred | WS16 continuation: implement and exercise the original behavior. |
-| channels merge into same-name rooms without touching memberships | deferred | WS16 continuation: implement and exercise the original behavior. |
-| room targets force new, skip and explicit rooms, and reject bad ids | deferred | WS16 continuation: implement and exercise the original behavior. |
-| room target id must be an alive Open or Closed room | deferred | WS16 continuation: implement and exercise the original behavior. |
-| workspace runs never auto-merge a private channel by name | deferred | WS16 continuation: implement and exercise the original behavior. |
-| workspace runs merge a private channel only into its room target | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal runs never merge a private channel into an existing room | deferred | WS16 continuation: implement and exercise the original behavior. |
+| placeholder Google-link eligibility follows the allowed domains | covered | slack_users_humans_receive_open_rooms_bots_guests_and_unknown_authors_do_not plus Rails user vector |
+| channels merge into same-name rooms without touching memberships | covered | slack_conversations_only_public_workspace_channels_auto_merge |
+| room targets force new, skip and explicit rooms, and reject bad ids | covered | slack_conversations_explicit_merge_leaves_memberships_and_invalid_target_reports |
+| room target id must be an alive Open or Closed room | covered | slack_conversations_explicit_merge_leaves_memberships_and_invalid_target_reports |
+| workspace runs never auto-merge a private channel by name | covered | slack_conversations_only_public_workspace_channels_auto_merge |
+| workspace runs merge a private channel only into its room target | covered | slack_conversations_explicit_merge_leaves_memberships_and_invalid_target_reports |
+| personal runs never merge a private channel into an existing room | covered | slack_conversations_only_public_workspace_channels_auto_merge |
 | a conversation whose mapped room was deleted is skipped with an issue | deferred | WS16 continuation: implement and exercise the original behavior. |
 | workspace runs never auto-merge a large group DM by name | deferred | WS16 continuation: implement and exercise the original behavior. |
 | workspace runs merge a large group DM only into its room target | deferred | WS16 continuation: implement and exercise the original behavior. |
@@ -140,35 +140,35 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | dry runs preview a targeted large group DM as a merge | deferred | WS16 continuation: implement and exercise the original behavior. |
 | personal runs ignore room target ids | deferred | WS16 continuation: implement and exercise the original behavior. |
 | room setup is atomic: a crash while recording memberships leaves nothing behind | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal run imports DMs, group DMs and private channels | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal run skips self DMs and Slackbot DMs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal run dedupes a DM another member already imported | deferred | WS16 continuation: implement and exercise the original behavior. |
-| date bounds keep every row in range and are sent to Slack | deferred | WS16 continuation: implement and exercise the original behavior. |
-| cancel stops the run at the next step boundary | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a cancel observed mid-step stops the next page from being written | deferred | WS16 continuation: implement and exercise the original behavior. |
-| HTTP 429 reschedules the run after Retry-After | deferred | WS16 continuation: implement and exercise the original behavior. |
-| auth errors fail the run and flag the connection | deferred | WS16 continuation: implement and exercise the original behavior. |
-| scope errors fail with the missing scope and leave the connection | deferred | WS16 continuation: implement and exercise the original behavior. |
-| transient failures past the retry budget fail the run | deferred | WS16 continuation: implement and exercise the original behavior. |
+| personal run imports DMs, group DMs and private channels | covered | slack_sequence_personal_matches_rails_import_undo_reimport_database_rows: every field in 89 tables |
+| personal run skips self DMs and Slackbot DMs | covered | slack_conversations_directs_reuse_member_sets_skip_self_and_slackbot |
+| personal run dedupes a DM another member already imported | covered | slack_conversations_directs_reuse_member_sets_skip_self_and_slackbot |
+| date bounds keep every row in range and are sent to Slack | partial | Client query tests and 18 Rails boundary vectors cover this seam; exact original full bounded fixture scenario remains. |
+| cancel stops the run at the next step boundary | covered | slack_sql_store_rejects_cancelled_or_replaced_lease_before_domain_writes |
+| a cancel observed mid-step stops the next page from being written | covered | slack_runner_cancelled_during_fetch_does_not_commit_page_or_progress |
+| HTTP 429 reschedules the run after Retry-After | covered | slack_job_retry_after_commits_heartbeat_and_delayed_job_atomically |
+| auth errors fail the run and flag the connection | covered | slack_job_cancel_during_auth_error_preserves_cancel_and_disconnects plus client error vectors |
+| scope errors fail with the missing scope and leave the connection | partial | Client vector plus shared job failure branch; direct job scope-failure scenario remains. |
+| transient failures past the retry budget fail the run | partial | Client exhaustion/protocol guards implemented; exact non-Slack Ruby exception class text remains. |
 | failed runs stay resumable: a new run continues from the mapping | deferred | WS16 continuation: implement and exercise the original behavior. |
 | workspace runs exclude private channels when asked | deferred | WS16 continuation: implement and exercise the original behavior. |
-| two queued runs run one at a time | deferred | WS16 continuation: implement and exercise the original behavior. |
+| two queued runs run one at a time | covered | slack_job_live_lease_and_lost_run_claim_never_execute_callback plus registered serial worker |
 
 ## test/jobs/slack_import/workspace_import_test.rb
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| dry run writes nothing except the run row and its issues | deferred | WS16 continuation: implement and exercise the original behavior. |
-| workspace import creates rooms, memberships, messages, threads, boosts and pins | deferred | WS16 continuation: implement and exercise the original behavior. |
-| tiny step budget spans several steps for one conversation | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a second import creates zero duplicates | deferred | WS16 continuation: implement and exercise the original behavior. |
+| dry run writes nothing except the run row and its issues | covered | slack_sql_store_dry_run_collects_samples_without_domain_rows_or_reply_fetches |
+| workspace import creates rooms, memberships, messages, threads, boosts and pins | covered | slack_sequence_matches_rails_import_undo_reimport_database_rows: every field in 89 tables |
+| tiny step budget spans several steps for one conversation | covered | slack_runner_zero_budget_stops_after_page_and_preserves_reply_cursor plus actual fixture completion |
+| a second import creates zero duplicates | covered | slack_undo_actual_overlapping_imports_require_lifo_and_name_later_importer |
 | catch-up picks up a new message and a late reply | deferred | WS16 continuation: implement and exercise the original behavior. |
 | catch-up skips a thread whose mapped thread was deleted | deferred | WS16 continuation: implement and exercise the original behavior. |
 | import skips a thread whose parent message was deleted mid-run | deferred | WS16 continuation: implement and exercise the original behavior. |
 | a multi-year conversation spanning several steps imports everything | deferred | WS16 continuation: implement and exercise the original behavior. |
 | a full import after a date-bounded test import imports everything older too | deferred | WS16 continuation: implement and exercise the original behavior. |
 | catch-up after a kept test import and a full import re-reads only 30 days | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo is last-in, first-out per conversation | partial | Eligibility/blocking checked in DB; actual import and destructive undo not implemented. |
+| undo is last-in, first-out per conversation | covered | slack_undo_actual_overlapping_imports_require_lifo_and_name_later_importer |
 | a full import's coverage ends when an earlier run under it is undone | deferred | WS16 continuation: implement and exercise the original behavior. |
 | a full import finishes rooms an earlier test import created | deferred | WS16 continuation: implement and exercise the original behavior. |
 | finishing never moves an earlier membership's read pointer backwards | deferred | WS16 continuation: implement and exercise the original behavior. |
@@ -176,22 +176,22 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | finishing refreshes the heartbeat while looping over rooms | deferred | WS16 continuation: implement and exercise the original behavior. |
 | completing a run kicks the next queued run | deferred | WS16 continuation: implement and exercise the original behavior. |
 | undoing a run kicks the next queued run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo is blocked while another run is queued | deferred | WS16 continuation: controller behavior deferred; domain overlap/naming checks exist. |
-| message timestamps keep exact microseconds | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo is blocked while another run is queued | partial | Domain blocking and actual LIFO guarded; original controller response remains. |
+| message timestamps keep exact microseconds | covered | slack_writer_timestamp_microseconds_do_not_round_through_float plus full Rails row differential |
 | truncated reaction lists import the listed users with one issue per message | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo removes exactly what the run created and leaves the rest | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo keeps mappings for kept placeholders, so re-import creates no duplicates | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo keeps a created room that gained foreign messages and records an issue | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo removes exactly what the run created and leaves the rest | covered | slack_undo_deletes_data_search_and_mappings_then_reimports_fixture plus kept-content tests and Rails differential |
+| undo keeps mappings for kept placeholders, so re-import creates no duplicates | partial | Claimed-user mapping and kept-root reimport covered; all original session/Google/authorship variants remain. |
+| undo keeps a created room that gained foreign messages and records an issue | covered | slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies |
 | undo keeps a created room that holds an event and a scheduled message | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo keeps threads and rooms with real activity, with members and mappings | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo keeps threads and rooms with real activity, with members and mappings | covered | slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies |
 | undo keeps the parent of a thread holding a saved reply | deferred | WS16 continuation: implement and exercise the original behavior. |
 | undo keeps an imported message someone started a thread on | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo keeps imported messages holding a poll, a saved item or someone else's pin | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo keeps imported messages holding a poll, a saved item or someone else's pin | covered | slack_undo_keeps_poll_saved_item_foreign_pin_and_pending_root_reply |
 | undo keeps a thread whose reply holds a poll | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo keeps a thread with a pending scheduled reply, and the message it quotes | deferred | WS16 continuation: implement and exercise the original behavior. |
+| undo keeps a thread with a pending scheduled reply, and the message it quotes | covered | slack_undo_keeps_live_thread_parent_for_foreign_or_scheduled_replies |
 | undo removes a thread whose scheduled replies were all sent | deferred | WS16 continuation: implement and exercise the original behavior. |
-| import stays silent: no foreign jobs, broadcasts, unread or inbox items | deferred | WS16 continuation: implement and exercise the original behavior. |
-| imported messages are searchable | deferred | WS16 continuation: implement and exercise the original behavior. |
+| import stays silent: no foreign jobs, broadcasts, unread or inbox items | covered | slack_writer_history_replies_pins_reactions_are_quiet_and_keep_microseconds; rejecting broadcast sink and real job queue |
+| imported messages are searchable | covered | slack_writer_history_replies_pins_reactions_are_quiet_and_keep_microseconds; message_search_index included in both Rails differentials |
 
 ## test/models/slack/client_test.rb
 
@@ -305,4 +305,4 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 ## Totals
 
-66 covered, 6 partial, 172 deferred; 244 Rails tests inventoried.
+95 covered, 10 partial, 139 deferred; 244 Rails tests inventoried.

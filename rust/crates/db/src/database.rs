@@ -51,6 +51,16 @@ pub struct Env {
     pub message_reference_syncs: Vec<MessageReferenceSync>,
     /// App-owned account disconnects run inside User::deactivate, before its status save.
     pub user_deactivation_hooks: Vec<UserDeactivationHook>,
+    /// Deterministic input providers for cross-runtime fixture comparisons. Production
+    /// builds expose no provider; UUIDs remain random and insert_all uses SQLite's clock.
+    #[cfg(feature = "test-support")]
+    pub fixture_inputs: Option<Arc<FixtureInputs>>,
+}
+
+#[cfg(feature = "test-support")]
+pub struct FixtureInputs {
+    pub message_uuid: Arc<dyn Fn() -> String + Send + Sync>,
+    pub sqlite_now: Timestamp,
 }
 
 pub type UserDeactivationHook = fn(&mut Tx<'_>, &crate::User) -> Result<()>;
@@ -66,6 +76,8 @@ impl Default for Env {
             bcrypt_cost: 12,
             message_reference_syncs: Vec::new(),
             user_deactivation_hooks: Vec::new(),
+            #[cfg(feature = "test-support")]
+            fixture_inputs: None,
         }
     }
 }
@@ -73,6 +85,28 @@ impl Default for Env {
 impl Env {
     pub fn now(&self) -> Timestamp {
         self.clock.now()
+    }
+
+    pub(crate) fn message_uuid(&self) -> String {
+        #[cfg(feature = "test-support")]
+        if let Some(inputs) = &self.fixture_inputs {
+            return (inputs.message_uuid)();
+        }
+        crate::sql::uuid()
+    }
+
+    pub(crate) fn sqlite_now_sql(&self) -> std::borrow::Cow<'static, str> {
+        #[cfg(feature = "test-support")]
+        if let Some(inputs) = &self.fixture_inputs {
+            let now = inputs.sqlite_now;
+            return format!(
+                "'{}.{:03}'",
+                now.jiff().strftime("%Y-%m-%d %H:%M:%S"),
+                now.subsec_microsecond() / 1000
+            )
+            .into();
+        }
+        crate::time::SQLITE_NOW.into()
     }
 }
 
@@ -140,7 +174,11 @@ impl<'c> Tx<'c> {
     /// Used for identical, session-independent broadcast descriptions, never jobs.
     pub fn broadcast_after_commit_once<B: crate::Broadcast>(&mut self, broadcast: &B) {
         let event = Event::broadcast(broadcast);
-        if !self.after_commit.iter().any(|pending| matches!(pending, AfterCommit::Event(existing) if existing == &event)) {
+        if !self
+            .after_commit
+            .iter()
+            .any(|pending| matches!(pending, AfterCommit::Event(existing) if existing == &event))
+        {
             self.emit_after_commit(event);
         }
     }
@@ -190,12 +228,15 @@ impl<'c> Tx<'c> {
         self.conn.execute_batch("SAVEPOINT model_operation")?;
         match f(self) {
             Ok(value) => {
-                self.conn.execute_batch("RELEASE SAVEPOINT model_operation")?;
+                self.conn
+                    .execute_batch("RELEASE SAVEPOINT model_operation")?;
                 Ok(value)
             }
             Err(error) => {
                 self.after_commit.truncate(callbacks);
-                self.conn.execute_batch("ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation")?;
+                self.conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation",
+                )?;
                 Err(error)
             }
         }
@@ -437,12 +478,18 @@ impl Checkpoints {
             .name("campfire-db-checkpointer".into())
             .spawn(move || {
                 while woken.recv().is_ok() {
-                    let _running = checkpointer_running.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                    let _running = checkpointer_running
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
                     checkpoint(&conn, "PASSIVE");
                 }
             })
             .map_err(|e| Error::Other(e.to_string()))?;
-        Ok(Self { wake, running, woken_at: 0 })
+        Ok(Self {
+            wake,
+            running,
+            woken_at: 0,
+        })
     }
 
     /// Wakes the checkpointer for every [`AUTOCHECKPOINT_PAGES`] the WAL grows.
@@ -461,7 +508,10 @@ impl Checkpoints {
 /// checkpointer hasn't, and waits for readers so that the next write restarts the WAL. It waits
 /// for a running PASSIVE checkpoint first, which would otherwise make SQLite refuse it.
 fn restart_wal(conn: &Connection, checkpoints: &Checkpoints) {
-    let _running = checkpoints.running.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let _running = checkpoints
+        .running
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     checkpoint(conn, "RESTART");
 }
 
@@ -469,7 +519,9 @@ fn restart_wal(conn: &Connection, checkpoints: &Checkpoints) {
 /// running, or readers still on old frames past the busy timeout) in its `busy` column, not as an
 /// error.
 fn checkpoint(conn: &Connection, mode: &str) {
-    match conn.query_row(&format!("PRAGMA wal_checkpoint({mode})"), [], |row| row.get::<_, i64>(0)) {
+    match conn.query_row(&format!("PRAGMA wal_checkpoint({mode})"), [], |row| {
+        row.get::<_, i64>(0)
+    }) {
         Ok(0) => {}
         Ok(_) => tracing::warn!(mode, "WAL checkpoint couldn't finish"),
         Err(error) => tracing::warn!(%error, mode, "WAL checkpoint failed"),
@@ -506,15 +558,24 @@ impl ReaderPool {
 
     fn with<T>(&self, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
         let conn = {
-            let mut idle = self.idle.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let mut idle = self
+                .idle
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             loop {
                 if let Some(conn) = idle.pop() {
                     break conn;
                 }
-                idle = self.available.wait(idle).unwrap_or_else(|poisoned| poisoned.into_inner());
+                idle = self
+                    .available
+                    .wait(idle)
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
             }
         };
-        let checkout = Checkout { pool: self, conn: Some(conn) };
+        let checkout = Checkout {
+            pool: self,
+            conn: Some(conn),
+        };
         f(checkout.conn.as_ref().expect("checked out"))
     }
 }
@@ -530,7 +591,11 @@ struct Checkout<'a> {
 impl Drop for Checkout<'_> {
     fn drop(&mut self) {
         if let Some(conn) = self.conn.take() {
-            self.pool.idle.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).push(conn);
+            self.pool
+                .idle
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .push(conn);
             self.pool.available.notify_one();
         }
     }
@@ -557,7 +622,11 @@ mod tests {
             assert!(panicked.is_err());
         }
         // With one reader, a lost connection would make this wait forever.
-        assert_eq!(db.read_blocking(|conn| Ok(conn.query_row("SELECT 1", [], |r| r.get::<_, i64>(0))?)).unwrap(), 1);
+        assert_eq!(
+            db.read_blocking(|conn| Ok(conn.query_row("SELECT 1", [], |r| r.get::<_, i64>(0))?))
+                .unwrap(),
+            1
+        );
     }
 
     /// Commits never checkpoint on the writer: the WAL reaching the auto-checkpoint threshold
@@ -569,7 +638,8 @@ mod tests {
         let mut config = Config::new(&path);
         config.readers = 1;
         let db = Database::open(config, Env::default()).unwrap();
-        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?)).unwrap();
+        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?))
+            .unwrap();
         let before = main_file_len(&path);
 
         // ~1,200 pages of 4 KiB, over a few commits.
@@ -582,7 +652,10 @@ mod tests {
 
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
         while main_file_len(&path) < before + 1000 * 4096 {
-            assert!(std::time::Instant::now() < deadline, "the WAL was never checkpointed");
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the WAL was never checkpointed"
+            );
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
     }
@@ -595,7 +668,8 @@ mod tests {
         let mut config = Config::new(&path);
         config.readers = 1;
         let db = Database::open(config, Env::default()).unwrap();
-        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?)).unwrap();
+        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?))
+            .unwrap();
 
         // ~25,000 pages, 500 per commit.
         for _ in 0..50 {
@@ -606,7 +680,12 @@ mod tests {
             })
             .unwrap();
         }
-        let wal = std::fs::metadata(path.with_extension("sqlite3-wal")).unwrap().len();
-        assert!(wal < (WAL_LIMIT_PAGES as u64 + 1000) * 4200, "WAL of {wal} bytes");
+        let wal = std::fs::metadata(path.with_extension("sqlite3-wal"))
+            .unwrap()
+            .len();
+        assert!(
+            wal < (WAL_LIMIT_PAGES as u64 + 1000) * 4200,
+            "WAL of {wal} bytes"
+        );
     }
 }

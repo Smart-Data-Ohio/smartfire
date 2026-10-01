@@ -3,9 +3,22 @@ use campfire_db::models::slack::{NewConnection, SlackWorkspace};
 use campfire_db::models::slack_import::{Kind, Mode, NewImport};
 use campfire_db::{Config, Env, TestClock, Timestamp};
 use campfire_jobs::{Execution, QueueConfig, Registry, RunnerConfig, inspect};
-use serde_json::json;
+use serde_json::{Value, json};
 
 pub(crate) async fn setup() -> (Database, Arc<ArEncryption>, tempfile::TempDir) {
+    setup_at(
+        Timestamp::parse_db("2026-03-02 16:00:00.123456").unwrap(),
+        false,
+    )
+    .await
+}
+pub(crate) async fn setup_sequence() -> (Database, Arc<ArEncryption>, tempfile::TempDir) {
+    setup_at(Timestamp::parse_db("2026-03-02 16:00:00").unwrap(), true).await
+}
+async fn setup_at(
+    now: Timestamp,
+    sequence: bool,
+) -> (Database, Arc<ArEncryption>, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
     let mut registry = Registry::<()>::new();
     registry
@@ -17,7 +30,7 @@ pub(crate) async fn setup() -> (Database, Arc<ArEncryption>, tempfile::TempDir) 
         QueueConfig::new("slack_import", 1),
     ]);
     let queue = campfire_jobs::JobQueue::new(&registry, &config).unwrap();
-    struct Sink(campfire_jobs::JobQueue);
+    struct Sink(campfire_jobs::JobQueue, bool);
     impl campfire_db::EventSink for Sink {
         fn persist(&self, tx: &campfire_db::Tx<'_>, event: &Event) -> campfire_db::Result<()> {
             if matches!(event, Event::Broadcast(_)) {
@@ -25,7 +38,9 @@ pub(crate) async fn setup() -> (Database, Arc<ArEncryption>, tempfile::TempDir) 
                     "Slack test captured an unintended broadcast".into(),
                 ));
             }
-            if let Some(request) = crate::jobs::request_for(event) {
+            if let Some(request) = crate::jobs::request_for(event)
+                && !self.1
+            {
                 self.0.enqueue(tx, &request)?;
             }
             Ok(())
@@ -40,12 +55,25 @@ pub(crate) async fn setup() -> (Database, Arc<ArEncryption>, tempfile::TempDir) 
         }
         fn emit(&self, _: Event) {}
     }
-    let clock = TestClock::frozen_at(Timestamp::parse_db("2026-03-02 16:00:00.123456").unwrap());
+    let clock = TestClock::frozen_at(now);
+    let uuid_index = std::sync::atomic::AtomicU64::new(0);
+    let fixture_inputs = sequence.then(|| {
+        Arc::new(campfire_db::database::FixtureInputs {
+            sqlite_now: now,
+            message_uuid: Arc::new(move || {
+                format!(
+                    "00000000-0000-4000-8000-{:012}",
+                    uuid_index.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1
+                )
+            }),
+        })
+    });
     let db = Database::open(
         Config::new(dir.path().join("db.sqlite3")),
         Env {
             clock: Arc::new(clock),
-            sink: Arc::new(Sink(queue)),
+            sink: Arc::new(Sink(queue, sequence)),
+            fixture_inputs,
             rich_text: Arc::new(crate::rich_text::AppRichText::new(
                 Arc::new(rails_compat::Secrets::new(
                     serde_json::from_str::<serde_json::Value>(include_str!(
@@ -55,18 +83,23 @@ pub(crate) async fn setup() -> (Database, Arc<ArEncryption>, tempfile::TempDir) 
                         .as_str()
                         .unwrap(),
                 )),
-                Arc::new(campfire_kit::clock::FrozenClock::new(
-                    "2026-03-02T16:00:00.123456Z".parse().unwrap(),
-                )),
+                Arc::new(campfire_kit::clock::FrozenClock::new(now.jiff())),
             )),
             message_reference_syncs: vec![crate::integrations::github::references::sync],
             ..Default::default()
         },
     )
     .unwrap();
-    let encryption = Arc::new(ArEncryption::new(&rails_compat::Secrets::new(
-        &"ws16-job-key".repeat(32),
-    )));
+    let secret = if sequence {
+        serde_json::from_str::<Value>(include_str!("../../../../../../vectors/slack/crypto.json"))
+            .unwrap()["secret_key_base"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    } else {
+        "ws16-job-key".repeat(32)
+    };
+    let encryption = Arc::new(ArEncryption::new(&rails_compat::Secrets::new(&secret)));
     let crypto = encryption.clone();
     db.write(move |tx| {
         tx.conn().execute(

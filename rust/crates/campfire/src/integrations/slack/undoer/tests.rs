@@ -4,6 +4,7 @@ use super::super::jobs::tests::{run, setup, start};
 use super::super::store::tests::{import, routes};
 use super::super::users;
 use super::*;
+use campfire_db::Timestamp;
 
 pub(crate) async fn undo(db: &Database, id: i64) -> SlackImport {
     assert!(db.write(move |tx| SlackImport::undo(tx, id)).await.unwrap());
@@ -282,4 +283,128 @@ async fn slack_undo_batch_cursor_and_lease_block_duplicate_execution() {
     .await
     .unwrap();
     assert_eq!(run(&db, id).await.state["undo_step"], "messages");
+}
+
+#[tokio::test]
+async fn slack_undo_actual_overlapping_imports_require_lifo_and_name_later_importer() {
+    let (db, crypto, _dir, first) = imported().await;
+    let before_messages = db.read(Message::count).await.unwrap();
+    let connection_crypto = crypto.clone();
+    let second = db
+        .write(move |tx| {
+            let actor = User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: "Later importer".into(),
+                    role: campfire_db::user::Role::Administrator,
+                    ..Default::default()
+                },
+            )?;
+            let connection = campfire_db::models::slack::SlackConnection::create(
+                tx,
+                &connection_crypto,
+                campfire_db::models::slack::NewConnection {
+                    workspace_id: 1,
+                    user_id: actor.id,
+                    slack_user_id: "UOTHER",
+                    access_token: Some("fixture-user-token"),
+                    scopes: None,
+                },
+            )?;
+            Ok(SlackImport::create(
+                tx,
+                campfire_db::models::slack_import::NewImport {
+                    workspace_id: 1,
+                    connection_id: Some(connection.id),
+                    user_id: actor.id,
+                    kind: campfire_db::models::slack_import::Kind::Workspace,
+                    mode: campfire_db::models::slack_import::Mode::Import,
+                    options: json!({}),
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    let oldests=db.read(|c| {
+        let mut values=std::collections::HashMap::new();
+        for channel in ["CARCH","CCHAN","CPRIV"] {
+            let latest:f64=c.query_row("SELECT MAX(CAST(substr(slack_key,?) AS REAL)) FROM slack_import_records WHERE slack_kind='message' AND slack_key>=? AND slack_key<?",params![channel.len()+2,format!("{channel}:"),format!("{channel};")],|r|r.get(0))?;
+            values.insert(channel.to_owned(),format!("{:.6}",latest-super::super::runner::CATCHUP_LOOKBACK as f64));
+        } Ok(values)
+    }).await.unwrap();
+    let mut catchup_routes = routes(false);
+    for route in &mut catchup_routes {
+        if route.path.starts_with("/api/conversations.history?")
+            || route.path.starts_with("/api/conversations.replies?")
+        {
+            let url = url::Url::parse(&format!("https://slack.com{}", route.path)).unwrap();
+            let channel = url.query_pairs().find(|(k, _)| k == "channel").unwrap().1;
+            if let Some(oldest) = oldests.get(channel.as_ref()) {
+                let mut pairs = url
+                    .query_pairs()
+                    .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                    .collect::<Vec<_>>();
+                pairs.insert(
+                    if route.path.starts_with("/api/conversations.replies?") {
+                        2
+                    } else {
+                        1
+                    },
+                    ("oldest".into(), oldest.clone()),
+                );
+                let query = url::form_urlencoded::Serializer::new(String::new())
+                    .extend_pairs(pairs)
+                    .finish();
+                route.path = format!("{}?{query}", url.path());
+            }
+        }
+    }
+    let (server, network) = fake(catchup_routes).await;
+    let later = import(&db, crypto, second, network).await;
+    assert_eq!(later.stats["counts"]["messages"], 0);
+    assert_eq!(later.stats["counts"]["replies"], 0);
+    assert_eq!(db.read(Message::count).await.unwrap(), before_messages);
+    assert!(
+        server
+            .received()
+            .iter()
+            .any(|request| request.target.contains("&oldest="))
+    );
+    assert!(
+        !db.write(move |tx| SlackImport::undo(tx, first))
+            .await
+            .unwrap()
+    );
+    let reason = db
+        .read(move |c| {
+            SlackImport::find(c, first)?.unwrap().undo_blocked_reason(
+                c,
+                Timestamp::parse_db("2026-03-02 16:00:00.123456").unwrap(),
+            )
+        })
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        reason
+            == "A later import by Later importer also imported some of these conversations. It has to be undone first; ask them or an administrator.",
+        "{reason}"
+    );
+    undo(&db, second).await;
+    db.read(|c| {
+        assert!(!Room::all(c)?.is_empty());
+        assert!(Message::count(c)? > 0);
+        Ok(())
+    })
+    .await
+    .unwrap();
+    undo(&db, first).await;
+    db.read(|c| {
+        assert!(Room::all(c)?.is_empty());
+        assert_eq!(Message::count(c)?, 0);
+        Ok(())
+    })
+    .await
+    .unwrap();
 }

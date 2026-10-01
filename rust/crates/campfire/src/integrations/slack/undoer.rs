@@ -489,4 +489,4 @@ fn record_from_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<Record> {
     })
 }
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
