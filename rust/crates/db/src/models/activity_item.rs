@@ -156,7 +156,14 @@ impl ActivityItem {
             )?,
             (false, false) => unreachable!(),
         };
-        Self::broadcast_change(tx, self.user_id, self.id)?;
+        // Rails callbacks see the saved instance, including untouched snapshot columns.
+        let saved = Self {
+            read_at,
+            handled_at,
+            updated_at: now,
+            ..self.clone()
+        };
+        Self::broadcast_item(tx, self.user_id, &saved)?;
         Self::find(tx.conn(), self.id)
     }
 
@@ -240,18 +247,24 @@ impl ActivityItem {
     /// `broadcast_activity_change`: to active humans only, on `ActivityChannel`'s stream, after
     /// commit. (Huddle items' invitation payload is WS13's.)
     pub(crate) fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {
+        // These writers load and change the item within the same write transaction.
+        let item = Self::find(tx.conn(), id)?;
+        Self::broadcast_item(tx, user_id, &item)
+    }
+
+    fn broadcast_item(tx: &mut Tx<'_>, user_id: i64, item: &Self) -> Result<()> {
         let human = User::find_by_id(tx.conn(), user_id)?
             .is_some_and(|user| user.is_active() && !user.is_bot());
         if human {
-            if crate::models::huddle_invitations::enqueue_item_ring(tx, id)? {
+            if crate::models::huddle_invitations::enqueue_item_ring(tx, item)? {
                 return Ok(());
             }
             tx.emit_broadcast_once(
                 "activity_items",
-                id,
+                item.id,
                 &Broadcast::Cable {
                     stream: format!("user_{user_id}_activity"),
-                    payload: serde_json::json!({ "activityItemId": id }),
+                    payload: serde_json::json!({ "activityItemId": item.id }),
                 },
             );
         }
