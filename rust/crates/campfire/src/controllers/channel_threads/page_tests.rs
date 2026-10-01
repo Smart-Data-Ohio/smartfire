@@ -211,7 +211,7 @@ async fn ordinary_work_html_remains_pending_and_board_posts_render() {
     let response = app.david().get(&format!("/rooms/{room}/threads/{thread}")).await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(response.text().contains("class=\"board-post\""));
-    assert_eq!(app.david().get(&format!("/rooms/{room}/threads/{thread}/content")).await.status, StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(app.david().get(&format!("/rooms/{room}/threads/{thread}/content")).await.status, StatusCode::OK);
 }
 
 #[tokio::test]

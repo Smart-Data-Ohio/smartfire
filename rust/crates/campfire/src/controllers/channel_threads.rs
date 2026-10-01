@@ -108,8 +108,9 @@ pub async fn show(c: &mut Ctx) -> Result {
 pub async fn content(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
-    if room.board() || thread.work() {
-        // WS12 owns work/board conversation controls and history, including pane content.
+    if !room.board() && thread.work() {
+        // Ordinary work conversation controls and history remain a WS12 seam.
+        // Board posts already have their Rails-compatible conversation pane.
         return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
     }
     let id = thread.id;
