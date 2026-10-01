@@ -372,3 +372,237 @@ async fn scalar_retry_paths_match_rails_bytes_and_rows() {
         "WS8bm client retries: 24 scenarios; 48 Rails HTTP responses byte-identical; scalar IDs and saved rows checked"
     );
 }
+
+#[tokio::test]
+async fn initial_jpeg_after_commit_matches_rails() {
+    let app = app().await;
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/thread-upload-coverage.json"
+    ))
+    .unwrap();
+    let row = oracle["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["name"] == "top_image")
+        .unwrap();
+    let input = &row["responses"][0];
+    let before = app
+        .db()
+        .read(|conn| {
+            Ok((
+                conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?,
+                conn.query_row("SELECT COUNT(*) FROM channel_threads", [], |r| {
+                    r.get::<_, i64>(0)
+                })?,
+            ))
+        })
+        .await
+        .unwrap();
+    let response = app
+        .david()
+        .write(
+            Req::new(Method::POST, input["path"].as_str().unwrap())
+                .header("content-type", "application/json")
+                .body(input["input"].to_string()),
+        )
+        .await;
+    let after = app
+        .db()
+        .read(|conn| {
+            Ok((
+                conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?,
+                conn.query_row("SELECT COUNT(*) FROM channel_threads", [], |r| {
+                    r.get::<_, i64>(0)
+                })?,
+            ))
+        })
+        .await
+        .unwrap();
+    println!(
+        "WS8bm merged JPEG: Rust {}; committed messages/threads {:?}; Rails {} / (1, 1)",
+        response.status,
+        (after.0 - before.0, after.1 - before.1),
+        input["status"]
+    );
+    assert_eq!((after.0 - before.0, after.1 - before.1), (1, 1));
+    assert_response(&response, input);
+}
+
+#[tokio::test]
+async fn human_attachment_edits_enqueue_atomically_on_roots_and_threads() {
+    use base64::Engine as _;
+    for in_thread in [false, true] {
+        for signed in [false, true] {
+            let app = app().await;
+            let thread_id = if in_thread {
+                Some(thread(&app).await)
+            } else {
+                None
+            };
+            let message = app
+                .db()
+                .write(move |tx| {
+                    Message::create(
+                        tx,
+                        campfire_db::NewMessage {
+                            room_id: ALL_TALK,
+                            creator_id: DAVID,
+                            thread_id,
+                            markdown_source: Some("Preserve this edit".into()),
+                            ..Default::default()
+                        },
+                    )
+                })
+                .await
+                .unwrap();
+            let vectors: Value = serde_json::from_str(include_str!(
+                "../../../../../vectors/attachment_assignments.json"
+            ))
+            .unwrap();
+            let png = base64::engine::general_purpose::STANDARD
+                .decode(vectors["png_base64"].as_str().unwrap())
+                .unwrap();
+            let path = if let Some(id) = thread_id {
+                format!("/rooms/{ALL_TALK}/threads/{id}/messages/{}", message.id)
+            } else {
+                format!("/rooms/{ALL_TALK}/messages/{}", message.id)
+            };
+            let request = Req::new(Method::PATCH, &path);
+            let request = if signed {
+                let staged = app
+                    .booted
+                    .app
+                    .storage
+                    .stage_bytes(
+                        &png,
+                        campfire_storage::Filename::new("edit.png"),
+                        Some("image/png"),
+                    )
+                    .unwrap();
+                let blob = app
+                    .db()
+                    .write(move |tx| super::save_staged(tx, staged))
+                    .await
+                    .unwrap();
+                let capability = campfire_storage::paths::signed_blob_id(
+                    &*app.booted.app.storage.verifier,
+                    blob.id,
+                    None,
+                );
+                request.form(&[
+                    ("message[markdown_source]", "Reject this edit"),
+                    ("message[attachment]", &capability),
+                ])
+            } else {
+                request.multipart(
+                    &[("message[markdown_source]", "Reject this edit")],
+                    ("message[attachment]", "edit.png", "image/png", &png),
+                )
+            };
+            app.db().write(|tx| {
+                tx.conn().execute_batch("CREATE TRIGGER reject_message_edit_analysis BEFORE INSERT ON background_jobs WHEN NEW.job_class='ActiveStorage::AnalyzeJob' BEGIN SELECT RAISE(ABORT,'edit analysis must commit atomically'); END;")?;
+                Ok(())
+            }).await.unwrap();
+            let rows = row_snapshot(&app).await;
+            let files = file_snapshot(app.booted.app.storage.service.root());
+            let response = app.david().write(request).await;
+            assert_eq!(
+                response.status,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "thread={in_thread} signed={signed}"
+            );
+            assert_eq!(
+                row_snapshot(&app).await,
+                rows,
+                "thread={in_thread} signed={signed}"
+            );
+            assert_eq!(
+                file_snapshot(app.booted.app.storage.service.root()),
+                files,
+                "thread={in_thread} signed={signed}"
+            );
+        }
+    }
+    println!(
+        "WS8bm durable edit: 4 real HTTP enqueue failures; root/thread and signed/multipart; all request rows/files rolled back"
+    );
+}
+
+#[tokio::test]
+async fn initial_attachment_capability_and_media_matrix_matches_rails() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/thread-upload-coverage.json"
+    ))
+    .unwrap();
+    let mut requests = 0;
+    for row in oracle["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|r| r["kind"] == "upload")
+    {
+        let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(
+            row["now"].as_str().unwrap().parse().unwrap(),
+        )))
+        .await
+        .unwrap();
+        let before = app
+            .db()
+            .read(|c| {
+                Ok((
+                    c.query_row("SELECT MAX(id) FROM messages", [], |r| r.get::<_, i64>(0))?,
+                    c.query_row("SELECT MAX(id) FROM channel_threads", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                ))
+            })
+            .await
+            .unwrap();
+        if let Some(id) = row["delete_blob_file"].as_i64() {
+            let blob = app
+                .db()
+                .read(move |c| Ok(campfire_storage::Blob::find(c, id).unwrap().unwrap()))
+                .await
+                .unwrap();
+            app.booted.app.storage.service.delete(&blob.key).unwrap();
+        }
+        let input = &row["responses"][0];
+        let response = app
+            .david()
+            .write(
+                Req::new(Method::POST, input["path"].as_str().unwrap())
+                    .header("content-type", "application/json")
+                    .body(input["input"].to_string()),
+            )
+            .await;
+        println!(
+            "WS8bm initial attachment {}: Rust {} / Rails {}",
+            row["name"], response.status, input["status"]
+        );
+        assert_response(&response, input);
+        let state=app.db().read(move |c|{
+            let clients=c.prepare("SELECT client_message_id FROM messages WHERE id>? ORDER BY id")?.query_map([before.0],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            let threads=c.query_row("SELECT COUNT(*) FROM channel_threads WHERE id>?",[before.1],|r|r.get::<_,i64>(0))?;
+            let attachment=c.query_row("SELECT id FROM messages WHERE id>? ORDER BY id LIMIT 1",[before.0],|r|r.get::<_,i64>(0)).ok().map(|id|{
+                let blob=campfire_storage::Blob::attached(c,"Message",id,"attachment").unwrap().unwrap();
+                let note=Message::find(c,id)?.forward_note;
+                Ok::<_,campfire_db::Error>((json!({"id":blob.id,"metadata":serde_json::from_str::<Value>(&blob.metadata.encode()).unwrap()}),note))
+            }).transpose()?;
+            Ok((clients,threads,attachment))
+        }).await.unwrap();
+        assert_eq!(json!(state.0), row["clients"]);
+        assert_eq!(state.1, row["thread_count"].as_i64().unwrap());
+        if let Some((attachment, note)) = state.2 {
+            assert_eq!(attachment, row["attachment"]);
+            assert_eq!(json!(note), row["forward_note"]);
+        } else {
+            assert!(row["attachment"].is_null());
+        }
+        requests += 1;
+    }
+    assert_eq!(requests, 18);
+    println!(
+        "WS8bm initial attachments: 18 Rails requests byte-identical; top/nested; file/JPEG/video/BMP; invalid capabilities; committed and rolled-back rows"
+    );
+}

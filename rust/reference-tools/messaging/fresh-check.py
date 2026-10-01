@@ -25,9 +25,7 @@ print("WS8bm fresh concurrency: eight test threads; two build jobs; no timing th
 commands = [
     ("metadata", ["mise", "exec", "rust@1.98.1", "--", "cargo", "metadata", "--locked", "--manifest-path", "rust/Cargo.toml", "--format-version", "1"]),
     ("seeds", ["bash", "rust/parity/bin/seed", "build", "default", "first_run"]),
-    ("app", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"]),
-    ("db", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire_db"]),
-    ("views", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire_views", "--test", "core"]),
+    ("workspace", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--exclude", "html5ever", "--no-fail-fast"]),
     ("clippy", ["mise", "exec", "rust@1.98.1", "--", "cargo", "clippy", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--all-targets", "--", "-D", "warnings"]),
 ]
 failures = []
@@ -49,4 +47,4 @@ for name, command in commands:
 shutil.rmtree(clone / "rust/target", ignore_errors=True)
 print("WS8bm fresh target removed", flush=True)
 assert not failures, f"WS8bm fresh-check failures: {', '.join(failures)}; all available checks were run"
-print("WS8bm fresh-check: committed inputs only; generated default/first_run seeds; app/db/views/clippy passed", flush=True)
+print("WS8bm fresh-check: committed inputs only; generated default/first_run seeds; workspace tests/doctests/clippy passed", flush=True)
