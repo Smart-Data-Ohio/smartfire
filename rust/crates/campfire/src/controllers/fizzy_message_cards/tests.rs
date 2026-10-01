@@ -2,7 +2,7 @@ use crate::{
     controllers::presenters::test_support::*,
     integrations::{
         fizzy::accounts::{Account, Input},
-        test_support::{FakeServer, Route},
+        test_support::{FakeServer, Route, ws15e_http_case, ws15e_http_case_listener},
     },
 };
 use axum::http::{Method, StatusCode};
@@ -34,17 +34,8 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
         "no_connection",
         "direct_bots",
     ] {
-        let output = tokio::process::Command::new(std::env::current_exe().unwrap())
-            .args([
-                "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
-                "--exact",
-                "--nocapture",
-            ])
-            .env("WS15E_FIZZY_MESSAGE_CASE", case)
-            .env("FIZZY_API_BASE_URL", "http://127.0.0.1:51598")
-            .output()
-            .await
-            .unwrap();
+        let output = ws15e_http_case("WS15E_FIZZY_MESSAGE_CASE", case,
+            "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix").await;
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             output.status.success(),
@@ -59,6 +50,7 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
     }
 }
 async fn run(case: &str) {
+    let listener = ws15e_http_case_listener();
     let mut app = TestApp::boot().await.expect("pinned seeds required");
     app.booted
         .jobs
@@ -158,7 +150,7 @@ async fn run(case: &str) {
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
-    let base = "http://127.0.0.1:51598/897362094/cards/580".to_owned();
+    let base = format!("{}/897362094/cards/580", crate::integrations::fizzy::client::api_base_url());
     let url = if case == "long_reply" {
         format!("https://example.com/{}", "x".repeat(60000))
     } else {
@@ -179,9 +171,6 @@ async fn run(case: &str) {
         "new_rejected" => 401,
         _ => 200,
     };
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:51598")
-        .await
-        .unwrap();
     let server = FakeServer::on_listener(
         vec![
             Route::new("GET", "127.0.0.1", "/897362094/boards.json", board_status).body(

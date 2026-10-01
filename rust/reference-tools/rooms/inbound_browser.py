@@ -27,6 +27,7 @@ for line in (rust / 'parity/.env.reference').read_text().splitlines():
         env[key] = value
 env.update({'HTTP_PORT': str(candidate_port), 'TARGET_PORT': str(target_port),
             'TARGET_BIND': '127.0.0.1', 'CAMPFIRE_FROZEN_TIME': '2026-03-02T16:00:00Z',
+            'TMPDIR': str(scratch),
             'INBOUND_EMAIL_DOMAIN': 'mail.campfire.test', 'RAILS_INBOUND_EMAIL_PASSWORD': 'browser-fixture',
             'CAMPFIRE_LOG': 'error', 'PARITY_NAMESPACE': 'ws8br-browser', 'PARITY_OWNER': 'ws8br',
             'PARITY_IMAGE': 'ws8br-browser-reference-d7c7de92'})

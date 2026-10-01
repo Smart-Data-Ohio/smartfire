@@ -248,6 +248,40 @@ pub async fn ws15e_listener() -> TcpListener {
     panic!("WS15e test ports are all in use");
 }
 
+/// Reserve an assigned port across exec; Fizzy controllers construct system clients.
+pub async fn ws15e_http_case(marker: &str, case: &str, test: &str) -> std::process::Output {
+    use std::os::fd::AsRawFd;
+    let listener = ws15e_listener().await.into_std().unwrap();
+    let fd = listener.as_raw_fd();
+    let mut command = tokio::process::Command::new(std::env::current_exe().unwrap());
+    command.args([test, "--exact", "--nocapture"])
+        .env(marker, case)
+        .env("FIZZY_API_BASE_URL", format!("http://{}", listener.local_addr().unwrap()))
+        .env("WS15E_TEST_LISTENER_FD", fd.to_string());
+    // SAFETY: only the async-signal-safe fcntl runs between fork and exec. The
+    // parent retains the listener; clearing CLOEXEC in the child cannot affect it.
+    unsafe {
+        command.pre_exec(move || {
+            if libc::fcntl(fd, libc::F_SETFD, 0) == -1 {
+                Err(std::io::Error::last_os_error())
+            } else { Ok(()) }
+        });
+    }
+    let output = command.output().await.unwrap();
+    drop(listener);
+    output
+}
+
+pub fn ws15e_http_case_listener() -> TcpListener {
+    use std::os::fd::FromRawFd;
+    let fd = std::env::var("WS15E_TEST_LISTENER_FD").expect("parent reserves the listener")
+        .parse().unwrap();
+    // SAFETY: ws15e_http_case inherited this live TCP socket into this one-test
+    // child. This is its single ownership transfer; the parent has a separate fd.
+    let listener = unsafe { std::net::TcpListener::from_raw_fd(fd) };
+    TcpListener::from_std(listener).unwrap()
+}
+
 pub async fn ws15e_trickling_server(head: &'static str) -> SocketAddr {
     trickling_server_with(ws15e_listener().await, head).await.0
 }
