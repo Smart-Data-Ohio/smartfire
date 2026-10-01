@@ -337,7 +337,7 @@
     "slack_connections": [
       {
         "id": 1,
-        "access_token": "{\"p\":\"UHUSUymQcDBRj82Tudg+n027\",\"h\":{\"iv\":\"Tc1V6ppneK1bYS38\",\"at\":\"PVlqEoAipCRFvIbP4OBsIw==\"}}",
+        "access_token": "{\"p\":\"xT94+jO9W9NWV71fcvgGNlMG\",\"h\":{\"iv\":\"QYYFOJO8imkV+WJs\",\"at\":\"DhB35QIyb8/sXQIaxvBpsw==\"}}",
         "created_at": "2026-03-02 16:00:00",
         "disconnected_reason": null,
         "scopes": null,
@@ -354,7 +354,7 @@
       {
         "id": 1,
         "client_id": "fixture-client",
-        "client_secret": "{\"p\":\"VHNjQ3ErNt7SUEtZ4rU=\",\"h\":{\"iv\":\"qCJkso3F08s+0wNT\",\"at\":\"KyU/BpcoS2G6KvbMjYocKQ==\"}}",
+        "client_secret": "{\"p\":\"ptiRy4wxVFfqL27C+xU=\",\"h\":{\"iv\":\"fF8TG2DvSe+sssr5\",\"at\":\"ZUxmndj5KadYBQTkTnUSBg==\"}}",
         "configured_by_id": 1,
         "created_at": "2026-03-02 16:00:00",
         "team_domain": null,
@@ -1589,7 +1589,7 @@
     "slack_connections": [
       {
         "id": 1,
-        "access_token": "{\"p\":\"UHUSUymQcDBRj82Tudg+n027\",\"h\":{\"iv\":\"Tc1V6ppneK1bYS38\",\"at\":\"PVlqEoAipCRFvIbP4OBsIw==\"}}",
+        "access_token": "{\"p\":\"xT94+jO9W9NWV71fcvgGNlMG\",\"h\":{\"iv\":\"QYYFOJO8imkV+WJs\",\"at\":\"DhB35QIyb8/sXQIaxvBpsw==\"}}",
         "created_at": "2026-03-02 16:00:00",
         "disconnected_reason": null,
         "scopes": null,
@@ -2299,7 +2299,7 @@
       {
         "id": 1,
         "client_id": "fixture-client",
-        "client_secret": "{\"p\":\"VHNjQ3ErNt7SUEtZ4rU=\",\"h\":{\"iv\":\"qCJkso3F08s+0wNT\",\"at\":\"KyU/BpcoS2G6KvbMjYocKQ==\"}}",
+        "client_secret": "{\"p\":\"ptiRy4wxVFfqL27C+xU=\",\"h\":{\"iv\":\"fF8TG2DvSe+sssr5\",\"at\":\"ZUxmndj5KadYBQTkTnUSBg==\"}}",
         "configured_by_id": 1,
         "created_at": "2026-03-02 16:00:00",
         "team_domain": null,
@@ -3182,7 +3182,7 @@
     "slack_connections": [
       {
         "id": 1,
-        "access_token": "{\"p\":\"UHUSUymQcDBRj82Tudg+n027\",\"h\":{\"iv\":\"Tc1V6ppneK1bYS38\",\"at\":\"PVlqEoAipCRFvIbP4OBsIw==\"}}",
+        "access_token": "{\"p\":\"xT94+jO9W9NWV71fcvgGNlMG\",\"h\":{\"iv\":\"QYYFOJO8imkV+WJs\",\"at\":\"DhB35QIyb8/sXQIaxvBpsw==\"}}",
         "created_at": "2026-03-02 16:00:00",
         "disconnected_reason": null,
         "scopes": null,
@@ -3306,7 +3306,7 @@
       {
         "id": 1,
         "client_id": "fixture-client",
-        "client_secret": "{\"p\":\"VHNjQ3ErNt7SUEtZ4rU=\",\"h\":{\"iv\":\"qCJkso3F08s+0wNT\",\"at\":\"KyU/BpcoS2G6KvbMjYocKQ==\"}}",
+        "client_secret": "{\"p\":\"ptiRy4wxVFfqL27C+xU=\",\"h\":{\"iv\":\"fF8TG2DvSe+sssr5\",\"at\":\"ZUxmndj5KadYBQTkTnUSBg==\"}}",
         "configured_by_id": 1,
         "created_at": "2026-03-02 16:00:00",
         "team_domain": null,
@@ -4557,7 +4557,7 @@
     "slack_connections": [
       {
         "id": 1,
-        "access_token": "{\"p\":\"UHUSUymQcDBRj82Tudg+n027\",\"h\":{\"iv\":\"Tc1V6ppneK1bYS38\",\"at\":\"PVlqEoAipCRFvIbP4OBsIw==\"}}",
+        "access_token": "{\"p\":\"xT94+jO9W9NWV71fcvgGNlMG\",\"h\":{\"iv\":\"QYYFOJO8imkV+WJs\",\"at\":\"DhB35QIyb8/sXQIaxvBpsw==\"}}",
         "created_at": "2026-03-02 16:00:00",
         "disconnected_reason": null,
         "scopes": null,
@@ -5372,7 +5372,7 @@
       {
         "id": 1,
         "client_id": "fixture-client",
-        "client_secret": "{\"p\":\"VHNjQ3ErNt7SUEtZ4rU=\",\"h\":{\"iv\":\"qCJkso3F08s+0wNT\",\"at\":\"KyU/BpcoS2G6KvbMjYocKQ==\"}}",
+        "client_secret": "{\"p\":\"ptiRy4wxVFfqL27C+xU=\",\"h\":{\"iv\":\"fF8TG2DvSe+sssr5\",\"at\":\"ZUxmndj5KadYBQTkTnUSBg==\"}}",
         "configured_by_id": 1,
         "created_at": "2026-03-02 16:00:00",
         "team_domain": null,

@@ -2,6 +2,7 @@
 # Only transport, pacing, the clock (reference --freeze), and UUID inputs are fixed.
 require 'json'
 require 'net/http'
+require 'digest'
 kind = ARGV.fetch(0, 'workspace')
 retained = ARGV[1]
 raise 'unknown scenario' unless kind.in?(%w[workspace personal])
@@ -12,6 +13,22 @@ Slack::Client.prepend(Module.new do
   def initialize(**args)
     super(**args.merge(pacing: false))
   end
+end)
+# Encryption randomness is an input just like the clock and message UUIDs. This
+# fixture-only IV provider keeps the initial opaque credentials reproducible; the
+# real Rails encryptor still derives keys, encrypts, authenticates and serializes.
+# These inputs are loaded unchanged by Rust and every encrypted field is compared.
+iv_index = 0
+ActiveRecord::Encryption::Cipher::Aes256Gcm.prepend(Module.new do
+  define_method(:generate_iv) do |cipher, clear_text|
+    if @deterministic
+      super(cipher, clear_text)
+    else
+      iv_index += 1
+      Digest::SHA256.digest("ws16-fixture-iv:#{iv_index}")[0, cipher.iv_len]
+    end
+  end
+  private :generate_iv
 end)
 uuid_index = 0
 Random.singleton_class.define_method(:uuid) do
