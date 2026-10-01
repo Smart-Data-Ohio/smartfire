@@ -6,7 +6,7 @@ use crate::{
 };
 use campfire_db::{
     Timestamp,
-    models::google_account::{ConnectionGrant, GoogleAccount},
+    models::google_account::ConnectionGrant,
 };
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode};
 use rails_compat::ar_encryption::ArEncryption;
@@ -134,65 +134,17 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::sudo::require_sudo_mode(c)?;
     let user = concerns::require_current_user(c)?.clone();
     let id = user.id;
-    // Remote stop is best effort and must happen while the account still exists.
-    let channel = c
-        .app()
-        .db
-        .read(move |conn| {
-            use rusqlite::OptionalExtension;
-            Ok(conn
-                .query_row(
-                    "SELECT channel_id,resource_id FROM calendar_push_channels WHERE user_id=?",
-                    [id],
-                    |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?)),
-                )
-                .optional()?)
-        })
-        .await
-        .map_err(Error::internal)?;
-    if let Some((channel_id, Some(resource_id))) =
-        channel.filter(|(_, resource)| resource.as_deref().is_some_and(|s| !api::blank(s)))
-    {
-        let enc = ArEncryption::new(&c.app().secrets);
-        let usable = c
-            .app()
-            .db
-            .write(move |tx| {
-                let Some(mut a) = GoogleAccount::for_user(tx.conn(), id)? else {
-                    return Ok(false);
-                };
-                Ok(a.usable(tx, &enc)? && a.calendar())
-            })
-            .await
-            .map_err(Error::internal)?;
-        if usable {
-            let payload = json!({"id":channel_id,"resourceId":resource_id});
-            let _ = c
-                .app()
-                .google
-                .api()
-                .request(
-                    &c.app().db,
-                    &c.app().secrets,
-                    id,
-                    api::ApiRequest::calendar(
-                        hyper::Method::POST,
-                        "/calendar/v3/channels/stop",
-                        Some(&payload),
-                    ),
-                    Timestamp::from_jiff(c.now()),
-                )
-                .await;
-        }
-    }
-    let context = super::two_factor::audit_context(c)?;
     let secrets = c.app().secrets.clone();
-    c.app()
-        .db
-        .write(move |tx| {
-            campfire_db::models::google_connection::disconnect(tx, &user, &secrets, &context)
-        })
-        .await
-        .map_err(Error::internal)?;
+    let for_prepare = user.clone();
+    let plan = c.app().db.write(move |tx| {
+        campfire_db::models::google_connection::prepare_disconnect(tx, &for_prepare, &secrets)
+    }).await.map_err(Error::internal)?;
+    if let Some(plan) = plan {
+        let channel = crate::integrations::google::calendar::stop_remote(c.app(), id).await.map_err(Error::internal)?;
+        let context = super::two_factor::audit_context(c)?;
+        c.app().db.write(move |tx| {
+            campfire_db::models::google_connection::finish_disconnect(tx, &user, plan, channel, &context)
+        }).await.map_err(Error::internal)?;
+    }
     redirect(c, "Google Calendar disconnected.", true)
 }

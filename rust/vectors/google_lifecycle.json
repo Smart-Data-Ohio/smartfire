@@ -1,0 +1,458 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "spec": {
+        "name": "deactivate_connected",
+        "kind": "deactivate"
+      },
+      "account_id": 9800000000,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": null,
+      "status": null,
+      "calls": [
+        {
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "lifecycle-channel",
+            "resourceId": "lifecycle-resource"
+          },
+          "status": "active",
+          "cache": true
+        }
+      ],
+      "frames": [
+        {
+          "stream": "action_cable/Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE",
+          "payload": {
+            "type": "disconnect",
+            "reconnect": false
+          }
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OlN0YWdlLzY5OTQ0ODMzMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_stage_699448331\"><template>\n<div id=\"message_5c07adb2-32cd-4902-94ed-3d1b82663c82\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"935962058\" data-room-id=\"699448331\" data-message-timestamp=\"1790839967279\" data-message-updated-at=\"1790839967287\" data-sort-value=\"1790839967279\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-10-01T07:32:47Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  The stage ended because the last host left.\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://campfire.test/rooms/699448331/@935962058\"><time class=\"message__timestamp\" datetime=\"2026-10-01T07:32:47Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::DisconnectCleanupJob",
+          "args": [
+            [],
+            {
+              "access_token": "access-token",
+              "refresh_token": "refresh-token",
+              "access_token_expires_at": "2026-03-02T17:00:00.000Z"
+            },
+            9800000000
+          ]
+        },
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            390339825,
+            127326141
+          ]
+        },
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            411254270,
+            127326141
+          ]
+        }
+      ],
+      "user_status": "deactivated",
+      "account": {
+        "id": 9800000000,
+        "disconnected_reason": "Account deactivated",
+        "email": "fixture@example.test"
+      },
+      "cache": false,
+      "channel": false,
+      "ooo_until": null,
+      "ooo_broadcast": null,
+      "entry_ids": [
+        390339825,
+        411254270
+      ]
+    },
+    {
+      "spec": {
+        "name": "deactivate_disconnected",
+        "kind": "deactivate",
+        "reason": "revoked"
+      },
+      "account_id": 9800000001,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": null,
+      "status": null,
+      "calls": [],
+      "frames": [
+        {
+          "stream": "action_cable/Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE",
+          "payload": {
+            "type": "disconnect",
+            "reconnect": false
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            390339825,
+            127326141
+          ]
+        },
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            411254270,
+            127326141
+          ]
+        }
+      ],
+      "user_status": "deactivated",
+      "account": {
+        "id": 9800000001,
+        "disconnected_reason": "Account deactivated",
+        "email": "fixture@example.test"
+      },
+      "cache": false,
+      "channel": false,
+      "ooo_until": null,
+      "ooo_broadcast": null,
+      "entry_ids": [
+        390339825,
+        411254270
+      ]
+    },
+    {
+      "spec": {
+        "name": "deactivate_unreadable",
+        "kind": "deactivate",
+        "unreadable": true
+      },
+      "account_id": 9800000002,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": null,
+      "status": null,
+      "calls": [],
+      "frames": [
+        {
+          "stream": "action_cable/Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE",
+          "payload": {
+            "type": "disconnect",
+            "reconnect": false
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            390339825,
+            127326141
+          ]
+        },
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            411254270,
+            127326141
+          ]
+        }
+      ],
+      "user_status": "deactivated",
+      "account": {
+        "id": 9800000002,
+        "disconnected_reason": "Account deactivated",
+        "email": "fixture@example.test"
+      },
+      "cache": false,
+      "channel": false,
+      "ooo_until": null,
+      "ooo_broadcast": null,
+      "entry_ids": [
+        390339825,
+        411254270
+      ]
+    },
+    {
+      "spec": {
+        "name": "deactivate_invalid",
+        "kind": "deactivate",
+        "invalid": true
+      },
+      "account_id": 9800000003,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": "ActiveRecord::RecordInvalid",
+      "status": null,
+      "calls": [
+        {
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "lifecycle-channel",
+            "resourceId": "lifecycle-resource"
+          },
+          "status": "active",
+          "cache": true
+        }
+      ],
+      "frames": [
+        {
+          "stream": "action_cable/Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE",
+          "payload": {
+            "type": "disconnect",
+            "reconnect": false
+          }
+        }
+      ],
+      "jobs": [],
+      "user_status": "active",
+      "account": {
+        "id": 9800000003,
+        "disconnected_reason": null,
+        "email": ""
+      },
+      "cache": true,
+      "channel": true,
+      "ooo_until": null,
+      "ooo_broadcast": true,
+      "entry_ids": [
+        390339825,
+        411254270
+      ]
+    },
+    {
+      "spec": {
+        "name": "deactivate_no_account",
+        "kind": "deactivate",
+        "account": false
+      },
+      "account_id": null,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": null,
+      "status": null,
+      "calls": [],
+      "frames": [
+        {
+          "stream": "action_cable/Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE",
+          "payload": {
+            "type": "disconnect",
+            "reconnect": false
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            390339825,
+            127326141
+          ]
+        },
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            411254270,
+            127326141
+          ]
+        }
+      ],
+      "user_status": "deactivated",
+      "account": null,
+      "cache": false,
+      "channel": false,
+      "ooo_until": null,
+      "ooo_broadcast": null,
+      "entry_ids": [
+        390339825,
+        411254270
+      ]
+    },
+    {
+      "spec": {
+        "name": "disconnect_meeting",
+        "kind": "disconnect"
+      },
+      "account_id": 9800000005,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": null,
+      "status": 302,
+      "calls": [
+        {
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "lifecycle-channel",
+            "resourceId": "lifecycle-resource"
+          },
+          "status": "active",
+          "cache": false
+        }
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:status",
+          "payload": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">\ud83d\ude80 Shipping Rust</span>\n</span>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:ooo_notice",
+          "payload": "<turbo-stream action=\"update\" target=\"ooo_notice_user_127326141\"><template></template></turbo-stream>"
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::DisconnectCleanupJob",
+          "args": [
+            [
+              "lifecycle-390339825",
+              "lifecycle-411254270"
+            ],
+            {
+              "access_token": "access-token",
+              "refresh_token": "refresh-token",
+              "access_token_expires_at": "2026-03-02T17:00:00.000Z"
+            },
+            9800000005
+          ]
+        }
+      ],
+      "user_status": "active",
+      "account": null,
+      "cache": false,
+      "channel": false,
+      "ooo_until": null,
+      "ooo_broadcast": false,
+      "entry_ids": []
+    },
+    {
+      "spec": {
+        "name": "disconnect_manual_ooo",
+        "kind": "disconnect",
+        "manual": true
+      },
+      "account_id": 9800000006,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": null,
+      "status": 302,
+      "calls": [
+        {
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "lifecycle-channel",
+            "resourceId": "lifecycle-resource"
+          },
+          "status": "active",
+          "cache": false
+        }
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:status",
+          "payload": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">\ud83c\udf34 Out of office until March 03, 2026 \u2014 Own note</span>\n</span>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:ooo_notice",
+          "payload": "<turbo-stream action=\"update\" target=\"ooo_notice_user_127326141\"><template>  <p class=\"ooo-notice txt-small\" role=\"status\">David is out of office until March 03, 2026. Own note</p>\n</template></turbo-stream>"
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::DisconnectCleanupJob",
+          "args": [
+            [
+              "lifecycle-390339825",
+              "lifecycle-411254270"
+            ],
+            {
+              "access_token": "access-token",
+              "refresh_token": "refresh-token",
+              "access_token_expires_at": "2026-03-02T17:00:00.000Z"
+            },
+            9800000006
+          ]
+        }
+      ],
+      "user_status": "active",
+      "account": null,
+      "cache": false,
+      "channel": false,
+      "ooo_until": "2026-03-03T16:00:00Z",
+      "ooo_broadcast": true,
+      "entry_ids": []
+    },
+    {
+      "spec": {
+        "name": "disconnect_no_cache",
+        "kind": "disconnect",
+        "cache": false
+      },
+      "account_id": 9800000007,
+      "entry_event_ids": [
+        390339825,
+        411254270
+      ],
+      "error": null,
+      "status": 302,
+      "calls": [
+        {
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "lifecycle-channel",
+            "resourceId": "lifecycle-resource"
+          },
+          "status": "active",
+          "cache": false
+        }
+      ],
+      "frames": [],
+      "jobs": [
+        {
+          "class": "Calendar::DisconnectCleanupJob",
+          "args": [
+            [
+              "lifecycle-390339825",
+              "lifecycle-411254270"
+            ],
+            {
+              "access_token": "access-token",
+              "refresh_token": "refresh-token",
+              "access_token_expires_at": "2026-03-02T17:00:00.000Z"
+            },
+            9800000007
+          ]
+        }
+      ],
+      "user_status": "active",
+      "account": null,
+      "cache": false,
+      "channel": false,
+      "ooo_until": null,
+      "ooo_broadcast": true,
+      "entry_ids": []
+    }
+  ]
+}

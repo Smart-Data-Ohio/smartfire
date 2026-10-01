@@ -330,6 +330,25 @@ pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
         .await?;
     Ok(())
 }
+/// Calendar::PushChannel#stop_remote!: HTTP outside the writer, while the grant still exists.
+/// Return the loaded row id so a concurrent replacement is not destroyed by the disconnect.
+pub async fn stop_remote(app: &App, user_id: i64) -> api::Result<Option<i64>> {
+    let channel = app.db.read(move |conn| {
+        Ok(conn.query_row("SELECT id,channel_id,resource_id FROM calendar_push_channels WHERE user_id=?", [user_id],
+            |r| Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,Option<String>>(2)?))).optional()?)
+    }).await?;
+    let Some((id,channel_id,resource_id)) = channel else { return Ok(None) };
+    if let Some(resource_id) = resource_id.filter(|s| !api::blank(s))
+        && usable(app,user_id).await?
+    {
+        let payload = json!({"id":channel_id,"resourceId":resource_id});
+        if let Err(api::Error::Storage(error)) = app.google.api().request(&app.db,&app.secrets,user_id,
+            ApiRequest::calendar(Method::POST,"/calendar/v3/channels/stop",Some(&payload)),now(app)).await
+        { return Err(error.into()); }
+    }
+    Ok(Some(id))
+}
+
 fn summary(e: &api::Error) -> String {
     let class = e.class().rsplit("::").next().unwrap();
     campfire_richtext::ruby::truncate(&format!("{class}: {e}"), 250, "...")

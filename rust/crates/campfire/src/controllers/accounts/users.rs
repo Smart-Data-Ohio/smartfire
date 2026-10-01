@@ -58,6 +58,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let mut user = set_user(c).await?;
     concerns::sudo::require_sudo_mode(c)?;
     let audit = crate::controllers::two_factor::audit_context(c)?;
+    crate::integrations::google::calendar::stop_remote(c.app(), user.id).await.map_err(Error::internal)?;
     c.app()
         .db
         .write(move |tx| crate::authentication::deactivate_user(tx, &mut user, &audit))

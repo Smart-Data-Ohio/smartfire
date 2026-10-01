@@ -256,6 +256,9 @@ impl Jobs {
 
 impl EventSink for Jobs {
     fn disconnect_user_accounts(&self, tx: &mut Tx<'_>, user_id: i64) -> campfire_db::Result<()> {
+        if let Some(app) = self.app.get().and_then(Weak::upgrade) {
+            campfire_db::models::google_connection::deactivate(tx, user_id, &app.secrets)?;
+        }
         if let Some(account) = crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)? {
             account.mark_disconnected(tx, "Account deactivated")?;
         }
