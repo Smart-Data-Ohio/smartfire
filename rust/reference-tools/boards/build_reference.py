@@ -25,5 +25,5 @@ for name in files:
 )
 subprocess.run(["docker", "build", "-t", image, str(context)], check=True)
 probe = 'require "json"; require "digest"; JSON.parse(File.read("/source-hashes.json")).each { |file,hash| abort("source drift: #{file}") unless Digest::SHA256.file("/rails/#{file}").hexdigest == hash }; puts "WS12 board reference: 18 source hashes verified; d7c7de92 plus approved status/board drift"'
-subprocess.run(["docker", "run", "--rm", "--label", "parity.owner=ws12", "--entrypoint", "ruby",
+subprocess.run(["docker", "run", "--rm", "--name", f"ws12-board-source-probe-{os.getpid()}", "--label", "parity.owner=ws12", "--entrypoint", "ruby",
     "-v", f"{root}/reference-tools/boards/source-hashes.json:/source-hashes.json:ro", image, "-e", probe], check=True)
