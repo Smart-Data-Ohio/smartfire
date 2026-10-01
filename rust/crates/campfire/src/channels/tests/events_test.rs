@@ -53,11 +53,94 @@ async fn compare_stage(client: &mut Client, state: &Value) -> Vec<Value> {
     }
     actual
 }
+
+async fn creation_app() -> TestApp {
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        "2026-03-02T16:00:00Z".parse().unwrap(),
+    ));
+    let app = TestApp::boot_with_clock(clock)
+        .await
+        .expect("pinned default seed");
+    // Match Rails' before_create fixture inputs before Message::create reloads the row.
+    app.db().write(|tx| {
+        tx.conn().execute_batch("UPDATE sqlite_sequence SET seq=8000000000 WHERE name='events'; UPDATE sqlite_sequence SET seq=9000000000 WHERE name='messages'; UPDATE sqlite_sequence SET seq=7000000000 WHERE name='activity_items';
+            CREATE TRIGGER ws14e_socket_message_id AFTER INSERT ON messages
+            WHEN NEW.markdown_source LIKE 'Scheduled an event: Socket planning%' OR NEW.markdown_source LIKE 'Scheduled an event: Two records%'
+            BEGIN UPDATE messages SET client_message_id=CASE WHEN NEW.markdown_source LIKE 'Scheduled an event: Socket planning%' THEN 'ws14e-announcement' ELSE 'ws14e-series' END WHERE id=NEW.id; END;")?;
+        Ok(())
+    }).await.unwrap();
+    app
+}
+
+#[tokio::test]
+async fn pr174_event_creation_appends_announcement_to_connected_members() {
+    let app = creation_app().await;
+    let oracle: Value = serde_json::from_str(include_str!("golden/event-sockets.json")).unwrap();
+    let (url, origin) = listen(&app).await;
+    let room = app
+        .db()
+        .read(|c| campfire_db::Room::find(c, ALL_TALK))
+        .await
+        .unwrap();
+    let signed = rails_compat::turbo::signed_stream_name(
+        &app.booted.app.secrets,
+        &[&crate::channels::room_gid(&room).to_param(), "messages"],
+    );
+    let channel = identifier(json!({"channel":"RoomMessagesChannel", "signed_stream_name":signed}));
+    let mut member = connect(&app, &url, &origin, JASON).await;
+    member.confirm(&channel).await;
+    let mut organizer = connect(&app, &url, &origin, DAVID).await;
+    organizer.confirm(&channel).await;
+    let mut outsider = connect(&app, &url, &origin, KEVIN).await;
+    outsider.reject(&channel).await;
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET updated_at='2026-02-10 12:00:00' WHERE id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    app.db()
+        .write(|tx| {
+            CalendarEvent::create(
+                tx,
+                NewCalendarEvent {
+                    room_id: ALL_TALK,
+                    organizer_id: DAVID,
+                    title: "Socket planning".into(),
+                    starts_at: Timestamp::parse_db("2026-03-02 16:10:00"),
+                    time_zone: "UTC".into(),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let expected = oracle[0]["frames"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| {
+            f["payload"]
+                .as_str()
+                .is_some_and(|p| p.contains("action=\"append\""))
+        })
+        .expect("Rails creation append")["payload"]
+        .clone();
+    assert_eq!(payload(member.next_text().await), expected);
+    assert_eq!(payload(organizer.next_text().await), expected);
+    assert!(campfire_cable::turbo::session_bound(expected.as_str().unwrap()).is_none());
+    outsider.assert_silent().await;
+    member.assert_silent().await;
+    organizer.assert_silent().await;
+}
+
 #[tokio::test]
 async fn event_cards_and_activity_match_rails_over_real_sockets() {
-    let Some(app) = TestApp::boot().await else {
-        return;
-    };
+    let app = creation_app().await;
     let oracle: Value = serde_json::from_str(include_str!("golden/event-sockets.json")).unwrap();
     let (url, origin) = listen(&app).await;
     let room = app
@@ -80,6 +163,17 @@ async fn event_cards_and_activity_match_rails_over_real_sockets() {
     let mut outsider = connect(&app, &url, &origin, KEVIN).await;
     outsider.reject(&room_channel).await;
     outsider.confirm(&activity).await;
+    // Signing in touches the seeded user; restore the pinned fixture input before rendering.
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET updated_at='2026-02-10 12:00:00' WHERE id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     app.db().write(|tx|{tx.conn().execute_batch("UPDATE sqlite_sequence SET seq=8000000000 WHERE name='events'; UPDATE sqlite_sequence SET seq=9000000000 WHERE name='messages'; UPDATE sqlite_sequence SET seq=7000000000 WHERE name='activity_items';")?;Ok(())}).await.unwrap();
     let event = app
         .db()
@@ -100,8 +194,11 @@ async fn event_cards_and_activity_match_rails_over_real_sockets() {
         .unwrap();
     let id = event.id;
     assert_eq!(id, 8000000001);
-    compare_stage(&mut member, &oracle[0]).await;
-    app.db().write(move|tx|{tx.conn().execute("UPDATE messages SET client_message_id='ws14e-announcement' WHERE id IN (SELECT message_id FROM event_references WHERE event_id=?)",[id])?;Ok(())}).await.unwrap();
+    let created = compare_stage(&mut member, &oracle[0]).await;
+    assert_eq!(
+        payload(organizer.next_text().await),
+        *created.iter().find(|p| p.is_string()).unwrap()
+    );
     assert!(
         app.db()
             .write(move |tx| {
@@ -185,7 +282,11 @@ async fn event_cards_and_activity_match_rails_over_real_sockets() {
         })
         .await
         .unwrap();
-    compare_stage(&mut member, &oracle[5]).await;
+    let created = compare_stage(&mut member, &oracle[5]).await;
+    assert_eq!(
+        payload(organizer.next_text().await),
+        *created.iter().find(|p| p.is_string()).unwrap()
+    );
     let sid = series.id;
     app.db().write(move|tx| {
         tx.conn().execute("UPDATE messages SET client_message_id='ws14e-series' WHERE id IN (SELECT message_id FROM event_references WHERE event_id=?)",[sid])?;

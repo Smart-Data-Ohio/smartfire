@@ -311,13 +311,47 @@ Total named Rails tests inventoried: 221. Includes the Calendar entry model (WS1
 - The three lead rulings are covered by `event_after_commit_rejection_keeps_rails_rows`, `event_announcement_uses_rails_configured_origin`, `event_nil_series_start_matches_rails_failure_without_writes`, `event_create_keeps_commit_after_announcement_failure_and_jobs_reject_atomically`, and `persisted_series_nil_start_returns_rails_public_500_and_writes_nothing`. The nil-start request test covers head/middle/last with this_event/this_and_following/all; body equality uses pinned public/500.html.
 - `controller_time_and_parameter_casts_match_pinned_rails` compares 66 actual Rails private-method/model-cast states for create/update/prefill, including scalar/array/hash shapes, explicit offsets, fixed edit zones, DST gaps/folds, invalid dates, booleans, and Unicode prefill truncation.
 - `full_event_pages_match_pinned_rails_bytes` and `full_event_forms_match_pinned_rails_bytes` compare 92 complete Rails layouts. Event behavior stays pinned at d7c7de92; `reference-tools/events/page-reference.sh` overlays only the approved application layout, people.css and profile_card_controller.js from 2e20b24c, then recompiles assets. No HTML masks are used. These tests do not assert database query bounds, browser behavior, or every named HTTP controller case.
-- `event_cards_and_activity_match_rails_over_real_sockets` compares ten Rails states: singleton/series invitations, title edit, silent RSVP, reminder claim, cancellation, distinct events referencing one message, repeated saves of one event, update-then-destroy, and an internal Meet-link save. It also proves rollback silence, identical public card bytes for two viewers, and outsider stream denial. Full initial announcement Message append remains WS8b renderer integration; this merge retains main's existing messaging renderers.
-- Still deferred: broader Event create/update callback ordering and instance-identity cases in a wider outer transaction, and partial invitation failure among several recipients. Attendance and internal Meet-link record callback coalescing are now covered by the WS14g API differential. Normal scoped Calendar callback vectors and queue atomicity are covered; these broader edge cases are not.
+- `event_cards_and_activity_match_rails_over_real_sockets` compares ten Rails states: singleton/series invitations, title edit, silent RSVP, reminder claim, cancellation, distinct events referencing one message, repeated saves of one event, update-then-destroy, and an internal Meet-link save. It also proves rollback silence, identical public card bytes for two viewers, and outsider stream denial. Both singleton and series creation now include their full initial Message append from Rails, compared byte for byte for two connected members through the real sink. The separate PR174 creation regression also asserts outsider denial.
+- Still deferred: broader Event create/update callback ordering and instance-identity cases in a wider outer transaction. Attendance and internal Meet-link record callback coalescing are now covered by the WS14g API differential. Normal scoped Calendar callback vectors and queue atomicity are covered; these broader edge cases are not.
 - WS13 live stream reader is implemented for currently-live streams. Ended-stream full-layout bytes are covered; further WS13 HTTP/system integration remains for the end-to-end phase. Main now registers WS17's production delivery/policy handler behind the existing durable job seam; the ten named reminder-pusher scenarios remain assigned to WS17 in this inventory. The merge wires Event references into main's shared message reference/finalization hook; actual streamed-message lifecycle coverage remains assigned to WS11/end-to-end.
 
 - Rendering edge differentials additionally cover 0/2/3 going counts (Rails prints goings), 0/2 maybe counts, three single-character description lines, safe description HTML, an invalid Meet URI, viewer-private Calendar copies, ended-stage dots, and an empty index.
 
 - `rescued_not_found_matches_rails_empty_bodies_and_headers` compares 10 actual pinned Rails HTTP states, including malformed/missing IDs, wrong rooms, missing attendance events, and nonmember access with HTML/JSON Accept headers. Both controllers return an empty text/html 404 through their rescue, rather than the generic public error page.
+
+## PR174 review regressions
+
+All three regressions were run against unchanged bbcbe2a0 product code and failed:
+RSVP returned 302 and changed the selected response instead of Rails' 500/no writes;
+creation delivered no announcement append; rejecting recipient two removed recipient one.
+`reference-tools/events/review_regressions.rb` independently probes pinned d7c7de92:
+222 RSVP parameter-shape/branch cases, 30 sibling event-action root shapes and
+three invitation rejection positions. `pr174_attendance_parameter_shapes_match_pinned_rails`
+checks status, exact production 500 body, all persisted event tables and durable
+Calendar/Event job descriptions, series responses, frame IDs and hidden message values.
+`pr174_invitation_failure_preserves_committed_recipients` checks first/middle/last
+failures, surviving invitation rows, retained event/organizer response, no announcement,
+and retained primary SyncEntry callback. Each recipient now commits independently.
+`pr174_event_creation_appends_announcement_to_connected_members` compares the
+full creation frame from `reference-tools/events/sockets.rb`, without HTML masks.
+Raw failing-first summaries on bbcbe2a0 (test/fixture additions only):
+
+```text
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 943 filtered out; finished in 31.07s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 697 filtered out; finished in 0.18s
+```
+
+The first frame read timed out; RSVP logged status 302, `unchanged=false`, and
+responses `[going, declined, going]`; invitation position 1 had `[]` instead of
+`[149087659]`. After fixes the same three regression names passed:
+
+```text
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 943 filtered out; finished in 88.77s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 697 filtered out; finished in 0.33s
+```
+
+These additional regressions resolve the two previously disclosed boundaries;
+the 104 named-scenario deferrals remain unchanged. Calendar consumer signatures remain stable.
 
 ## WS14g public Event APIs (owner ruling continuation)
 

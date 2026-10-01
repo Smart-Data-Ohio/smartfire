@@ -12,6 +12,11 @@ Rails.application.routes.default_url_options[:protocol]='http'
 room=Room.find(ActiveRecord::FixtureSet.identify(:watercooler));david=User.find(ActiveRecord::FixtureSet.identify(:david));jason=User.find(ActiveRecord::FixtureSet.identify(:jason))
 frames=[]
 ActionCable.server.define_singleton_method(:broadcast) { |stream, payload, **options| frames << {stream:,payload:} }
+# Fixture inputs are deterministic before creation, including the creation broadcast.
+Message.before_create do
+  self.client_message_id = 'ws14e-announcement' if markdown_source&.start_with?("Scheduled an event: Socket planning\n")
+  self.client_message_id = 'ws14e-series' if markdown_source&.start_with?("Scheduled an event: Two records\n")
+end
 out=[]
 travel_to Time.utc(2026,3,2,16) do
   Current.user=david
@@ -19,8 +24,9 @@ travel_to Time.utc(2026,3,2,16) do
   Message.connection.execute("UPDATE sqlite_sequence SET seq=9000000000 WHERE name='messages'")
   ActivityItem.connection.execute("UPDATE sqlite_sequence SET seq=7000000000 WHERE name='activity_items'")
   event=room.events.create!(organizer:david,title:'Socket planning',starts_at:Time.utc(2026,3,2,16,10),time_zone:'UTC')
-  message=event.referencing_messages.sole;message.update_column(:client_message_id,'ws14e-announcement')
-  out << {kind:'invitation',frames:frames.select{|f|f[:stream]=="user_#{jason.id}_activity"}}
+  message=event.referencing_messages.sole
+  raise 'announcement fixture id' unless message.client_message_id == 'ws14e-announcement'
+  out << {kind:'invitation',frames:frames.select{|f|f[:stream]=="user_#{jason.id}_activity" || f[:payload].is_a?(String) && f[:payload].include?('action="append"') && f[:payload].include?('message_ws14e-') && !f[:payload].include?('message_ws14e-shared')}}
   frames.clear
   event.update!(title:'Changed <&>')
   out << {kind:'edit',frames:frames.select{|f|f[:payload].is_a?(String)&&f[:payload].include?('event_cards_message_ws14e-announcement')}}
@@ -35,10 +41,10 @@ travel_to Time.utc(2026,3,2,16) do
   out << {kind:'cancel',frames:frames.select{|f|f[:stream]=="user_#{jason.id}_activity"||f[:payload].is_a?(String)&&f[:payload].include?('event_cards_message_ws14e-announcement')}}
   frames.clear
   series=room.events.create!(organizer:david,title:'Two records',starts_at:Time.utc(2026,3,4,9),time_zone:'UTC',recurrence_rule:'weekly',recurrence_until:Date.new(2026,3,11))
-  series.referencing_messages.sole.update_column(:client_message_id,'ws14e-series')
+  raise 'series fixture id' unless series.referencing_messages.sole.client_message_id == 'ws14e-series'
   ids=series.series_events.ids
   room.root_messages.create_with_attachment!(creator:david,client_message_id:'ws14e-shared',markdown_source:ids.map{|id|"http://example.com/rooms/#{room.id}/events/#{id}"}.join("\n"))
-  out << {kind:'series_invitation',frames:frames.select{|f|f[:stream]=="user_#{jason.id}_activity"}}
+  out << {kind:'series_invitation',frames:frames.select{|f|f[:stream]=="user_#{jason.id}_activity" || f[:payload].is_a?(String) && f[:payload].include?('action="append"') && f[:payload].include?('message_ws14e-') && !f[:payload].include?('message_ws14e-shared')}}
   frames.clear
   series.update_with_scope!({title:'Shared changed'},scope:'this_and_following',actor:david)
   out << {kind:'two_records',frames:frames.select{|f|f[:payload].is_a?(String)&&f[:payload].include?('event_cards_message_ws14e')}}
