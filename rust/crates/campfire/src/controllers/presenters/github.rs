@@ -123,12 +123,15 @@ pub fn shared_card(conn: &Connection, pr: &PullRequest, room_id: i64, files: boo
     }
 }
 pub fn message_cards(conn: &Connection, app: &AppState, message: &Message) -> Result<String> {
+    message_cards_in_zone(conn, app, message, &super::page::renderer_time_zone())
+}
+pub fn message_cards_in_zone(conn: &Connection, app: &AppState, message: &Message, zone: &campfire_views::time::Zone) -> Result<String> {
     let cards = PullRequest::for_message(conn, message.id)?
         .iter()
         .map(|pr| shared_card(conn, pr, message.room_id, false))
         .collect::<Result<Vec<_>>>()?;
     let account = Account::first(conn)?;
-    Ok(super::page::render_detached(app, account.as_ref(), |ctx| {
+    Ok(super::page::render_detached_in_zone(app, account.as_ref(), "http://example.org", zone, |ctx| {
         campfire_views::github::cards(
             ctx,
             &message.client_message_id,
@@ -228,7 +231,7 @@ impl super::Presenter<'_> {
             if pr.stale(campfire_db::Timestamp::from_jiff(self.now)) { self.remember_github_refresh(id); }
         }
         let base = self.cache_base_url.as_deref().unwrap_or("http://example.org");
-        super::page::render_detached_at(self.app, None, base, |ctx| thread_header(self.conn, ctx, thread))
+        super::page::render_detached_in_zone(self.app, None, base, &self.render_zone, |ctx| thread_header(self.conn, ctx, thread))
             .map(campfire_views::helpers::raw)
     }
 }

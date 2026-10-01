@@ -78,7 +78,7 @@ impl Preloads {
         for id in &linked {
             let message = messages.iter().find(|m| m.id == *id).or_else(|| records.sources.get(id));
             if let Some(message) = message {
-                let html = crate::controllers::presenters::github::message_cards(p.conn, p.app(), message)?;
+                let html = crate::controllers::presenters::github::message_cards_in_zone(p.conn, p.app(), message, &p.render_zone)?;
                 let stamp = crate::controllers::presenters::github::cache_stamp(p.conn, message)?;
                 let refreshes = crate::integrations::github::pull_requests::PullRequest::for_message(p.conn, *id)?
                     .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(p.now))).map(|pr| pr.id).collect();
