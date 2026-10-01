@@ -45,6 +45,8 @@ pub mod periodic;
 mod messaging;
 pub(crate) mod huddle;
 mod notifications;
+#[cfg(test)]
+pub(crate) mod reminders;
 
 /// The app's job classes and their handlers, which get the [`App`].
 pub type Registry = campfire_jobs::Registry<App>;
@@ -460,3 +462,9 @@ use crate::channels::sink::template_free_broadcast;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod huddle_render_tests;
+#[cfg(test)]
+mod huddle_policy_integration_tests;
+#[cfg(test)]
+mod huddle_neighbor_mention_test;

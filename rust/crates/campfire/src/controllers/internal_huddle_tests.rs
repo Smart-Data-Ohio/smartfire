@@ -94,6 +94,23 @@ pub(super) fn bearer(app: &TestApp, grant: &HuddleGrant, offset: i64) -> String 
 }
 
 #[tokio::test]
+async fn ws13b_review_offset_disconnect_preserves_a_newer_rejoin() {
+    let app = TestApp::boot_with_huddle(config()).await.expect("parity seed required");
+    let grant = grant(&app).await;
+    let oracle: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws13b_review_fixes.json")).unwrap();
+    for case in oracle["boundaries"].as_array().unwrap() {
+        let seen: jiff::Timestamp = case["seen_at"].as_str().unwrap().parse().unwrap();
+        let id = grant.id;
+        app.db().write(move |tx| Ok(tx.conn().execute("UPDATE huddle_grants SET last_seen_at=? WHERE id=?", rusqlite::params![Timestamp::from_jiff(seen), id])?)).await.unwrap();
+        let (status, _) = request(&app, Method::POST, &format!("/internal/huddle/grants/{id}/left"), Some(GATEWAY), None, serde_json::json!({"disconnected_at":"2026-01-01 17:00:00 +0500"})).await;
+        assert_eq!(status, 200);
+        let actual = app.db().read(move |conn| Ok(HuddleGrant::find_by_id(conn, id)?.unwrap().last_seen_at)).await.unwrap();
+        let expected = case["seen_after"].as_str().map(|s| Timestamp::from_jiff(s.parse().unwrap()));
+        assert_eq!(actual, expected, "{}", case["seen_at"]);
+    }
+}
+
+#[tokio::test]
 async fn huddle_gateway_missing_and_wrong_secret_fail_closed() {
     let Some(app) = TestApp::boot_with_huddle(config()).await else {
         return;
@@ -305,6 +322,9 @@ async fn huddle_gateway_request_response_vectors_match_pinned_rails() {
         let revoked = case["revoked"] == true;
         let removed = case["removed"] == true;
         app.db().write(move |tx| {
+            // Assert committed producer intents even when the real worker has
+            // already consumed the row. This audit rolls back with the INSERT.
+            tx.conn().execute_batch("CREATE TABLE ws13_gateway_enqueues (job_class TEXT NOT NULL); CREATE TRIGGER ws13_gateway_enqueued AFTER INSERT ON background_jobs WHEN NEW.job_class LIKE 'Huddle::%' BEGIN INSERT INTO ws13_gateway_enqueues(job_class) VALUES(NEW.job_class); END;")?;
             let session = Session::start(tx, DAVID, None, None)?;
             let membership = Membership::find_by_room_and_user(tx.conn(), ALL_TALK, DAVID)?.unwrap();
             let stamp = tx.now();
@@ -349,7 +369,7 @@ async fn huddle_gateway_request_response_vectors_match_pinned_rails() {
         assert_eq!(response, case["body"], "{}", case["name"]);
         let (seen_after, jobs) = app.db().read(|conn| {
             let grant = HuddleGrant::find_by_id(conn, 17)?.unwrap();
-            let mut query = conn.prepare("SELECT job_class FROM background_jobs WHERE job_class LIKE 'Huddle::%' ORDER BY id")?;
+            let mut query = conn.prepare("SELECT job_class FROM ws13_gateway_enqueues ORDER BY rowid")?;
             let jobs = query.query_map([], |r| r.get::<_, String>(0))?.collect::<std::result::Result<Vec<_>, _>>()?.into_iter().map(|c| match c.as_str() {"Huddle::BroadcastPresenceJob" => "presence", "Huddle::JoinNoticeJob" => "join", "Huddle::CleanupJob" => "cleanup", _ => panic!("unexpected job {c}")}).collect::<Vec<_>>();
             Ok((grant.last_seen_at.map(Timestamp::as_second), jobs))
         }).await.unwrap();
@@ -408,6 +428,9 @@ async fn huddle_sighting_enqueue_rejection_rolls_back_http_request() {
 }
 
 async fn bind_fixture() -> tokio::net::TcpListener {
+    if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
+        return crate::channels::tests::support::bind_listener().await;
+    }
     for port in 52300..=52339 {
         if let Ok(listener) = tokio::net::TcpListener::bind(("127.0.0.1", port)).await {
             return listener;

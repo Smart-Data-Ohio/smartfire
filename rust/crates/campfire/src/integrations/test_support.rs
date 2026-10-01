@@ -237,19 +237,6 @@ impl Drop for FakeServer {
     }
 }
 
-/// Isolated HTTP matrices use distinct ports at the end of their worker's reserved range.
-pub fn fixture_http_base(default_port: u16, offset: u16) -> String {
-    let port = std::env::var("INTEGRATION_TEST_PORT_RANGE").map(|range| {
-        let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
-        let first: u16 = first.parse().unwrap();
-        let last: u16 = last.parse().unwrap();
-        let port = last.checked_sub(offset).expect("fixture port offset outside range");
-        assert!(first <= port, "fixture port offset outside range");
-        port
-    }).unwrap_or(default_port);
-    format!("http://127.0.0.1:{port}")
-}
-
 pub async fn ws15e_listener() -> TcpListener {
     if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
         return crate::test_support::bind_listener().await;
@@ -260,6 +247,28 @@ pub async fn ws15e_listener() -> TcpListener {
         }
     }
     panic!("WS15e test ports are all in use");
+}
+
+/// Reserve an assigned port across exec; Fizzy controllers construct system clients.
+/// Main's held-listener protocol transfers the socket through the child's stdin.
+pub async fn ws15e_http_case(marker: &str, case: &str, test: &str) -> std::process::Output {
+    use std::os::fd::OwnedFd;
+    let listener = crate::test_support::bind_listener().await.into_std().unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    tokio::process::Command::new(std::env::current_exe().unwrap())
+        .args([test, "--exact", "--nocapture", "--test-threads=8"])
+        .env(marker, case)
+        .env("FIZZY_API_BASE_URL", base)
+        .stdin(OwnedFd::from(listener))
+        .output().await.unwrap()
+}
+
+pub fn ws15e_http_case_listener() -> TcpListener {
+    use std::os::fd::AsFd;
+    let listener = std::net::TcpListener::from(std::io::stdin().as_fd().try_clone_to_owned().unwrap());
+    assert_eq!(crate::integrations::fizzy::client::api_base_url(), format!("http://{}", listener.local_addr().unwrap()));
+    listener.set_nonblocking(true).unwrap();
+    TcpListener::from_std(listener).unwrap()
 }
 
 pub async fn ws15e_trickling_server(head: &'static str) -> SocketAddr {

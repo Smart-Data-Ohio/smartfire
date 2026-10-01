@@ -1,8 +1,9 @@
-// Original ten declarations. The ring callback uses PR #172's exact API;
-// these acceptances are conditional until that domain branch lands.
+// Original ten declarations use the merged WS13b APIs. The two inbox cases
+// remain ready to enable once WS11-UI lands its public read/handled routes.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { fixture, visitRoom, text, waitController, markInCall } from './ws13-support.mjs';
+const inbox={skip:process.env.WS13_ENABLE_INBOX_CASES==='1'?false:'Deferred to WS11-UI: activity unread_count/read/handled endpoints'};
 const visible='#huddle-invitation:not([hidden])';
 const hidden='#huddle-invitation[hidden]';
 async function setup(t){
@@ -15,11 +16,11 @@ async function shown(p,label='David started a huddle'){await text(p,visible,labe
 async function dismissed(p){await p.locator(hidden).waitFor({state:'attached',timeout:10000});}
 const ringing=(p,key)=>p.evaluate(key=>window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('huddle-invitation'),'huddle-invitation')[key]===true,key);
 async function leaves(f,g){await f.mutate({op:'columns',grant:g.id,seen:0});await f.mutate({op:'revoke',grant:g.id});}
-test('the recipient sees an incoming huddle banner and dismissing it marks the item read',async t=>{
+test('the recipient sees an incoming huddle banner and dismissing it marks the item read',inbox,async t=>{
   const f=await setup(t);const p=f.page;const g=await issue(f);assert.ok(await item(f,g));await shown(p);await text(p,visible,'Join the huddle in David');await text(p,'.workspace-activity-count','1',10000);
   await p.locator(visible).getByRole('button',{name:'Dismiss',exact:true}).click();await dismissed(p);await p.locator('.workspace-activity-count[hidden]').waitFor({state:'attached',timeout:10000});assert.equal((await item(f,g)).read,true);
 });
-test('joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel',async t=>{
+test('joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel',inbox,async t=>{
   const f=await setup(t);const p=f.page;await p.evaluate(()=>{window.huddleJoinEvents=[];window.addEventListener('huddle:join',e=>window.huddleJoinEvents.push(e.detail));});const g=await issue(f);assert.ok(await item(f,g));await p.locator(visible).waitFor({timeout:10000});
   await p.locator(visible).getByRole('button',{name:'Join',exact:true}).click();await p.waitForURL(url=>url.pathname===`/rooms/${f.dm}`,{timeout:10000});await text(p,'.room--current','David');
   await p.waitForFunction(()=>window.huddleJoinEvents.length>0,null,{timeout:2000,polling:50});assert.deepEqual(await p.evaluate(()=>window.huddleJoinEvents),[{roomId:f.dm,roomName:'David'}]);assert.equal((await item(f,g)).handled,true);

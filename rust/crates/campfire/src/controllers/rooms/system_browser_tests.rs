@@ -51,14 +51,14 @@ async fn run_browser(real_livekit:bool) {
     // System tests load the seven Rails room fixtures; parity's additional
     // populated Voice/Stage/Board rooms must not leak into those interactions.
     let seed_room_ids = ["pets","hq","watercooler","designers","david_and_jason","david_and_kevin","bender_and_kevin"].map(|label|campfire_db::fixtures::identify(label).to_string()).join(",");
-    #[cfg(ws13b_domain_api)]
+
     let quiet = std::sync::Arc::new(std::sync::atomic::AtomicU8::new(0));
-    #[cfg(ws13b_domain_api)]
+
     let rings = queued_ring_adapter(app.clone(),quiet.clone());
     let fixtures = app.clone();
-    #[cfg(ws13b_domain_api)]
+
     let fixture_quiet=quiet.clone();
-    #[cfg(ws13b_domain_api)]
+
     let mutation_quiet=quiet.clone();
     let state = app.clone();
     let mutations = app.clone();
@@ -66,7 +66,7 @@ async fn run_browser(real_livekit:bool) {
         .route("/__ws13__/fixture", post(move |Json(options): Json<serde_json::Value>| {
             let app = fixtures.clone();
             let seed_room_ids = seed_room_ids.clone();
-            #[cfg(ws13b_domain_api)]
+
             fixture_quiet.store(0,std::sync::atomic::Ordering::SeqCst);
             async move {
                 let secrets = app.secrets.clone();
@@ -85,7 +85,7 @@ async fn run_browser(real_livekit:bool) {
                     // against a warm fragment cache. Original seed rooms remain intact.
                     tx.conn().execute_batch("DELETE FROM background_jobs; DELETE FROM activity_items; DELETE FROM huddle_cleanups; DELETE FROM huddle_grants; DELETE FROM streams;  UPDATE users SET inbox_preferences=NULL;")?;
                     tx.conn().execute(&format!("UPDATE rooms SET deleted_at=COALESCE(deleted_at,updated_at),direct_member_key=NULL WHERE id NOT IN ({seed_room_ids})"),[])?;
-                    #[cfg(ws13b_domain_api)]
+
                     tx.conn().execute("UPDATE users SET dnd_enabled=0,dnd_until=NULL",[])?;
                     let room = if options["kind"] == "designers" {
                         Room::find(tx.conn(),654632876)?
@@ -127,7 +127,7 @@ async fn run_browser(real_livekit:bool) {
         }))
         .route("/__ws13__/mutation", post(move |Json(options):Json<serde_json::Value>| {
             let app=mutations.clone();
-            #[cfg(ws13b_domain_api)]
+
             let mutation_quiet=mutation_quiet.clone();
             async move {
                 if options["op"]=="server_remove" {
@@ -143,7 +143,7 @@ async fn run_browser(real_livekit:bool) {
                     let disconnected=app.cable.disconnect(&crate::channels::user_gid(user).to_string(),true);
                     return Json(json!({"disconnected":disconnected}));
                 }
-                #[cfg(ws13b_domain_api)]
+
                 if let Some(quiet)=options["quiet"].as_bool() { mutation_quiet.store(if quiet {2} else {1},std::sync::atomic::Ordering::SeqCst); }
                 let config=campfire_db::models::room_delete::HuddleConfig {api_secret:app.config.huddle.api_secret.clone(),admin_configured:app.config.huddle.admin_configured()};
                 let reply=app.db.write(move |tx| mutation(tx,&options,&config)).await.unwrap();
@@ -232,16 +232,16 @@ async fn run_browser(real_livekit:bool) {
         .arg("--env")
         .arg(format!("WS13_LIVEKIT_GATEWAY_BYPASS={}",if real_livekit {app.config.huddle.public_url.as_deref().unwrap().trim_start_matches("ws://")} else {""}))
         .arg("--env")
-        .arg(format!("WS13_WS13B_API={}",if cfg!(ws13b_domain_api) {"1"}else{"0"}))
+        .arg(format!("WS13_ENABLE_INBOX_CASES={}",std::env::var("WS13_ENABLE_INBOX_CASES").unwrap_or_default()))
         .arg(image)
         .arg("node")
         .args(["--test", "--test-concurrency=8"])
-        .arg(root.join(if real_livekit {"parity/system/ws13-livekit-stage.test.mjs"} else {"parity/system/ws13-stage.test.mjs"}))
+        .arg(root.join(if real_livekit {"parity/system/ws13-livekit-stage.test.mjs"} else if std::env::var_os("WS13_INVITATIONS_ONLY").is_some() {"parity/system/ws13-invitations.cases.mjs"} else {"parity/system/ws13-stage.test.mjs"}))
         .kill_on_drop(true)
         .status()
         .await
         .unwrap();
-    #[cfg(ws13b_domain_api)]
+
     {rings.abort();let _=rings.await;}
     forward.kill().await.unwrap();
     forward.wait().await.unwrap();
@@ -292,7 +292,7 @@ fn mutation(tx:&mut campfire_db::Tx<'_>, options:&serde_json::Value, config:&cam
     }
     if op=="preferences" {
         tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?",params![options["preferences"].to_string(),options["user"].as_i64().unwrap()])?;
-        #[cfg(ws13b_domain_api)]
+
         if let Some(quiet)=options["quiet"].as_bool() {
             // Rails injects RingPolicy.quiet_check. The current WS13b issuance
             // emits inline, so provide that same decision through WS17's
@@ -330,9 +330,8 @@ fn mutation(tx:&mut campfire_db::Tx<'_>, options:&serde_json::Value, config:&cam
 
 /// Rails emits the ring inline. For E2E, drain only that durable effect through
 /// WS13b's current API, with the same optional quiet_check injection as Rails.
-/// The API lives on PR #172; the tracked runner overlays its exact source files
-/// in an isolated checkout and sets this test-only cfg, without merging it.
-#[cfg(ws13b_domain_api)]
+/// Uses the merged main API directly; no source or compile-time overlay.
+
 fn queued_ring_adapter(app:crate::app::App,quiet:std::sync::Arc<std::sync::atomic::AtomicU8>)->tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {

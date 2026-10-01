@@ -28,9 +28,13 @@ pub mod rooms;
 pub mod huddle;
 pub mod huddle_stage;
 pub mod messages;
+pub mod channel_threads;
 pub mod github;
 pub mod integration_health;
 pub mod searches;
+pub mod pins;
+pub mod saved_items;
+pub mod scheduled_messages;
 pub mod events;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
@@ -173,5 +177,6 @@ pub struct Platform {
     pub operating_system: String,
 }
 
+pub mod room_files;
 #[cfg(test)]
 mod card_html_audit;

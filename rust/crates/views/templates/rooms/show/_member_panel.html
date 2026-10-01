@@ -1,0 +1,47 @@
+<aside id="channel-members"
+       class="member-panel"
+       aria-label="Channel members"
+       aria-hidden="true"
+       inert
+       data-member-panel-target="panel"
+       data-members-url="{{ "/rooms/" ~ room.id ~ "/members.json" }}"
+       data-default-avatar-url="{{ ctx.asset("default-avatar.svg") }}"
+       data-card-url-template="/users/USER_ID/card"
+       data-star-url-template="/users/USER_ID/star">
+  <button type="button"
+          class="member-panel__backdrop"
+          aria-hidden="true"
+          tabindex="-1"
+          data-member-panel-target="backdrop"
+          data-action="member-panel#close"
+          hidden></button>
+
+  <section class="member-panel__surface" aria-labelledby="channel-members-title" data-controller="multi-select" data-multi-select-selection-mode-value="true">
+    <header class="member-panel__header">
+      <div class="min-width">
+        <h2 id="channel-members-title">Members</h2>
+        <p data-member-panel-target="summary">Loading…</p>
+      </div>
+
+      <button type="button"
+              class="btn member-panel__close"
+              aria-label="Close members"
+              title="Close members"
+              data-member-panel-target="close"
+              data-action="member-panel#close">
+        {{ h::image_tag(ctx,"remove.svg",h::attrs().size(16).aria_hidden()) }}
+      </button>
+    </header>
+
+    <p class="member-panel__status" role="status" data-member-panel-target="status">Open the member list to load members.</p>
+    <div class="member-panel__content" data-member-panel-target="content"></div>
+    {{ self.multi_select_bar() }}
+  </section>
+
+  <div id="member-row-menu" class="member-row-menu border shadow" role="menu" aria-label="Member actions"
+      hidden data-member-panel-target="rowMenu" data-action="keydown->member-panel#rowMenuKeydown">
+    <button type="button" class="btn member-row-menu__item" role="menuitem"
+        data-member-panel-target="rowMenuStar" data-action="member-panel#toggleRowMenuStar">☆ Star</button>
+    <span class="for-screen-reader" role="status" data-member-panel-target="rowMenuStatus"></span>
+  </div>
+</aside>{{ "\n" }}

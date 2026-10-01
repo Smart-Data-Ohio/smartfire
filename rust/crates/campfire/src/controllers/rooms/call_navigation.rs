@@ -4,7 +4,7 @@ use campfire_db::{CachedStatements, Membership, Room, User};
 use campfire_views::{helpers::IconSource, rooms::navigation::Navigation};
 
 pub(crate) fn model(
-    app: &crate::app::App,
+    app: &crate::app::AppState,
     conn: &campfire_db::Connection,
     room: &Room,
     user: &User,
@@ -41,6 +41,8 @@ pub(crate) fn model(
     )?;
     Ok(Navigation {
         room: campfire_views::rooms::RoomView {
+            header: None,
+            involvement: "mentions".into(),
             id: room.id,
             kind: room_kind(room.room_type),
             name: room.name.clone(),
@@ -67,7 +69,7 @@ pub(crate) fn model(
 }
 
 pub(crate) fn edit_sections(
-    _app: &crate::app::App,
+    _app: &crate::app::AppState,
     conn: &campfire_db::Connection,
     room: &Room,
     user: &User,

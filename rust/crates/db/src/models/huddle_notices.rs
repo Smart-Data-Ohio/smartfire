@@ -35,9 +35,9 @@ impl Job for PushInvitationJob {
     const CLASS: &'static str = "Huddle::PushInvitationJob";
 }
 
-/// WS17 supplies Notifications::Policy and the durable delivery handler. `prepare_push` owns
-/// the huddle subscription scopes and conditional join throttle. A request authorizes no
-/// delivery on its own; this class deliberately has no stub handler.
+/// The registered WS17 handler deserializes this intent, evaluates current policy,
+/// and atomically claims the throttle and enqueues delivery. The legacy `prepare_push`
+/// helper remains for isolated subscription/claim checks and is not part of that path.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PushRequest {
     pub kind: PushKind,
@@ -63,7 +63,7 @@ pub struct PushDelivery {
     pub subscriptions: Vec<crate::PushSubscription>,
 }
 
-/// WS17 calls its policy on this transaction's current records, then passes the decision here.
+/// Isolated scope/claim helper. Production uses WS17's `enqueue_huddle_request` instead.
 /// It must enqueue delivery in this same transaction so a rejected enqueue rolls the throttle
 /// back. Invitation queue calls may carry zero subscriptions; joins never burn an empty window.
 pub fn prepare_push(
@@ -127,18 +127,30 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
     else {
         return Ok(());
     };
-    let Some(joiner) = human(tx.conn(), grant.user_id)? else {
-        return Ok(());
+    let memberships = Membership::for_room(tx.conn(), room.id)?;
+    let viewer_ids = memberships.iter().filter(|m| m.user_id != grant.user_id).map(|m| m.user_id).collect::<Vec<_>>();
+    let viewers = if viewer_ids.is_empty() { Vec::new() } else {
+        query_all(tx.conn(), &format!("SELECT users.* FROM users WHERE users.id IN ({})", vec!["?";viewer_ids.len()].join(",")), rusqlite::params_from_iter(viewer_ids), |row| {
+            let preferences: Option<String> = row.get("inbox_preferences")?;
+            Ok((User::from_row(row)?, invitations_enabled_value(preferences.as_deref())))
+        })?
     };
     let in_call = in_call_user_ids(tx.conn(), room.id, tx.now())?;
     let members = room_users(tx.conn(), room.id)?;
+    // Use the shared member list for the joiner too. Preserve imported/orphan
+    // grant behavior when its user is no longer a room member.
+    let joiner = match members.iter().find(|u|u.id == grant.user_id) {
+        Some(user) => Some(user.clone()),
+        None => User::find_by_id(tx.conn(), grant.user_id)?,
+    };
+    let Some(joiner) = joiner.filter(|u|u.is_active() && !u.is_bot()) else { return Ok(()); };
     let rung: BTreeSet<i64> = query_all(tx.conn(), "SELECT DISTINCT a.user_id FROM activity_items a JOIN huddle_grants g ON g.id=a.source_id WHERE a.source_type='HuddleGrant' AND a.event_type='huddle_started' AND a.handled_at IS NULL AND a.created_at>=? AND g.room_id=?", params![tx.now().ago(SignedDuration::from_secs(60)), room.id], |r| r.get(0))?.into_iter().collect();
     let rejoin: bool = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE id!=? AND room_id=? AND user_id=? AND revoked_at>=? AND last_seen_at>=?)", params![grant.id, room.id, joiner.id, tx.now().ago(SignedDuration::from_secs(5)), tx.now().ago(SignedDuration::from_secs(IN_CALL_WINDOW))], |r| r.get(0))?;
-    for membership in Membership::for_room(tx.conn(), room.id)? {
+    for membership in memberships {
         if membership.user_id == joiner.id {
             continue;
         }
-        let Some(viewer) = human(tx.conn(), membership.user_id)? else {
+        let Some((viewer, invitations_enabled)) = viewers.iter().find(|(u,_)|u.id == membership.user_id && u.is_active() && !u.is_bot()) else {
             continue;
         };
         let viewer_in_call = in_call.contains(&viewer.id);
@@ -157,7 +169,7 @@ pub fn notify_join(tx: &mut Tx<'_>, grant_id: i64) -> Result<()> {
             viewer.id,
             json!({"eventType":"huddle_joined", "roomId":room.id, "roomName":display_name(&room, viewer.id, &viewer.name, &members, true), "roomPath":format!("/rooms/{}",room.id), "joinerId":joiner.id, "joinerName":joiner.name, "inCall":viewer_in_call, "rejoin":rejoin}),
         );
-        if !viewer_in_call && invitations_enabled(tx.conn(), viewer.id)? {
+        if !viewer_in_call && *invitations_enabled {
             enqueue_huddle_push(
                 tx,
                 &PushRequest {
@@ -230,6 +242,9 @@ pub fn call_ended(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
     if others {
         return Ok(());
     }
+    // Rails sends rings synchronously, before this ended frame. Cancel Rust's
+    // pending started frames, including a claimed job retaining old arguments.
+    tx.conn().execute_cached("UPDATE background_jobs SET arguments=json_set(arguments,'$.cancelled',1) WHERE job_class='Notifications::HuddleRingJob' AND json_extract(arguments,'$.invitation.roomId')=? AND json_extract(arguments,'$.invitation.eventType')='huddle_started' AND json_extract(arguments,'$.invitation.state')='unread'", [room.id])?;
     let members = room_users(tx.conn(), room.id)?;
     let ids: Vec<i64> = query_all(
         tx.conn(),
@@ -434,14 +449,14 @@ pub(crate) fn invitations_enabled(conn: &Connection, user: i64) -> Result<bool> 
         )
         .optional()?
         .flatten();
-    let value: serde_json::Value = raw
-        .as_deref()
-        .and_then(|s| serde_json::from_str(s).ok())
-        .unwrap_or_default();
-    Ok(match value.get("huddle_invitations") {
+    Ok(invitations_enabled_value(raw.as_deref()))
+}
+fn invitations_enabled_value(raw: Option<&str>) -> bool {
+    let value: serde_json::Value = raw.and_then(|s| serde_json::from_str(s).ok()).unwrap_or_default();
+    match value.get("huddle_invitations") {
         Some(serde_json::Value::Bool(false)) => false,
         Some(serde_json::Value::Number(number)) => number.as_f64() != Some(0.0),
         Some(serde_json::Value::String(value)) => !matches!(value.as_str(), "0" | "false"),
         _ => true,
-    })
+    }
 }

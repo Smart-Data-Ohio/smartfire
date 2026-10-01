@@ -1,0 +1,2689 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "cases": [
+    {
+      "name": "membership",
+      "operation": "membership",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 1,
+            "identity": "grant:1",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 2,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 3,
+            "identity": "grant:3",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "session",
+      "operation": "session",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9021,
+            "revoked_at": null,
+            "room_id": 9002,
+            "room_name": "campfire-room-1eee3524a28b87bf9e4913a58934404e428f2d991cd9e99c89bf592c7b93dbf3",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 4,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9021,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9002,
+            "room_name": "campfire-room-1eee3524a28b87bf9e4913a58934404e428f2d991cd9e99c89bf592c7b93dbf3",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 4,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 1,
+            "identity": "grant:1",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 2,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 2,
+            "identity": "grant:2",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-1eee3524a28b87bf9e4913a58934404e428f2d991cd9e99c89bf592c7b93dbf3",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ban",
+      "operation": "ban",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 1,
+            "identity": "grant:1",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 2,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 2,
+            "identity": "grant:2",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deactivate",
+      "operation": "deactivate",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9021,
+            "revoked_at": null,
+            "room_id": 9002,
+            "room_name": "campfire-room-1eee3524a28b87bf9e4913a58934404e428f2d991cd9e99c89bf592c7b93dbf3",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 4,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9021,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9002,
+            "room_name": "campfire-room-1eee3524a28b87bf9e4913a58934404e428f2d991cd9e99c89bf592c7b93dbf3",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 4,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 1,
+            "identity": "grant:1",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 2,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 2,
+            "identity": "grant:2",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-1eee3524a28b87bf9e4913a58934404e428f2d991cd9e99c89bf592c7b93dbf3",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 3,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 4,
+            "identity": "grant:4",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "room",
+      "operation": "room",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": null,
+            "identity": null,
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "delete_room",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "voice_membership",
+      "operation": "membership",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Voice",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Voice",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 1,
+            "identity": "grant:1",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 2,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 3,
+            "identity": "grant:3",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "voice_room",
+      "operation": "room",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Voice",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Voice",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": null,
+            "identity": null,
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "delete_room",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "voice_deactivate",
+      "operation": "deactivate",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Voice",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Voice",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 1,
+            "identity": "grant:1",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 2,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": "2026-01-01 12:00:01 UTC",
+            "huddle_grant_id": 3,
+            "identity": "grant:3",
+            "last_attempted_at": null,
+            "next_attempt_at": "2026-01-01 12:01:01 UTC",
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unavailable",
+      "operation": "membership",
+      "input": {
+        "rooms": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9001",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "WS13b 9002",
+            "pins_changed_at": null,
+            "type": "Rooms::Closed",
+            "updated_at": "2026-01-01 12:00:00 UTC"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9021,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9022,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9002,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "sessions": [
+          {
+            "id": 7001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-0",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-1",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 127326141
+          },
+          {
+            "id": 7003,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-fixture-session-2",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "WS13b",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ]
+      },
+      "before": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": []
+      },
+      "after": {
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7001,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7003,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:01 UTC",
+            "membership_id": 9011,
+            "revoked_at": "2026-01-01 12:00:01 UTC",
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 7002,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:01 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "cleanups": [
+          {
+            "id": 1,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": null,
+            "huddle_grant_id": 1,
+            "identity": "grant:1",
+            "last_attempted_at": null,
+            "next_attempt_at": null,
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          },
+          {
+            "id": 2,
+            "attempts": 0,
+            "completed_at": null,
+            "created_at": "2026-01-01 12:00:01 UTC",
+            "enqueued_at": null,
+            "huddle_grant_id": 3,
+            "identity": "grant:3",
+            "last_attempted_at": null,
+            "next_attempt_at": null,
+            "operation": "remove_participant",
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "updated_at": "2026-01-01 12:00:01 UTC"
+          }
+        ]
+      }
+    }
+  ]
+}

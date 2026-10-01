@@ -1,0 +1,131 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "missing": {
+      "status": 404,
+      "error": "User not found",
+      "payload": null
+    },
+    "bot": {
+      "status": 422,
+      "error": "Cannot open a DM with a bot",
+      "payload": null
+    },
+    "inactive": {
+      "status": 422,
+      "error": "Cannot open a DM with an inactive account",
+      "payload": null
+    },
+    "unrelated": {
+      "status": 403,
+      "error": "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability",
+      "payload": null
+    },
+    "owner": {
+      "status": 201,
+      "error": null,
+      "payload": {
+        "message": {
+          "source": "Hello",
+          "creator_id": 394959859,
+          "client_message_id": "ws11-dm-owner"
+        },
+        "room": {
+          "type": "Rooms::Direct",
+          "members": [
+            127326141,
+            394959859
+          ]
+        }
+      }
+    },
+    "replay": {
+      "status": 201,
+      "error": null,
+      "payload": {
+        "message": {
+          "source": "Hello",
+          "creator_id": 394959859,
+          "client_message_id": "ws11-dm-owner"
+        },
+        "room": {
+          "type": "Rooms::Direct",
+          "members": [
+            127326141,
+            394959859
+          ]
+        }
+      }
+    },
+    "budget": {
+      "status": 429,
+      "error": "Daily message budget exceeded (0/day)",
+      "payload": {
+        "error": "Daily message budget exceeded (0/day)",
+        "cap": "messages",
+        "limit": 0,
+        "retry_after": 28799
+      }
+    },
+    "previous_human": {
+      "status": 201,
+      "error": null,
+      "payload": {
+        "message": {
+          "source": "Old inbound",
+          "creator_id": 394959859,
+          "client_message_id": "ws11-dm-prior"
+        },
+        "room": {
+          "type": "Rooms::Direct",
+          "members": [
+            149087659,
+            394959859
+          ]
+        }
+      }
+    },
+    "bad_reply": {
+      "status": 404,
+      "error": "Reply target not found",
+      "payload": null
+    },
+    "invalid_drive": {
+      "status": 422,
+      "error": "Drive attachments includes an invalid file id",
+      "payload": {
+        "errors": {
+          "drive_attachments": [
+            "includes an invalid file id"
+          ]
+        }
+      }
+    },
+    "blank": {
+      "status": 422,
+      "error": "Markdown source can't be blank",
+      "payload": {
+        "errors": {
+          "markdown_source": [
+            "can't be blank"
+          ]
+        }
+      }
+    },
+    "existing_room_scope": {
+      "status": 403,
+      "error": "Forbidden: agent lacks post_messages capability",
+      "payload": null
+    },
+    "scope_bot": {
+      "status": 422,
+      "error": "Cannot open a DM with a bot",
+      "payload": null
+    },
+    "revoked": {
+      "status": 403,
+      "error": "Forbidden: agent lacks post_messages capability",
+      "payload": null
+    }
+  }
+}

@@ -34,5 +34,7 @@ The current WS11-UI report is the specific handoff, rather than an inferred
 assignment from WS13's domain source header.
 
 No inbox route, controller or domain seam is implemented by this continuation.
-After WS11-UI's routes and WS13b land, rerun both full original declarations and
-all ten conditional invitation declarations with the overlay disabled.
+WS13b landed in main at b908ebc2 and the overlay is deleted. Eight invitation
+declarations now run directly on those merged APIs. The lead ruled the two inbox
+declarations nonblocking and deferred to WS11-UI. Enable their retained complete
+assertions with WS13_ENABLE_INBOX_CASES=1 when those three public routes land.

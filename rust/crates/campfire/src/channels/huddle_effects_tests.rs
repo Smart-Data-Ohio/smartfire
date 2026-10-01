@@ -627,3 +627,190 @@ async fn stage_quiet_note_html_matches_rails_bytes() {
         .unwrap();
     assert_eq!(html, vector["html"].as_str().unwrap());
 }
+
+#[tokio::test]
+async fn presence_job_fanout_and_missing_room_match_rails_counts() {
+    use campfire_db::models::huddle_grant::PresenceJob;
+    use campfire_db::{Event, Room, RoomType};
+    use campfire_kit::Crypto;
+    let oracle: Value =
+        serde_json::from_str(include_str!("../huddle/huddle_job_contract_vectors.json")).unwrap();
+    let huddle = crate::huddle::Config::from_lookup(|key| {
+        Some(
+            match key {
+                "LIVEKIT_URL" => "wss://huddle.example.test",
+                "LIVEKIT_INTERNAL_URL" => "ws://livekit.example.test:7880",
+                _ => "ws13b-fixture-value",
+            }
+            .into(),
+        )
+    });
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        SEED_NOW.parse().unwrap(),
+    ));
+    let test = TestApp::boot_with_huddle_and_clock(huddle, clock)
+        .await
+        .expect("WS13b requires the parity seed");
+    let app = test.booted.app.clone();
+    let jason = campfire_db::fixtures::identify("jason");
+    let (grant, jason_token) = app
+        .db
+        .write(move |tx| {
+            let room =
+                Room::create_for(tx, RoomType::Voice, Some("Lounge"), DAVID, &[DAVID, jason])?;
+            tx.conn()
+                .execute("UPDATE rooms SET id=9001 WHERE id=?", [room.id])?;
+            tx.conn().execute(
+                "UPDATE memberships SET room_id=9001 WHERE room_id=?",
+                [room.id],
+            )?;
+            let session = Session::start(tx, DAVID, None, None)?;
+            let membership = Membership::find_by_room_and_user(tx.conn(), 9001, DAVID)?.unwrap();
+            let grant = HuddleGrant::issue(
+                tx,
+                session.id,
+                membership.id,
+                9001,
+                &HuddleConfig {
+                    api_secret: Some("ws13b-fixture-value".into()),
+                    admin_configured: false,
+                },
+            )?;
+            tx.conn().execute(
+                "UPDATE huddle_grants SET last_seen_at=? WHERE id=?",
+                rusqlite::params![tx.now(), grant.id],
+            )?;
+            let peer = Session::start_with(
+                tx,
+                jason,
+                campfire_db::NewSession {
+                    user_agent: None,
+                    ip_address: None,
+                    device_id: None,
+                    two_factor_verified: true,
+                },
+            )?;
+            Ok((grant.id, peer.token))
+        })
+        .await
+        .unwrap();
+    let listener = super::tests::support::bind_listener().await;
+    let addr = listener.local_addr().unwrap();
+    let (stop, stopping) = tokio::sync::oneshot::channel::<()>();
+    let router = test.booted.router.clone();
+    let serving = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async {
+                let _ = stopping.await;
+            })
+            .await
+            .unwrap()
+    });
+    let signed = campfire_kit::RailsCrypto::new(app.secrets.clone()).sign_cookie(
+        "session_token",
+        &jason_token,
+        None,
+    );
+    let cookies = [
+        david_cookie(),
+        format!("session_token={}", campfire_kit::cookies::escape(&signed)),
+    ];
+    let mut sockets = Vec::new();
+    for (user, cookie) in [DAVID, jason].into_iter().zip(cookies) {
+        let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
+        request
+            .headers_mut()
+            .insert("origin", format!("http://{addr}").parse().unwrap());
+        request
+            .headers_mut()
+            .insert("cookie", cookie.parse().unwrap());
+        request.headers_mut().insert(
+            "sec-websocket-protocol",
+            "actioncable-v1-json".parse().unwrap(),
+        );
+        let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+        assert_eq!(next(&mut socket).await["type"], "welcome");
+        let stream = super::broadcasts::Stream::user_rooms(user);
+        subscribe(
+            &mut socket,
+            "Turbo::StreamsChannel",
+            rails_compat::turbo::signed_stream_name(&app.secrets, &stream.streamables()),
+        )
+        .await;
+        if user == DAVID {
+            let room = app.db.read(|conn| Room::find(conn, 9001)).await.unwrap();
+            let stream = super::broadcasts::Stream::room_messages(&room);
+            subscribe(
+                &mut socket,
+                "RoomMessagesChannel",
+                rails_compat::turbo::signed_stream_name(&app.secrets, &stream.streamables()),
+            )
+            .await;
+        }
+        sockets.push(socket);
+    }
+    app.db
+        .write(move |tx| {
+            tx.emit_after_commit(Event::job(&PresenceJob { grant_id: grant }));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut targets = std::collections::BTreeMap::new();
+    let mut streams = std::collections::BTreeMap::<String, i64>::new();
+    let room = app.db.read(|conn| Room::find(conn, 9001)).await.unwrap();
+    for (index, socket) in sockets.iter_mut().enumerate() {
+        for _ in 0..if index == 0 { 2 } else { 1 } {
+            let frame = next(socket).await;
+            let html = frame["message"].as_str().unwrap();
+            assert!(html.contains("1 in voice: David"), "{html}");
+            let target = if html.contains("sidebar_voice_participants") {
+                "sidebar"
+            } else {
+                "header"
+            };
+            *targets.entry(format!("{index}:{target}")).or_insert(0) += 1;
+            let stream = if target == "header" {
+                super::broadcasts::Stream::room_messages(&room)
+            } else {
+                super::broadcasts::Stream::user_rooms(if index == 0 { DAVID } else { jason })
+            };
+            *streams.entry(stream.streamables().join(":")).or_insert(0) += 1;
+        }
+    }
+    assert_eq!(
+        targets,
+        std::collections::BTreeMap::from([
+            ("0:sidebar".into(), 1),
+            ("0:header".into(), 1),
+            ("1:sidebar".into(), 1)
+        ])
+    );
+    assert_eq!(serde_json::json!(streams), oracle["presence"]["counts"]);
+    app.db
+        .write(move |tx| {
+            tx.emit_after_commit(Event::job(&PresenceJob { grant_id: -1 }));
+            tx.conn()
+                .execute("UPDATE huddle_grants SET room_id=-1 WHERE id=?", [grant])?;
+            tx.emit_after_commit(Event::job(&PresenceJob { grant_id: grant }));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    assert_eq!(oracle["presence"]["missing"], serde_json::json!([]));
+    for socket in &mut sockets {
+        assert!(
+            tokio::time::timeout(Duration::from_millis(150), socket.next())
+                .await
+                .is_err(),
+            "missing room/grant broadcast"
+        );
+        socket.close(None).await.unwrap();
+    }
+    let _ = stop.send(());
+    tokio::time::timeout(Duration::from_secs(3), serving)
+        .await
+        .unwrap()
+        .unwrap();
+}

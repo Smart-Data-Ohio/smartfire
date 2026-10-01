@@ -14,6 +14,39 @@ use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
+/// Failure artifacts are output, never fixture inputs. Create their parent and a private
+/// directory even when neither TMPDIR nor any previous target directory exists.
+pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
+    let byte = actual
+        .bytes()
+        .zip(expected.bytes())
+        .position(|(a, b)| a != b)
+        .unwrap_or(actual.len().min(expected.len()));
+    let parent = Path::new(ROOT).join("target/ws8bm-diffs");
+    let directory = std::fs::create_dir_all(&parent).ok().and_then(|_| {
+        tempfile::Builder::new()
+            .prefix("difference-")
+            .tempdir_in(&parent)
+            .ok()
+    });
+    if let Some(directory) = directory {
+        let path = directory.keep();
+        let _ = std::fs::write(path.join("actual.txt"), actual);
+        let _ = std::fs::write(path.join("expected.txt"), expected);
+        panic!(
+            "{label}: byte {byte}; actual {} bytes, Rails {} bytes; {}",
+            actual.len(),
+            expected.len(),
+            path.display()
+        );
+    }
+    panic!(
+        "{label}: byte {byte}; actual {} bytes, Rails {} bytes",
+        actual.len(),
+        expected.len()
+    );
+}
+
 pub const DAVID: i64 = 127326141;
 pub const JASON: i64 = 149087659;
 pub const KEVIN: i64 = 712064548;
@@ -67,7 +100,10 @@ fn find_seed(root: &Path, name: &str, ci: bool) -> Option<PathBuf> {
     if dir.join("db/production.sqlite3").is_file() {
         return Some(dir);
     }
-    assert!(!ci, "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests");
+    assert!(
+        !ci,
+        "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests"
+    );
     eprintln!("skipping locally: parity/.seed/{name} isn't built (parity/bin/seed build {name})");
     None
 }
@@ -118,42 +154,65 @@ pub fn david_cookie() -> String {
         .to_string()
 }
 
-/// The production app and router, with an optional runner for statement-level tests.
-/// Ordinary tests retain the complete runner and its normal concurrency.
-pub struct TestBooted {
-    pub app: crate::app::App,
-    pub router: axum::Router,
-    pub jobs: TestJobs,
-}
-pub struct TestJobs(Option<crate::jobs::Runner>);
-impl TestJobs {
-    pub async fn stop(&mut self, grace: std::time::Duration) {
-        if let Some(runner) = &mut self.0 { runner.stop(grace).await; }
-    }
-
-    pub async fn shutdown(self, grace: std::time::Duration) {
-        if let Some(runner) = self.0 { runner.shutdown(grace).await; }
-    }
-}
-impl From<Booted> for TestBooted {
-    fn from(booted: Booted) -> Self {
-        Self {app: booted.app, router: booted.router, jobs: TestJobs(Some(booted.jobs))}
-    }
-}
-
 pub struct TestApp {
-    pub booted: TestBooted,
+    pub booted: Booted,
     _dir: tempfile::TempDir,
 }
 
 impl TestApp {
+    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_with_huddle_services(clock, crate::integrations::net::Network::system(), settings, huddle).await
+    }
+    pub async fn stop_jobs(&mut self) {
+        self.booted.jobs.stop(std::time::Duration::from_secs(2)).await;
+    }
+
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
-        Self::boot_with_huddle(crate::huddle::Config::default()).await
+        Self::boot_with_clock(seed_clock()).await
+    }
+
+    pub async fn boot_with_huddle(huddle: crate::huddle::Config) -> Option<TestApp> {
+        Self::boot_with_huddle_and_clock(huddle, seed_clock()).await
+    }
+
+    pub async fn boot_with_huddle_and_clock(
+        huddle: crate::huddle::Config,
+        clock: campfire_kit::SharedClock,
+    ) -> Option<TestApp> {
+        Self::boot_with_huddle_services(
+            clock,
+            crate::integrations::net::Network::system(),
+            &[],
+            huddle,
+        )
+        .await
+    }
+
+    /// Byte goldens generated with the reference's --freeze clock.
+    pub async fn boot_frozen() -> Option<TestApp> {
+        Self::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
+            SEED_NOW.parse().unwrap(),
+        )))
+        .await
+    }
+
+    /// Test-local configuration; no process environment changes or pre-existing input files.
+    pub async fn boot_frozen_with_env(values: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_with_clock_and_env(
+            std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+            values,
+        )
+        .await
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
-        Self::boot_with_clients("default", seed_clock(), network, &[], None, crate::huddle::Config::default()).await
+        Self::boot_with_clients("default", seed_clock(), network, &[], None).await
+    }
+
+    /// A caller-owned clock for exact request/row differentials; normal seeded tests keep ticking.
+    pub async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_clock(clock).await
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
@@ -164,27 +223,52 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), extra, None, crate::huddle::Config::default()).await
+        Self::boot_with_clients(
+            "default",
+            clock,
+            crate::integrations::net::Network::system(),
+            extra,
+            None,
+        )
+        .await
     }
 
     pub async fn boot_with_github_app(
         github_app: crate::integrations::github::client::AppClient,
     ) -> Option<TestApp> {
-        Self::boot_with_clients("default", seed_clock(), crate::integrations::net::Network::system(), &[], Some(github_app), crate::huddle::Config::default()).await
+        Self::boot_with_clients(
+            "default",
+            seed_clock(),
+            crate::integrations::net::Network::system(),
+            &[],
+            Some(github_app),
+        )
+        .await
     }
 
+    pub async fn boot_seed_with_env(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        vars: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_clients(
+            name,
+            clock,
+            crate::integrations::net::Network::system(),
+            vars,
+            None,
+        )
+        .await
+    }
     pub async fn boot_seed(name: &str) -> Option<TestApp> {
-        Self::boot_with_clients(name, seed_clock(), crate::integrations::net::Network::system(), &[], None, crate::huddle::Config::default()).await
-    }
-
-    pub async fn boot_with_huddle(huddle: crate::huddle::Config) -> Option<TestApp> {
-        Self::boot_with_huddle_and_clock(huddle, seed_clock()).await
-    }
-    pub async fn boot_with_huddle_and_clock(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock) -> Option<TestApp> {
-        Self::boot_with_settings(huddle, clock, &[]).await
-    }
-    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), settings, None, huddle).await
+        Self::boot_with_clients(
+            name,
+            seed_clock(),
+            crate::integrations::net::Network::system(),
+            &[],
+            None,
+        )
+        .await
     }
 
     async fn boot_with_clients(
@@ -193,7 +277,34 @@ impl TestApp {
         network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
         github_app: Option<crate::integrations::github::client::AppClient>,
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services(
+            name,
+            clock,
+            network,
+            extra,
+            crate::huddle::Config::default(),
+            github_app,
+        )
+        .await
+    }
+
+    async fn boot_with_huddle_services(
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None).await
+    }
+
+    async fn boot_seed_with_huddle_services(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+        huddle: crate::huddle::Config,
+        github_app: Option<crate::integrations::github::client::AppClient>,
     ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
@@ -211,27 +322,34 @@ impl TestApp {
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
             "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
-            _ => extra.iter().find(|(key,_)|*key==name).map(|(_,value)|(*value).to_string()),
+            _ => extra
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (*value).into()),
         })
         .unwrap();
         config.huddle = huddle;
-        let intervals = crate::jobs::periodic::Intervals { periodic: None, huddle: None };
+        let intervals = crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        };
         let booted = match github_app {
             Some(client) => crate::app::boot_with_all_services(
-                config, clock, crate::integrations::github::client::ReadClient::from_env(),
-                client, crate::integrations::net::Network::system(), network, intervals,
-            ).await.unwrap(),
-            None => boot_with_services(config, clock, network, intervals).await.unwrap(),
+                config,
+                clock,
+                crate::integrations::github::client::ReadClient::from_env(),
+                client,
+                crate::integrations::net::Network::system(),
+                network,
+                intervals,
+            )
+            .await
+            .unwrap(),
+            None => boot_with_services(config, clock, network, intervals)
+                .await
+                .unwrap(),
         };
-        Some(TestApp { booted: booted.into(), _dir: dir })
-
-    }
-
-    /// Observe only a controller's SQL, without the independent queue's polling writes.
-    pub async fn stop_jobs(&mut self) {
-        if let Some(runner) = self.booted.jobs.0.take() {
-            runner.shutdown(std::time::Duration::from_secs(2)).await;
-        }
+        Some(TestApp { booted, _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {
@@ -394,6 +512,36 @@ pub fn encode(value: &str) -> String {
     percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string()
 }
 
+tokio::task_local! {
+    static FIXED_RENDER_SECRETS: ();
+}
+
+/// Fix only rendering entropy, before the real router/controller runs. No HTML inputs
+/// or response rewrites; authentication and forgery verification keep their real tokens.
+pub async fn with_fixed_render_secrets<T>(request: impl std::future::Future<Output = T>) -> T {
+    FIXED_RENDER_SECRETS.scope((), request).await
+}
+
+pub(super) fn fixed_render_secrets()
+-> Option<campfire_views::helpers::request_forgery::RequestSecrets> {
+    use campfire_views::helpers::request_forgery::{AuthenticityTokens, RequestSecrets};
+    struct Tokens;
+    impl AuthenticityTokens for Tokens {
+        fn global(&self) -> String {
+            "GLOBAL".into()
+        }
+        fn for_form(&self, action: &str, method: &str) -> String {
+            format!("{method}:{action}")
+        }
+    }
+    FIXED_RENDER_SECRETS
+        .try_with(|()| RequestSecrets {
+            tokens: Box::new(Tokens),
+            csp_nonce: Some("NONCE".into()),
+        })
+        .ok()
+}
+
 impl Browser<'_> {
     /// Rails-compatible sudo session for controller tests; no confirmation endpoint shortcut.
     pub(crate) async fn grant_sudo(&mut self) {
@@ -401,15 +549,25 @@ impl Browser<'_> {
         self.authenticity_token().await;
         let key = campfire_kit::session::SESSION_KEY;
         let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
-        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
-        let mut session = crypto.decrypt_cookie(key, &raw, jiff::Timestamp::now()).unwrap();
-        session["sudo_verified_at"] = serde_json::json!(self.app.booted.app.clock.now().as_second());
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap())
+            .decode_utf8()
+            .unwrap();
+        let mut session = crypto
+            .decrypt_cookie(key, &raw, jiff::Timestamp::now())
+            .unwrap();
+        session["sudo_verified_at"] =
+            serde_json::json!(self.app.booted.app.clock.now().as_second());
         let encrypted = crypto.encrypt_cookie(key, &session, None);
-        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&encrypted));
+        self.cookies
+            .insert(key.into(), campfire_kit::cookies::escape(&encrypted));
     }
 
     pub fn cookie_header(&self) -> String {
-        self.cookies.iter().map(|(k,v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")
+        self.cookies
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("; ")
     }
 
     pub fn absorb_cookie_header(&mut self, header: &str) {
@@ -435,10 +593,14 @@ impl Browser<'_> {
     }
 
     pub async fn send(&mut self, req: Req) -> Reply {
-        let mut request = Request::builder()
-            .method(req.method.clone())
-            .uri(&req.path)
-            .header(header::HOST, "campfire.test");
+        let mut request = Request::builder().method(req.method.clone()).uri(&req.path);
+        if !req
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("host"))
+        {
+            request = request.header(header::HOST, "campfire.test");
+        }
         if !self.cookies.is_empty() {
             let cookie = self
                 .cookies

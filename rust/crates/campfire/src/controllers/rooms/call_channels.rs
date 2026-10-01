@@ -92,7 +92,7 @@ pub async fn new(c: &mut Ctx) -> Result {
                 }
                 .into(),
             ),
-        },
+        ..Default::default()},
         stage: stage(c),
         can_administer: true,
         current_user_id: require_current_user(c)?.id,
@@ -167,7 +167,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 .await
                 .map_err(db_error)?;
             let form = CallForm {
-                room: FormRoom { id: None, name },
+                room: FormRoom { id: None, name, ..Default::default()},
                 stage: stage(c),
                 can_administer: true,
                 current_user_id: creator,
@@ -258,7 +258,7 @@ async fn form(c: &Ctx, room: Room, errors: Vec<String>) -> Result<CallForm> {
                 room: FormRoom {
                     id: Some(room.id),
                     name: room.name.clone(),
-                },
+                ..Default::default()},
                 stage: room.stage(),
                 can_administer: current.can_administer(Some(room.creator_id), false),
                 current_user_id: current.id,

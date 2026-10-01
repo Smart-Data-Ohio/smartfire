@@ -1,0 +1,393 @@
+{
+  "reference": "d7c7de92",
+  "headers": [
+    {
+      "name": "channel",
+      "id": 486777696,
+      "param_key": "rooms_closed",
+      "direct": false,
+      "kind_label": "Channel",
+      "icon_name": null,
+      "room_name": "All Talk",
+      "viewer_name": "David",
+      "display_name": "All Talk",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">All Talk</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "emoji",
+      "id": 486777696,
+      "param_key": "rooms_closed",
+      "direct": false,
+      "kind_label": "Channel",
+      "icon_name": "fire",
+      "room_name": "All Talk",
+      "viewer_name": "David",
+      "display_name": "All Talk",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span role=\"img\" aria-label=\"Fire\" class=\"icon-avatar icon-avatar--emoji room-header__icon\" style=\"font-size: 32px\">🔥</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">All Talk</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "brand",
+      "id": 486777696,
+      "param_key": "rooms_closed",
+      "direct": false,
+      "kind_label": "Channel",
+      "icon_name": "github",
+      "room_name": "All Talk",
+      "viewer_name": "David",
+      "display_name": "All Talk",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <img alt=\"GitHub\" class=\"icon-avatar icon-avatar--brand room-header__icon\" src=\"/assets/icons/brands/github-07b84d6c.svg\" width=\"32\" height=\"32\" />\n\n    <span class=\"room-header__name overflow-ellipsis\">All Talk</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "unknown_icon",
+      "id": 486777696,
+      "param_key": "rooms_closed",
+      "direct": false,
+      "kind_label": "Channel",
+      "icon_name": "missing-icon",
+      "room_name": "All Talk",
+      "viewer_name": "David",
+      "display_name": "All Talk",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">All Talk</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "voice",
+      "id": 699448333,
+      "param_key": "rooms_voice",
+      "direct": false,
+      "kind_label": "Voice channel",
+      "icon_name": null,
+      "room_name": "Voice <&>",
+      "viewer_name": "David",
+      "display_name": "Voice <&>",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_voice_699448333\">\n  <span class=\"room-header__kind\">Voice channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Voice &lt;&amp;&gt;</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "stage",
+      "id": 699448334,
+      "param_key": "rooms_stage",
+      "direct": false,
+      "kind_label": "Stage channel",
+      "icon_name": null,
+      "room_name": "Stage <&>",
+      "viewer_name": "David",
+      "display_name": "Stage <&>",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_stage_699448334\">\n  <span class=\"room-header__kind\">Stage channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Stage &lt;&amp;&gt;</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "board",
+      "id": 699448335,
+      "param_key": "rooms_board",
+      "direct": false,
+      "kind_label": "Board",
+      "icon_name": null,
+      "room_name": "Board <&>",
+      "viewer_name": "David",
+      "display_name": "Board <&>",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_board_699448335\">\n  <span class=\"room-header__kind\">Board</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Board &lt;&amp;&gt;</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "pair_for_david",
+      "id": 186869642,
+      "param_key": "rooms_direct",
+      "direct": true,
+      "kind_label": "Direct message",
+      "icon_name": null,
+      "room_name": null,
+      "viewer_name": "David",
+      "display_name": "Jason",
+      "other_names": [
+        "Jason"
+      ],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_186869642\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Jason</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "pair_for_jason",
+      "id": 186869642,
+      "param_key": "rooms_direct",
+      "direct": true,
+      "kind_label": "Direct message",
+      "icon_name": null,
+      "room_name": null,
+      "viewer_name": "Jason",
+      "display_name": "David",
+      "other_names": [
+        "David"
+      ],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_186869642\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "solo",
+      "id": 699448336,
+      "param_key": "rooms_direct",
+      "direct": true,
+      "kind_label": "Direct message",
+      "icon_name": null,
+      "room_name": null,
+      "viewer_name": "David",
+      "display_name": "David",
+      "other_names": [],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448336\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "group_for_david",
+      "id": 699448337,
+      "param_key": "rooms_direct",
+      "direct": true,
+      "kind_label": "Direct message",
+      "icon_name": null,
+      "room_name": null,
+      "viewer_name": "David",
+      "display_name": "Jason, Kevin",
+      "other_names": [
+        "Jason",
+        "Kevin"
+      ],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448337\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Jason, Kevin</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "group_for_kevin",
+      "id": 699448337,
+      "param_key": "rooms_direct",
+      "direct": true,
+      "kind_label": "Direct message",
+      "icon_name": null,
+      "room_name": null,
+      "viewer_name": "Kevin",
+      "display_name": "David, Jason",
+      "other_names": [
+        "David",
+        "Jason"
+      ],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448337\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Jason</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "group_ten",
+      "id": 699448338,
+      "param_key": "rooms_direct",
+      "direct": true,
+      "kind_label": "Direct message",
+      "icon_name": null,
+      "room_name": null,
+      "viewer_name": "David",
+      "display_name": "Jason, Kevin, Person +6",
+      "other_names": [
+        "Jason",
+        "Kevin",
+        "Person 0",
+        "Person 1",
+        "Person 2",
+        "Person 3",
+        "Person 4",
+        "Person 5",
+        "Person 6"
+      ],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448338\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Jason, Kevin, Person +6</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "group_named",
+      "id": 699448337,
+      "param_key": "rooms_direct",
+      "direct": true,
+      "kind_label": "Direct message",
+      "icon_name": null,
+      "room_name": "Weekend <&>",
+      "viewer_name": "Kevin",
+      "display_name": "Weekend <&>",
+      "other_names": [
+        "David",
+        "Jason"
+      ],
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448337\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Weekend &lt;&amp;&gt;</span>\n  </h1>\n</div>\n"
+    }
+  ],
+  "setup": {
+    "group_id": 699448329
+  },
+  "operations": [
+    {
+      "name": "rename",
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Friday &lt;&amp;&gt;\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Friday &lt;&amp;&gt;\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Friday &lt;&amp;&gt;</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Friday &lt;&amp;&gt;\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Friday &lt;&amp;&gt;\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Friday &lt;&amp;&gt;</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83NzM1MjM5NTM:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Friday &lt;&amp;&gt;\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Friday &lt;&amp;&gt;\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83NzM1MjM5NTM:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Friday &lt;&amp;&gt;</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Friday &lt;&amp;&gt;\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Friday &lt;&amp;&gt;\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Friday &lt;&amp;&gt;</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "name": "clear_name",
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, JZ, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, JZ, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Jason, JZ, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, JZ, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, JZ, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, JZ, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83NzM1MjM5NTM:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83NzM1MjM5NTM:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Jason, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason, JZ\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason, JZ\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Jason, JZ</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "name": "leave",
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83NzM1MjM5NTM:rooms",
+          "html": "<turbo-stream action=\"remove\" target=\"list_rooms_direct_699448329\"></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Jason, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Jason</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "name": "add",
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, JZ, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, JZ, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Jason, JZ, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, JZ, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, JZ, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, JZ, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_direct_699448329\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason, JZ\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason, JZ\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Jason, JZ</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83NzM1MjM5NTM:rooms",
+          "html": "<turbo-stream action=\"prepend\" target=\"direct_rooms\"><template><div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason, Kevin\n      </span>\n    </span>\n</a></div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83NzM1MjM5NTM:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_direct_699448329\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_699448329\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Jason, Kevin</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        }
+      ]
+    }
+  ],
+  "guards": {
+    "anonymous": 302,
+    "bot": 403,
+    "outsider": 302,
+    "outsider_location": "http://campfire.test/"
+  },
+  "labels": [
+    {
+      "names": [
+        "One Two"
+      ],
+      "label": "One Two"
+    },
+    {
+      "names": [
+        "Line\u000bBreak"
+      ],
+      "label": "Line"
+    },
+    {
+      "names": [
+        "One Two",
+        "Line\u000bBreak"
+      ],
+      "label": "Line, One Two"
+    },
+    {
+      "names": [
+        "\tOne Two",
+        "Three\fFour"
+      ],
+      "label": "One, Three"
+    }
+  ]
+}

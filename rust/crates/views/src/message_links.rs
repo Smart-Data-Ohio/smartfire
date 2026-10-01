@@ -1,63 +1,89 @@
-//! Session-independent quote children of the shared message renderer.
+//! Viewer-authorized quote frame and viewer-neutral card facts supplied by controllers.
 use crate::{ViewContext, helpers as h};
 use askama::Template;
-
-// The parent renderer supplies request/default origins after these tokenless children
-// are built. Only the generated href prefix is replaced, never escaped source text.
-pub const ORIGIN_SLOT: &str = "__campfire_quote_origin__";
-
-pub fn lazy(reference_id: i64, room_id: i64) -> String {
-    h::content_tag(
-        "turbo-frame",
-        h::attrs()
-            .attr("loading", "lazy")
-            .class("message-link-frame")
-            .id(format!(
-                "message_link_card_message_reference_{reference_id}"
-            ))
-            .attr(
-                "src",
-                format!("/rooms/{room_id}/message_links/{reference_id}"),
-            ),
-        "",
-    )
-    .0
-}
-#[derive(Template)]
-#[template(path = "messages/message_links/_card.html")]
-pub struct Card<'a> {
-    pub ctx: &'a ViewContext<'a>,
-    pub author: &'a str,
-    pub room_label: &'a str,
+#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
+pub struct Card {
+    pub author: String,
+    pub room_label: String,
+    pub excerpt: String,
     pub created_at: jiff::Timestamp,
-    pub plain_text: &'a str,
-    pub path: &'a str,
+    pub message_path: String,
 }
-impl Card<'_> {
-    /// The ERB child partial retains its final newline inside the cards container.
-    pub fn html(&self) -> String {
-        format!("{}\n", self.render().expect("quote card renders"))
-    }
+/// WS8bm2 root integration: only same-room sources carry inline facts. Cross-room
+/// references stay lazy and the existing frame endpoint performs viewer authorization.
+#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
+pub struct Reference {
+    pub id: i64,
+    pub card: Option<Card>,
+}
 
-    fn time(&self) -> h::Html {
-        h::local_datetime_tag(
-            &crate::time::Zone::utc(),
+pub fn cards(ctx: &ViewContext, message: &crate::messages::MessageView) -> h::Html {
+    let Some(references) = &message.components.quote_references else {
+        return crate::messages::cards(message, "message_link_cards", "message-link-cards", 0,
+            &message.components.message_link_cards);
+    };
+    let mut bodies = Vec::new();
+    for reference in references {
+        let content = if let Some(card) = &reference.card {
+            CardPartial { ctx, card }.render().expect("quote renders")
+        } else {
+            h::turbo_frame_tag(&format!("message_link_card_message_reference_{}", reference.id),
+                Some(&format!("/rooms/{}/message_links/{}", message.room_id, reference.id)),
+                None, h::attrs().attr("loading", "lazy").class("message-link-frame"), "").0
+        };
+        bodies.push(format!("\n    {content}\n"));
+    }
+    crate::messages::cards(message, "message_link_cards", "message-link-cards", 0, &bodies)
+}
+impl Card {
+    pub fn datetime(&self, ctx: &ViewContext) -> h::Html {
+        crate::time::local_datetime_tag(
+            &ctx.time_zone,
             self.created_at,
             "time",
             h::attrs().class("message-quote__time"),
             "",
         )
     }
-    fn excerpt(&self) -> String {
-        h::truncate(self.plain_text, 200, "...")
-    }
-    fn jump(&self) -> h::Html {
-        h::link_to(
-            &self.ctx.url(self.path),
-            h::attrs()
-                .class("message-quote__jump")
-                .data("turbo_frame", "_top"),
-            "Jump to message",
+}
+#[derive(Template)]
+#[template(path = "messages/message_links/_card.html")]
+pub struct CardPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub card: &'a Card,
+}
+#[derive(Template)]
+#[template(path = "rooms/message_links/show.html")]
+pub struct Frame<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub reference_id: i64,
+    pub card: Option<&'a Card>,
+}
+impl Frame<'_> {
+    pub fn html(&self) -> h::Html {
+        let content = if let Some(card) = self.card {
+            CardPartial {
+                ctx: self.ctx,
+                card,
+            }
+            .render()
+            .expect("quote card renders")
+        } else {
+            "<span class=\"message-quote-private\">Message in a private room</span>\n".into()
+        };
+        h::turbo_frame_tag(
+            &format!("message_link_card_message_reference_{}", self.reference_id),
+            None,
+            None,
+            h::attrs().class("message-link-frame"),
+            &format!("\n    {content}\n"),
         )
     }
 }
+
+/// Origin placeholder used only by detached fixture renders.
+pub const ORIGIN_SLOT: &str = "http://campfire.test";
+pub fn lazy(id: i64, room_id: i64) -> String {
+    h::turbo_frame_tag(&format!("message_link_card_message_reference_{id}"),Some(&format!("/rooms/{room_id}/message_links/{id}")),None,h::attrs().attr("loading","lazy").class("message-link-frame"),"").0
+}
+impl Card { pub fn html(&self,ctx:&ViewContext) -> String {CardPartial{ctx,card:self}.render().expect("quote renders")} }

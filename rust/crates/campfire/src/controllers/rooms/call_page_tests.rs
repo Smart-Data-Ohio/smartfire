@@ -140,6 +140,7 @@ async fn complete_voice_and_stage_form_pages_match_fourteen_rails_renders() {
     for case in vectors["cases"].as_array().unwrap() {
         let input = &case["input"];
         let actor_id = input["actor_id"].as_i64().unwrap();
+        let now = test.booted.app.clock.now();
         let (user, mut preferences, account, has_logo, last_room, icons) = test
             .db()
             .read(move |conn| {
@@ -154,7 +155,7 @@ async fn complete_voice_and_stage_form_pages_match_fourteen_rails_renders() {
                     .unwrap_or(false);
                 Ok((
                     campfire_db::User::find(conn, actor_id)?,
-                    view_context::user_preferences(conn, actor_id)?,
+                    view_context::user_preferences(conn, actor_id, now)?,
                     account,
                     has_logo,
                     Room::original_for_user(conn, actor_id)?.map(|r| r.id),
@@ -184,7 +185,7 @@ async fn complete_voice_and_stage_form_pages_match_fourteen_rails_renders() {
             room: FormRoom {
                 id: input["id"].as_i64(),
                 name: input["name"].as_str().map(str::to_string),
-            },
+            ..Default::default()},
             stage: input["stage"].as_bool().unwrap(),
             can_administer: input["can_administer"].as_bool().unwrap(),
             current_user_id: actor_id,

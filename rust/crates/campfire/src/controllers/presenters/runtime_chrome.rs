@@ -1,16 +1,8 @@
 //! Read-only adapters for layout chrome. These never call notification policy,
 //! decrypt Google tokens, refresh calendars, or send anything to a transport.
 use campfire_db::{CachedStatements, Connection, Timestamp};
-use campfire_views::layouts::{GooglePicker, RecentSearch, UserPreferences};
+use campfire_views::layouts::{RecentSearch, UserPreferences};
 use rusqlite::OptionalExtension;
-pub(crate) fn picker(mut get: impl FnMut(&str) -> Option<String>) -> Option<GooglePicker> {
-    let mut present = |name| get(name).filter(|s| !campfire_richtext::ruby::is_blank(s));
-    Some(GooglePicker {
-        client_id: present("GOOGLE_CLIENT_ID")?,
-        api_key: present("GOOGLE_PICKER_API_KEY")?,
-        project_number: present("GOOGLE_CLOUD_PROJECT_NUMBER")?,
-    })
-}
 pub(crate) fn recent_searches(
     conn: &Connection,
     user_id: Option<i64>,

@@ -17,7 +17,7 @@ use campfire_views::users::{
 use campfire_views::Platform;
 use rails_compat::Secrets;
 use rails_compat::global_id::{self, GlobalId};
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 
 use super::{attachments, epoch_string, to_fs_number, user_summary};
 
@@ -91,11 +91,7 @@ pub fn mention_user(secrets: &Secrets, user: &User) -> MentionUser {
 
 /// `room_display_name(room, for_user:)`: a direct room is named after its other members.
 pub fn room_display_name(conn: &Connection, room: &Room, for_user: &User) -> campfire_db::Result<String> {
-    if room.direct() {
-        Ok(room.direct_display_name(conn, Some(for_user), None)?.unwrap_or_default())
-    } else {
-        Ok(room.name.clone().unwrap_or_default())
-    }
+    if room.direct() {room.direct_display_name(conn,Some(for_user),None).map(Option::unwrap_or_default)} else {Ok(room.name.clone().unwrap_or_default())}
 }
 
 /// `Room.model_name.param_key` for the room's STI class.
@@ -135,61 +131,67 @@ pub const DIRECT_PLACEHOLDERS: i64 = 20;
 
 #[derive(Debug, Clone)]
 pub struct Sidebar {
+    pub favorite_memberships: Vec<campfire_views::users::SidebarItem>,
+    pub categories: Vec<campfire_views::users::SidebarCategory>,
     pub direct_memberships: Vec<SidebarDirectItem>,
     pub other_memberships: Vec<SidebarRoom>,
+    pub voice_memberships: Vec<SidebarRoom>,
     pub direct_placeholder_users: Vec<UserSummary>,
 }
 
-/// Users::SidebarsController#show.
+/// Users::SidebarsController#show: partition the loaded memberships before rendering.
 pub fn sidebar(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db::Result<Sidebar> {
-    let all_memberships = Membership::visible_with_ordered_room(conn, user.id)?;
-
-    // `select { direct }.sort_by { |m| m.room.updated_at }.reverse`
-    let mut direct: Vec<&(Membership, Room)> = all_memberships.iter().filter(|(_, room)| room.direct()).collect();
-    direct.sort_by_key(|(_, room)| room.updated_at);
-    direct.reverse();
-
-    let direct_memberships = direct
-        .iter()
-        .map(|(membership, room)| {
-            // `cache membership` wraps the whole partial: on a hit Rails loads none of its members.
-            Ok(match campfire_views::users::cached_direct_room_fragment(membership.id, membership.updated_at.jiff()) {
-                Some(html) => SidebarDirectItem::Fragment(html),
-                None => SidebarDirectItem::View(sidebar_direct(conn, secrets, membership, room)?),
-            })
-        })
-        .collect::<campfire_db::Result<_>>()?;
-    let other_memberships = all_memberships
-        .iter()
-        .filter(|(membership, _)| !direct.iter().any(|(direct, _)| direct.id == membership.id))
-        .map(|(membership, room)| SidebarRoom {
-            id: room.id,
-            param_key: room_param_key(room.room_type).to_string(),
-            name: room.name.clone().unwrap_or_default(),
-            unread: membership.unread(),
-        })
-        .collect();
-
-    Ok(Sidebar { direct_memberships, other_memberships, direct_placeholder_users: direct_placeholder_users(conn, secrets, user)? })
+    let all = Membership::visible_with_ordered_room(conn, user.id)?;
+    // Rails preloads the members association once for every direct room, in membership order.
+    let mut stmt=conn.prepare_cached("SELECT memberships.room_id AS sidebar_room_id, users.* FROM memberships INNER JOIN users ON users.id=memberships.user_id WHERE memberships.room_id IN (SELECT rooms.id FROM rooms INNER JOIN memberships ON rooms.id=memberships.room_id WHERE memberships.user_id=? AND rooms.type='Rooms::Direct' AND rooms.deleted_at IS NULL) ORDER BY memberships.id")?;
+    let mut members=std::collections::HashMap::<i64,Vec<User>>::new();
+    for row in stmt.query_map([user.id],|r|Ok((r.get::<_,i64>("sidebar_room_id")?,User::from_row(r)?)))? { let (id,u)=row?;members.entry(id).or_default().push(u); }
+    let shared=|m:&Membership,r:&Room| SidebarRoom {
+        id:r.id,param_key:room_param_key(r.room_type).into(),name:r.name.clone().unwrap_or_default(),unread:m.unread(),
+        menu:room_menu(r,Some(m),Some(user),0,None),icon:resolve_room_icon(conn,r.icon_name.as_deref()),huddle_participants:None,
+    };
+    let direct=|m:&Membership,r:&Room| sidebar_direct_users(secrets,m,r,members.get(&r.id).map(Vec::as_slice).unwrap_or_default(),user);
+    let mut favorites: Vec<_>=all.iter().filter(|(m,_)|m.favorited()).collect();
+    favorites.sort_by_key(|(m,_)|(m.favorite_position,m.id));
+    let favorite_memberships=favorites.into_iter().map(|(m,r)|if r.direct(){campfire_views::users::SidebarItem::Direct(Box::new(direct(m,r)))}else{campfire_views::users::SidebarItem::Room(Box::new(shared(m,r)))}).collect();
+    let rest:Vec<_>=all.iter().filter(|(m,_)|!m.favorited()).collect();
+    let mut directs:Vec<_>=rest.iter().copied().filter(|(_,r)|r.direct()).collect();
+    directs.sort_by_key(|(_,r)|r.updated_at);directs.reverse();
+    let direct_memberships=directs.into_iter().map(|(m,r)|{
+        let row=direct(m,r);
+        match campfire_views::users::cached_direct_room_fragment(&row) { Some(html)=>SidebarDirectItem::Fragment(html),None=>row.into() }
+    }).collect();
+    let voice_memberships=rest.iter().filter(|(_,r)|r.room_type==RoomType::Voice).map(|(m,r)|shared(m,r)).collect();
+    // Voice and direct memberships have already left `rest` in the Rails partition.
+    let categories=campfire_db::RoomCategory::ordered_for_user(conn,user.id)?.into_iter().map(|c|campfire_views::users::SidebarCategory {
+        id:c.id,name:c.name,collapsed:c.collapsed,
+        rooms:rest.iter().filter(|(m,r)|!r.direct() && r.room_type!=RoomType::Voice && m.room_category_id==Some(c.id)).map(|(m,r)|shared(m,r)).collect(),
+    }).collect();
+    let other_memberships=rest.iter().filter(|(m,r)|!r.direct() && r.room_type!=RoomType::Voice && m.room_category_id.is_none()).map(|(m,r)|shared(m,r)).collect();
+    Ok(Sidebar {favorite_memberships,categories,direct_memberships,other_memberships,voice_memberships,direct_placeholder_users:direct_placeholder_users(conn,secrets,user)?})
 }
 
 /// `users/sidebars/rooms/_direct` locals: `room.users.without(membership.user).presence || [ membership.user ]`.
 pub fn sidebar_direct(conn: &Connection, secrets: &Secrets, membership: &Membership, room: &Room) -> campfire_db::Result<SidebarDirect> {
-    let users = room.users(conn)?;
-    let mut members: Vec<&User> = users.iter().filter(|user| user.id != membership.user_id).collect();
-    let own;
-    if members.is_empty() {
-        own = User::find(conn, membership.user_id)?;
-        members.push(&own);
+    // The Rails preload groups Membership records, not the room.users join. In the seeded
+    // group these association orders differ; avatars follow membership insertion order.
+    let mut statement = conn.prepare_cached("SELECT users.* FROM memberships INNER JOIN users ON users.id=memberships.user_id WHERE memberships.room_id=? ORDER BY memberships.id")?;
+    let users = statement.query_map([room.id], User::from_row)?.collect::<rusqlite::Result<Vec<_>>>()?;
+    let viewer=User::find(conn,membership.user_id)?;
+    Ok(sidebar_direct_users(secrets,membership,room,&users,&viewer))
+}
+
+fn sidebar_direct_users(secrets:&Secrets,membership:&Membership,room:&Room,users:&[User],viewer:&User)->SidebarDirect {
+    let mut members:Vec<&User>=users.iter().filter(|u|u.id!=membership.user_id).collect();
+    if members.is_empty(){members.push(viewer);}
+    let members:Vec<UserSummary>=members.into_iter().map(|u|user_summary(secrets,u)).collect();
+    let label=sidebar_direct_label(room.name.as_deref(),&members);
+    SidebarDirect {
+        room_id:room.id,unread:membership.unread(),updated_at_epoch:epoch_string(room.updated_at.jiff()),
+        menu:room_menu(room,Some(membership),Some(viewer),users.len(),Some(label.clone())),label,members,
+        viewer_administrator:viewer.is_administrator(),huddle_participants:None,participant_ids:None,
+        membership_id:membership.id,membership_updated_at:membership.updated_at.jiff(),
     }
-    Ok(SidebarDirect {
-        room_id: room.id,
-        unread: membership.unread(),
-        updated_at_epoch: epoch_string(room.updated_at.jiff()),
-        members: members.into_iter().map(|user| user_summary(secrets, user)).collect(),
-        membership_id: membership.id,
-        membership_updated_at: membership.updated_at.jiff(),
-    })
 }
 
 /// `find_direct_placeholder_users`. `exclude_user_ids` is `Membership.where(room_id: directs).pluck(:user_id).uniq`
@@ -303,4 +305,44 @@ pub fn string_attribute(params: &campfire_kit::ParamMap, key: &str) -> Option<Op
         return None;
     }
     Some(params.get(key).and_then(|param| param.to_s()))
+}
+
+/// Room-menu metadata must use the recipient, never the actor's Current.user.
+pub fn room_menu(room: &Room, membership: Option<&Membership>, viewer: Option<&User>, direct_member_count: usize, label: Option<String>) -> campfire_views::users::RoomMenu {
+    let group = room.direct() && (direct_member_count>2 || room.name.as_deref().is_some_and(|n|!campfire_richtext::ruby::is_blank(n)));
+    campfire_views::users::RoomMenu {
+        menu_categorizable:matches!(room.room_type,RoomType::Open|RoomType::Closed),
+        menu_favorited:membership.is_some_and(Membership::favorited),
+        menu_favorite_position:membership.and_then(|m|m.favorite_position),
+        menu_muted:membership.is_some_and(|m|m.involved_in(campfire_db::Involvement::Muted)),
+        menu_default_involvement:room.default_involvement().into(),
+        menu_category_id:membership.and_then(|m|m.room_category_id),
+        menu_can_delete:viewer.is_some_and(|u|u.is_administrator() || (!group && room.creator_id==u.id)),
+        menu_can_leave:membership.is_some(),
+        menu_leave_url:if room.direct(){format!("/rooms/directs/{}/leave",room.id)}else{format!("/rooms/{}/leave",room.id)},
+        menu_open_room:room.open(),menu_direct_room:room.direct(),menu_room_label:label.or_else(||room.name.clone()),
+    }
+}
+
+pub fn sidebar_direct_label(name: Option<&str>, members: &[UserSummary]) -> String {
+    if let Some(name)=name.filter(|s|!campfire_richtext::ruby::is_blank(s)){return name.into();}
+    if members.len()<=1 {return members.first().map(|u|sidebar_first_name(&u.name)).unwrap_or_default().to_string();}
+    let mut names: Vec<&str>=members.iter().map(|m|m.name.as_str()).collect();
+    names.sort_by_key(|n|n.to_lowercase());
+    let label=names.iter().take(3).map(|n|sidebar_first_name(n)).collect::<Vec<_>>().join(", ");
+    if names.len()>3 {format!("{label} +{}",names.len()-3)}else{label}
+}
+
+fn sidebar_first_name(name: &str) -> &str {
+    // Ruby String#split(" "): vertical tab separates words; NBSP does not.
+    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c']).find(|part|!part.is_empty()).unwrap_or_default()
+}
+
+pub fn resolve_room_icon(conn: &Connection, name: Option<&str>) -> Option<campfire_views::helpers::AvatarIcon> {
+    use campfire_views::{helpers::AvatarIcon,messages::reactions::static_icon};
+    let name=name?;
+    let icon=static_icon(name);
+    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})){return icon;}
+    let title: Option<String>=conn.query_row("SELECT title FROM workspace_icons WHERE name=?",[name],|row|row.get(0)).optional().ok().flatten();
+    title.map(|title|AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
 }

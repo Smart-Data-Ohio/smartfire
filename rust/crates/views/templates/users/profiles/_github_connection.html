@@ -1,0 +1,18 @@
+<section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="github-connection-title">
+  <h2 id="github-connection-title" class="txt-large">GitHub</h2>
+
+
+{% if sections.github.connected() %}    <p>Connected as {{ sections.github.name() }}{% if sections.github.app_token() %} through the GitHub App{% endif %}</p>
+    <p>Comments and reviews you post from PR threads act as <strong>@{{ sections.github.name() }}</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>
+    {{ h::button_to_form("/github/connection", h::attrs().method("delete").class("btn btn--negative"), h::attrs().data("turbo_confirm", "Disconnect GitHub? You will no longer be able to comment or review from PR threads."), "Disconnect GitHub") }}
+{% else %}{% if sections.github.exists() %}      <p>GitHub rejected the connection{% if let Some(reason) = sections.github.reason() %} ({{ reason }}){% endif %}. Reconnect below.</p>
+{% else %}      <p>Connect GitHub to comment and review from PR threads as yourself. Linking also shows you cards for private repositories your account can read.</p>
+{% endif %}{% if sections.github_app_configured %}      <p>{{ h::link_to("/github/app/connect", h::attrs().class("btn btn--primary"), sections.github.oauth_label()) }}</p>
+      <details>
+        <summary>Or paste a personal access token instead</summary>
+{% endif %}{% let connect = h::form_with("/github/connection").class("flex align-center gap") %}    {% filter form_with(connect) %}
+      {{ connect.password_field("access_token", h::attrs().class("input flex-item-grow").placeholder("github_pat_…").autocomplete("off").required(true).attr("aria-label", "GitHub personal access token")) }}
+      {{ h::legacy_tag("input", h::attrs().type_("submit").name("commit").value(sections.github.connect_label("GitHub")).class("btn").data("disable_with", sections.github.connect_label("GitHub"))) }}
+{% endfilter %}    <p class="txt-small">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>
+{% if sections.github_app_configured %}      </details>
+{% endif %}{% endif %}</section>

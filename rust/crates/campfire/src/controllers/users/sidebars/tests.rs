@@ -33,7 +33,7 @@ async fn full_sidebar_matches_seventeen_complete_post_fix_rails_renders() {
         return;
     };
     for case in vectors["cases"].as_array().unwrap() {
-        let sidebar: campfire_views::users::sidebar::Sidebar =
+        let sidebar: campfire_views::users::sidebar_composition::Sidebar =
             serde_json::from_value(case["input"].clone()).unwrap();
         let actual =
             page::render_detached_at(&test.booted.app, None, "http://campfire.test", |ctx| {

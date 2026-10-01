@@ -3,32 +3,6 @@
 use super::Presenter;
 use campfire_db::{Message, Result, Room, User};
 
-/// Rails message_quote_stamp/message_quote_names_digest: edits and source renames
-/// invalidate a quoting parent's cached bytes even when that parent is untouched.
-pub fn cache_stamp(conn: &campfire_db::Connection, message: &Message) -> Result<String> {
-    use sha2::{Digest, Sha256};
-    let mut query = conn.prepare("SELECT source.updated_at,source.edited_at,author.name,room.name FROM message_references ref JOIN messages source ON source.id=ref.referenced_message_id JOIN users author ON author.id=source.creator_id JOIN rooms room ON room.id=source.room_id WHERE ref.message_id=? ORDER BY ref.id")?;
-    let dependencies = query
-        .query_map([message.id], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, Option<String>>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, Option<String>>(3)?,
-            ))
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    if dependencies.is_empty() {
-        return Ok(String::new());
-    }
-    Ok(format!(
-        "{:x}",
-        Sha256::digest(
-            serde_json::to_vec(&dependencies).expect("quote cache dependencies serialize")
-        )
-    ))
-}
-
 pub fn cards(presenter: &Presenter<'_>, message: &Message) -> Result<Vec<String>> {
     let mut query = presenter.conn.prepare(
         "SELECT id,referenced_message_id FROM message_references WHERE message_id=? ORDER BY id",
@@ -70,14 +44,13 @@ pub fn cards(presenter: &Presenter<'_>, message: &Message) -> Result<Vec<String>
                         .unwrap_or(campfire_views::message_links::ORIGIN_SLOT),
                     |ctx| {
                         campfire_views::message_links::Card {
-                            ctx,
-                            author: &user.name,
-                            room_label,
+                                author: user.name.clone(),
+                            room_label: room_label.into(),
                             created_at: source.created_at.jiff(),
-                            plain_text: &plain_text,
-                            path: &path,
+                            excerpt: plain_text.clone(),
+                            message_path: path.clone(),
                         }
-                        .html()
+                        .html(ctx)
                     },
                 )
             };
@@ -108,14 +81,13 @@ mod tests {
                 "http://campfire.test",
                 |ctx| {
                     let card = campfire_views::message_links::Card {
-                        ctx,
-                        author: input["author"].as_str().unwrap(),
-                        room_label: input["room_label"].as_str().unwrap(),
+                        author: input["author"].as_str().unwrap().into(),
+                        room_label: input["room_label"].as_str().unwrap().into(),
                         created_at: input["created_at"].as_str().unwrap().parse().unwrap(),
-                        plain_text: input["plain_text"].as_str().unwrap(),
-                        path: input["path"].as_str().unwrap(),
+                        excerpt: input["plain_text"].as_str().unwrap().into(),
+                        message_path: input["path"].as_str().unwrap().into(),
                     }
-                    .html();
+                    .html(ctx);
                     format!(
                         "<div id=\"message_link_cards_message_{}\" class=\"message-link-cards\">\n    {card}\n</div>\n",
                         input["client_message_id"].as_str().unwrap()

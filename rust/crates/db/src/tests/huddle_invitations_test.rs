@@ -1,5 +1,5 @@
 use crate::models::huddle_grant::HuddleGrant;
-use crate::models::huddle_invitations::{self, RingRequest};
+use crate::models::huddle_invitations;
 use crate::models::room_delete::HuddleConfig;
 use crate::tests::{TestDb, huddle_notices_test};
 use crate::{Connection, Timestamp};
@@ -18,7 +18,7 @@ fn normalize(value: &mut Value) {
     }
 }
 
-fn snapshot(conn: &Connection, table: &str) -> crate::Result<Value> {
+pub(crate) fn snapshot(conn: &Connection, table: &str) -> crate::Result<Value> {
     let mut statement = conn.prepare(&format!("SELECT * FROM {table} ORDER BY id"))?;
     let columns = statement
         .column_names()
@@ -78,6 +78,9 @@ fn issuance_invitations_match_forty_nine_rails_scenarios() {
             }
             Ok(())
         });
+        if case["sound_allowed"] == false {
+            db.write(|tx| Ok(tx.conn().execute("UPDATE users SET dnd_enabled=1",[])?));
+        }
         db.sink.take();
         let session = case["session_id"].as_i64().unwrap();
         let membership = case["membership_id"].as_i64().unwrap();
@@ -117,14 +120,6 @@ fn issuance_invitations_match_forty_nine_rails_scenarios() {
             .filter_map(|event| event.as_job::<crate::models::huddle_notices::PushInvitationJob>())
             .map(|job| job.activity_item_id)
             .collect::<Vec<_>>();
-        let rings = events
-            .iter()
-            .filter_map(|event| event.as_job::<RingRequest>())
-            .collect::<Vec<_>>();
-        let sound = case["sound_allowed"].as_bool().unwrap();
-        for ring in rings {
-            db.write(move |tx| huddle_invitations::publish_ring(tx, &ring, sound));
-        }
         let broadcasts = db
             .events()
             .iter()
@@ -172,13 +167,6 @@ fn overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent() {
         db.sink.take();
         let user = case["user_id"].as_i64();
         db.write(move |tx| huddle_invitations::resolve_overdue(tx, user));
-        let events = db.sink.take();
-        for ring in events
-            .iter()
-            .filter_map(|event| event.as_job::<RingRequest>())
-        {
-            db.write(move |tx| huddle_invitations::publish_ring(tx, &ring, true));
-        }
         let actual = db
             .events()
             .iter()

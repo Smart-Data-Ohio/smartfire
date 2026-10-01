@@ -193,8 +193,8 @@ impl RoomService {
             now,
             &Timeouts {
                 open: OPEN_TIMEOUT,
-                write: READ_TIMEOUT,
                 read: READ_TIMEOUT,
+                write: http::NET_HTTP_DEFAULT_TIMEOUT,
             },
         )
         .await
@@ -210,8 +210,8 @@ impl RoomService {
             now,
             &Timeouts {
                 open: OPEN_TIMEOUT,
-                write: READ_TIMEOUT,
                 read: READ_TIMEOUT,
+                write: http::NET_HTTP_DEFAULT_TIMEOUT,
             },
         )
         .await

@@ -1,4 +1,4 @@
-if(process.env.WS13_WS13B_API==='1') await import('./ws13-invitations.cases.mjs');
+import './ws13-invitations.cases.mjs';
 import './ws13-join.cases.mjs';
 import './ws13-presence.cases.mjs';
 // Complete ordinary Stage declarations from pinned test/system/stage_test.rb.

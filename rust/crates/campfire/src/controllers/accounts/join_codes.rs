@@ -12,7 +12,12 @@ pub async fn create(c: &mut Ctx) -> Result {
     concerns::sudo::require_sudo_mode(c)?;
     let mut account = super::current_account(c).await?;
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    c.app().db.write(move |tx| crate::account_security::reset_join_code(tx, &mut account, &audit)).await.map_err(Error::internal)?;
+    let account = c.app().db.write(move |tx| {
+        account.reset_join_code(tx)?;
+        Ok(account)
+    }).await.map_err(Error::internal)?;
+    // Rails resets the code before the separate AuditLog.record! call.
+    c.app().db.write(move |tx| crate::account_security::join_code_reset(tx, &account, &audit)).await.map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }

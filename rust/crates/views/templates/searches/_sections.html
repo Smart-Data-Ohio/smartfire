@@ -1,0 +1,16 @@
+{% if !sections.is_empty() %}  <div class="search-sections">
+{% for section in sections %}      <section class="search-sections__section" aria-labelledby="search-{{ section.id }}">
+        <h2 id="search-{{ section.id }}" class="search-sections__heading">{{ section.heading }}</h2>
+        <ul class="search-sections__list">
+{% for record in section.records %}            <li class="search-sections__item">
+                {{ h::link_to_text(&record.title,&record.path,h::attrs().class("search-sections__link")) }}
+                <span class="search-sections__meta">
+                  {{ record.room_label }} ·
+{% if section.id == "events" %}                  {{ crate::time::local_datetime_tag(&ctx.time_zone,record.time.clone(),"time",h::attrs(),"") }}{% if record.status.is_some() %} · Cancelled{% endif %}
+{% else %}                  {{ record.status.as_deref().unwrap_or_default() }} ·
+                  {{ crate::time::local_datetime_tag(&ctx.time_zone,record.time.clone(),"time",h::attrs(),"") }}
+{% endif %}                </span>
+            </li>
+{% endfor %}        </ul>
+      </section>
+{% endfor %}  </div>{{ "\n" }}{% endif %}

@@ -1,5 +1,5 @@
 <div class="header-overflow" data-controller="header-overflow"
-     data-header-overflow-involvement-url-value="{{ self.involvement_path() }}"
+     data-header-overflow-involvement-url-value="{{ h::routes::room_involvement(room.id) }}"
      data-header-overflow-involvement-frame-value="{{ room.dom_id("involvement") }}">
   <button type="button"
           id="header-overflow-button"
@@ -31,7 +31,7 @@
         <span class="room-header__thread-unread" data-thread-panel-unread hidden></span>
       </button>
 {% endif %}
-    {% filter link_to(self.events_path(), h::attrs().class("btn room-menu__item header-overflow__item").role("menuitem")) %}
+    {% filter link_to("/rooms/" ~ room.id ~ "/events",h::attrs().class("btn room-menu__item header-overflow__item").attr("role","menuitem")) %}
       {{ h::image_tag(ctx,"calendar.svg",h::attrs().size(20).aria_hidden()) }}
       <span>Events</span>
 {% endfilter %}
@@ -43,11 +43,11 @@
         <span class="header-overflow__badge" data-header-overflow-target="pinsCount"></span>
       </button>
 {% endif %}
-    {% filter link_to(self.files_path(), h::attrs().class("btn room-menu__item header-overflow__item").role("menuitem")) %}
+    {% filter link_to("/rooms/" ~ room.id ~ "/files",h::attrs().class("btn room-menu__item header-overflow__item").attr("role","menuitem")) %}
       {{ h::image_tag(ctx,"attachment.svg",h::attrs().size(20).aria_hidden()) }}
       <span>Files</span>
 {% endfilter %}
-{% if nav.stage.is_some() %}      <button type="button" class="btn room-menu__item header-overflow__item header-overflow__item--phone-only" role="menuitem"
+{% if room.is_stage() %}      <button type="button" class="btn room-menu__item header-overflow__item header-overflow__item--phone-only" role="menuitem"
               data-action="header-overflow#forward"
               data-header-overflow-forward-value=".room-header__actions [aria-label='Show stage']">
         <span class="stage-panel__glyph" aria-hidden="true">◉</span>
@@ -58,24 +58,24 @@
       <button type="button" class="btn room-menu__item header-overflow__item header-overflow__item--phone-only" role="menuitem"
               aria-expanded="false" aria-controls="header-overflow-notifications"
               data-action="header-overflow#toggleNotifications">
-        {{ self.notification_icon() }}
-        <span data-header-overflow-target="notificationsLabel">Notifications: {{ self.short_label(&nav.involvement) }}</span>
+        {{ h::image_tag(ctx,"notification-bell-" ~ room.involvement ~ ".svg",h::attrs().size(20).aria_hidden().data("header_overflow_target","notificationsIcon")) }}
+        <span data-header-overflow-target="notificationsLabel">Notifications: {{ h::short_involvement_label(room.involvement.as_str()) }}</span>
       </button>
       <div id="header-overflow-notifications" class="header-overflow__submenu" role="group" aria-label="Notification level"
            hidden data-header-overflow-target="notificationsPanel">
-{% for level in self.levels() %}          <button type="button" class="btn room-menu__item header-overflow__submenu-item" role="menuitemradio"
-                  aria-checked="{{ self.current_level(level) }}" title="{{ self.description(level) }}"
+{% for level in h::involvement_levels(room.is_direct()) %}          <button type="button" class="btn room-menu__item header-overflow__submenu-item" role="menuitemradio"
+                  aria-checked="{{ *level == room.involvement }}" title="{{ h::humanize_involvement(level) }}"
                   data-action="header-overflow#chooseInvolvement"
                   data-header-overflow-level-value="{{ level }}"
-                  data-header-overflow-label-value="{{ self.short_label(level) }}">
-            <span class="header-overflow__check" aria-hidden="true" data-header-overflow-check>{% if self.current_level(level) %}✓{% endif %}</span>
-            <span>{{ self.short_label(level) }}</span>
+                  data-header-overflow-label-value="{{ h::short_involvement_label(level) }}">
+            <span class="header-overflow__check" aria-hidden="true" data-header-overflow-check>{% if *level == room.involvement %}✓{% endif %}</span>
+            <span>{{ h::short_involvement_label(level) }}</span>
           </button>
 {% endfor %}        <p class="for-screen-reader" role="status" data-header-overflow-target="notificationsStatus"></p>
       </div>
     </div>
 
-    {% filter link_to(room.edit_path(), h::attrs().class("btn room-menu__item header-overflow__item header-overflow__item--phone-only").role("menuitem")) %}
+    {% filter link_to(room.edit_path(),h::attrs().class("btn room-menu__item header-overflow__item header-overflow__item--phone-only").attr("role","menuitem")) %}
       {{ h::image_tag(ctx,"settings.svg",h::attrs().size(20).aria_hidden()) }}
       <span>Room settings</span>
 {% endfilter %}

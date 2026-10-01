@@ -1,55 +1,145 @@
 {% extends "layouts/application.html" %}
-
-{% block content %}{% if let Some(sidebar) = composition %}{{ sidebar.render(ctx)|safe }}{% else %}{% filter sidebar_turbo_frame_tag %}
-  {{ h::turbo_stream_from(rooms_stream.as_str()) }}
-  {{ h::turbo_stream_from(user_rooms_stream.as_str()) }}
-
-  <div class="sidebar__container overflow-y overflow-hide-scrollbar"
-      data-controller="badge-dot"
+{% block content %}{% filter sidebar_turbo_frame_tag %}
+  <div class="sidebar__container"
+      data-controller="badge-dot dm-presence{% if ctx.chrome.huddle_configured %} huddle-presence{% endif %}"
       data-badge-dot-unread-class="unread"
-      data-action="rooms-list:unread@window->badge-dot#update rooms-list:read@window->badge-dot#update turbo:submit-start->turbo-frame#unpermanize">
-    <turbo-frame id="direct_rooms_control" target="_top">
-      <div class="directs gap overflow-x overflow-hide-scrollbar">
-        {% filter link_to(h::routes::new_rooms_direct(), h::attrs().class("direct direct__new").data("turbo_frame", "_self")) %}
-          <span class="avatar avatar--icon">
-            {{ h::image_tag(ctx, "messages-add.svg", h::attrs().size(20).aria_hidden().class("colorize--black")) }}
-          </span>
+      data-dm-presence-url-value="/users/presence"
+      data-huddle-presence-url-value="/users/huddle_presence"
+      data-action="rooms-list:unread@window->badge-dot#update rooms-list:read@window->badge-dot#update turbo:submit-start->turbo-frame#unpermanize workspace-presence:connected@window->dm-presence#refresh">
+    <header class="workspace-identity">
+      <div class="workspace-identity__mark" aria-hidden="true">
+{% if ctx.account.has_logo %}          {{ h::image_tag(ctx,ctx.account.logo_url.as_str(),h::attrs().attr("alt", "").size(36)) }}
+{% else %}          <span>{{ self.workspace_initial() }}</span>
+{% endif %}      </div>
 
-          <span class="direct__author flex max-width min-width border-radius pad-inline-half">
-            <span class="for-screen-reader">New</span>
-            <span class="txt-small overflow-clip">Ping</span>
-          </span>
-{% endfilter %}
-        <div id="direct_rooms" contents data-controller="sorted-list" data-action="rooms-list:unread@window->sorted-list#updateItem">
-          {% for membership in direct_memberships %}{{ crate::users::cached_direct_room(ctx, membership) }}{% endfor %}        </div>
-
-        <div contents>
-          {% for user in direct_placeholder_users %}{% include "users/sidebars/rooms/_direct_placeholder.html" %}{% endfor %}        </div>
+      <div class="workspace-identity__text min-width">
+        <strong class="overflow-ellipsis">{{ ctx.account.name }}</strong>
+        <span>Smartfire workspace</span>
       </div>
-    </turbo-frame>
+    </header>
 
-    <div class="rooms position-relative flex flex-column gap">
-      <div id="shared_rooms" contents data-controller="sorted-list">
-{% for room in other_memberships %}          {% include "users/sidebars/rooms/_shared.html" %}{% endfor %}      </div>
+    <div class="sidebar__scroll overflow-y overflow-hide-scrollbar"
+         data-controller="room-menu sidebar-organize">
+      <nav class="sidebar-list workspace-destinations" aria-label="Your workspace">
+        {% filter link_to("/activity", h::attrs().class("sidebar-item btn").data("workspace_destination","/activity").data("controller","activity-indicator").data("activity_indicator_url_value","/activity/unread_count.json")) %}
+          {{ h::image_tag(ctx,"notification-bell-everything.svg",h::attrs().size(20).aria_hidden().class("colorize--black")) }}
+          <span class="sidebar-item__label">Activity inbox</span>
+          <span class="workspace-activity-count" data-activity-indicator-target="count" hidden></span>
+{% endfilter %}        {% filter link_to("/work", h::attrs().class("sidebar-item btn").data("workspace_destination","/work")) %}
+          {{ h::image_tag(ctx,"check.svg",h::attrs().size(20).aria_hidden().class("colorize--black")) }}
+          <span class="sidebar-item__label">Work threads</span>
+{% endfilter %}        {% filter link_to("/saved", h::attrs().class("sidebar-item btn").data("workspace_destination","/saved")) %}
+          {{ h::image_tag(ctx,"bookmark.svg",h::attrs().size(20).aria_hidden().class("colorize--black")) }}
+          <span class="sidebar-item__label">Saved</span>
+{% endfilter %}        {% filter link_to("/scheduled_messages", h::attrs().class("sidebar-item btn").data("workspace_destination","/scheduled_messages")) %}
+          {{ h::image_tag(ctx,"calendar.svg",h::attrs().size(20).aria_hidden().class("colorize--black")) }}
+          <span class="sidebar-item__label">Scheduled</span>
+{% endfilter %}        {% filter link_to("/agents", h::attrs().class("sidebar-item btn").data("workspace_destination","/agents")) %}
+          {{ h::image_tag(ctx,"bot.svg",h::attrs().size(20).aria_hidden().class("colorize--black")) }}
+          <span class="sidebar-item__label">Agents</span>
+{% endfilter %}        {% filter link_to(h::routes::users(), h::attrs().class("sidebar-item btn").data("workspace_destination",h::routes::users())) %}
+          {{ h::image_tag(ctx,"everyone.svg",h::attrs().size(20).aria_hidden().class("colorize--black")) }}
+          <span class="sidebar-item__label">People</span>
+{% endfilter %}      </nav>
 
-{% if can_create_rooms %}        {% filter link_to(h::routes::new_rooms_open(), h::attrs().class("rooms__new-btn btn room align-center gap txt-reversed").aria("label", "New Chat Room")) %}
-          {{ h::image_tag(ctx, "add.svg", h::attrs().size(20).aria_hidden().style("view-transition-name: new-room")) }}
-{% endfilter %}{% endif %}    </div>
+{% if !favorite_memberships.is_empty() %}        <section class="sidebar-section sidebar-section--favorites rooms" aria-labelledby="favorites-heading">
+          <header class="sidebar-section__header">
+            <h2 id="favorites-heading"><span aria-hidden="true">★ </span>Favourites</h2>
+          </header>
 
-    {{ self.call_sections()|safe }}
-    <button class="btn sidebar__toggle" data-action="toggle-class#toggle">
-      {{ h::image_tag(ctx, "menu.svg", h::attrs().size(20).aria_hidden()) }}
-      <span class="for-screen-reader">Open menu</span>
-    </button>
+          <div id="favorite_rooms" class="sidebar-list">
+{% for membership in favorite_memberships %}                {{ membership.render(ctx) }}
+{% endfor %}          </div>
+        </section>
+{% endif %}
+      <section class="sidebar-section sidebar-section--channels rooms" aria-labelledby="channels-heading" data-category-drop="">
+        <header class="sidebar-section__header">
+          <h2 id="channels-heading">Channels</h2>
+{% if can_create_rooms %}            {% filter link_to(h::routes::new_rooms_open(), h::attrs().class("btn sidebar-section__add").aria("label","New channel").attr("title","New channel")) %}
+              {{ h::image_tag(ctx,"add.svg",h::attrs().size(16).aria_hidden().style("view-transition-name: new-room")) }}
+{% endfilter %}{% endif %}        </header>
+
+        <div id="shared_rooms" class="sidebar-list" data-controller="sorted-list">
+{% for room in other_memberships %}{% if room.param_key != "rooms_stage" && room.param_key != "rooms_board" %}              {% include "users/sidebars/rooms/_shared.html" %}
+{% endif %}{% endfor %}        </div>
+      </section>
+
+      {% include "users/sidebars/_room_categories.html" %}
+
+      <section class="sidebar-section sidebar-section--boards rooms" aria-labelledby="boards-heading">
+        <header class="sidebar-section__header">
+          <h2 id="boards-heading">Boards</h2>
+{% if can_create_rooms %}            {% filter link_to("/rooms/boards/new", h::attrs().class("btn sidebar-section__add").aria("label","New board").attr("title","New board")) %}
+              {{ h::image_tag(ctx,"add.svg",h::attrs().size(16).aria_hidden()) }}
+{% endfilter %}{% endif %}        </header>
+
+        <div id="board_rooms" class="sidebar-list" data-controller="sorted-list">
+{% for room in other_memberships %}{% if room.param_key == "rooms_board" %}              {% include "users/sidebars/rooms/_shared.html" %}
+{% endif %}{% endfor %}        </div>
+      </section>
+
+      <section class="sidebar-section sidebar-section--voice rooms" aria-labelledby="voice-heading">
+        <header class="sidebar-section__header">
+          <h2 id="voice-heading">Voice</h2>
+{% if can_create_rooms %}            {% filter link_to("/rooms/voices/new", h::attrs().class("btn sidebar-section__add").aria("label","New voice channel").attr("title","New voice channel")) %}
+              {{ h::image_tag(ctx,"add.svg",h::attrs().size(16).aria_hidden()) }}
+{% endfilter %}{% endif %}        </header>
+
+        <div id="voice_rooms" class="sidebar-list" data-controller="sorted-list">
+{% for room in voice_memberships %}            {% include "users/sidebars/rooms/_shared.html" %}
+{% endfor %}        </div>
+      </section>
+
+      <section class="sidebar-section sidebar-section--stage rooms" aria-labelledby="stage-heading">
+        <header class="sidebar-section__header">
+          <h2 id="stage-heading">Stage</h2>
+{% if can_create_rooms %}            {% filter link_to("/rooms/stages/new", h::attrs().class("btn sidebar-section__add").aria("label","New stage channel").attr("title","New stage channel")) %}
+              {{ h::image_tag(ctx,"add.svg",h::attrs().size(16).aria_hidden()) }}
+{% endfilter %}{% endif %}        </header>
+
+        <div id="stage_rooms" class="sidebar-list" data-controller="sorted-list">
+{% for room in other_memberships %}{% if room.param_key == "rooms_stage" %}              {% include "users/sidebars/rooms/_shared.html" %}
+{% endif %}{% endfor %}        </div>
+      </section>
+
+      <turbo-frame id="direct_rooms_control" target="_top">
+        <section class="sidebar-section" aria-labelledby="direct-messages-heading">
+          <header class="sidebar-section__header">
+            <h2 id="direct-messages-heading">Direct messages</h2>
+            {% filter link_to(h::routes::new_rooms_direct(), h::attrs().class("btn sidebar-section__add").data("turbo_frame","_self").aria("label","New direct message").attr("title","New direct message")) %}
+              {{ h::image_tag(ctx,"add.svg",h::attrs().size(16).aria_hidden()) }}
+{% endfilter %}          </header>
+
+          <div id="direct_rooms" class="sidebar-list" data-controller="sorted-list" data-action="rooms-list:unread@window->sorted-list#updateItem">
+            {% for membership in direct_memberships %}{{ crate::users::cached_direct_room(ctx,membership) }}{% endfor %}
+          </div>
+
+          <div class="sidebar-list sidebar-list--people" aria-label="Start a direct message">
+            {% for user in direct_placeholder_users %}{% include "users/sidebars/rooms/_direct_placeholder.html" %}{% endfor %}
+          </div>
+        </section>
+      </turbo-frame>
+
+      {% include "users/sidebars/_room_menu.html" %}
+    </div>
   </div>
 
-  <div class="flex align-end sidebar__tools gap justify-end">
-    {% filter link_to(h::routes::user_profile(), h::attrs().class("btn avatar flex-item-no-shrink sidebar__tool")) %}
-      {{ h::image_tag(ctx, current_user.avatar_path.as_str(), h::attrs().size(48).aria_hidden().style("view-transition-name: avatar-" ~ current_user.id)) }}
-      <span class="for-screen-reader">My Settings</span>
+  <div class="sidebar__tools">
+    {% filter link_to(h::routes::user_profile(), h::attrs().class("workspace-user min-width").merge(self.profile_card_trigger())) %}
+      <span class="avatar workspace-user__avatar">
+        {{ h::image_tag(ctx,current_user.avatar_path.as_str(),h::attrs().size(36).aria_hidden().style("view-transition-name: avatar-" ~ current_user.id)) }}
+      </span>
+      <span class="workspace-user__identity min-width">
+        <strong class="overflow-ellipsis">{{ current_user.name }}</strong>
+        <span>Profile</span>
+      </span>
 {% endfilter %}
-    {% filter link_to(h::routes::edit_account(), h::attrs().class("btn align-center gap txt-reversed sidebar__tool")) %}
-      {{ h::image_tag(ctx, "settings.svg", h::attrs().size(20).aria_hidden().style("view-transition-name: account-settings")) }}
-      <span class="for-screen-reader">Account Settings</span>
-{% endfilter %}  </div>
-{% endfilter %}{% endif %}{% endblock %}
+    {% filter link_to(h::routes::edit_account(), h::attrs().class("btn sidebar__tool").aria("label","Account settings").attr("title","Account settings")) %}
+      {{ h::image_tag(ctx,"settings.svg",h::attrs().size(20).aria_hidden().style("view-transition-name: account-settings")) }}
+{% endfilter %}
+    <button type="button" class="btn sidebar__tool" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"
+            data-action="click->keyboard-shortcuts#openHelp">
+      {{ h::image_tag(ctx,"help-circle.svg",h::attrs().size(20).aria_hidden()) }}
+    </button>
+  </div>
+{% endfilter %}{% endblock %}

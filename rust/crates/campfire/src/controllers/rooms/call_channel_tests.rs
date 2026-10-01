@@ -181,7 +181,7 @@ async fn call_forms_rows_and_huddle_layouts_match_parity_seed_rails_bytes() {
                         room: FormRoom {
                             id: input["id"].as_i64(),
                             name: input["name"].as_str().map(str::to_string),
-                        },
+                        ..Default::default()},
                         stage: input["stage"].as_bool().unwrap(),
                         can_administer: true,
                         current_user_id: DAVID,

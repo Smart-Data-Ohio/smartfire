@@ -304,6 +304,42 @@ impl Agent {
         }
         Ok(())
     }
+    /// Agent's declared dependent destroys, in Rails declaration order. This is
+    /// different from User::Bot's has_one :agent, dependent: :delete.
+    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        tx.savepoint(|tx| self.destroy_inner(tx))
+    }
+    fn destroy_inner(&self, tx: &mut Tx<'_>) -> Result<()> {
+        for table in [
+            "agent_credentials",
+            "agent_grants",
+            "agent_slash_commands",
+            "agent_events",
+        ] {
+            tx.conn()
+                .execute(&format!("DELETE FROM {table} WHERE agent_id=?"), [self.id])?;
+        }
+        let approvals = crate::sql::query_all(
+            tx.conn(),
+            "SELECT id FROM agent_approvals WHERE agent_id=? ORDER BY id",
+            [self.id],
+            |r| r.get::<_, i64>(0),
+        )?;
+        for id in approvals {
+            if let Some(approval) = crate::AgentApproval::find(tx.conn(), id)? {
+                approval.destroy(tx)?;
+            }
+        }
+        // Budget notices, steps and handoffs are not declared Agent dependents.
+        tx.conn()
+            .execute("DELETE FROM agents WHERE id=?", [self.id])?;
+        Ok(())
+    }
+    /// The migration's one-shot data operation, not a schema migration or boot hook.
+    /// Repeating it with existing Agent rows fails the same unique index as Rails.
+    pub fn backfill_existing_bots(tx: &Tx<'_>) -> Result<usize> {
+        Ok(tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,created_at,updated_at) SELECT id,NULL,'workspace',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP FROM users WHERE role=2",[])?)
+    }
     pub fn active(&self, conn: &Connection) -> Result<bool> {
         exists(
             conn,

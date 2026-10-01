@@ -40,6 +40,16 @@ impl Search {
         )
     }
 
+    /// The bounded header and results-page history, even for old untrimmed rows.
+    pub fn recent_for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM searches WHERE user_id=? ORDER BY updated_at DESC LIMIT 10",
+            [user_id],
+            Self::from_row,
+        )
+    }
+
     pub fn count(conn: &Connection) -> Result<i64> {
         sql::count(conn, r#"SELECT COUNT(*) FROM "searches""#, [])
     }

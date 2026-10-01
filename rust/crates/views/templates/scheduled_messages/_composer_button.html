@@ -1,0 +1,42 @@
+<span class="schedule-send" data-controller="schedule-send"
+    data-schedule-send-url-value="{{ campfire_routes::room_scheduled_messages(room_id) }}"
+    data-schedule-send-thread-id-value="{{ self.thread_value() }}"
+    data-schedule-send-dialog-id-value="{{ self.dialog_id() }}">
+  <button type="button" class="btn btn--borderless composer__schedule-btn flex-item-no-shrink"
+      title="Schedule send" aria-label="Schedule send" aria-haspopup="dialog"
+      data-action="schedule-send#open">
+    {{ self.icon() }}
+  </button>
+
+  <dialog id="{{ self.dialog_id() }}" class="schedule-send__dialog" aria-labelledby="{{ self.dialog_id() }}-title">
+    <div class="schedule-send__panel">
+      <div class="schedule-send__header">
+        <h2 id="{{ self.dialog_id() }}-title">Schedule send</h2>
+        <button type="button" class="btn btn--borderless" data-action="schedule-send#close" aria-label="Close schedule send">✕</button>
+      </div>
+
+      <p class="txt-small schedule-send__hint">Times are in your time zone.</p>
+      <p class="schedule-send__status txt-small" role="alert" hidden data-schedule-send-target="status"></p>
+
+      <div class="schedule-send__presets">
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="hour">In 1 hour</button>
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="tomorrow">Tomorrow at 9 AM</button>
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="monday">Next Monday at 9 AM</button>
+      </div>
+
+      <div class="schedule-send__custom">
+        {{ self.label() }}
+        <div class="schedule-send__custom-row">
+          <input type="datetime-local" id="{{ self.dialog_id() }}-custom" class="input"
+              data-schedule-send-target="custom"
+              data-action="keydown->schedule-send#customEnter">
+          <button type="button" class="btn btn--primary btn--small" data-action="schedule-send#scheduleCustom">Schedule</button>
+        </div>
+      </div>
+
+      <p class="schedule-send__footer txt-small">
+        {{ h::link_to_text("View scheduled messages", &campfire_routes::scheduled_messages(), h::attrs().target("_top")) }}
+      </p>
+    </div>
+  </dialog>
+</span>{{ "\n" }}

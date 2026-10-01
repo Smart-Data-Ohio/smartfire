@@ -1021,7 +1021,20 @@ async fn durable_analysis_other_callers_roll_back() {
             "{kind}: {}",
             reply.text()
         );
-        assert_eq!(counts(&app).await, before, "{kind}");
+        if kind == "first run" {
+            // Rails FirstRun.create! commits Account.create! before the user/room save.
+            // The pinned HTTP oracle rejects an attachment in that later transaction.
+            let oracle: serde_json::Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/users_first_run_attachment_failure.json"))).unwrap();
+            let (accounts, users, blobs, attachments) = counts(&app).await;
+            assert_eq!(serde_json::json!([accounts, users, blobs, attachments]), oracle["counts"]);
+            app.db().read(move |conn| {
+                assert_eq!(conn.query_row("SELECT COUNT(*) FROM rooms", [], |r| r.get::<_, i64>(0))?, oracle["rooms"].as_i64().unwrap());
+                assert_eq!(conn.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get::<_, i64>(0))?, oracle["sessions"].as_i64().unwrap());
+                Ok(())
+            }).await.unwrap();
+        } else {
+            assert_eq!(counts(&app).await, before, "{kind}");
+        }
         if matches!(kind, "profile" | "bot update") {
             let id = if kind == "profile" { DAVID } else { BENDER };
             assert_ne!(

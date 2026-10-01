@@ -2,7 +2,7 @@ use crate::controllers::presenters::{page, test_support::TestApp, view_context};
 use askama::Template;
 use campfire_views::{
     helpers::request_forgery::{RequestSecrets, rendering_with},
-    rooms::{Show, ShowView},
+    rooms::composition_page::{Show, ShowView},
 };
 #[tokio::test]
 async fn full_room_pages_match_thirty_eight_complete_rails_pages() {
@@ -62,7 +62,8 @@ async fn full_room_pages_match_thirty_eight_complete_rails_pages() {
                 })
                 .await
                 .unwrap();
-            assert_eq!(room, show.room, "{} room adapter", case["name"]);
+            assert_eq!((room.id,room.kind,&room.name,&room.display_name), (show.room.id,show.room.kind,&show.room.name,&show.room.display_name), "{} recorded room adapter", case["name"]);
+
             assert_eq!(
                 Some(&navigation),
                 show.navigation.as_ref(),
@@ -84,7 +85,7 @@ async fn full_room_pages_match_thirty_eight_complete_rails_pages() {
                         c,
                         id,
                         now,
-                        view_context::user_preferences(c, id)?,
+                        view_context::user_preferences(c, id, now.jiff())?,
                     )?,
                     crate::controllers::presenters::client_icon_names(c)?,
                     RoomLast::get(c, id)?,

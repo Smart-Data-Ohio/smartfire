@@ -1,0 +1,32 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "first": true,
+    "second": false,
+    "third": false,
+    "jobs": [
+      [
+        900100001,
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        900100001,
+        "2026-03-02T16:00:00.000000Z"
+      ]
+    ],
+    "frames": [
+      {
+        "source": "A",
+        "streaming": true
+      },
+      {
+        "source": "ABC",
+        "streaming": true
+      },
+      {
+        "source": "ABC",
+        "streaming": false
+      }
+    ]
+  }
+}

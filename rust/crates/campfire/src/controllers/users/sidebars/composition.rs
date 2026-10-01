@@ -2,7 +2,7 @@
 use crate::app::App;
 use crate::controllers::{presenters, rooms::call_channels};
 use campfire_db::{Account, Connection, Involvement, Membership, Room, RoomCategory, User};
-use campfire_views::users::sidebar::{Category, Person, Row, Sidebar};
+use campfire_views::users::sidebar_composition::{Category, Person, Row, Sidebar};
 fn person(app: &App, user: &User) -> Person {
     Person {
         id: user.id,
