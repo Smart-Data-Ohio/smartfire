@@ -54,12 +54,11 @@ async fn dispatch(c: &Ctx, agent_id: i64, operation: &str, args: Value, rest: bo
         "open_dm" => return super::conversations::dm(c,agent_id,args,rest).await,
         _ => {}
     }
-    let operation = operation.to_owned();
-    c.app()
-        .db
-        .write(move |tx| preflight(tx, agent_id, &operation, args))
-        .await
-        .map_err(db_error)
+    let reader = matches!(operation, "list_rooms" | "read_messages" | "list_work" | "get_work" | "list_board_posts");
+    let op = operation.to_owned();
+    let fields = args.clone();
+    let result = c.app().db.write(move |tx|preflight(tx, agent_id, &op, fields)).await.map_err(db_error)?;
+    if reader && result.is_ok() {super::reads::operation(c,agent_id,operation,args).await} else {Ok(result)}
 }
 fn preflight(
     tx: &mut Tx<'_>,
@@ -307,6 +306,9 @@ fn preflight(
                 "Unknown agent operation: {op}"
             )));
         }
+    }
+    if matches!(op, "list_rooms" | "read_messages" | "list_work" | "get_work" | "list_board_posts") {
+        return Ok(ServiceResult::ok(Value::Null,200));
     }
     campfire_db::models::agent_api_pending::execute(tx, agent_id, op, args)
 }

@@ -18,7 +18,7 @@ def check_dispatch(names, source):
 def main():
     root = Path(__file__).resolve().parents[2]
     scratch = Path(sys.argv[1]).resolve()
-    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json'), ('conversation', 'agent_conversation_http.json'), ('Fizzy reads', 'agent_fizzy_http.json'), ('Fizzy approvals', 'agent_fizzy_action_http.json')]:
+    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json'), ('conversation', 'agent_conversation_http.json'), ('Fizzy reads', 'agent_fizzy_http.json'), ('Fizzy approvals', 'agent_fizzy_action_http.json'), ('readers', 'agent_reads_http.json')]:
         expected = (root / 'vectors' / filename).read_bytes()
         actual = (scratch / filename).read_bytes()
         compare_vectors(actual, expected, filename)
@@ -30,7 +30,7 @@ def main():
     cases = json.loads((root / 'vectors/agent_mcp.json').read_text())['cases']
     asserted = set(re.findall(r'"([^"]+)"', (root / 'crates/campfire/src/controllers/agent_mcp_tests.rs').read_text()))
     covered = sum(c['name'] in asserted for c in cases)
-    print(f'WS11-api base MCP coverage: {covered} asserted vectors; {len(cases) - covered} explicitly deferred list success vectors')
+    print(f'WS11-api base MCP coverage: {covered} asserted vectors; {len(cases) - covered} deferred base vectors')
     surface = json.loads((root / 'vectors/agent_surface.json').read_text())['cases']
     assert sum(c['name'].startswith('matrix_rest_invalid_') for c in surface) == 35
     assert sum(c['name'].startswith('matrix_rest_session_') for c in surface) == 35

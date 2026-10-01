@@ -9,6 +9,7 @@ pub mod mcp;
 pub mod approvals;
 pub mod pending;
 pub mod conversations;
+mod reads;
 pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {

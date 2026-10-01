@@ -204,3 +204,8 @@ async fn mcp_shares_rest_buckets_and_counts_endpoint_before_origin() {
     assert_eq!(overflow.status.as_u16(), 429);
     assert_eq!(overflow.json(), json!({"error":"rate_limited"}));
 }
+
+#[tokio::test]
+async fn mcp_lists_rooms_and_owned_work() {
+    check(&["tool_empty_list_rooms", "tool_empty_list_work"]).await;
+}
