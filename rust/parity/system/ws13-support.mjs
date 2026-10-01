@@ -29,20 +29,24 @@ async function fixture(t, names, options={}) {
     // Capybara's selector wait does not bound Selenium page loads. Retain
     // Playwright's normal navigation budget rather than inheriting that 2 s wait.
     page.setDefaultNavigationTimeout(30000);
-    const response = await page.goto(`${origin}/rooms/${data.room}`,{waitUntil:'domcontentloaded'});
-    assert.equal(response.status(),200);
-    await page.waitForFunction(() => {
-      const sources = [...document.querySelectorAll('turbo-cable-stream-source')];
-      return sources.length>=3 && sources.every(source=>source.hasAttribute('connected'));
-    },null,{timeout:15000});
-    // Cable and Stimulus connect independently. The Rails helper assumes the
-    // huddle controller exists before installing its SDK fixture.
-    await page.waitForFunction(() => !!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle'),null,{timeout:2000});
+    await visitRoom(page,data.room);
     pages[name] = page;
   }
   const state = async () => (await api.request.get(`${origin}/__ws13__/rooms/${data.room}`)).json();
   return {...data,pages,state};
 }
+async function visitRoom(page,room) {
+  const response = await page.goto(`${origin}/rooms/${room}`,{waitUntil:'domcontentloaded'});
+  assert.equal(response.status(),200);
+  await page.waitForFunction(() => {
+    const sources = [...document.querySelectorAll('turbo-cable-stream-source')];
+    return sources.length>=3 && sources.every(source=>source.hasAttribute('connected'));
+  },null,{timeout:15000});
+  // Cable and Stimulus connect independently. The Rails helper assumes the
+  // huddle controller exists before installing its SDK fixture.
+  await page.waitForFunction(() => !!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle'),null,{timeout:2000});
+}
+
 async function text(page, selector, value, timeout=2000) {
   await page.locator(selector).filter({hasText:value}).first().waitFor({state:'visible',timeout});
 }
@@ -67,4 +71,4 @@ const row = id => `#stage_row_membership_${id}`;
 const controls = room => `#stage_controls_rooms_stage_${room}`;
 
 
-export { fixture, text, absent, emptyStackShown, panel, row, controls };
+export { fixture, visitRoom, text, absent, emptyStackShown, panel, row, controls };
