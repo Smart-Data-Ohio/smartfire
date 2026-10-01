@@ -7,6 +7,44 @@ use crate::controllers::presenters::test_support::*;
 
 fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/thread-pages.json")).unwrap() }
 
+#[tokio::test]
+async fn seeded_pull_request_thread_header_matches_rails_bytes_through_http() {
+    let app = TestApp::boot_frozen().await.expect("default seed required");
+    let oracle: Value = serde_json::from_str(include_str!("../../../../../vectors/github_seed_fragments.json")).unwrap();
+    let row = &oracle["thread"];
+    let room = row["room_id"].as_i64().unwrap();
+    let thread = row["thread_id"].as_i64().unwrap();
+    let response = app.david().get(&format!("/rooms/{room}/threads/{thread}")).await;
+    assert_eq!(response.status, StatusCode::OK);
+    let expected = row["header"].as_str().unwrap();
+    assert!(response.text().contains(expected), "real HTTP thread page omits or changes Rails PR header/card/files/actions bytes");
+}
+
+#[tokio::test]
+async fn pull_request_thread_pages_match_four_rails_http_responses() {
+    let oracle: Value = serde_json::from_str(include_str!("../../../../../vectors/messaging/pr-thread-http.json")).unwrap();
+    for row in oracle["rows"].as_array().unwrap() {
+        let app = TestApp::boot_frozen().await.expect("default seed required");
+        let private = row["private"].as_bool();
+        let mapped = row["mapped"].as_bool().unwrap();
+        let pr = oracle["pull_request_id"].as_i64().unwrap();
+        let thread = oracle["thread_id"].as_i64().unwrap();
+        app.db().write(move |tx| {
+            tx.conn().execute("UPDATE github_pull_requests SET private=? WHERE id=?", (private, pr))?;
+            if !mapped { tx.conn().execute("DELETE FROM github_pull_request_threads WHERE channel_thread_id=?", [thread])?; }
+            Ok(())
+        }).await.unwrap();
+        let response = with_fixed_render_secrets(app.david().get(row["path"].as_str().unwrap())).await;
+        assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16);
+        let text = response.text();
+        let start = text.find("<main class=\"thread\"").unwrap();
+        let end = text[start..].find("</main>").unwrap() + start + "</main>".len();
+        let actual = &text[start..end];
+        let expected = row["body"].as_str().unwrap();
+        if actual != expected { rails_mismatch(actual, expected, row["name"].as_str().unwrap()); }
+    }
+}
+
 async fn fixture() -> (TestApp, i64, Vec<i64>) {
     let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
     let (parent, threads) = app.db().write(|tx| {

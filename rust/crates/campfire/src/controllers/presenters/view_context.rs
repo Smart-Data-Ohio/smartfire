@@ -124,6 +124,8 @@ impl Layout {
     /// `csp_meta_tag` and the importmap tags), which puts the CSRF token in the session.
     pub fn render(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
         let secrets = RequestSecrets { tokens: Box::new(KitTokens(c.authenticity_tokens())), csp_nonce: c.content_security_policy_nonce() };
+        #[cfg(test)]
+        let secrets = super::test_support::fixed_render_secrets().unwrap_or(secrets);
         self.render_with_secrets(c, Some(secrets), render)
     }
 

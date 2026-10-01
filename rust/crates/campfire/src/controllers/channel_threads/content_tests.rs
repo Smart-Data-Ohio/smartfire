@@ -21,17 +21,8 @@ async fn content_scopes_room_and_anchor_without_joining_and_denies_bots() {
 use std::sync::Arc;
 use campfire_kit::clock::FrozenClock;
 use serde_json::Value;
-use crate::controllers::presenters::{Presenter, page};
-use campfire_db::{Room, Timeline, User};
-use campfire_views::helpers::{self as h, request_forgery::{self, AuthenticityTokens, RequestSecrets}};
-use askama::Template;
 
 fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/thread-content.json")).unwrap() }
-struct FixedTokens;
-impl AuthenticityTokens for FixedTokens {
-    fn global(&self) -> String { "GLOBAL".into() }
-    fn for_form(&self, action: &str, method: &str) -> String { format!("{method}:{action}") }
-}
 async fn fixture() -> (TestApp, i64) {
     let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
     let id = app.db().write(|tx| {
@@ -51,44 +42,22 @@ async fn fixture() -> (TestApp, i64) {
 }
 
 #[tokio::test]
-async fn conversation_and_room_composer_match_fixed_secret_rails_bytes() {
-    let (app, id) = fixture().await;
+async fn conversation_and_room_composer_match_rails_bytes_through_http() {
+    let (app, _) = fixture().await;
+    let mut browser = app.david();
     for row in oracle()["rows"].as_array().unwrap().iter().filter(|row| row["status"] == 200) {
-        let runtime = app.booted.app.clone();
-        let row_owned = row.clone();
-        let html = app.db().read(move |conn| {
-            let p = Presenter::new(conn, &runtime, None);
-            let room = Room::find(conn, ALL_TALK)?;
-            let thread = ChannelThread::find(conn, id)?;
-            let viewer = User::find(conn, DAVID)?;
-            let anchor = row_owned["anchor"].as_i64();
-            let records = if let Some(anchor) = anchor { Message::page_around(conn, Timeline::Thread(id), &Message::find(conn, anchor)?)? } else {Message::last_page(conn, Timeline::Thread(id))?};
-            assert_eq!(serde_json::json!(records.iter().map(|message| message.id).collect::<Vec<_>>()), row_owned["selected_ids"]);
-            let messages = p.messages(&records)?;
-            let user = p.user_view(DAVID)?;
-            let steps = p.thread_steps(id)?;
-            let composer = p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, false)?)?;
-            assert_eq!(serde_json::json!(composer.slash_commands), oracle()["slash_names"]);
-            // The schedule child is an explicit owner input, produced by the actual Rails child.
-            let scheduled_control = h::raw(row_owned["composer_button"].as_str().unwrap());
-            page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| request_forgery::rendering_with(RequestSecrets {tokens: Box::new(FixedTokens), csp_nonce: None}, || {
-                campfire_views::channel_threads::Conversation {ctx, thread_id: id, room_updated_at: room.updated_at.jiff(), anchor,
-                    messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()
-            })).map_err(|e| campfire_db::Error::Other(e.to_string()))
-        }).await.unwrap();
+        let query = row["params"]["message_id"].as_i64().map(|id| format!("?message_id={id}")).unwrap_or_default();
+        let response = with_fixed_render_secrets(browser.get(&format!("{}{query}", row["path"].as_str().unwrap()))).await;
+        assert_eq!(response.status, StatusCode::OK);
         let expected = row["body"].as_str().unwrap();
-        if html != expected {rails_mismatch(&html, expected, row["name"].as_str().unwrap());}
+        if response.text() != expected { rails_mismatch(&response.text(), expected, row["name"].as_str().unwrap()); }
     }
-    let runtime = app.booted.app.clone();
-    let html = app.db().read(move |conn| {
-        let p = Presenter::new(conn, &runtime, None);
-        let composer = p.composer_facts(&Room::find(conn, ALL_TALK)?, &User::find(conn, DAVID)?, None, p.composer_drive_flow(&User::find(conn, DAVID)?, false)?)?;
-        let scheduled_control = h::raw(oracle()["room_schedule"].as_str().unwrap());
-        page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| request_forgery::rendering_with(RequestSecrets {tokens: Box::new(FixedTokens), csp_nonce: None}, || {
-            campfire_views::messages::composer::Composer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()
-        })).map_err(|e| campfire_db::Error::Other(e.to_string()))
-    }).await.unwrap();
-    if html != oracle()["room_composer"].as_str().unwrap() {rails_mismatch(&html, oracle()["room_composer"].as_str().unwrap(), "room composer");}
+    let response = with_fixed_render_secrets(browser.get(&format!("/rooms/{ALL_TALK}"))).await;
+    assert_eq!(response.status, StatusCode::OK);
+    // rooms/show contributes two spaces before the partial's first line, as Rails does.
+    let expected = oracle()["room_composer"].as_str().unwrap().to_string();
+    let footer = format!("  {}", expected.strip_prefix('\n').unwrap());
+    assert!(response.text().contains(&footer), "HTTP root composer differs from Rails bytes");
 }
 
 #[tokio::test]

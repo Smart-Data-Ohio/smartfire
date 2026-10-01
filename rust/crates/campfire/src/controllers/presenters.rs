@@ -180,6 +180,10 @@ impl<'a> Presenter<'a> {
         self.github_refreshes.take().into_iter().collect()
     }
 
+    pub(crate) fn remember_github_refresh(&self, id: i64) {
+        self.github_refreshes.borrow_mut().insert(id);
+    }
+
     pub(crate) fn resolver(&self) -> super::searches::preloads::PageResolver<'_> {
         super::searches::preloads::PageResolver { db: DbResolver::with_twitter_cache(self.conn, self.secrets, self.now, &self.twitter_existence), preloads: self.search_preloads.as_ref() }
     }

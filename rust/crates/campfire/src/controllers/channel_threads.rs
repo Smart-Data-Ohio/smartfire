@@ -104,11 +104,14 @@ pub async fn content(c: &mut Ctx) -> Result {
     let picker_available = c.app().config.google_picker.is_some();
     let (messages, user, steps, composer) = messages::present(c, move |p| Ok((p.messages(&records)?, p.user_view(viewer.id)?, p.thread_steps(id)?,
         p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, picker_available && !viewer.is_bot())?)?))).await?;
-    // WS8b-m2 supplies the scheduled child after the lead merges its feature branch.
-    let scheduled_control = campfire_views::helpers::empty();
     c.set_header("x-thread-content-at-latest", if anchor.is_none() {"true"} else {"false"});
-    page::bare(c, StatusCode::OK, &format::HTML, |ctx| campfire_views::channel_threads::Conversation {ctx, thread_id: id,
-        room_updated_at: updated_at, anchor, messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()).await
+    page::bare(c, StatusCode::OK, &format::HTML, |ctx| {
+        let scheduled_control = campfire_views::helpers::raw(campfire_views::scheduled_messages::ComposerButton {
+            ctx, room_id: composer.room_id, thread_id: Some(id),
+        }.render()?);
+        campfire_views::channel_threads::Conversation {ctx, thread_id: id,
+            room_updated_at: updated_at, anchor, messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()
+    }).await
 }
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
@@ -118,18 +121,22 @@ async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Mess
         Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name(),
             render_thread_pull_request_header(p, &thread)?))
     }).await?;
-    // Work/board/PR sections are integration seams with WS12/WS15. The ordinary standalone
-    // thread uses the same stable collection entry point as the room's message list.
+    // The standalone thread uses the same stable collection entry point as the room's list.
     page::titled_content(c, response_status, &name, |ctx| campfire_views::channel_threads::Show { ctx,
         name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items }.render()).await
 }
 
-/// WS15g integration call site: resolve `github_pr_thread_pull_request(thread)` here, then
-/// lend its card to `campfire_views::github::thread_header(ctx, room_id, thread_id, card)`.
-/// Neither provider is on main at this branch's baseline. This is an explicit empty-fragment
-/// seam, not acceptance of populated PR headers; it does not block ordinary thread HTML.
-fn render_thread_pull_request_header(_p: &crate::controllers::presenters::Presenter<'_>, _thread: &ChannelThread) -> campfire_db::Result<campfire_views::helpers::Html> {
-    Ok(campfire_views::helpers::empty())
+fn render_thread_pull_request_header(p: &crate::controllers::presenters::Presenter<'_>, thread: &ChannelThread) -> campfire_db::Result<campfire_views::helpers::Html> {
+    use rusqlite::OptionalExtension;
+    // Rails refreshes a rendered header even when the thread has no starter message.
+    // messages::present performs the durable enqueue after releasing this reader.
+    if let Some(id) = p.conn.query_row("SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=? AND room_id=?",
+        (thread.id, thread.room_id), |row| row.get::<_, i64>(0)).optional()? {
+        p.remember_github_refresh(id);
+    }
+    page::render_detached_at(p.app(), None, p.cache_base_url.as_deref().unwrap_or("http://example.org"), |ctx| {
+        crate::controllers::presenters::github::thread_header(p.conn, ctx, thread).map(campfire_views::helpers::raw)
+    })
 }
 
 fn work_status_label(status: Option<&str>) -> Option<&'static str> {
