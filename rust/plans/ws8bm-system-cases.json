@@ -106,8 +106,10 @@
         },
         {
           "name": "a stray create re-entry does not wipe the half-filled thread name",
-          "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
+          "status": "deferred",
+          "evidence": null,
+          "prior_evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted",
+          "remaining_reason": "The final fresh-clone browser batch failed the stronger pre-submit name assertion: the field was empty after the pinned same-context re-entry. Earlier runs passed, but current acceptance is unresolved. Preserve the assertion and 30-second waits; do not refill the draft or change timing to get a pass."
         },
         {
           "name": "browses active and closed threads and can join or leave a closed one",

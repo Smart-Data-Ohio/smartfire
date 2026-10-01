@@ -122,7 +122,7 @@ async function acceptance(base,caseName,probe={}) {
       }
       async function finishCreate(name,page=author) {
         const panel=page.locator('#thread-panel');
-        assert.equal(await panel.locator('[data-thread-panel-target="createName"]').inputValue(),name,'the completed name must survive until submission');
+        assert.equal(await panel.locator('[data-thread-panel-target="createName"]').inputValue(),name,`${base}: ${caseName}: the completed name must survive until submission`);
         await panel.locator('[data-thread-panel-target="createSubmit"]').click();
         try {await panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}).waitFor();}
         catch(error) {
