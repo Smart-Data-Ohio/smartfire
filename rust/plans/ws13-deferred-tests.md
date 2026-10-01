@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. All 548 original declarations remain inventoried across 33 Rails files. WS13 owns 332 controller/integration/system titles; WS13b owns 216 domain titles, whose results are reported by WS13b. All 226 WS13 controller/integration declarations have complete assertions. WS13b PR #172 has not been merged. Its model/job/service counts are deliberately unscored here. WS17's public seams stay unchanged. Eleven Stage, eight audio-processing, eight roster, twelve voice, sixteen join-notice and six presence browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 45 system declarations remain open: ten invitations pending the unmerged WS13b API acceptance, and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
+Status: partial. All 548 original declarations remain inventoried across 33 Rails files. WS13 owns 332 controller/integration/system titles; WS13b owns 216 domain titles, whose results are reported by WS13b. All 226 WS13 controller/integration declarations have complete assertions. WS13b PR #172 has not been merged. Its model/job/service counts are deliberately unscored here. WS17's public seams stay unchanged. Fifteen Stage, eight audio-processing, eight roster, twelve voice, sixteen join-notice and six presence browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 41 system declarations remain open: ten invitations pending the unmerged WS13b API acceptance, and 31 real LiveKit huddle cases, individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -18,7 +18,7 @@ Controller and integration coverage is complete: all 226 original WS13 declarati
 
 The complete room header has 28 byte-identical renders; voice/Stage new/edit pages have 14. The new Markdown composer, member/thread panels and poll builder have 30 complete Rails renders across Closed, named/unnamed Direct, Voice and Stage rooms and Drive modes. The complete sidebar frame has 17 cold Rails renders over the parity seed, using the exact post-#163 sidebar source. It includes workspace identity/destinations/tools, shared/Board/Voice/Stage/DM rows, favourites, category controls, placeholders, room menus and the profile-card trigger. Request tests also exercise persisted placement and the administrator-only group-DM delete flag. The surrounding room page, pending-message shell, first-paint preloads, unread-divider/jump controls and per-viewer live OOO notices are integrated: 38 complete pages plus 38 complete component renders. Actual seeded/populated pages compare their room/header/shell adapters and native message renderer, including on-page and off-page unread boundaries. Both Designers captures are accepted with main’s GitHub cards and the native quote-child bridge. Shared/direct row refresh and callback adapters now use the same native composition as the request frame. Another 16 standalone sidebar rows and six recipient-specific group-DM headers match Rails byte for byte. Real socket/request tests cover rename delivery, recipient menu flags, JSON mute/read effects and live OOO updates/clears; Voice/Stage callback signatures are unchanged. The two Designers fixtures and approved post-#163 application-layout/status-action reconciliation are complete.
 
-Runtime recent-search, Drive and sound metadata adapters are integrated with 23 recorded persisted-state cases and eight Picker configurations. WS13b owns model/job/service cases; WS17 owns policy/transport. Sixty-one system cases now pass; 45 remain, including ten WS13b-dependent invitations and 35 LiveKit cases. No newly completed controller/integration title was inferred from render-vector counts.
+Runtime recent-search, Drive and sound metadata adapters are integrated with 23 recorded persisted-state cases and eight Picker configurations. WS13b owns model/job/service cases; WS17 owns policy/transport. Sixty-five system cases now pass; 41 remain, including ten WS13b-dependent invitations and 31 LiveKit huddle cases. No newly completed controller/integration title was inferred from render-vector counts.
 
 
 ## Rails declaration coverage by file
@@ -43,7 +43,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/rooms/stage_view_test.rb` | 16 | 16 | 0 |
 | `test/system/huddle_join_notices_test.rb` | 16 | 16 | 0 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 15 | 0 |
-| `test/system/stage_test.rb` | 15 | 11 | 4 |
+| `test/system/stage_test.rb` | 15 | 15 | 0 |
 | `test/models/huddle/join_pusher_test.rb` | 13 | WS13b | WS13b |
 | `test/system/voice_channels_test.rb` | 12 | 12 | 0 |
 | `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
@@ -60,7 +60,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | WS13b | WS13b |
 | `test/services/huddle/reconciler_test.rb` | 4 | WS13b | WS13b |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | WS13b | WS13b |
-| **WS13 total** | **332** | **287** | **45** |
+| **WS13 total** | **332** | **291** | **41** |
 | **WS13b owned (unscored)** | **216** | — | — |
 | **Catalogue total** | **548** | — | — |
 
@@ -742,7 +742,7 @@ Owner: WS13. Deferred: all 31 declarations require LIVEKIT_SYSTEM_TESTS=1 and a 
 
 ## test/system/stage_test.rb
 
-Owner: WS13. Complete browser coverage: 11/15 original declarations passed with their full assertions. Four declarations remain open because they require a real LiveKit server: subscribe-only listener/host publishing, role-change reconnect publishing, host server-mute/unmute reconnect, and full listener reconnect.
+Owner: WS13. Complete: 15/15 original declarations; four real LiveKit acceptances and eleven ordinary browser cases.
 
 - **Passed:** stage rooms list in their own section with distinct creation controls and a stage panel
 - **Passed:** a listener raises and lowers their hand without seeing host controls
@@ -754,10 +754,10 @@ Owner: WS13. Complete browser coverage: 11/15 original declarations passed with 
 - **Passed:** a listener joins without a microphone or device check
 - **Passed:** a demoted speaker retries as a listener without entering prejoin
 - **Passed:** stage rooms carry ordinary text chat
-- a listener joins subscribe-only while the host publishes
-- inviting a listener to speak rejoins them publishing, and moving them back removes publish
-- a host server-mutes a speaker and they rejoin muted, then unmutes them
-- a listener survives a full reconnect and stays subscribe-only
+- **Passed:** a listener joins subscribe-only while the host publishes
+- **Passed:** inviting a listener to speak rejoins them publishing, and moving them back removes publish
+- **Passed:** a host server-mutes a speaker and they rejoin muted, then unmutes them
+- **Passed:** a listener survives a full reconnect and stays subscribe-only
 - **Passed:** a muted speaker is told and rejoins without microphone prejoin
 
 ## test/system/voice_channels_test.rb
