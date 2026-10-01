@@ -23,9 +23,13 @@ end
   raise "HTML fallback differs: #{response.status} #{response.headers['Location']}" unless response.status == 303 && response.headers['Location'] == 'http://campfire.test/activity'
 end
 ActiveRecord::Base.connection.execute("CREATE TRIGGER reject_decision_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.approval.decide' BEGIN SELECT RAISE(ABORT,'fixture decision audit rejection'); END;")
+broadcasts = []
+ActionCable.server.define_singleton_method(:broadcast) { |stream, message, **_options| broadcasts << [stream, message] }
 %w[approved denied].each do |decision|
   Current.user = david
   approval = AgentApproval.create!(agent:, action: "deploy", summary: "Audit failure boundary")
+  broadcasts.clear
+  expected_frames = ActivityItem.where(source: approval).pluck(:user_id, :id).map { |user_id, id| [ActivityChannel.stream_name_for(user_id), { activityItemId: id }] }
   begin
     response = request(labels, approval, decision, ".json")
     raise "expected HTTP 500" unless response.status == 500
@@ -36,5 +40,6 @@ ActiveRecord::Base.connection.execute("CREATE TRIGGER reject_decision_audit BEFO
   raise 'ledger was rolled back' unless AgentEvent.where(event_type: 'approval_decided').count { |event| event.metadata['approval_id'] == approval.id } == 1
   raise 'inbox handling was rolled back' if ActivityItem.where(source: approval, handled_at: nil).exists?
   raise 'an audit was unexpectedly stored' if AuditLog.where(action: 'agent.approval.decide', target_id: approval.id).exists?
+  raise 'committed activity frames differed' unless broadcasts.sort_by(&:first) == expected_frames.sort_by(&:first)
 end
-puts 'Rails human decision boundaries: 2 HTML fallbacks; 2 committed decisions after rejected audits; 4 actions passed'
+puts 'Rails human decision boundaries: 2 HTML fallbacks; 2 committed decisions and private activity frames after rejected audits; 4 actions passed'

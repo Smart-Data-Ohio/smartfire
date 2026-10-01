@@ -93,13 +93,13 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
     let mut other_socket = activity_socket(&test, address, other_id).await;
     let mut owner = test.browser("198.51.100.157");
     owner.sign_in(&test.label("emails.kevin")).await;
-    for rollback in [false, true] {
+    for reject_audit in [false, true] {
         let approval_id = test.booted.app.db.write(move |tx| {
             let approval = AgentApproval::create(tx,NewApproval {
                 agent_id,action:"deploy".into(),summary:"Private approval summary".into(),
                 ..Default::default()
             })?;
-            if rollback {
+            if reject_audit {
                 tx.conn().execute_batch("CREATE TRIGGER reject_live_decision_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.approval.decide' BEGIN SELECT RAISE(ABORT,'test audit rejection'); END;")?;
             }
             Ok(approval.id)
@@ -117,7 +117,7 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
                 &[("decision", "denied"), ("note", "Private decision note")],
             )
             .await;
-        if rollback {
+        if reject_audit {
             assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
             test.booted
                 .app
@@ -125,7 +125,7 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
                 .read(move |conn| {
                     assert_eq!(
                         AgentApproval::find(conn, approval_id)?.unwrap().status,
-                        "pending"
+                        "denied"
                     );
                     assert!(
                         campfire_db::ActivityItem::find_by_user_and_source(
@@ -136,7 +136,7 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
                         )?
                         .unwrap()
                         .handled_at
-                        .is_none()
+                        .is_some()
                     );
                     Ok(())
                 })
@@ -144,26 +144,28 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
                 .unwrap();
         } else {
             assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-            let decided = receive(&mut owner_socket).await;
-            assert_eq!(decided["message"], json!({"activityItemId":item_id}));
-            assert_eq!(
-                owner
-                    .form(
-                        "patch",
-                        &format!("/agent_approvals/{approval_id}.json"),
-                        &[("decision", "approved")]
-                    )
-                    .await
-                    .status,
-                StatusCode::UNPROCESSABLE_ENTITY
-            );
         }
+        // decide! committed before AuditLog.record!: even an HTTP 500 sends
+        // the handled item's private frame exactly once, as the pinned oracle.
+        let decided = receive(&mut owner_socket).await;
+        assert_eq!(decided["message"], json!({"activityItemId":item_id}));
+        assert_eq!(
+            owner
+                .form(
+                    "patch",
+                    &format!("/agent_approvals/{approval_id}.json"),
+                    &[("decision", "approved")]
+                )
+                .await
+                .status,
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
         for socket in [&mut owner_socket, &mut other_socket] {
             assert!(
                 tokio::time::timeout(std::time::Duration::from_millis(150), socket.next())
                     .await
                     .is_err(),
-                "duplicate, rolled-back or another user's activity reached the socket"
+                "duplicate or another user's activity reached the socket"
             );
         }
     }
