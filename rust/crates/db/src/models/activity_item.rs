@@ -140,6 +140,15 @@ impl ActivityItem {
         Ok(())
     }
 
+    /// `mark_read!`: an already-read item emits no additional callback.
+    pub fn mark_read(&self, tx: &mut Tx<'_>) -> Result<Self> {
+        if self.read_at.is_none() {
+            tx.conn().execute_cached("UPDATE activity_items SET read_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),self.id])?;
+            Self::broadcast_change(tx, self.user_id, self.id)?;
+        }
+        Self::find(tx.conn(), self.id)
+    }
+
     /// `mark_handled!`: preserve an existing read timestamp when accepting a late invite.
     pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<Self> {
         tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;

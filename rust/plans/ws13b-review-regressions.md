@@ -35,3 +35,22 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 808 filtered out
 ```
 
 `ws13b_ring_generations.rb` independently probes six actual Rails retry sequences. Each emits one unread retry frame. Rails resets item `created_at` when refreshing the row; banner-only invitations use the grant's refreshed `last_issued_at`. Rust jobs now capture that generation in UTC microseconds and reject superseded or unversioned requests before rebuilding metadata. An older state/type update also cannot be promoted into another state's ring. The new corpus checks both drain orders, while the reviewer's post-commit and legitimate-retry-after-end probes remain executable.
+
+## Third-pass pending banner, failed first on 3f82457a
+
+Before production edits, the reviewer's exact real-handler regression was copied unchanged from the read-only review clone. It retained the queued job's original arguments, reissued the grant one second later without a replacement enqueue, then drained through the real handler and ActivityChannel.
+
+```sh
+CARGO_BUILD_JOBS=2 CI=1 TMPDIR="$PWD/.scratch" CABLE_TEST_PORT_RANGE=53000-53049 MAIL_TEST_PORT_RANGE=53050-53099 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever reviewer_r3_real_handler_keeps_pending_ring_after_deduped_reissue -- --test-threads=8 --nocapture
+```
+
+```text
+assertion `left == right` failed: suppressed=true: a deduped issuance discarded the only durable ring
+  left: 0
+ right: 1
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1000 filtered out; finished in 1.80s
+```
+
+The delivery rule was written first in `ws13b-ring-delivery-rule.md`. Rails does not have an asynchronous in-app ring job: its actual asynchronous invitation job is a push job identified by item ID. The immutable Rust queue row identifies its extra deferred emission. Only an actual later invitation emission supersedes that row, atomically with the new enqueue. Dedupe is a no-op for that identity; banner last_issued_at is not an invitation generation.
+
+The 180-case Rails-generated matrix records actual synchronous emissions and push enqueues, full item state, and an explicitly documented deferred-delivery projection. Rust uses real queue persistence, retained worker arguments, its real ring handler and ActivityChannel. Initial and legitimate retry banners survive deduped reissues; genuinely newer emissions supersede old jobs; stale rings do not survive access removal or call end. No fixture masks or timing thresholds change.

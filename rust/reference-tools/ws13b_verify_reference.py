@@ -8,6 +8,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[2]
 PATHS = [
     "app/models/huddle_grant.rb", "app/models/huddle_cleanup.rb", "app/models/membership.rb",
+    "app/models/huddle/invitation_pusher.rb",
     "app/models/session.rb", "app/models/user.rb", "app/models/user/bannable.rb", "app/models/room.rb",
     "app/jobs/room/destroy_job.rb", "app/models/rooms/voice.rb", "test/models/huddle_revocation_test.rb",
     "app/models/rooms/stage.rb", "test/models/huddle_grant_test.rb",

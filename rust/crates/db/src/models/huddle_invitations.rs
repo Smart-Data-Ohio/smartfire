@@ -18,7 +18,7 @@ pub struct RingRequest {
     /// Older item jobs can recover their source; banner-only jobs cannot.
     #[serde(default)]
     pub grant_id: Option<i64>,
-    /// UTC microseconds: item created_at (reset on retry), or banner last_issued_at.
+    /// UTC microseconds: item created_at, or the actual banner emission time.
     /// Unversioned jobs cannot safely identify the invitation they belong to.
     #[serde(default)]
     pub invited_at: Option<i64>,
@@ -26,6 +26,31 @@ pub struct RingRequest {
 }
 impl Job for RingRequest {
     const CLASS: &'static str = "Notifications::HuddleRingJob";
+}
+
+/// Rails broadcasts synchronously. The queue row identifies Rust's deferred
+/// emission; transport reissuance does not create or invalidate that emission.
+pub fn publish_queued_ring(tx: &mut Tx<'_>, id: i64) -> Result<()> {
+    let arguments: Option<serde_json::Value> = tx.conn().query_row_cached(
+        "SELECT arguments FROM background_jobs WHERE id=? AND job_class=?",
+        params![id, RingRequest::CLASS], |row| row.get(0),
+    ).optional()?;
+    let Some(arguments) = arguments else { return Ok(()); };
+    if arguments["cancelled"] == 1 || arguments["superseded"] == 1 { return Ok(()); }
+    let request = serde_json::from_value(arguments).map_err(|error| crate::Error::Other(error.to_string()))?;
+    publish_ring_with_policy(tx, &request, None)
+}
+
+/// Only an actual Rails callback/emission supersedes the prior pending callback
+/// for this logical target. All changes share the invitation/enqueue transaction.
+fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
+    let item = request.invitation["activityItemId"].as_i64().unwrap_or_default();
+    tx.conn().execute_cached(
+        "UPDATE background_jobs SET arguments=json_set(arguments,'$.superseded',1) WHERE job_class=? AND json_extract(arguments,'$.recipient_id')=? AND json_extract(arguments,'$.invitation.roomId')=? AND json_extract(arguments,'$.invitation.activityItemId')=? AND (?!=0 OR json_extract(arguments,'$.sender_id')=?)",
+        params![RingRequest::CLASS, request.recipient_id, request.invitation["roomId"].as_i64(), item, item, request.sender_id],
+    )?;
+    tx.emit_after_commit(Event::job(request));
+    Ok(())
 }
 
 /// `Huddle::RingPolicy.ring?`: an override replaces the entire sound decision.
@@ -104,10 +129,10 @@ fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest
     } else {
         let Some(grant) = request.grant_id.map(|id| HuddleGrant::find_by_id(tx.conn(), id)).transpose()?.flatten() else { return Ok(None); };
         if grant.user_id != request.sender_id { return Ok(None); }
-        if request.invited_at.is_none() || request.invited_at != grant.last_issued_at.map(Timestamp::as_microsecond) { return Ok(None); }
+        if request.invited_at.is_none() { return Ok(None); }
         let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
         let Some(caller) = User::find_by_id(tx.conn(), grant.user_id)? else { return Ok(None); };
-        RingRequest { recipient_id:viewer.id, sender_id:caller.id, grant_id:Some(grant.id), invited_at:grant.last_issued_at.map(Timestamp::as_microsecond),
+        RingRequest { recipient_id:viewer.id, sender_id:caller.id, grant_id:Some(grant.id), invited_at:request.invited_at,
             invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":room.direct_display_name(tx.conn(),Some(&viewer),None)?,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""}) }
     };
     let grant = HuddleGrant::find_by_id(tx.conn(), current.grant_id.unwrap())?.unwrap();
@@ -170,7 +195,7 @@ fn item_ring_request(tx: &Tx<'_>, item: &ActivityItem) -> Result<Option<RingRequ
 /// Returning false preserves ordinary activity frames for other source/event types.
 pub(crate) fn enqueue_item_ring(tx: &mut Tx<'_>, id: i64) -> Result<bool> {
     let Some(request) = item_ring_request(tx, &ActivityItem::find(tx.conn(), id)?)? else { return Ok(false); };
-    tx.emit_after_commit(Event::job(&request));
+    enqueue_ring(tx, &request)?;
     Ok(true)
 }
 
@@ -228,7 +253,7 @@ fn invite_recipient(
     if !huddle_notices::invitations_enabled(tx.conn(), recipient.id)? {
         let caller = User::find(tx.conn(), grant.user_id)?;
         let name = room.direct_display_name(tx.conn(), Some(recipient), None)?;
-        tx.emit_after_commit(Event::job(&RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:grant.last_issued_at.map(Timestamp::as_microsecond),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})}));
+        enqueue_ring(tx, &RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:Some(tx.now().as_microsecond()),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})})?;
         return Ok(());
     }
     let owned = ActivityItem::find_by_user_and_source(
