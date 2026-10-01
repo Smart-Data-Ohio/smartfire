@@ -1,6 +1,7 @@
 // Instrumentation from pinned Rails HuddlesTest; native WebRTC and local LiveKit.
 import assert from 'node:assert/strict';
 import {fixture, text, absent} from './ws13-support.mjs';
+import {pollBrowser} from './ws13-browser-poll.mjs';
 export const target = name => '[data-huddle-target="'+name+'"]';
 export const controller = "window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle')";
 export const microphone = controller+"?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack";
@@ -58,11 +59,13 @@ export async function noise(p,on) {
   await wait(p,microphone+"?.getProcessor()?.name "+(on?"=== 'campfire-rnnoise'":"== null"),on?'the RNNoise processor never attached to the microphone':'the RNNoise processor was not removed');
 }
 export async function media(p,kind,after=0,activeOnly=false) {
-  await p.waitForFunction(async ({kind,after,activeOnly})=>{
+  // Playwright 1.63 tests Promise truthiness in waitForFunction, before it
+  // settles. Sample with evaluate (which awaits it), like Rails' async script.
+  await pollBrowser(p,async ({kind,after,activeOnly})=>{
     const pcs=window.huddleTestPeerConnections.slice(after).filter(pc=>!activeOnly||['connected','completed'].includes(pc.connectionState));
     const reports=await Promise.all(pcs.map(pc=>pc.getStats())).catch(()=>[]);
     return reports.some(report=>[...report.values()].some(s=>s.type==='inbound-rtp'&&s.kind===kind&&s.bytesReceived>0));
-  },{kind,after,activeOnly},{timeout:20000,polling:100});
+  },{kind,after,activeOnly},{timeout:20000,polling:100,message:'no '+kind+' RTP media arrived from LiveKit'});
 }
 export async function reconnect(p) {
   const result=await p.evaluate(async()=>{

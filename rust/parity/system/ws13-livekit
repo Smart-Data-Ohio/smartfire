@@ -10,4 +10,6 @@ if ! docker image inspect "$image" >/dev/null 2>&1; then
   docker build -q --label parity.owner=ws13 -f rust/parity/Dockerfile.playwright -t "$image" rust/parity
 fi
 npm ci --ignore-scripts --no-audit --no-fund --prefix script/livekit-gateway
+# Exercise the asynchronous sampling contract before any media acceptance.
+docker run --rm --init --name ws13-polling-regression --network none --ipc host --cpus 2 --user "$(id -u):$(id -g)" --volume "$root/parity:$root/parity:ro" --workdir "$root/parity" "$image" node --test --test-concurrency=8 system/ws13-browser-poll.test.mjs
 WS13_PLAYWRIGHT_IMAGE="$image" CI=1 TMPDIR="$PWD/.scratch" CABLE_TEST_PORT_RANGE=52300-52349 MAIL_TEST_PORT_RANGE=52350-52399 CARGO_BUILD_JOBS=2 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 CARGO_INCREMENTAL=0 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire livekit_stage_system_cases_in_real_browser -- --ignored --nocapture --test-threads=8
