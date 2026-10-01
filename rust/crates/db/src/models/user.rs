@@ -437,7 +437,7 @@ impl User {
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
             if status != Status::Active {
                 crate::models::huddle_grant::HuddleGrant::revoke_for_user(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
-                lifecycle::revoke_agent_grants(tx, self.id)?;
+                crate::models::AgentGrant::revoke_for_user(tx, self.id)?;
             }
             self.status = status;
             sets.push(("status", Box::new(status)));

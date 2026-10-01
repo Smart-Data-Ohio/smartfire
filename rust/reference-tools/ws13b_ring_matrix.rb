@@ -156,7 +156,7 @@ class WS13bRingMatrix
   end
 
   def drain(spec,operation)
-    jobs = pending_jobs
+    jobs = pending_jobs.dup
     originals = jobs.dup
     jobs.reverse! if operation[:order] == "newest" || (!operation[:order] && spec[:newest_first])
     jobs.shuffle!(random: @rng) if operation[:order] == "shuffled"
@@ -166,7 +166,7 @@ class WS13bRingMatrix
       @adapter.enqueued_jobs.delete(row)
       ActiveJob::Base.execute(row.except(:job,:args,:queue,:priority,:at))
     end
-    raise "complete drain left pending jobs" if !operation[:limit] && pending_jobs.any?
+    raise "#{spec[:name]}: complete drain left pending jobs: #{queue_inventory.inspect}" if !operation[:limit] && pending_jobs.any?
   end
 
   def apply(action)
