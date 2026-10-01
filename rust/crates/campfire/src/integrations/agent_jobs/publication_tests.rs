@@ -248,3 +248,46 @@ async fn ws11_publication_durable_intent_recovers_commit_gap_and_binds_once() {
         Ok(())
     }).await.unwrap();
 }
+
+#[tokio::test]
+async fn ws11_r4_crash_gap_does_not_publish_after_restart() {
+    use crate::app::AppState;
+    use super::post_deferred_with_network;
+    use std::sync::Arc;
+    let (app,dir)=TestApp::boot().await.expect("default seed").stop_jobs().await;
+    let (agent_id,thread_id)=app.db.write(|tx| {
+        let agent=Agent::for_user(tx.conn(),BENDER)?.unwrap();
+        tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[agent.id])?;
+        Room::find(tx.conn(),ALL_TALK)?.grant_to(tx,&[BENDER])?;
+        let thread=ChannelThread::create(tx,NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,
+            name:Some("Restart gap".into()),work_status:Some("planned".into()),..Default::default()})?;
+        tx.conn().execute("UPDATE channel_threads SET work_owner_id=? WHERE id=?",rusqlite::params![BENDER,thread.id])?;
+        Ok((agent.id,thread.id))
+    }).await.unwrap();
+    let snapshot=dir.path().join("restart.sqlite3");
+    let export=snapshot.clone();
+    app.db.write(move|tx| {
+        tx.after_commit(move|tx| {tx.conn().execute("VACUUM INTO ?",[export.to_str().unwrap()])?;Ok(())});
+        ChannelThread::find(tx.conn(),thread_id)?.destroy(tx)
+    }).await.unwrap();
+    let env=app.db.env().clone();
+    let mut config=campfire_db::Config::new(&snapshot);config.prepare=false;
+    let db=campfire_db::Database::open(config,env).unwrap();
+    let (job_id,args)=db.read(move|conn| {
+        assert!(ChannelThread::find_by_id(conn,thread_id)?.is_none());
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",rusqlite::params![agent_id,thread_id],|r|r.get::<_,i64>(0))?,0);
+        Ok(conn.query_row("SELECT id,arguments FROM background_jobs WHERE job_class='Agent::EventWebhookJob' AND json_extract(arguments,'$.deleted_work.metadata.thread_id')=?",[thread_id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,Value>(1)?)))?)
+    }).await.unwrap();
+    let state=Arc::try_unwrap(app).unwrap_or_else(|_|panic!("stopped app has no shared strong references"));
+    let restarted=Arc::new(AppState {db,..state});
+    post_deferred_with_network(&restarted,serde_json::from_value(args).unwrap(),job_id,&crate::integrations::net::Network::system()).await.unwrap();
+    let actual=restarted.db.read(move|conn| {
+        let page=agent_event_polling::poll(conn,agent_id,None,None,Timestamp::parse_db("2026-03-02 16:00:00").unwrap(),&Default::default(),|m|Ok(json!({"id":m.id})))?;
+        Ok(json!({"thread_exists":ChannelThread::find_by_id(conn,thread_id)?.is_some(),
+            "deletion_events":conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",rusqlite::params![agent_id,thread_id],|r|r.get::<_,i64>(0))?,
+            "polled_deletions":page["events"].as_array().unwrap().iter().filter(|e|e["event_type"]=="work_unassigned" && e["work"]["thread_id"]==thread_id).count()}))
+    }).await.unwrap();
+    let gold:Value=serde_json::from_str(include_str!("../../../../../vectors/agents_deletion_crash_contract.json")).unwrap();
+    println!("WS11 r4 restarted: {actual}");
+    assert_eq!(actual,gold["results"]);
+}

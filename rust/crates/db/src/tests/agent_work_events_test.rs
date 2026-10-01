@@ -189,3 +189,82 @@ fn ws11_publication_deletion_id_follows_events_committed_in_parent() {
     let oracle:Value=serde_json::from_str(include_str!("../../../../vectors/agents_deletion_publication_contract.json")).unwrap();
     assert_eq!(actual,oracle["results"]["same_transaction"]);
 }
+
+fn callback_order_oracle() -> Value {
+    serde_json::from_str(include_str!("../../../../vectors/agents_deletion_callback_contract.json")).unwrap()
+}
+fn callback_thread(tx: &mut Tx<'_>, name: &str) -> Result<ChannelThread> {
+    let thread = ChannelThread::create(tx, crate::NewChannelThread {
+        room_id:id("watercooler"), creator_id:id("david"), name:Some(name.into()),
+        work_status:Some("planned".into()), ..Default::default()
+    })?;
+    tx.conn().execute("UPDATE channel_threads SET work_owner_id=? WHERE id=?",params![id("bender"),thread.id])?;
+    ChannelThread::find(tx.conn(),thread.id)
+}
+fn callback_observation(t: &TestDb) -> Value {
+    t.read(|conn| {
+        let events=AgentEvent::for_agent(conn,id("bender_agent"))?;
+        let mut cursor=json!(0);let mut titles=Vec::new();
+        loop {
+            let page=crate::models::agent_event_polling::poll(conn,id("bender_agent"),Some(&cursor),Some(&json!(1)),
+                Timestamp::parse_db("2026-03-02 16:00:00").unwrap(),&Default::default(),|m|Ok(json!({"id":m.id})))?;
+            if page["events"].as_array().unwrap().is_empty() {break}
+            titles.extend(page["events"].as_array().unwrap().iter().map(|e|e["work"]["title"].clone()));
+            cursor=page["next_since"].clone();
+        }
+        Ok(json!({"ledger":events.iter().map(|e|e.metadata["title"].clone()).collect::<Vec<_>>(),"polled":titles,
+            "threads_remaining":conn.query_row("SELECT COUNT(*) FROM channel_threads WHERE name IN ('A','B','A edited')",[],|r|r.get::<_,i64>(0))?}))
+    })
+}
+fn callback_setup(webhook: bool) -> TestDb {
+    let t=setup();
+    t.write(move|tx| {
+        tx.conn().execute("DELETE FROM channel_threads WHERE id=?",[THREAD])?;
+        if !webhook {tx.conn().execute("DELETE FROM webhooks WHERE user_id=?",[id("bender")])?;}
+        Ok(())
+    });
+    t
+}
+#[test]
+fn ws11_r4_callback_created_first_matches_rails() {
+    for webhook in [false,true] {
+        let t=callback_setup(webhook);
+        t.write(|tx| {let a=callback_thread(tx,"A")?;let b=callback_thread(tx,"B")?;b.destroy(tx)?;a.destroy(tx)});
+        let actual=callback_observation(&t);
+        println!("WS11 r4 created_first webhook={webhook}: {actual}");
+        assert_eq!(actual,callback_order_oracle()["results"][format!("created_same_transaction_{webhook}")]);
+    }
+}
+#[test]
+fn ws11_r4_callback_updated_first_matches_rails() {
+    for webhook in [false,true] {
+        let t=callback_setup(webhook);
+        let (mut a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
+        t.write(move|tx| {a.update_settings(tx,Some("A edited"),None)?;b.destroy(tx)?;a.destroy(tx)});
+        let actual=callback_observation(&t);
+        println!("WS11 r4 updated_first webhook={webhook}: {actual}");
+        assert_eq!(actual,callback_order_oracle()["results"][format!("updated_first_{webhook}")]);
+    }
+}
+#[test]
+fn ws11_r4_callback_plain_reverse_deletion_matches_rails() {
+    for webhook in [false,true] {
+        let t=callback_setup(webhook);
+        let (a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
+        t.write(move|tx| {b.destroy(tx)?;a.destroy(tx)});
+        assert_eq!(callback_observation(&t),callback_order_oracle()["results"][format!("plain_{webhook}")]);
+    }
+}
+#[test]
+fn ws11_r4_callback_failure_stops_remaining_publications() {
+    let t=callback_setup(false);
+    let (a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
+    let failed=t.try_write(move|tx| {
+        tx.conn().execute_batch(&format!("CREATE TEMP TRIGGER ws11_reject_first BEFORE INSERT ON agent_events WHEN NEW.event_type='work_unassigned' AND json_extract(NEW.metadata,'$.thread_id')={} BEGIN SELECT RAISE(ABORT,'WS11 rejected ledger'); END",b.id))?;
+        b.destroy(tx)?;a.destroy(tx)
+    });
+    assert!(failed.is_err());
+    let actual=callback_observation(&t);
+    println!("WS11 r4 first_callback_failure: {actual}");
+    assert_eq!(actual,callback_order_oracle()["results"]["first_ledger_failure"]);
+}

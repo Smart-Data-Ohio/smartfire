@@ -1,0 +1,77 @@
+{
+  "reference": "d7c7de92",
+  "results": {
+    "plain_false": {
+      "ledger": [
+        "B",
+        "A"
+      ],
+      "polled": [
+        "B",
+        "A"
+      ],
+      "threads_remaining": 0
+    },
+    "updated_first_false": {
+      "ledger": [
+        "A edited",
+        "B"
+      ],
+      "polled": [
+        "A edited",
+        "B"
+      ],
+      "threads_remaining": 0
+    },
+    "created_same_transaction_false": {
+      "ledger": [
+        "A",
+        "B"
+      ],
+      "polled": [
+        "A",
+        "B"
+      ],
+      "threads_remaining": 0
+    },
+    "plain_true": {
+      "ledger": [
+        "B",
+        "A"
+      ],
+      "polled": [
+        "B",
+        "A"
+      ],
+      "threads_remaining": 0
+    },
+    "updated_first_true": {
+      "ledger": [
+        "A edited",
+        "B"
+      ],
+      "polled": [
+        "A edited",
+        "B"
+      ],
+      "threads_remaining": 0
+    },
+    "created_same_transaction_true": {
+      "ledger": [
+        "A",
+        "B"
+      ],
+      "polled": [
+        "A",
+        "B"
+      ],
+      "threads_remaining": 0
+    },
+    "first_ledger_failure_error": "statement_invalid",
+    "first_ledger_failure": {
+      "ledger": [],
+      "polled": [],
+      "threads_remaining": 0
+    }
+  }
+}
