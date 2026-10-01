@@ -26,4 +26,15 @@ ActiveRecord::Base.connection.execute("CREATE TRIGGER reject_rotation_audit BEFO
   after = read.call
   raise "rotation rolled back: #{action}" if after.blank? || before == after
 end
-puts 'Rails rotation fault boundaries: bot key, agent signing secret, legacy signing secret remain rotated after rejected audit; 3 requests passed'
+ActiveRecord::Base.connection.execute('DROP TRIGGER reject_rotation_audit')
+ActiveRecord::Base.connection.execute("CREATE TRIGGER reject_agent_secret_write BEFORE UPDATE OF webhook_signing_secret ON agents BEGIN SELECT RAISE(ABORT,'fixture secret write rejection'); END;")
+before = bot.agent.reload.attributes.slice('webhook_signing_secret', 'updated_at')
+begin
+  browser.post("/account/bots/#{bot.id}/webhook_secret", params: {}, headers: headers.except('Cookie'))
+  raise "expected 500, got #{browser.response.status}" unless browser.response.status == 500
+rescue ActiveRecord::StatementInvalid => error
+  raise unless error.message.include?('fixture secret write rejection')
+end
+raise 'failed secret write changed state' unless bot.agent.reload.attributes.slice('webhook_signing_secret', 'updated_at') == before
+raise 'failed writes were audited' if AuditLog.where(action: ['agent.credential.reset', 'agent.webhook_secret.reset']).exists?
+puts 'Rails rotation fault boundaries: 3 committed rotations after rejected audits; 1 unchanged agent secret after rejected write; 4 requests passed'

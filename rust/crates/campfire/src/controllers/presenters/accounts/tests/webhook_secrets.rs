@@ -381,13 +381,13 @@ async fn agent_secret_rotation_rejects_nonowner_with_sudo_and_preserves_cipherte
 }
 
 #[tokio::test]
-async fn agent_secret_rotation_rolls_back_ciphertext_timestamp_and_audit_on_failure() {
+async fn agent_secret_write_failure_rolls_back_ciphertext_timestamp_and_audit() {
     let test = boot_seed("default").await.expect("default seed");
     let bot_id: i64 = test.label("users.bender").parse().unwrap();
     initialize_agent_secret(&test, bot_id).await;
     let before = agent_secret(&test, bot_id).await;
     test.booted.app.db.write(|tx| {
-        tx.conn().execute_batch("CREATE TRIGGER reject_agent_secret_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.webhook_secret.reset' BEGIN SELECT RAISE(ABORT,'test audit rejection'); END;")?;
+        tx.conn().execute_batch("CREATE TRIGGER reject_agent_secret_write BEFORE UPDATE OF webhook_signing_secret ON agents BEGIN SELECT RAISE(ABORT,'test secret write rejection'); END;")?;
         Ok(())
     }).await.unwrap();
     let mut admin = test.browser("198.51.100.168");
