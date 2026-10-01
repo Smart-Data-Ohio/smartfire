@@ -256,3 +256,77 @@ async fn slack_conversations_dry_group_preview_uses_negative_members_without_wri
     .await
     .unwrap();
 }
+
+#[tokio::test]
+async fn slack_review_room_matching_uses_rails_sqlite_lower() {
+    let vectors: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/review_regressions.json"
+    ))
+    .unwrap();
+    for case in vectors["rooms"].as_array().unwrap() {
+        let (db, _, _dir) = setup().await;
+        let id = start(&db).await;
+        let run = run(&db, id).await;
+        let case = case.clone();
+        db.write(move |tx| {
+            tx.conn().execute("INSERT INTO rooms(id,name,type,creator_id,created_at,updated_at) VALUES(861,?,'Rooms::Open',1,?,?)",rusqlite::params![case["existing"].as_str().unwrap(),tx.now(),tx.now()])?;
+            Room::find(tx.conn(), 861)?.grant_to(tx, &[1])?;
+            let conversation = json!({"id":"CREVIEW", "name":case["incoming"]});
+            let preview = resolve(tx, &run, &conversation, &[], &HashMap::new(), true)?;
+            assert_eq!(json!({"action":preview.action,"room_id":preview.room.map(|r|r.id)}),case["preview"],"{} into {} preview",case["incoming"],case["existing"]);
+            let result = resolve(tx, &run, &conversation, &[], &HashMap::new(), false)?;
+            let room = result.room.unwrap();
+            let created: bool = tx.conn().query_row("SELECT created_record FROM slack_import_records WHERE slack_kind='conversation'",[],|r|r.get(0))?;
+            let actual = json!({"action":result.action,"room_id":room.id,"name":room.name,"created":created,"memberships":room.memberships(tx.conn())?.len()});
+            assert_eq!(actual,case["result"],"{} into {} import",case["incoming"],case["existing"]);
+            Ok(())
+        }).await.unwrap();
+    }
+    println!("Slack review room parity: 11 Rails preview/import cases matched");
+}
+
+#[tokio::test]
+async fn slack_review_group_name_keeps_ruby_unicode_downcase_order() {
+    let vectors: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/review_regressions.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        let mut users = HashMap::new();
+        let mut members = Vec::new();
+        for (i, name) in vectors["group"]["names"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            let key = format!("U{i}");
+            members.push(json!(key));
+            users.insert(
+                key,
+                User::create(
+                    tx,
+                    campfire_db::NewUser {
+                        name: name.as_str().unwrap().into(),
+                        ..Default::default()
+                    },
+                )?,
+            );
+        }
+        let result = resolve(
+            tx,
+            &run,
+            &json!({"id":"GREVIEW","is_mpim":true}),
+            &members,
+            &users,
+            false,
+        )?;
+        assert_eq!(json!(result.room.unwrap().name), vectors["group"]["result"]);
+        Ok(())
+    })
+    .await
+    .unwrap();
+}

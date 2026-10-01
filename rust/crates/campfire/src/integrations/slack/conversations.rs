@@ -4,6 +4,7 @@ use super::users::{self, SLACKBOT_ID};
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Result, Room, RoomType, Tx, User};
+use rusqlite::OptionalExtension;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
@@ -94,11 +95,15 @@ fn merge_room(tx: &Tx<'_>, run: &SlackImport, c: &Value, target: &Choice) -> Res
     if *target == Choice::New || run.kind == "personal" || truthy(&c["is_private"]) {
         return Ok(None);
     }
-    let name = channel_name(c).to_lowercase();
-    Ok(Room::of_type(tx.conn(), room_type(c))?
-        .into_iter()
-        .filter(|r| !r.deleted() && r.name.as_ref().is_some_and(|n| n.to_lowercase() == name))
-        .min_by_key(|r| r.id))
+    // ConversationMapper#merge_room lowers only the incoming value in Ruby.
+    // SQLite LOWER on persisted names folds ASCII; Unicode case pairs differ.
+    let name = super::payload::downcase(&channel_name(c));
+    let id: Option<i64> = tx.conn().query_row(
+        "SELECT id FROM rooms WHERE deleted_at IS NULL AND type=? AND LOWER(name)=? ORDER BY id LIMIT 1",
+        rusqlite::params![room_type(c), name],
+        |row| row.get(0),
+    ).optional()?;
+    id.map(|id| Room::find(tx.conn(), id)).transpose()
 }
 fn mapped_members(member_ids: &[Value], users: &HashMap<String, User>) -> Vec<i64> {
     let mut result = Vec::new();
@@ -340,7 +345,7 @@ pub fn resolve(
                     .map(|u| u.name.clone())
                     .filter(|n| !n.trim().is_empty())
                     .collect();
-                names.sort_by_key(|n| n.to_lowercase());
+                names.sort_by_key(|n| super::payload::downcase(n));
                 let name = if names.is_empty() {
                     present(&c["name"]).unwrap_or_else(|| "Group DM".into())
                 } else if names.len() <= 4 {

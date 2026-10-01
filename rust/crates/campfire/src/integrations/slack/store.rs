@@ -441,8 +441,7 @@ pub fn allowed_domains() -> HashSet<String> {
         .unwrap_or_default()
         .split(',')
         .map(|s| {
-            s.trim_matches(|c: char| c.is_ascii_whitespace() || c == '\0')
-                .to_lowercase()
+            super::payload::downcase(s.trim_matches(|c: char| c.is_ascii_whitespace() || c == '\0'))
         })
         .filter(|s| DOMAIN.is_match(s))
         .collect()

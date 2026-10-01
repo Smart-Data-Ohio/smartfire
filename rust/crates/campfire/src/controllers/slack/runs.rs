@@ -42,13 +42,8 @@ async fn find(c: &mut Ctx, user: &User, admin: bool) -> Result<SlackImport> {
         .await
         .map_err(Error::internal)?
         .ok_or_else(|| {
-            if admin {
-                Error::NotFound
-            } else {
-                // ImportsController#set_run renders `head :not_found`; it does not
-                // raise RecordNotFound and therefore bypasses the public error page.
-                Error::Halt(Box::new(c.head(StatusCode::NOT_FOUND)))
-            }
+            // Both Rails controllers render `head :not_found` in set_run.
+            Error::Halt(Box::new(c.head(StatusCode::NOT_FOUND)))
         })
 }
 async fn log(c: &Ctx, user: &User, id: i64, action: &str, changes: Option<Value>) -> Result<()> {
@@ -612,7 +607,7 @@ pub(super) fn data(
 async fn list(c: &Ctx, uid: Option<i64>) -> Result<Vec<RunData>> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
     c.app().db.read(move |conn|{
-        let mut stmt=conn.prepare("SELECT id FROM slack_imports WHERE (? IS NULL OR (user_id=? AND kind='personal')) ORDER BY created_at DESC")?;
+        let mut stmt=conn.prepare("SELECT id FROM slack_imports WHERE (? IS NULL OR (user_id=? AND kind='personal')) ORDER BY created_at DESC, id DESC")?;
         stmt.query_map(params![uid,uid],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().map(|id|data(conn,SlackImport::find(conn,id)?.unwrap(),now)).collect()
     }).await.map_err(Error::internal)
 }

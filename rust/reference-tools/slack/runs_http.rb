@@ -25,6 +25,9 @@ cases=[]
  path=action=='index'||action=='create' ? base : "#{base}/853#{action=='show' ? '' : '/'+(action=='start_import' ? 'import' : action)}"
  cases << {name:"admin-member-#{action}",role:0,method:,path:}
  cases << {name:"admin-#{action}",method:,path:}
+ unless %w[index create].include?(action)
+  cases << {name:"admin-missing-#{action}",method:,path:path.sub('853','999')}
+ end
 end
 %w[index create show status cancel undo].each do |action|
  method=%w[create cancel undo].include?(action) ? 'POST' : 'GET'
@@ -36,6 +39,9 @@ end
   cases << {name:"personal-missing-#{action}",role:0,method:,path:path.sub('853','999')}
  end
 end
+cases << {name:'admin-index-equal-created-at',path:base,later:true}
+cases << {name:'personal-index-equal-created-at',path:personal,later:true,kind:'personal',role:0}
+cases << {name:'setup-active-equal-created-at',path:'/account/slack_import',status:'running',other_active:true}
 [true,false].each do |admin|
  path=admin ? base : personal
  cases << {name:"#{admin}-unconfigured",method:'POST',path:,unconfigured:true,role:admin ? 1 : 0}

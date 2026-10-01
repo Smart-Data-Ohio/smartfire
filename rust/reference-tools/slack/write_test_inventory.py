@@ -34,7 +34,7 @@ model_ports = {
 }
 client_deferred = {}
 job_ports = {
- 'undo is blocked while another run is queued': '109 real Rails HTTP actions compare blocking reason and unchanged DB/queue.',
+ 'undo is blocked while another run is queued': '119 real Rails HTTP actions compare blocking reason and unchanged DB/queue.',
  'dry run writes nothing except the run row and its issues': 'slack_sql_store_dry_run_collects_samples_without_domain_rows_or_reply_fetches',
  'workspace import creates rooms, memberships, messages, threads, boosts and pins': 'slack_sequence_matches_rails_import_undo_reimport_database_rows: every field in 89 tables',
  'tiny step budget spans several steps for one conversation': 'slack_runner_zero_budget_stops_after_page_and_preserves_reply_cursor plus actual fixture completion',
@@ -118,7 +118,7 @@ for path in paths:
             if name == "run page loads later runs' stats once across the undo checks":
                 state, note = 'covered', 'slack_personal_show_reads_later_stats_once_for_both_undo_controls: native SQLite trace asserts one later-stats query across both controls and actual HTTP response.'
             else:
-                state, note = 'covered', '109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow.'
+                state, note = 'covered', '119 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow.'
         elif '/models/slack/client_test.rb' in str(path):
             if name in client_deferred:
                 state, note = 'partial', client_deferred[name]

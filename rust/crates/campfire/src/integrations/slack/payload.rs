@@ -1,6 +1,33 @@
 //! Ruby JSON access/coercion at Slack's untyped payload boundary.
 use serde_json::{Value, json};
 
+/// Ruby's default String#downcase has no context-sensitive final sigma rule.
+/// Use the pinned Ruby mappings so the Rust toolchain's Unicode version cannot
+/// change the query values or group names produced by the Rails Slack mappers.
+pub fn downcase(value: &str) -> String {
+    if value.is_ascii() {
+        return value.to_ascii_lowercase();
+    }
+    static MAPPINGS: std::sync::LazyLock<std::collections::HashMap<char, String>> =
+        std::sync::LazyLock::new(|| {
+            serde_json::from_str::<Vec<(char, String)>>(include_str!(
+                "../../../data/slack-ruby-downcase.json"
+            ))
+            .expect("pinned Ruby downcase table")
+            .into_iter()
+            .collect()
+        });
+    let mut lowered = String::with_capacity(value.len());
+    for ch in value.chars() {
+        if let Some(mapping) = MAPPINGS.get(&ch) {
+            lowered.push_str(mapping);
+        } else {
+            lowered.push(ch);
+        }
+    }
+    lowered
+}
+
 #[derive(Debug, thiserror::Error)]
 #[error("{class}: {message}")]
 pub struct Error {

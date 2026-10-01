@@ -153,3 +153,68 @@ async fn slack_users_duplicate_page_identity_rolls_back_all_users_and_mappings()
         0
     );
 }
+
+#[tokio::test]
+async fn slack_review_email_matching_keeps_sqlite_lower_and_ruby_downcase() {
+    let vectors: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/review_regressions.json"
+    ))
+    .unwrap();
+    for case in vectors["emails"].as_array().unwrap() {
+        let (db, _, _dir) = setup().await;
+        let id = start(&db).await;
+        let run = run(&db, id).await;
+        let case = case.clone();
+        db.write(move |tx| {
+            // Use Rails-recorded ids to compare the actual mapping and placeholder row.
+            review_owner_id(tx)?;
+            tx.conn().execute("INSERT INTO users(id,name,email_address,created_at,updated_at) VALUES(812,'Existing',?,?,?)",params![case["existing"].as_str().unwrap(),tx.now(),tx.now()])?;
+            let members = json!([{"id":"UREVIEW","name":"Incoming","profile":{"email":case["incoming"]}}]);
+            assert_eq!(map_page(tx,&run,&members,true,&HashSet::new())?,case["preview"],"{} preview",case["incoming"]);
+            let imported = map_page(tx,&run,&members,false,&HashSet::new());
+            if let Some(error) = case["error"].as_str() {
+                assert!(imported.unwrap_err().to_string().contains(error), "{} error", case["incoming"]);
+                let counts = tx.conn().query_row("SELECT (SELECT count(*) FROM slack_import_records),(SELECT count(*) FROM users)",[],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,i64>(1)?)))?;
+                assert_eq!(counts,(case["records"].as_i64().unwrap(),case["users"].as_i64().unwrap()));
+                return Ok(());
+            }
+            assert_eq!(imported?,case["stats"],"{} import",case["incoming"]);
+            let actual = tx.conn().query_row("SELECT u.id,u.name,u.email_address,r.created_record FROM slack_import_records r JOIN users u ON u.id=r.record_id WHERE r.slack_key='UREVIEW'",[],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"name":r.get::<_,String>(1)?,"email":r.get::<_,Option<String>>(2)?,"created":r.get::<_,bool>(3)?})))?;
+            assert_eq!(actual,case["user"],"{} row",case["incoming"]);
+            Ok(())
+        }).await.unwrap();
+    }
+    println!("Slack review email parity: 7 Rails preview/import cases matched");
+}
+
+#[tokio::test]
+async fn slack_review_bot_handles_remain_exact_case_sensitive_keys() {
+    let vectors: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/review_regressions.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        review_owner_id(tx)?;
+        let actual = vectors["handles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|case| {
+                bot_user(tx, &run, &json!({"username":case["name"]}))
+                    .map(|user| json!({"name":case["name"],"id":user.id}))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(json!(actual), vectors["handles"]);
+        Ok(())
+    })
+    .await
+    .unwrap();
+}
+
+fn review_owner_id(tx: &mut Tx<'_>) -> Result<()> {
+    tx.conn().execute_batch("PRAGMA defer_foreign_keys=ON; UPDATE users SET id=811 WHERE id=1; UPDATE slack_workspaces SET configured_by_id=811 WHERE configured_by_id=1; UPDATE slack_connections SET user_id=811 WHERE user_id=1; UPDATE slack_imports SET user_id=811 WHERE user_id=1")?;
+    Ok(())
+}

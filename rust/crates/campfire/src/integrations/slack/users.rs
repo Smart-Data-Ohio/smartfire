@@ -197,13 +197,10 @@ pub fn map_page(
             let mut stmt = tx
                 .conn()
                 .prepare("SELECT * FROM users WHERE LOWER(email_address)=? ORDER BY id")?;
-            for user in stmt.query_map([email.to_lowercase()], User::from_row)? {
+            for user in stmt.query_map([super::payload::downcase(&email)], User::from_row)? {
                 let user = user?;
                 email_index.insert(
-                    user.email_address
-                        .clone()
-                        .unwrap_or_default()
-                        .to_lowercase(),
+                    super::payload::downcase(user.email_address.as_deref().unwrap_or_default()),
                     user,
                 );
             }
@@ -231,7 +228,9 @@ pub fn map_page(
             ("bots", None)
         } else if placeholder_only(member) || email.as_ref().is_none_or(|s| s.trim().is_empty()) {
             ("deactivated", None)
-        } else if let Some(user) = email_index.get(&email.as_ref().unwrap().to_lowercase()) {
+        } else if let Some(user) =
+            email_index.get(&super::payload::downcase(email.as_ref().unwrap()))
+        {
             ("matched", Some(user.clone()))
         } else {
             ("placeholders", None)
@@ -247,12 +246,13 @@ pub fn map_page(
                 } else {
                     name.clone()
                 };
-                let domain = email
-                    .as_ref()
-                    .and_then(|s| s.rsplit('@').next())
-                    .unwrap_or("")
-                    .trim()
-                    .to_lowercase();
+                let domain = super::payload::downcase(
+                    email
+                        .as_ref()
+                        .and_then(|s| s.rsplit('@').next())
+                        .unwrap_or("")
+                        .trim(),
+                );
                 User::create_slack_placeholder(
                     tx,
                     NewUser {
