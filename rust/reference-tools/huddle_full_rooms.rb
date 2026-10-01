@@ -73,11 +73,7 @@ scenarios.each do |id,mode|
   content=renderer.render(template:'rooms/show',layout:false,assigns:assigns)
   fixture={name:"seed_#{id}_#{configured}#{mode ? "_#{mode}" : ''}",message_ids:messages.map(&:id),input:input,configured:configured,html:html,content:content,providers:{vapid_public_key:Rails.configuration.x.vapid.public_key}}
   fixture[:membership_unread_at]=unread_at if mode
-  if id==654632876
-   deferred << fixture.merge(reason:'Shared message renderer: GitHub PR cards and message-link lazy frames are not integrated on WS13; lead reconciles owning workers.')
-  else
-   cases << fixture
-  end
+  cases << fixture
  end
 end
 puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases,deferred:deferred})

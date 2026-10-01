@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod github;
+mod message_links;
 pub mod status_settings;
 pub mod attachments;
 pub mod link_embeds;
@@ -267,11 +268,21 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        let stamp = github::cache_stamp(self.conn, message)?;
+        let stamp = self.message_cards_stamp(message)?;
         Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment_with_cards(message.id, message.updated_at.jiff(), base, &stamp)) {
             Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
             None => MessageItem::View(Box::new(self.message(message)?)),
         })
+    }
+
+    fn message_cards_stamp(&self, message: &Message) -> Result<String> {
+        let mut stamp = github::cache_stamp(self.conn, message)?;
+        let quote_stamp = message_links::cache_stamp(self.conn, message)?;
+        if !quote_stamp.is_empty() {
+            stamp.push_str("/quotes:");
+            stamp.push_str(&quote_stamp);
+        }
+        Ok(stamp)
     }
 
     /// A message as `messages/_message` shows it.
@@ -318,8 +329,9 @@ impl<'a> Presenter<'a> {
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
             components: campfire_views::messages::MessageComponents {
+                message_link_cards: message_links::cards(self, message)?,
                 github_cards_html: Some(github_cards_html),
-                github_cards_stamp: github::cache_stamp(self.conn, message)?,
+                github_cards_stamp: self.message_cards_stamp(message)?,
                 ..link_embeds::components(self, message)?
             },
         })

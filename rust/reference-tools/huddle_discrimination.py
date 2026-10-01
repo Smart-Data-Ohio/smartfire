@@ -56,7 +56,9 @@ def replace_body(source, marker, body):
 
 
 mutations = [
-    ("room-populated-collection-rendering-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, "{{ self.timeline()|safe }}", "{{ \"\" }}"), "campfire", "full_room_pages_match_thirty_six_complete_rails_pages"),
+    ("quote-source-cache-dependencies-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters.rs", lambda s: replace_once(s, "if !quote_stamp.is_empty() {", "if false && !quote_stamp.is_empty() {"), "campfire", "warm_quote_parent_refreshes_legacy_edits_and_source_names"),
+    ("cross-room-quote-cache-leaks-private-source", ROOT / "rust/crates/campfire/src/controllers/presenters/message_links.rs", lambda s: replace_once(s, "if source.room_id != message.room_id {", "if false && source.room_id != message.room_id {"), "campfire", "cross_room_quote_parent_never_renders_private_source_facts"),
+    ("room-populated-collection-rendering-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, "{{ self.timeline()|safe }}", "{{ \"\" }}"), "campfire", "full_room_pages_match_thirty_eight_complete_rails_pages"),
     ("room-row-callback-rendering-bypassed", Z, lambda s: replace_once(s, "super::room_composition::deliver(app,&broadcast)?", "false && super::room_composition::deliver(app,&broadcast)?"), "campfire", "composed_sidebar_ooo_after_commit_updates_and_clears_real_subscriptions"),
     ("room-shell-invisible-notice-leaks", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'presence != "invisible"', 'presence != "never-invisible"'), "campfire", "room_shell_ooo_request_adapter_matches_recorded_calendar_and_manual_states"),
     ("room-shell-scroll-threshold-corrupted", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'state.unread_count > 5', 'state.unread_count > 4'), "campfire", "room_shell_unread_pointer_matches_count_threshold_deleted_cursor_and_off_page_jump"),

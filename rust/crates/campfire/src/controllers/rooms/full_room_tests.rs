@@ -5,22 +5,14 @@ use campfire_views::{
     rooms::{Show, ShowView},
 };
 #[tokio::test]
-async fn full_room_pages_match_thirty_six_complete_rails_pages() {
+async fn full_room_pages_match_thirty_eight_complete_rails_pages() {
     let Some(test) = TestApp::boot().await else {
         return;
     };
     let v: serde_json::Value =
         serde_json::from_str(include_str!("full_room_vectors.json")).unwrap();
-    assert_eq!(v["cases"].as_array().unwrap().len(), 36);
-    let deferred = v["deferred"].as_array().unwrap();
-    assert_eq!(deferred.len(), 2);
-    assert!(deferred.iter().all(|case| {
-        case["input"]["room"]["id"] == 654632876
-            && case["reason"]
-                .as_str()
-                .unwrap()
-                .contains("Shared message renderer")
-    }));
+    assert_eq!(v["cases"].as_array().unwrap().len(), 38);
+    assert!(v["deferred"].as_array().unwrap().is_empty());
     let mut mismatches = Vec::new();
     for case in v["cases"].as_array().unwrap() {
         let mut show: ShowView = serde_json::from_value(case["input"].clone()).unwrap();

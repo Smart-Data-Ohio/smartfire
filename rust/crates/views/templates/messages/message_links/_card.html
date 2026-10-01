@@ -1,0 +1,9 @@
+<blockquote class="message-quote">
+  <div class="message-quote__meta">
+    <span class="message-quote__author">{{ author }}</span>
+    <span class="message-quote__room">in {{ room_label }}</span>
+    {{ self.time() }}
+  </div>
+  <p class="message-quote__excerpt">{{ self.excerpt() }}</p>
+  {{ self.jump() }}
+</blockquote>
