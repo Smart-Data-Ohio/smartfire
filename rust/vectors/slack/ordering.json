@@ -57,6 +57,10 @@
     "U10"
   ],
   "mapped_name": "Alice, alice, ALICE +8",
+  "duplicate_count": 40000,
+  "duplicate_keys": [
+    "U00"
+  ],
   "missing_ids": [
     "UMISSING-Z",
     "U10",

@@ -5,7 +5,7 @@ use super::runner::{present, string, truthy};
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Connection, NewUser, Result, Tx, User};
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 
@@ -33,7 +33,7 @@ pub fn users_for(
     run: &SlackImport,
     ids: &[Value],
 ) -> Result<IndexMap<String, User>> {
-    let ids: Vec<_> = ids
+    let ids: IndexSet<_> = ids
         .iter()
         .map(string)
         .filter(|id| !id.trim().is_empty())

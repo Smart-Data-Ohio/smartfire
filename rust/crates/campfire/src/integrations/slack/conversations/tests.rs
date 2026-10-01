@@ -69,6 +69,13 @@ async fn slack_ordering_tied_group_names_repeat_rails_order_50_times() {
             mismatches.len()
         );
         assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+        let duplicates =
+            vec![oracle["keys"][0].clone(); oracle["duplicate_count"].as_u64().unwrap() as usize];
+        let mapped = users::users_for(tx.conn(), &run, &duplicates)?;
+        assert_eq!(
+            json!(mapped.keys().collect::<Vec<_>>()),
+            oracle["duplicate_keys"]
+        );
         Ok(())
     })
     .await
