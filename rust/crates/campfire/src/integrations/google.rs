@@ -1,6 +1,7 @@
 //! Google identity and opt-in Calendar/Drive integrations.
 pub mod api;
 pub mod calendar;
+pub mod calendar_sync;
 pub mod client;
 pub mod drive;
 pub mod entry_sync;

@@ -1,0 +1,1893 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-03-02T16:00:00Z",
+  "cases": [
+    {
+      "spec": {
+        "name": "cancelled_going",
+        "kind": "inbound",
+        "remote": [
+          200,
+          {
+            "status": "cancelled"
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000000,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000000,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtg00000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "declined"
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            9100000000,
+            127326141
+          ]
+        }
+      ],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962058,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "deleted_maybe",
+        "kind": "inbound",
+        "local": "maybe",
+        "remote": [
+          404,
+          {}
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000010,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "maybe"
+        }
+      ],
+      "entry_id": 9200000010,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtgk0000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "declined"
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            9100000010,
+            127326141
+          ]
+        }
+      ],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962059,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "confirmed_declined",
+        "kind": "inbound",
+        "local": "declined"
+      },
+      "events": [
+        {
+          "id": 9100000020,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "declined"
+        }
+      ],
+      "entry_id": 9200000020,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrth80000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "declined"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962060,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "confirmed_going",
+        "kind": "inbound"
+      },
+      "events": [
+        {
+          "id": 9100000030,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000030,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrths0000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962061,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "null_going",
+        "kind": "inbound",
+        "remote": [
+          200,
+          null
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000040,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000040,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtig0000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962062,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "no_attendance",
+        "kind": "inbound",
+        "local": null,
+        "remote": [
+          200,
+          {
+            "status": "cancelled"
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000050,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": null
+        }
+      ],
+      "entry_id": 9200000050,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtj40000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        null
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962063,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "past",
+        "kind": "inbound",
+        "past": true
+      },
+      "events": [
+        {
+          "id": 9100000060,
+          "starts_at": "2026-03-02T15:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000060,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962064,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "cancelled_local",
+        "kind": "inbound",
+        "cancelled": true
+      },
+      "events": [
+        {
+          "id": 9100000070,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": true,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000070,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962065,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "missing_account",
+        "kind": "inbound",
+        "account": false
+      },
+      "events": [
+        {
+          "id": 9100000080,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000080,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": null,
+      "announcement_id": 935962066,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "disconnected",
+        "kind": "inbound",
+        "disconnected": true
+      },
+      "events": [
+        {
+          "id": 9100000090,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000090,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": false,
+      "announcement_id": 935962067,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "wrong_scope",
+        "kind": "inbound",
+        "scopes": "openid"
+      },
+      "events": [
+        {
+          "id": 9100000100,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000100,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962068,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "inactive",
+        "kind": "inbound",
+        "inactive": true
+      },
+      "events": [
+        {
+          "id": 9100000110,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000110,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962069,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "nonmember",
+        "kind": "inbound",
+        "nonmember": true
+      },
+      "events": [
+        {
+          "id": 9100000120,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000120,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962070,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "head_declines_followers",
+        "kind": "inbound",
+        "series": true,
+        "remote": [
+          200,
+          {
+            "status": "cancelled"
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000130,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000131,
+          "starts_at": "2026-03-09T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000132,
+          "starts_at": "2026-03-16T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000130,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrto40000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "declined",
+        "declined",
+        "declined"
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            9100000130,
+            127326141
+          ]
+        },
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            9100000131,
+            127326141
+          ]
+        },
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            9100000132,
+            127326141
+          ]
+        }
+      ],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962071,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "follower_declines_locally",
+        "kind": "inbound",
+        "series": true,
+        "index": 1,
+        "remote": [
+          404,
+          {}
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000140,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000141,
+          "starts_at": "2026-03-09T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000142,
+          "starts_at": "2026-03-16T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000140,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtoq0000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going",
+        "declined",
+        "going"
+      ],
+      "jobs": [
+        {
+          "class": "Calendar::SyncEntryJob",
+          "args": [
+            9100000141,
+            127326141
+          ]
+        }
+      ],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": null,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "forbidden_entry_continues",
+        "kind": "inbound",
+        "extra": true,
+        "remote": [
+          403,
+          {
+            "error": {
+              "message": "denied"
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000150,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000155,
+          "starts_at": "2026-03-02T18:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000150,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtpc0000000f5mnnk",
+          "body": null
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtpm0000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going",
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962073,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "server_error_continues",
+        "kind": "inbound",
+        "extra": true,
+        "remote": [
+          503,
+          {}
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000160,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000165,
+          "starts_at": "2026-03-02T18:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000160,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtq00000000f5mnnk",
+          "body": null
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtqa0000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going",
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962075,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "transport_aborts",
+        "kind": "inbound",
+        "extra": true,
+        "remote": [
+          "timeout",
+          null
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000170,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000175,
+          "starts_at": "2026-03-02T18:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000170,
+      "error": "Google::Client::Unavailable",
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtqk0000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going",
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962077,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "quota_aborts",
+        "kind": "inbound",
+        "extra": true,
+        "remote": [
+          429,
+          {}
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000180,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000185,
+          "starts_at": "2026-03-02T18:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000180,
+      "error": "Google::Client::RateLimited",
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtr80000000f5mnnk",
+          "body": null
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going",
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962079,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "revoked_aborts",
+        "kind": "inbound",
+        "extra": true,
+        "remote": [
+          401,
+          {}
+        ],
+        "refresh": [
+          400,
+          {
+            "error": "invalid_grant"
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000190,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        },
+        {
+          "id": 9100000195,
+          "starts_at": "2026-03-02T18:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000190,
+      "error": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtrs0000000f5mnnk",
+          "body": null
+        },
+        {
+          "method": "POST",
+          "path": "/token",
+          "body": {
+            "client_id": "test-client-id",
+            "client_secret": "FAKE-calendar-consumer-secret",
+            "refresh_token": "refresh-token",
+            "grant_type": "refresh_token"
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going",
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": "Unauthorized: Google rejected the refresh token",
+      "connected": false,
+      "announcement_id": 935962081,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "provisions",
+        "kind": "meet"
+      },
+      "events": [
+        {
+          "id": 9100000200,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000200",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucrtsg0000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtsg0000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000200-9200000192"
+              }
+            }
+          }
+        }
+      ],
+      "link": "https://meet.google.com/abc-defg-hij",
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962083,
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-provisions\"><template>  <div id=\"event_cards_message_consumer-provisions\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000200\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000200\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962083_event_9100000200\" src=\"/rooms/486777696/events/9100000200/attendance?message_id=935962083\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "synced_copy",
+        "kind": "meet",
+        "synced": true
+      },
+      "events": [
+        {
+          "id": 9100000210,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": 9200000210,
+      "error": null,
+      "calls": [
+        {
+          "method": "PUT",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtt40000000f5mnnk",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000210",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            }
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucrtt40000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000210-9200000210"
+              }
+            }
+          }
+        }
+      ],
+      "link": "https://meet.google.com/abc-defg-hij",
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962084,
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-synced_copy\"><template>  <div id=\"event_cards_message_consumer-synced_copy\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000210\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000210\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962084_event_9100000210\" src=\"/rooms/486777696/events/9100000210/attendance?message_id=935962084\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "not_requested",
+        "kind": "meet",
+        "requested": false
+      },
+      "events": [
+        {
+          "id": 9100000220,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": false,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962085,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "organizer_unconnected",
+        "kind": "meet",
+        "account": false
+      },
+      "events": [
+        {
+          "id": 9100000230,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": null,
+      "announcement_id": 935962086,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "organizer_disconnected",
+        "kind": "meet",
+        "disconnected": true
+      },
+      "events": [
+        {
+          "id": 9100000240,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": false,
+      "announcement_id": 935962087,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "existing_link",
+        "kind": "meet",
+        "link": "https://meet.google.com/existing"
+      },
+      "events": [
+        {
+          "id": 9100000250,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": "https://meet.google.com/existing",
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [],
+      "link": "https://meet.google.com/existing",
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962088,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "cancelled_meet",
+        "kind": "meet",
+        "cancelled": true
+      },
+      "events": [
+        {
+          "id": 9100000260,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": true,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962089,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "insert_refused",
+        "kind": "meet",
+        "insert": [
+          403,
+          {
+            "error": {
+              "message": "denied"
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000270,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000270",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru0s0000000f5mnnk"
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962090,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "insert_server_error",
+        "kind": "meet",
+        "insert": [
+          503,
+          {}
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000280,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000280",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru1g0000000f5mnnk"
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962091,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "patch_refused",
+        "kind": "meet",
+        "remote": [
+          403,
+          {
+            "error": {
+              "message": "denied"
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000290,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000290",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru240000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru240000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000290-9200000213"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962092,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "patch_server_error",
+        "kind": "meet",
+        "remote": [
+          503,
+          {}
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000300,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000300",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru2o0000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru2o0000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000300-9200000214"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962093,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "patch_transport",
+        "kind": "meet",
+        "remote": [
+          "timeout",
+          null
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000310,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": "Google::Client::Unavailable",
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000310",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru3c0000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru3c0000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000310-9200000215"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962094,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "patch_quota",
+        "kind": "meet",
+        "remote": [
+          429,
+          {}
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000320,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": "Google::Client::RateLimited",
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000320",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru400000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru400000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000320-9200000216"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962095,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "pending",
+        "kind": "meet",
+        "remote": [
+          200,
+          {
+            "conferenceData": {
+              "createRequest": {
+                "status": "pending"
+              }
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000330,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": "Google::Client::Unavailable",
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000330",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru4k0000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru4k0000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000330-9200000217"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962096,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "null_conference",
+        "kind": "meet",
+        "remote": [
+          200,
+          null
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000340,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000340",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru580000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru580000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000340-9200000218"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962097,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "blank_conference",
+        "kind": "meet",
+        "remote": [
+          200,
+          {
+            "hangoutLink": " "
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000350,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000350",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru5s0000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru5s0000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000350-9200000219"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962098,
+      "frames": []
+    },
+    {
+      "spec": {
+        "name": "scalar_link",
+        "kind": "meet",
+        "remote": [
+          200,
+          {
+            "hangoutLink": 7
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": 9100000360,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": null,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "Calendar consumer",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000360",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru6g0000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru6g0000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000360-9200000220"
+              }
+            }
+          }
+        }
+      ],
+      "link": "7",
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962099,
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_consumer-scalar_link\"><template>  <div id=\"event_cards_message_consumer-scalar_link\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"9100000360\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/9100000360\">Calendar consumer</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 5:00 PM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962099_event_9100000360\" src=\"/rooms/486777696/events/9100000360/attendance?message_id=935962099\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "invalid_event_save",
+        "kind": "meet",
+        "invalid": true
+      },
+      "events": [
+        {
+          "id": 9100000370,
+          "starts_at": "2026-03-02T17:00:00Z",
+          "ends_at": null,
+          "cancelled": false,
+          "requested": true,
+          "link": null,
+          "response": "going"
+        }
+      ],
+      "entry_id": null,
+      "error": "ActiveRecord::RecordInvalid",
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": {
+            "summary": "",
+            "description": "From Smartfire: http://campfire.test/rooms/486777696/events/9100000370",
+            "start": {
+              "dateTime": "2026-03-02T17:00:00Z",
+              "timeZone": "UTC"
+            },
+            "end": {
+              "dateTime": "2026-03-02T18:00:00Z",
+              "timeZone": "UTC"
+            },
+            "reminders": {
+              "useDefault": true
+            },
+            "id": "campfire000000gucru740000000f5mnnk"
+          }
+        },
+        {
+          "method": "PATCH",
+          "path": "/calendar/v3/calendars/primary/events/campfire000000gucru740000000f5mnnk?conferenceDataVersion=1",
+          "body": {
+            "conferenceData": {
+              "createRequest": {
+                "requestId": "meet-9100000370-9200000221"
+              }
+            }
+          }
+        }
+      ],
+      "link": null,
+      "responses": [
+        "going"
+      ],
+      "jobs": [],
+      "channel_error": null,
+      "connected": true,
+      "announcement_id": 935962100,
+      "frames": []
+    }
+  ]
+}

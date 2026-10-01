@@ -439,3 +439,121 @@ async fn google_channel_renewal_boundary_matches_rails() {
         );
     }
 }
+
+#[tokio::test]
+async fn review_emitted_calendar_jobs_have_working_consumers() {
+    use campfire_db::{
+        Event,
+        models::google_calendar::{InboundSyncJob, MeetLinkJob},
+    };
+    let a = TestApp::boot_without_periodic().await.unwrap();
+    support::install(&a, Recorded::new(vec![])).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute("DELETE FROM google_accounts", [])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    a.db()
+        .write(|tx| {
+            tx.emit_after_commit(Event::job(&InboundSyncJob((DAVID,))));
+            tx.emit_after_commit(Event::job(&MeetLinkJob { event_id: -1 }));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        loop {
+            let running = a.db().read(|c| Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob') AND status != 'failed'",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
+            if running == 0 { break; }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    }).await.unwrap();
+    let errors = a.db().read(|c| Ok(c.prepare("SELECT last_error FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob') AND status='failed'")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)).await.unwrap();
+    assert!(
+        errors.is_empty(),
+        "Calendar work permanently failed: {errors:?}"
+    );
+}
+
+#[tokio::test]
+async fn review_calendar_runner_declines_and_provisions_like_rails() {
+    use campfire_db::{
+        Event,
+        models::google_calendar::{InboundSyncJob, MeetLinkJob},
+    };
+    use hyper::Method;
+    let a = TestApp::boot_without_periodic().await.unwrap();
+    let r = Recorded::new(vec![]);
+    support::install(&a, r.clone()).await;
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute_batch("DELETE FROM event_calendar_entries;DELETE FROM google_accounts;")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    support::grant(
+        &a,
+        DAVID,
+        Timestamp::from_jiff(a.booted.app.clock.now()).since(jiff::SignedDuration::from_hours(1)),
+        false,
+    )
+    .await;
+    let decline = 9_500_000_001i64;
+    let meet = 9_500_000_002i64;
+    let remote = campfire_db::models::google_entry::google_id(decline, DAVID);
+    r.answer_for(
+        Method::GET,
+        &format!("/calendar/v3/calendars/primary/events/{remote}"),
+        200,
+        json!({"status":"cancelled"}),
+    );
+    r.answer_for(
+        Method::DELETE,
+        &format!("/calendar/v3/calendars/primary/events/{remote}"),
+        200,
+        json!({}),
+    );
+    r.answer_for(
+        Method::POST,
+        "/calendar/v3/calendars/primary/events",
+        200,
+        json!({}),
+    );
+    let conference = campfire_db::models::google_entry::google_id(meet, DAVID);
+    r.answer_for(
+        Method::PATCH,
+        &format!("/calendar/v3/calendars/primary/events/{conference}?conferenceDataVersion=1"),
+        200,
+        json!({"hangoutLink":"https://meet.google.com/abc-defg-hij"}),
+    );
+    a.db().write(move |tx| {
+        for id in [decline,meet] {
+            tx.conn().execute("INSERT INTO events(id,room_id,organizer_id,title,starts_at,time_zone,meet_link_requested,created_at,updated_at) VALUES(?,?,?,'Runner consumer',?,'UTC',?,?,?)",rusqlite::params![id,crate::controllers::presenters::test_support::ALL_TALK,DAVID,tx.now().since(jiff::SignedDuration::from_hours(1)),id==meet,tx.now(),tx.now()])?;
+            tx.conn().execute("INSERT INTO event_attendances(event_id,user_id,response,created_at,updated_at) VALUES(?,?,'going',?,?)",rusqlite::params![id,DAVID,tx.now(),tx.now()])?;
+        }
+        let entry=campfire_db::models::google_entry::reserve(tx,decline,DAVID)?;
+        campfire_db::models::google_entry::success(tx,&entry)?;
+        tx.emit_after_commit(Event::job(&InboundSyncJob((DAVID,))));
+        tx.emit_after_commit(Event::job(&MeetLinkJob{event_id:meet}));
+        Ok(())
+    }).await.unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(5),async {loop {
+        let waiting=a.db().read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob','Calendar::SyncEntryJob') AND status!='failed'",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
+        if waiting==0 {break} tokio::task::yield_now().await;
+    }}).await.unwrap();
+    let (errors,response,link)=a.db().read(move |c| {
+        let errors=c.prepare("SELECT last_error FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob') AND status='failed'")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok((errors,c.query_row("SELECT response FROM event_attendances WHERE event_id=? AND user_id=?",[decline,DAVID],|r|r.get::<_,String>(0))?,c.query_row("SELECT meet_link FROM events WHERE id=?",[meet],|r|r.get::<_,Option<String>>(0))?))
+    }).await.unwrap();
+    assert!(errors.is_empty(), "Calendar consumers failed: {errors:?}");
+    assert_eq!(response, "declined");
+    assert_eq!(
+        link.as_deref(),
+        Some("https://meet.google.com/abc-defg-hij")
+    );
+    assert_eq!(r.calls.lock().unwrap().len(), 4);
+}

@@ -594,3 +594,5 @@ pub(crate) mod asset_goldens;
 
 #[cfg(test)]
 mod google_review_tests;
+#[cfg(test)]
+mod google_consumer_tests;

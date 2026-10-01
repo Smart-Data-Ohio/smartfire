@@ -183,6 +183,7 @@ pub fn registry() -> Registry {
     crate::integrations::google::calendar::register(&mut registry);
     crate::integrations::google::meeting_refresh::register(&mut registry);
     crate::integrations::google::entry_sync::register(&mut registry);
+    crate::integrations::google::calendar_sync::register(&mut registry);
     registry
 }
 

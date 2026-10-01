@@ -21,7 +21,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 type Responses = VecDeque<(u16, Vec<u8>)>;
-type TargetedResponses = BTreeMap<(String, String), Responses>;
+type TargetedResponses = BTreeMap<(String, String), VecDeque<Result<(u16, Vec<u8>), Unavailable>>>;
 pub struct Recorded {
     pub answers: Mutex<Responses>,
     pub calls: Mutex<Vec<Value>>,
@@ -54,7 +54,15 @@ impl Recorded {
             .unwrap()
             .entry((method.to_string(), target.into()))
             .or_default()
-            .push_back((status, serde_json::to_vec(&body).unwrap()));
+            .push_back(Ok((status, serde_json::to_vec(&body).unwrap())));
+    }
+    pub fn fail_for(&self, method: Method, target: &str) {
+        self.targeted_answers
+            .lock()
+            .unwrap()
+            .entry((method.to_string(), target.into()))
+            .or_default()
+            .push_back(Err(Unavailable));
     }
 }
 impl Client for Recorded {
@@ -96,7 +104,7 @@ impl Client for Recorded {
                 .get_mut(&(method.to_string(), target.into()))
                 .and_then(VecDeque::pop_front)
             {
-                return Ok(answer);
+                return answer;
             }
             Ok(self.answers.lock().unwrap().pop_front().unwrap_or_else(|| {
                 panic!("unrecorded Google call: {method} {host}{target}; network prohibited")

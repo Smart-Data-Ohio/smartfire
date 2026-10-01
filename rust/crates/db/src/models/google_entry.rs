@@ -28,6 +28,14 @@ pub fn event(conn: &Connection, id: i64) -> Result<Option<CalendarEvent>> {
 pub fn find(conn: &Connection, event_id: i64, user_id: i64) -> Result<Option<Entry>> {
     Ok(conn.query_row("SELECT id,event_id,user_id,google_event_id,synced_at FROM event_calendar_entries WHERE event_id=? AND user_id=?",[event_id,user_id],|r|Ok(Entry{id:r.get(0)?,event_id:r.get(1)?,user_id:r.get(2)?,google_event_id:r.get(3)?,synced_at:r.get(4)?})).optional()?)
 }
+/// InboundSync's find_each scope: active upcoming events, up to 50 entries in primary-key order.
+pub fn inbound_entries(
+    conn: &Connection,
+    user_id: i64,
+    now: Timestamp,
+) -> Result<Vec<(Entry, i64)>> {
+    Ok(conn.prepare("SELECT c.id,c.event_id,c.user_id,c.google_event_id,c.synced_at,e.room_id FROM event_calendar_entries c JOIN events e ON e.id=c.event_id WHERE c.user_id=? AND e.cancelled_at IS NULL AND COALESCE(e.ends_at,e.starts_at)>=? ORDER BY c.id LIMIT 50")?.query_map(params![user_id,now],|r|Ok((Entry{id:r.get(0)?,event_id:r.get(1)?,user_id:r.get(2)?,google_event_id:r.get(3)?,synced_at:r.get(4)?},r.get(5)?)))?.collect::<rusqlite::Result<_>>()?)
+}
 pub fn google_id(event_id: i64, user_id: i64) -> String {
     let bytes = [
         (event_id as u64).to_be_bytes(),
