@@ -29,7 +29,7 @@ async function acceptance(base,caseName,probe={}) {
       const page=await context.newPage();
       if(file==='threads') page.on('response',async response=>{
         const url=new URL(response.url());
-        if(!/^\/rooms\/654632876\/threads(?:\/|$)/.test(url.pathname)) return;
+        if(!/^\/rooms\/654632876\/threads(?:\.json)?(?:\/|$)/.test(url.pathname)) return;
         const entry={method:response.request().method(),path:url.pathname,status:response.status()};
         threadResponses.push(entry);
         if((response.headers()['content-type']||'').includes('json')) {
