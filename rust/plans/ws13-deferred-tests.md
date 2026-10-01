@@ -1,10 +1,10 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 294 passed, 254 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged pending PR #172; that branch has not been merged. WS17's public seams stay unchanged. Eleven Stage, eight audio-processing, eight roster and four voice browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 75 system declarations remain open: 40 ordinary browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
+Status: partial. All 548 original declarations remain inventoried across 33 Rails files. WS13 owns 332 controller/integration/system titles; WS13b owns 216 domain titles, whose results are reported by WS13b. All 226 WS13 controller/integration declarations have complete assertions. WS13b PR #172 has not been merged. Its model/job/service counts are deliberately unscored here. WS17's public seams stay unchanged. Eleven Stage, eight audio-processing, eight roster, twelve voice, sixteen join-notice and six presence browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 45 system declarations remain open: ten invitations pending the unmerged WS13b API acceptance, and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
 
 ## Continued slice coverage (after merging WS19b)
 
-Historical domain coverage predates the WS13b split and is retained below. WS13b now owns the model/job/service files; WS13 owns controllers, integration and system files. WS17 retains transport and Notifications::Policy.
+Domain titles are retained for catalogue identity, with results delegated to WS13b. WS13b now owns the model/job/service files; WS13 owns controllers, integration and system files. WS17 retains transport and Notifications::Policy.
 
 - `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Every protocol shape now also executes through HTTP; liveness and disconnect presence assertions are complete. SQL statement and transaction boundaries now have execution-level assertions.
 - `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations now have 49 exact Rails issuance scenarios; Stream callbacks now run; committed presence and leave/call-ended notices now have the coverage below.
@@ -18,7 +18,7 @@ Controller and integration coverage is complete: all 226 original WS13 declarati
 
 The complete room header has 28 byte-identical renders; voice/Stage new/edit pages have 14. The new Markdown composer, member/thread panels and poll builder have 30 complete Rails renders across Closed, named/unnamed Direct, Voice and Stage rooms and Drive modes. The complete sidebar frame has 17 cold Rails renders over the parity seed, using the exact post-#163 sidebar source. It includes workspace identity/destinations/tools, shared/Board/Voice/Stage/DM rows, favourites, category controls, placeholders, room menus and the profile-card trigger. Request tests also exercise persisted placement and the administrator-only group-DM delete flag. The surrounding room page, pending-message shell, first-paint preloads, unread-divider/jump controls and per-viewer live OOO notices are integrated: 38 complete pages plus 38 complete component renders. Actual seeded/populated pages compare their room/header/shell adapters and native message renderer, including on-page and off-page unread boundaries. Both Designers captures are accepted with main’s GitHub cards and the native quote-child bridge. Shared/direct row refresh and callback adapters now use the same native composition as the request frame. Another 16 standalone sidebar rows and six recipient-specific group-DM headers match Rails byte for byte. Real socket/request tests cover rename delivery, recipient menu flags, JSON mute/read effects and live OOO updates/clears; Voice/Stage callback signatures are unchanged. The two Designers fixtures and approved post-#163 application-layout/status-action reconciliation are complete.
 
-Runtime recent-search, Drive and sound metadata adapters are integrated with 23 recorded persisted-state cases and eight Picker configurations. WS13b owns model/job/service cases; WS17 owns policy/transport. Thirty-one system cases now pass; 75 remain for end-to-end testing, including 35 LiveKit cases. No newly completed controller/integration title was inferred from render-vector counts.
+Runtime recent-search, Drive and sound metadata adapters are integrated with 23 recorded persisted-state cases and eight Picker configurations. WS13b owns model/job/service cases; WS17 owns policy/transport. Sixty-one system cases now pass; 45 remain, including ten WS13b-dependent invitations and 35 LiveKit cases. No newly completed controller/integration title was inferred from render-vector counts.
 
 
 ## Rails declaration coverage by file
@@ -28,39 +28,41 @@ These are original declaration counts, not Rust test counts or individual vector
 | Rails file | Original | Assertions covered (passed) | Partial/deferred |
 | --- | ---: | ---: | ---: |
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 38 | 0 |
-| `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
+| `test/models/huddle_invitation_test.rb` | 38 | WS13b | WS13b |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 36 | 0 |
-| `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
-| `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
+| `test/models/huddle/join_notifier_test.rb` | 33 | WS13b | WS13b |
+| `test/models/huddle_grant_test.rb` | 33 | WS13b | WS13b |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 29 | 0 |
-| `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
-| `test/models/stream_test.rb` | 27 | 14 | 13 |
+| `test/models/rooms/stage_test.rb` | 27 | WS13b | WS13b |
+| `test/models/stream_test.rb` | 27 | WS13b | WS13b |
 | `test/controllers/rooms/stages_controller_test.rb` | 24 | 24 | 0 |
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 20 | 0 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 19 | 0 |
 | `test/controllers/rooms/voices_controller_test.rb` | 18 | 18 | 0 |
 | `test/controllers/rooms/stage_view_test.rb` | 16 | 16 | 0 |
-| `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
+| `test/system/huddle_join_notices_test.rb` | 16 | 16 | 0 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 15 | 0 |
 | `test/system/stage_test.rb` | 15 | 11 | 4 |
-| `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
-| `test/system/voice_channels_test.rb` | 12 | 4 | 8 |
+| `test/models/huddle/join_pusher_test.rb` | 13 | WS13b | WS13b |
+| `test/system/voice_channels_test.rb` | 12 | 12 | 0 |
 | `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
-| `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
-| `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
-| `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
+| `test/models/huddle/invitation_resolver_test.rb` | 9 | WS13b | WS13b |
+| `test/models/huddle_revocation_test.rb` | 9 | WS13b | WS13b |
+| `test/models/huddle/ring_policy_test.rb` | 8 | WS13b | WS13b |
 | `test/system/huddle_audio_test.rb` | 8 | 8 | 0 |
 | `test/system/huddle_roster_test.rb` | 8 | 8 | 0 |
 | `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 6 | 0 |
-| `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
+| `test/system/huddle_presence_test.rb` | 6 | 6 | 0 |
 | `test/integration/huddle_presence_test.rb` | 5 | 5 | 0 |
-| `test/models/rooms/voice_test.rb` | 5 | 2 | 3 |
-| `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
-| `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
-| `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
-| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **294** | **254** |
+| `test/models/rooms/voice_test.rb` | 5 | WS13b | WS13b |
+| `test/jobs/huddle/join_notice_job_test.rb` | 4 | WS13b | WS13b |
+| `test/jobs/huddle/push_invitation_job_test.rb` | 4 | WS13b | WS13b |
+| `test/services/huddle/reconciler_test.rb` | 4 | WS13b | WS13b |
+| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | WS13b | WS13b |
+| **WS13 total** | **332** | **287** | **45** |
+| **WS13b owned (unscored)** | **216** | — | — |
+| **Catalogue total** | **548** | — | — |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -345,14 +347,14 @@ Owner: WS13. Complete: 5/5 original declarations passed through real HTTP, Cable
 
 ## test/jobs/huddle/broadcast_presence_job_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - broadcasts the room's current stacks
 - missing grants and rooms stay silent
 
 ## test/jobs/huddle/join_notice_job_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - a first sighting enqueues the join notice alongside the presence broadcast
 - a repeat sighting enqueues no join notice
@@ -361,7 +363,7 @@ Owner: WS13b. Deferred.
 
 ## test/jobs/huddle/push_invitation_job_test.rb
 
-Owner: WS13b with WS17 for transport/policy integration. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - pushes the invitation to the recipient only
 - an opted-out recipient gets no push subscriptions
@@ -370,21 +372,21 @@ Owner: WS13b with WS17 for transport/policy integration. Deferred.
 
 ## test/models/huddle/invitation_resolver_test.rb
 
-Owner: WS13b. Passed: all nine declarations, mapped to the 29-case Rails resolver corpus and `overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent`. Complete row snapshots cover state, unread/read/handled stamps and item counts; group and per-user cases cover both recipients; a second pass proves idempotence.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
-- **Passed:** an unanswered invitation becomes a missed call and stays unread
-- **Passed:** unanswered group invitations each become missed calls
-- **Passed:** a recipient who was issued a grant since the start has their invitation handled
-- **Passed:** a recipient seen in the call has their invitation handled
-- **Passed:** the starter leaving before the wait elapses is a missed call
-- **Passed:** an invitation within the wait is left alone
-- **Passed:** an already-handled invitation is left alone
-- **Passed:** resolving twice keeps a single missed item
-- **Passed:** resolution can be scoped to one user
+- an unanswered invitation becomes a missed call and stays unread
+- unanswered group invitations each become missed calls
+- a recipient who was issued a grant since the start has their invitation handled
+- a recipient seen in the call has their invitation handled
+- the starter leaving before the wait elapses is a missed call
+- an invitation within the wait is left alone
+- an already-handled invitation is left alone
+- resolving twice keeps a single missed item
+- resolution can be scoped to one user
 
 ## test/models/huddle/join_notifier_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - an in-call DM member is told when the peer joins, and the joiner is not
 - a member with no access to the room is told nothing
@@ -422,7 +424,7 @@ Owner: WS13b. Deferred.
 
 ## test/models/huddle/join_pusher_test.rb
 
-Owner: WS13b with WS17 for transport/policy integration. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - pushes the join to the recipient's subscriptions and stamps the throttle
 - a second push inside ten minutes is throttled
@@ -440,7 +442,7 @@ Owner: WS13b with WS17 for transport/policy integration. Deferred.
 
 ## test/models/huddle/ring_policy_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - an invitation rings a member who is not in do-not-disturb
 - do-not-disturb silences the ring
@@ -453,7 +455,7 @@ Owner: WS13b. Deferred.
 
 ## test/models/huddle_grant_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - an active session and membership reuse one random grant
 - revoking and restoring room membership never resurrects the old grant
@@ -491,7 +493,7 @@ Owner: WS13b. Deferred.
 
 ## test/models/huddle_invitation_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - issuing a grant in a one-to-one DM invites only the other participant
 - issuing a grant never schedules a delayed job
@@ -534,7 +536,7 @@ Owner: WS13b. Deferred.
 
 ## test/models/huddle_revocation_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - membership revocation persists cleanup for only that grant
 - session removal revokes its grants in every room and leaves another session active
@@ -548,29 +550,29 @@ Owner: WS13b. Deferred.
 
 ## test/models/rooms/stage_test.rb
 
-Owner: WS13b. Partial: 12/27 declarations passed against the hand, lifecycle and participation corpora plus existing WS8a room tests; the other 15 remain open.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
-- **Passed:** type predicate
+- type predicate
 - stage rooms are listed without directs but outside the voice scope
-- **Passed:** default involvement for new members is mentions
-- **Passed:** the room creator becomes host and every other member becomes a listener
-- **Passed:** the creator becomes host even when they were not in the member list
+- default involvement for new members is mentions
+- the room creator becomes host and every other member becomes a listener
+- the creator becomes host even when they were not in the member list
 - members added later become listeners
-- **Passed:** the last host cannot be demoted
+- the last host cannot be demoted
 - a host demotion checks for another host after locking the room in its transaction
-- **Passed:** a host can step down once another host exists
-- **Passed:** non-stage rooms leave the stage columns nil
-- **Passed:** only listeners can raise a hand, and any promotion clears it
-- **Passed:** raising twice keeps the first timestamp
-- **Passed:** lowering a hand that was never raised succeeds
+- a host can step down once another host exists
+- non-stage rooms leave the stage columns nil
+- only listeners can raise a hand, and any promotion clears it
+- raising twice keeps the first timestamp
+- lowering a hand that was never raised succeeds
 - stage members can reach the room's messages like any channel
-- **Passed:** deactivating a user removes their stage memberships
+- deactivating a user removes their stage memberships
 - deactivating the sole host ends the live session and promotes an administrator member
 - deactivating the sole host promotes the earliest remaining member without an administrator
 - deactivating a host promotes nobody when another host remains
 - deactivating the last member of a stage leaves the emptied room alone
 - destroying the last host membership ends the live session and promotes an administrator successor
-- **Passed:** destroying the last host promotes the earliest remaining member without an administrator
+- destroying the last host promotes the earliest remaining member without an administrator
 - destroying a host while another host remains ends nothing and promotes nobody
 - destroying a speaker ends only their own stream and grants
 - destroying the last host locks the room and checks for another host inside its transaction
@@ -580,49 +582,49 @@ Owner: WS13b. Partial: 12/27 declarations passed against the hand, lifecycle and
 
 ## test/models/rooms/voice_test.rb
 
-Owner: WS13b. Partial: 2/5 declarations passed; the other 3 remain WS13b work.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
-- **Passed:** type predicate
+- type predicate
 - voices scope and channel queries include voice rooms
-- **Passed:** default involvement for new members is mentions
+- default involvement for new members is mentions
 - voice members can reach the room's messages like any channel
 - deactivating a user removes their voice memberships
 
 ## test/models/stream_test.rb
 
-Owner: WS13b. Partial: 14/27 declarations passed; the other 13 remain WS13b work.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
-- **Passed:** quality must be a known preset
-- **Passed:** started_at defaults to now
+- quality must be a known preset
+- started_at defaults to now
 - live scope only returns unended streams
-- **Passed:** one live stream per room
-- **Passed:** an ended stream frees the room for another
-- **Passed:** end! is idempotent
+- one live stream per room
+- an ended stream frees the room for another
+- end! is idempotent
 - starting broadcasts the badge, dot, and per-viewer panel
-- **Passed:** starting broadcasts the event venue dot
-- **Passed:** ending broadcasts the cleared event venue dot
+- starting broadcasts the event venue dot
+- ending broadcasts the cleared event venue dot
 - ending broadcasts the cleared badge, dot, and panel
 - ending twice broadcasts once
 - a host stop appends a stream-stopped event to the presenter's persistent target
 - a presenter stop appends no stream-stopped event
 - an automatic end appends no stream-stopped event
-- **Passed:** revoking the presenter's last grant for the room ends the stream
+- revoking the presenter's last grant for the room ends the stream
 - revoking another member's grant leaves the stream live
 - a grant revoked through authorization ends the stream
 - removing the presenter's membership ends the stream
-- **Passed:** removing the presenter's membership without grants ends the stream and broadcasts the end
+- removing the presenter's membership without grants ends the stream and broadcasts the end
 - deactivating the presenter ends the stream
-- **Passed:** deactivating the presenter ends the stream even without grants
+- deactivating the presenter ends the stream even without grants
 - destroying the room destroys its streams
 - revoking a grant outside a stage room runs no stream queries
-- **Passed:** end_stale_live! ends streams whose presenter went quiet over thirty seconds ago
-- **Passed:** end_stale_live! ends streams whose presenter was never seen
-- **Passed:** end_stale_live! keeps streams with a recently seen presenter
-- **Passed:** end_stale_live! ignores other memberships' grants in the room
+- end_stale_live! ends streams whose presenter went quiet over thirty seconds ago
+- end_stale_live! ends streams whose presenter was never seen
+- end_stale_live! keeps streams with a recently seen presenter
+- end_stale_live! ignores other memberships' grants in the room
 
 ## test/services/huddle/reconciler_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Results and remaining domain gaps belong to its own report.
 
 - one pass resolves overdue invitations, ends stale streams, and reconciles cleanup
 - a resolver failure is logged and does not stop cleanup reconciliation
@@ -659,35 +661,35 @@ Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers
 
 ## test/system/huddle_join_notices_test.rb
 
-Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration are complete; the remaining system interactions need their backend fixture adapter. These cases use stubbed rooms and do not require a real LiveKit server.
+Owner: WS13. Complete: 16/16 original declarations pass through actual browser interactions and backend fixture APIs.
 
-- an in-call member sees a join toast and hears the join sound
-- rapid joins batch into one toast with one sound
-- a join toast stays silent with DND on
-- join and leave toasts announce through the container live region
-- a leave toasts quietly in the call without the join sound
-- a server mute cycle toasts neither left nor joined
-- a server mute cycle stays silent when the join arrives before the leave
-- a rejoin after the leave toasted toasts joined again
-- a genuine leave after a join-first mute cycle still toasts
-- a genuine rejoin after the leave delay toasts joined again
-- a server mute cycle across a room switch stays silent
-- joining a sidebar pill from another room navigates then joins
-- an out-of-call member sees the banner and sidebar pill and joins from the banner
-- the join banner drops each leaver and hides when empty
-- the join banner reconciles its roster with presence refreshes
-- the join banner clears when the huddle ends
+- **Passed:** an in-call member sees a join toast and hears the join sound
+- **Passed:** rapid joins batch into one toast with one sound
+- **Passed:** a join toast stays silent with DND on
+- **Passed:** join and leave toasts announce through the container live region
+- **Passed:** a leave toasts quietly in the call without the join sound
+- **Passed:** a server mute cycle toasts neither left nor joined
+- **Passed:** a server mute cycle stays silent when the join arrives before the leave
+- **Passed:** a rejoin after the leave toasted toasts joined again
+- **Passed:** a genuine leave after a join-first mute cycle still toasts
+- **Passed:** a genuine rejoin after the leave delay toasts joined again
+- **Passed:** a server mute cycle across a room switch stays silent
+- **Passed:** joining a sidebar pill from another room navigates then joins
+- **Passed:** an out-of-call member sees the banner and sidebar pill and joins from the banner
+- **Passed:** the join banner drops each leaver and hides when empty
+- **Passed:** the join banner reconciles its roster with presence refreshes
+- **Passed:** the join banner clears when the huddle ends
 
 ## test/system/huddle_presence_test.rb
 
-Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration are complete; the remaining system interactions need their backend fixture adapter. These cases use stubbed rooms and do not require a real LiveKit server.
+Owner: WS13. Complete: 6/6 original declarations pass through actual browser interactions and backend fixture APIs.
 
-- the channel sidebar row and header show participants and empty on revoke
-- the DM sidebar row and header show the peer and empty on revoke
-- the sidebar aggregate poll clears quietly expired grants
-- the sidebar aggregate poll runs on connect and skips in-flight refreshes
-- a removed sidebar stack clears once but keeps accepting updates while the header latches
-- the aggregate poller skips while hidden and fetches on becoming visible
+- **Passed:** the channel sidebar row and header show participants and empty on revoke
+- **Passed:** the DM sidebar row and header show the peer and empty on revoke
+- **Passed:** the sidebar aggregate poll clears quietly expired grants
+- **Passed:** the sidebar aggregate poll runs on connect and skips in-flight refreshes
+- **Passed:** a removed sidebar stack clears once but keeps accepting updates while the header latches
+- **Passed:** the aggregate poller skips while hidden and fetches on becoming visible
 
 ## test/system/huddle_roster_test.rb
 
@@ -760,20 +762,20 @@ Owner: WS13. Complete browser coverage: 11/15 original declarations passed with 
 
 ## test/system/voice_channels_test.rb
 
-Owner: WS13. Partial: 4/12 complete original declarations passed through public voice CRUD, actual David/Jason sessions, Rust pages/assets/Cable and real participants HTTP. The remaining eight titles need the grant/broadcast/reconnect fixture adapter; no original assertion was removed from the four completed cases.
+Owner: WS13. Complete: 12/12 original declarations pass through actual browser interactions and backend fixture APIs.
 
-- the sidebar row and header show participants and update when a grant is revoked
-- the sidebar loads once when the cable connects and reloads on reconnect
-- rooms stream broadcasts survive the reconnect sidebar reload
+- **Passed:** the sidebar row and header show participants and update when a grant is revoked
+- **Passed:** the sidebar loads once when the cable connects and reloads on reconnect
+- **Passed:** rooms stream broadcasts survive the reconnect sidebar reload
 - **Passed:** join voice dispatches huddle:join
 - **Passed:** the button toggles to leave voice while connected and leaves through the panel
-- presence refreshes once quiet grants expire
-- leaving through the panel clears presence immediately
+- **Passed:** presence refreshes once quiet grants expire
+- **Passed:** leaving through the panel clears presence immediately
 - **Passed:** voice rooms carry ordinary text chat
-- removing a member drops their sidebar row and header stack without errors
+- **Passed:** removing a member drops their sidebar row and header stack without errors
 - **Passed:** a participants 404 stops polling and clears the stack without retrying
-- the voice header fits narrow phones and caps the stack
-- the room page shares one participants request across its stacks
+- **Passed:** the voice header fits narrow phones and caps the stack
+- **Passed:** the room page shares one participants request across its stacks
 
 ## Current continuation evidence
 

@@ -68,3 +68,7 @@ tokio-tungstenite.workspace = true
 futures-util.workspace = true
 tempfile.workspace = true
 rusqlite.workspace = true
+
+# Private E2E adapter compiled explicitly against the unmerged WS13b API.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(ws13b_domain_api)"] }
