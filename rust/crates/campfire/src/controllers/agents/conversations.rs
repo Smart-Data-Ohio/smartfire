@@ -110,7 +110,9 @@ async fn start(
 ) -> Result<ServiceResult> {
     if rest && args.get("message").is_some_and(|v| !v.is_object()) {
         // Rails params.require(:message).permit raises for non-Parameters values.
-        return Err(campfire_kit::Error::internal(anyhow::anyhow!("message does not support permit")));
+        return Err(campfire_kit::Error::internal(anyhow::anyhow!(
+            "message does not support permit"
+        )));
     }
     let a = if streaming {
         let mut a = attributes(&args, rest, false);
@@ -120,47 +122,125 @@ async fn start(
         canonical(c, &args, rest, false).await?
     };
     let drive = drive(&args, rest);
-    let outcome = c
+    let assignment = if rest && !streaming {
+        let params = c
+            .params
+            .get("message")
+            .and_then(campfire_kit::Param::as_hash)
+            .unwrap_or(&c.params);
+        messages::attachment_assignment(
+            &params.permit(&campfire_kit::permit_keys(&["attachment"])),
+        )?
+    } else {
+        None
+    };
+    // Rails checks replay/budget/Drive before assigning an attachment. Repeat the same
+    // permission and service checks in the writer after staging, so a revoked grant wins.
+    if assignment.is_some() {
+        let (attributes, drive) = (a.clone(), drive.clone());
+        let early = c
+            .app()
+            .db
+            .write(move |tx| {
+                if let Some(result) = post_permission(tx, agent_id, attributes.room_id)? {
+                    return Ok(Some(result));
+                }
+                match agent_posting::preflight_service(tx, agent_id, &attributes, &drive) {
+                    Err(campfire_db::Error::RecordNotFound(_)) => Ok(Some(reply_not_found())),
+                    result => result,
+                }
+            })
+            .await
+            .map_err(db_error)?;
+        if let Some(result) = early {
+            return present_post(c, result, 201, false).await;
+        }
+    }
+    let attachment = match assignment {
+        Some(assignment) => Some(assignment.stage(c.app()).await?),
+        None => None,
+    };
+    if matches!(
+        attachment,
+        Some(crate::controllers::presenters::attachments::Assignment::Invalid)
+    ) {
+        return Err(campfire_kit::Error::internal(anyhow::anyhow!(
+            "Could not find or build blob: expected attachable"
+        )));
+    }
+    let (mut outcome, blob) = c
         .app()
         .db
         .write(move |tx| {
-            let agent = Agent::find(tx.conn(), agent_id)?
-                .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-            if Room::find_for_user(tx.conn(), agent.user_id, a.room_id)?.is_none() {
-                return Ok(agent_posting::PostResult::Denied(ServiceResult::fail(
-                    "Room not found",
-                    404,
-                )));
+            if let Some(result) = post_permission(tx, agent_id, a.room_id)? {
+                return Ok((result, None));
             }
-            if !agent_access::capability_for_agent(
-                tx.conn(),
-                agent_id,
-                "post_messages",
-                Some(a.room_id),
-            )? {
-                return Ok(agent_posting::PostResult::Denied(ServiceResult::fail(
-                    "Forbidden: agent lacks post_messages capability",
-                    403,
-                )));
-            }
+            let mut blob = None;
             let result = if streaming {
                 agent_streaming::start(tx, agent_id, a)
             } else {
-                agent_posting::post_service(tx, agent_id, a, drive)
+                agent_posting::post_service_with_preparation(tx, agent_id, a, drive, |tx, a| {
+                    if let Some(attachment) = attachment {
+                        blob = messages::attachment_blob(tx, attachment)?;
+                        a.attachment_blob_id = blob.as_ref().map(|blob| blob.id);
+                        if let Some(blob) = &blob {
+                            crate::controllers::presenters::attachments::enqueue_analysis(tx, blob);
+                        }
+                    }
+                    Ok(())
+                })
             };
-            match result {
-                Err(campfire_db::Error::RecordNotFound(_)) => {
-                    Ok(agent_posting::PostResult::Denied(ServiceResult::fail(
-                        "Reply target not found",
-                        404,
-                    )))
-                }
-                result => result,
+            let result = match result {
+                Err(campfire_db::Error::RecordNotFound(_)) => reply_not_found(),
+                result => result?,
+            };
+            if matches!(result, agent_posting::PostResult::Denied(_)) {
+                blob = None;
             }
+            Ok((result, blob))
         })
         .await
         .map_err(db_error)?;
+    if let Some(blob) = blob {
+        messages::process_attachment(c.app(), blob).await?;
+        if let agent_posting::PostResult::Posted(message) = &mut outcome {
+            let id = message.id;
+            **message = c
+                .app()
+                .db
+                .read(move |conn| campfire_db::Message::find(conn, id))
+                .await
+                .map_err(db_error)?;
+        }
+    }
     present_post(c, outcome, 201, streaming).await
+}
+fn reply_not_found() -> agent_posting::PostResult {
+    agent_posting::PostResult::Denied(ServiceResult::fail("Reply target not found", 404))
+}
+fn post_permission(
+    tx: &campfire_db::Tx<'_>,
+    agent_id: i64,
+    room_id: i64,
+) -> campfire_db::Result<Option<agent_posting::PostResult>> {
+    let agent =
+        Agent::find(tx.conn(), agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+    let denial = if Room::find_for_user(tx.conn(), agent.user_id, room_id)?.is_none() {
+        Some(ServiceResult::fail("Room not found", 404))
+    } else if !agent_access::capability_for_agent(
+        tx.conn(),
+        agent_id,
+        "post_messages",
+        Some(room_id),
+    )? {
+        Some(ServiceResult::fail(
+            "Forbidden: agent lacks post_messages capability",
+            403,
+        ))
+    } else {
+        None
+    };
+    Ok(denial.map(agent_posting::PostResult::Denied))
 }
 async fn present_post(
     c: &Ctx,

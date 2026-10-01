@@ -10,10 +10,10 @@ pub mod approvals;
 pub mod pending;
 pub mod conversations;
 mod reads;
-mod reactions;
-mod work_validation;
 mod pins;
 mod polls;
+mod reactions;
+mod work_validation;
 pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {

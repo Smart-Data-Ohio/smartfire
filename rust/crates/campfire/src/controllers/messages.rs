@@ -564,7 +564,7 @@ pub(crate) fn save_staged(tx: &mut campfire_db::Tx<'_>, staged: Staged) -> campf
 }
 
 /// Resolve a staged upload or an existing direct-upload blob inside the writer transaction.
-fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
+pub(crate) fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => attachments::save_existing(tx, blob).map(Some),

@@ -1074,7 +1074,10 @@ mod agent_polls_tests;
 mod agent_reactions_tests;
 
 #[cfg(test)]
+mod agent_polling_tests;
+
+#[cfg(test)]
 mod agent_work_validation_tests;
 
 #[cfg(test)]
-mod agent_polling_tests;
+mod agent_attachments_tests;

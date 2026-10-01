@@ -1,0 +1,448 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "attachment_rest_0",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[attachment]\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-false-0\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "note.txt",
+          "content_type": "text/plain",
+          "byte_size": 18,
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"attachment-false-0\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"note.txt\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_1",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[attachment]\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-replay\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "repeat": 1,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "note.txt",
+          "content_type": "text/plain",
+          "byte_size": 18,
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"attachment-replay\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"note.txt\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_2",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[attachment]\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-false-2\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "message_cap": 0,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_3",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[attachment]\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-false-3\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_rest_4",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[attachment]\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-false-4\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "board": true,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": false
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 422,
+      "response_body": "{\"errors\":{\"thread\":[\"must be present in a board\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_0",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-true-0\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "note.txt",
+          "content_type": "text/plain",
+          "byte_size": 18,
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1900700004"
+      }
+    },
+    {
+      "name": "attachment_bot_1",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-replay\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "repeat": 1,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": {
+          "filename": "note.txt",
+          "content_type": "text/plain",
+          "byte_size": 18,
+          "checksum": "3tNQ06T7SdqpH3WZA9tcBA=="
+        },
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1900700004"
+      }
+    },
+    {
+      "name": "attachment_bot_2",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-true-2\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "message_cap": 0,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_3",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-true-3\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_bot_4",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "--ws11api-attachment\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"note.txt\"\r\nContent-Type: text/plain\r\n\r\nAttachment α & β\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nattachment-true-4\r\n--ws11api-attachment--\r\n",
+      "setup": {
+        "board": true,
+        "content_type": "multipart/form-data; boundary=ws11api-attachment",
+        "attachment_case": true,
+        "bot_key": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 422,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_signed_0",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"invalid-signature\",\"client_message_id\":\"attachment-signed-0\"}}",
+      "setup": {
+        "attachment_case": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_signed_1",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":null,\"client_message_id\":\"attachment-signed-1\"}}",
+      "setup": {
+        "attachment_case": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"attachment-signed-1\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_signed_2",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":\"\",\"client_message_id\":\"attachment-signed-2\"}}",
+      "setup": {
+        "attachment_case": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"attachment-signed-2\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_signed_3",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":false,\"client_message_id\":\"attachment-signed-3\"}}",
+      "setup": {
+        "attachment_case": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_signed_4",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":3,\"client_message_id\":\"attachment-signed-4\"}}",
+      "setup": {
+        "attachment_case": true
+      },
+      "attachment_state": {
+        "messages": 0,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_signed_5",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":[],\"client_message_id\":\"attachment-signed-5\"}}",
+      "setup": {
+        "attachment_case": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"attachment-signed-5\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "attachment_signed_6",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"attachment\":{},\"client_message_id\":\"attachment-signed-6\"}}",
+      "setup": {
+        "attachment_case": true
+      },
+      "attachment_state": {
+        "messages": 1,
+        "attachment": null,
+        "markdown_source": null
+      },
+      "status": 201,
+      "response_body": "{\"id\":1900700004,\"client_message_id\":\"attachment-signed-6\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700004\",\"thread_id\":null}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    }
+  ]
+}
