@@ -16,9 +16,9 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/agents/drive_attachments_delivery_test.rb
 
-- **Deferred** — polling carries drive_attachments with file_id and url only — WS14g Drive model + WS11-api caller.
-- **Deferred** — polling carries an empty drive_attachments array without attachments — WS14g Drive model + WS11-api caller.
-- **Deferred** — agent webhook posts drive_attachments without names — WS14g Drive model + WS11-api caller.
+- **Partial** — polling carries drive_attachments with file_id and url only — `integrations::agent_jobs::drive_attachment_cases::ws14g_agent_polling_carries_drive_file_ids_and_urls_only` consumes WS11 real EventPolling and production message presenter and matches pinned Rails GET projection. The REST `/agents/events` route is still absent from main; WS11-api owns that transport and the final HTTP status assertion.
+- **Partial** — polling carries an empty drive_attachments array without attachments — `integrations::agent_jobs::drive_attachment_cases::ws14g_agent_polling_carries_an_empty_drive_array` consumes WS11 real EventPolling and production message presenter and matches pinned Rails GET projection. The REST `/agents/events` route is still absent from main; WS11-api owns that transport and the final HTTP status assertion.
+- **Ported** — agent webhook posts drive_attachments without names — `integrations::agent_jobs::drive_attachment_cases::ws14g_agent_webhook_posts_drive_files_without_names` (real Message/mention producer, Delivery consumer, claimed EventWebhook consumer and local HTTP POST match pinned Rails; names absent).
 
 ## test/controllers/channel_thread_messages_drive_attachments_test.rb
 
@@ -57,8 +57,8 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — callback with a bad state redirects to the profile with an alert — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
 - **Ported** — callback with a connection failure redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
 - **Ported** — callback without the calendar scope stores the grant but does not claim a connection — `app::google_connection_tests::google_connection_without_calendar_stores_grant_without_audit_or_jobs`.
-- **Partial** — callback keeps the calendar scope when Drive is granted alongside — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
-- **Partial** — callback success stores the account and enqueues syncs for upcoming going/maybe attendances — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — callback keeps the calendar scope when Drive is granted alongside — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (seven real pinned producers; exact grants/flags, upcoming jobs and user/organizer Meet-link isolation).
+- **Ported** — callback success stores the account and enqueues syncs for upcoming going/maybe attendances — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (seven real pinned producers; exact grants/flags, upcoming jobs and user/organizer Meet-link isolation).
 - **Ported** — callback stores the granted scope string — `app::google_connection_tests::google_connection_scope_retention_and_reconnect_clear_disconnected_reason`.
 - **Ported** — callback without a scope string leaves scopes unset — `app::google_connection_tests::google_connection_scope_retention_and_reconnect_clear_disconnected_reason`.
 - **Ported** — callback without a scope string keeps previously stored scopes — `app::google_connection_tests::google_connection_scope_retention_and_reconnect_clear_disconnected_reason`.
@@ -70,29 +70,29 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — disconnect clears local state without waiting on Google, then cleans up remotely — `app::google_lifecycle_tests::google_lifecycle_matches_pinned_rails_state_jobs_and_remote_stop_order` (disconnect scenarios; exact committed state at channels/stop, snapshot and cleanup job).
 - **Ported** — disconnect without readable tokens skips cleanup but still disconnects — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
 - **Ported** — disconnect drops the meeting cache — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
-- **Deferred** — disconnect while in a meeting broadcasts the cleared badge — WS14g integration with WS17 status/OOO broadcast claims; cache removal is ported, the cleared badge broadcast remains absent.
-- **Partial** — callback enqueues a meeting refresh for members who left meeting status on — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
-- **Partial** — callback enqueues no meeting refresh without the opt-in — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — disconnect while in a meeting broadcasts the cleared badge — `app::google_lifecycle_tests::google_disconnect_publishes_complete_rails_badges_and_ooo_notices_after_commit` (real socket subscription and fenced complete Rails status fragment after commit).
+- **Ported** — callback enqueues a meeting refresh for members who left meeting status on — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (seven real pinned producers; exact grants/flags, upcoming jobs and user/organizer Meet-link isolation).
+- **Ported** — callback enqueues no meeting refresh without the opt-in — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (seven real pinned producers; exact grants/flags, upcoming jobs and user/organizer Meet-link isolation).
 - **Ported** — disconnect without a connection still redirects — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
-- **Partial** — disconnect clears the organizer's stored Meet links but keeps the request — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
-- **Partial** — disconnect leaves another organizer's Meet links alone — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
-- **Partial** — disconnect only touches the current user's entries — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — disconnect clears the organizer's stored Meet links but keeps the request — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (seven real pinned producers; exact grants/flags, upcoming jobs and user/organizer Meet-link isolation).
+- **Ported** — disconnect leaves another organizer's Meet links alone — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (seven real pinned producers; exact grants/flags, upcoming jobs and user/organizer Meet-link isolation).
+- **Ported** — disconnect only touches the current user's entries — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (seven real pinned producers; exact grants/flags, upcoming jobs and user/organizer Meet-link isolation).
 - **Ported** — routes 404 when GOOGLE_CLIENT_ID is unset — `app::google_connection_tests::google_connection_authorize_parameters_configuration_and_sign_in_guards`.
 ## test/controllers/google/drive_files_controller_test.rb
 
 - **Ported** — show renders the file JSON for a connected account with the Drive scope — `app::google_drive_tests::google_drive_file_json_and_all_mime_kinds_match_rails`.
 - **Ported** — show maps MIME types to kinds — `app::google_drive_tests::google_drive_file_json_and_all_mime_kinds_match_rails`.
-- **Partial** — show is 404 with an empty body without an account — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show is 404 with an empty body without an account — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — show is 404 with an empty body for a disconnected account — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
 - **Ported** — show is 404 with an empty body without the Drive scope — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
-- **Partial** — show is 404 with an empty body for the retired metadata grant — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show is 404 with an empty body for the retired metadata grant — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — show is 404 with an empty body when Google answers 403 or 404 — `app::google_drive_tests::google_drive_transport_quota_and_forbidden_fail_with_rails_statuses`.
 - **Ported** — show is 404 with an empty body for a malformed id — `app::google_drive_tests::google_drive_requires_viewer_grant_and_valid_id_and_has_distinct_anonymous_behavior`.
-- **Partial** — show is 503 on a Google transport failure — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show is 503 on a Google transport failure — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — show requires sign-in — `app::google_drive_tests::google_drive_requires_viewer_grant_and_valid_id_and_has_distinct_anonymous_behavior`.
-- **Partial** — show caches the file for five minutes per viewer — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show caches the file for five minutes per viewer — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — show never reuses another viewer\'s cache entry — `app::google_drive_tests::google_drive_viewer_inaccessible_file_is_empty_404_and_never_reuses_other_viewer_cache`.
-- **Partial** — index lists recent files when q is blank — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — index lists recent files when q is blank — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — index treats whitespace-only q as a recent list — `app::google_drive_tests::google_drive_index_refreshes_expired_access_and_invalid_grant_disconnects`.
 - **Ported** — index searches by name with quote and backslash escaping — `app::google_drive_tests::google_drive_lists_never_cache_trim_and_cap_terms_and_return_502_on_failure`.
 - **Ported** — index trims q and caps it at 100 characters — `app::google_drive_tests::google_drive_lists_never_cache_trim_and_cap_terms_and_return_502_on_failure`.
@@ -104,14 +104,14 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — index is 404 when Drive answers forbidden — `app::google_drive_tests::google_drive_transport_quota_and_forbidden_fail_with_rails_statuses`.
 - **Ported** — index is 404 when the refresh fails with invalid_grant — `app::google_drive_tests::google_drive_index_refreshes_expired_access_and_invalid_grant_disconnects`.
 - **Ported** — index refreshes an expired access token before listing — `app::google_drive_tests::google_drive_index_refreshes_expired_access_and_invalid_grant_disconnects`.
-- **Partial** — index throttles each user to 30 lists per minute — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — index throttles each user to 30 lists per minute — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — index never caches results — `app::google_drive_tests::google_drive_lists_never_cache_trim_and_cap_terms_and_return_502_on_failure`.
-- **Partial** — show throttles each user to 60 views per minute — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
-- **Partial** — show is 503 on a connection failure — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show throttles each user to 60 views per minute — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
+- **Ported** — show is 503 on a connection failure — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — show is 503 when Google rate limits — `app::google_drive_tests::google_drive_transport_quota_and_forbidden_fail_with_rails_statuses`.
 - **Ported** — show is 404 with an empty body for an unreadable token — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
 - **Ported** — index is 404 with an empty body for an unreadable token — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
-- **Partial** — index is 502 on a connection failure — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — index is 502 on a connection failure — `app::google_drive_tests::endpoints::google_drive_endpoint_requests_match_pinned_rails_cache_expiry_and_user_budgets` (15 real pinned scenarios; full JSON/empty response, cache headers, all recorded requests, exact 299/300/301-second expiry and independent minute budgets).
 - **Ported** — index rejects an unenrolled session instead of listing files — `app::google_drive_tests::google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_before_http`.
 - **Ported** — index terminates a stale enrolled session — `app::google_drive_tests::google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_before_http`.
 
@@ -227,8 +227,8 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — authorization code is filtered from logs — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (production parameter filter equals Rails-generated code-filter observation)`.
 - **Ported** — Google sign-in creates no Calendar/Drive connection and stores no tokens — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations (recorded token response includes access/refresh tokens, every account delta and identity schema token columns compared with Rails)`.
 - **Partial** — Calendar connection is never treated as login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — connecting Calendar creates no login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — disconnecting Calendar keeps the login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — connecting Calendar creates no login identity — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (identity rows compared after real callback/DELETE; separation preserved).
+- **Ported** — disconnecting Calendar keeps the login identity — `app::google_connection_tests::parity_cases::google_connection_producers_and_disconnect_isolation_match_pinned_rails` (identity rows compared after real callback/DELETE; separation preserved).
 
 ## test/controllers/sessions/google_pre_hijack_test.rb
 

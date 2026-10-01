@@ -707,3 +707,5 @@ async fn google_connection_unreadable_disconnect_drops_cache_preserves_flags_and
     assert_eq!(entries, (0, 1));
     assert!(r.calls.lock().unwrap().is_empty());
 }
+
+mod parity_cases;
