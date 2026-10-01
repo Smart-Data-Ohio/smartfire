@@ -64,12 +64,38 @@ async fn full_room_pages_match_thirty_eight_complete_rails_pages() {
                 .unwrap();
             assert_eq!((room.id,room.kind,&room.name,&room.display_name), (show.room.id,show.room.kind,&show.room.name,&show.room.display_name), "{} recorded room adapter", case["name"]);
 
+            // The recorder's room input contains identity fields, not the
+            // Presenter's richer HeaderIdentity or membership involvement.
+            // Check every recorded navigation field, then render the actual
+            // adapter against the unchanged Rails whole-page response.
+            let recorded = show.navigation.as_ref().unwrap();
             assert_eq!(
-                Some(&navigation),
-                show.navigation.as_ref(),
+                (
+                    navigation.room.id,
+                    navigation.room.kind,
+                    &navigation.room.name,
+                    &navigation.room.display_name,
+                    &navigation.icon,
+                    navigation.pins_count,
+                    &navigation.involvement,
+                    &navigation.participants,
+                    &navigation.stage,
+                ),
+                (
+                    recorded.room.id,
+                    recorded.room.kind,
+                    &recorded.room.name,
+                    &recorded.room.display_name,
+                    &recorded.icon,
+                    recorded.pins_count,
+                    &recorded.involvement,
+                    &recorded.participants,
+                    &recorded.stage,
+                ),
                 "{} header adapter",
                 case["name"]
             );
+            show.navigation = Some(navigation);
             assert_eq!(shell, show.shell, "{} shell adapter", case["name"]);
             show.messages = items;
         }
