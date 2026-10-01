@@ -2,10 +2,6 @@
 use crate::{Result, Tx};
 use crate::models::audit_log::Context;
 
-pub(super) fn revoke_agent_grants(tx: &Tx<'_>, user: i64) -> Result<()> {
-    crate::models::AgentGrant::revoke_for_user(tx, user).map(|_| ())
-}
-
 pub(super) fn deactivate(tx: &mut Tx<'_>, user: i64, context: &Context) -> Result<()> {
     let sink=tx.env().sink.clone();
     sink.disconnect_user_accounts(tx, user)?;

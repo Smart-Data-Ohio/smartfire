@@ -96,7 +96,7 @@ fn html(p: &Presenter<'_>, message: &Message) -> Result<String> {
         let resolver = p.resolver();
         crate::rich_text::markdown_presentation(p.conn, &message.body_html(p.conn)?.unwrap_or_default(), &resolver.render_context(p.request_host.clone()))
             .map_err(campfire_db::Error::Other)
-    } else { p.rendered_body_html(message) }
+    } else { p.editable_body(message) }
 }
 
 fn permalink(message: &Message, base: &str) -> String {

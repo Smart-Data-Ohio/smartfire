@@ -204,6 +204,7 @@ impl<'a> Presenter<'a> {
         self.twitter_posts.borrow_mut().extend(posts);
         Ok(Self { app:self.app,conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
             request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),
+            current_user_id:self.current_user_id,agent_payload:self.agent_payload,
             users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data),
             link_fetches:self.link_fetches.clone(),twitter_fetches:self.twitter_fetches.clone(),
             twitter_posts:self.twitter_posts.clone(),twitter_existence:self.twitter_existence.clone(),github_refreshes:self.github_refreshes.clone() })
