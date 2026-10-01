@@ -327,3 +327,119 @@ async fn slack_job_overlapping_executions_have_exactly_one_lease_holder() {
     assert_eq!(db.read(inspect::all).await.unwrap().len(), 2);
     assert!(run(&db, id).await.state.get("step_lease_token").is_none());
 }
+
+#[tokio::test]
+async fn slack_registered_serial_worker_imports_undoes_and_registers_30_second_sweep() {
+    let directory = tempfile::tempdir().unwrap();
+    let config = crate::config::Config::from_lookup(|name| match name {
+        "SECRET_KEY_BASE" => Some("a".repeat(128)),
+        "DISABLE_SSL" => Some("1".into()),
+        "RAILS_ENV" => Some("test".into()),
+        "CAMPFIRE_STORAGE_PATH" => Some(directory.path().to_string_lossy().into_owned()),
+        _ => None,
+    })
+    .unwrap();
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        "2026-03-02T16:00:00Z".parse().unwrap(),
+    ));
+    let (_server, network) =
+        super::super::client::tests::fake(super::super::store::tests::routes(false)).await;
+    let booted = crate::app::boot_with_services(
+        config,
+        clock,
+        network,
+        crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        },
+    )
+    .await
+    .unwrap();
+    let crypto = booted.app.ar_encryption.clone();
+    let id = booted
+        .app
+        .db
+        .write(move |tx| {
+            let user = campfire_db::User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: "Run owner".into(),
+                    ..Default::default()
+                },
+            )?;
+            let workspace = SlackWorkspace::create(
+                tx,
+                &crypto,
+                "fixture-client",
+                "fixture-secret",
+                Some(user.id),
+            )?;
+            let connection = SlackConnection::create(
+                tx,
+                &crypto,
+                NewConnection {
+                    workspace_id: workspace.id,
+                    user_id: user.id,
+                    slack_user_id: "UADMIN",
+                    access_token: Some("fixture-user-token"),
+                    scopes: None,
+                },
+            )?;
+            Ok(SlackImport::create(
+                tx,
+                NewImport {
+                    workspace_id: workspace.id,
+                    connection_id: Some(connection.id),
+                    user_id: user.id,
+                    kind: Kind::Workspace,
+                    mode: Mode::Import,
+                    options: json!({}),
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    let db = booted.app.db.clone();
+    tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            let row = run(&db, id).await;
+            if row.status == "completed" {
+                break;
+            }
+            assert!(row.error.is_none(), "{:?}", row.error);
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("registered import worker timed out");
+    assert!(db.write(move |tx| SlackImport::undo(tx, id)).await.unwrap());
+    tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            if run(&db, id).await.status == "undone" {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("registered undo worker timed out");
+    db.read(|c| {
+        assert_eq!(campfire_db::Message::count(c)?, 0);
+        assert_eq!(campfire_db::Room::all(c)?.len(), 0);
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let periodic = crate::jobs::periodic::periodic(crate::jobs::periodic::PeriodicIntervals {
+        reminders: Duration::from_secs(30),
+        retention: Duration::from_secs(86400),
+    });
+    let tasks: Vec<_> = periodic
+        .tasks()
+        .filter(|t| t.name() == "slack imports")
+        .collect();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].interval(), Duration::from_secs(30));
+    booted.jobs.shutdown(Duration::from_secs(1)).await;
+}

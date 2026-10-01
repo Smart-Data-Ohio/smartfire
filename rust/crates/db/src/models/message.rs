@@ -1113,16 +1113,32 @@ impl Message {
     /// commit their quote cards are replaced and the thread indicator is re-broadcast.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         let with_conversation = Room::find(tx.conn(), self.room_id)?.deleted();
-        self.destroy_inner(tx, with_conversation)
+        self.destroy_inner(tx, with_conversation, false)
     }
 
     /// `destroy` from the thread's `dependent: :destroy`: the thread's counter row goes with it,
     /// so no recount.
     pub(crate) fn destroy_with_conversation(&self, tx: &mut Tx<'_>) -> Result<()> {
-        self.destroy_inner(tx, true)
+        self.destroy_inner(tx, true, false)
     }
 
-    fn destroy_inner(&self, tx: &mut Tx<'_>, with_conversation: bool) -> Result<()> {
+    /// `message.importing = true; message.destroy!`: retain dependency cleanup,
+    /// tombstones, the counter and search removal, without quote or thread broadcasts.
+    pub fn destroy_imported(&self, tx: &mut Tx<'_>) -> Result<()> {
+        let with_conversation = Room::find(tx.conn(), self.room_id)?.deleted();
+        self.destroy_inner(tx, with_conversation, true)
+    }
+
+    pub(crate) fn destroy_imported_with_conversation(&self, tx: &mut Tx<'_>) -> Result<()> {
+        self.destroy_inner(tx, true, true)
+    }
+
+    fn destroy_inner(
+        &self,
+        tx: &mut Tx<'_>,
+        with_conversation: bool,
+        importing: bool,
+    ) -> Result<()> {
         let quoting_ids = crate::models::message_reference::incoming_ids(tx.conn(), self.id)?;
         let now = tx.now();
         tx.conn().execute_cached(
@@ -1183,10 +1199,12 @@ impl Message {
         }
         Room::touch(tx, self.room_id)?;
         remove_from_index(tx, self.id)?;
-        crate::models::message_reference::removed_source(tx, quoting_ids)?;
-        tx.after_commit(move |tx| {
-            ChannelThread::broadcast_thread_indicators(tx, &indicator_threads)
-        });
+        if !importing {
+            crate::models::message_reference::removed_source(tx, quoting_ids)?;
+            tx.after_commit(move |tx| {
+                ChannelThread::broadcast_thread_indicators(tx, &indicator_threads)
+            });
+        }
         Ok(())
     }
 

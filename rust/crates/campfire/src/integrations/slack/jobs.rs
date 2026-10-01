@@ -32,6 +32,55 @@ impl JobKind for UndoStep {
     const QUEUE: &'static str = crate::jobs::SLACK_IMPORT_QUEUE;
 }
 
+pub fn register(registry: &mut crate::jobs::Registry) {
+    registry.register(import_step);
+    registry.register(undo_step);
+}
+
+async fn import_step(
+    app: crate::app::App,
+    job: ImportStep,
+    _: campfire_jobs::Execution,
+) -> campfire_jobs::JobResult {
+    let db = app.db.clone();
+    let network = app.slack_network.clone();
+    let pacing = app.config.environment != "test";
+    perform_import(
+        app.db.clone(),
+        app.ar_encryption.clone(),
+        job.0.import_id,
+        move |run, lease, token| async move {
+            super::runner::Runner::new(
+                super::store::SqlStore {
+                    db,
+                    lease,
+                    allowed_domains: super::store::allowed_domains(),
+                },
+                super::client::Client::with_network(token, None, pacing, network),
+                run,
+            )
+            .step()
+            .await
+        },
+    )
+    .await?;
+    Ok(campfire_jobs::Outcome::Done)
+}
+
+async fn undo_step(
+    app: crate::app::App,
+    job: UndoStep,
+    _: campfire_jobs::Execution,
+) -> campfire_jobs::JobResult {
+    let id = job.0.import_id;
+    let db = app.db.clone();
+    perform_undo(app.db.clone(), id, move |_, lease| async move {
+        super::undoer::Undoer { db, id, lease }.step().await
+    })
+    .await?;
+    Ok(campfire_jobs::Outcome::Done)
+}
+
 pub async fn perform_import<F, Fut>(
     db: Database,
     encryption: Arc<ArEncryption>,

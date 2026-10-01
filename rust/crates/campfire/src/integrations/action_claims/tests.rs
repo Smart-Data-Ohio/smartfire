@@ -278,7 +278,7 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         });
         assert_eq!(
             periodic.tick(booted.app.clone(), db.env().now()).await,
-            ["clear plaintext bot tokens", "stranded agent webhooks", "saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "stuck GitHub claims", "stuck Fizzy claims", "retention prune", "presence leases", "meeting status", "out of office"]
+            ["clear plaintext bot tokens", "stranded agent webhooks", "saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "stuck GitHub claims", "stuck Fizzy claims", "slack imports", "retention prune", "presence leases", "meeting status", "out of office"]
         );
         assert_eq!(snapshot(db).await["metadata"]["status"], "failed");
         clock.advance(jiff::SignedDuration::from_secs(29));
@@ -291,7 +291,7 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         clock.advance(jiff::SignedDuration::from_secs(1));
         assert_eq!(
             periodic.tick(booted.app.clone(), db.env().now()).await,
-            ["stranded agent webhooks", "saved item reminders", "scheduled messages", "poll closing", "stuck GitHub claims", "stuck Fizzy claims"]
+            ["stranded agent webhooks", "saved item reminders", "scheduled messages", "poll closing", "stuck GitHub claims", "stuck Fizzy claims", "slack imports"]
         );
         assert_eq!(snapshot(db).await["audits"], 1);
     }

@@ -2,6 +2,7 @@
 //! and Transferable are signed ids, which live in `rails_compat`).
 
 pub mod lifecycle;
+mod destruction;
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};

@@ -18,6 +18,7 @@ fn with_pool(original: &App, pool: Pool) -> App {
         github_read: original.github_read.clone(),
         sudo: Default::default(),
         two_factor: Default::default(),
+        slack_network: crate::integrations::net::Network::system(),
         subscription_network: original.subscription_network.clone(),
         config: original.config.clone(),
         secrets: original.secrets.clone(),
