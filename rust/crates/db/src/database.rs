@@ -48,7 +48,16 @@ pub struct Env {
     pub bcrypt_cost: u32,
     /// Configured default host/protocol, supplied from the mail URL configuration.
     pub default_url_origin: String,
+    /// App-owned reference domains run on Message's real save hooks, in its transaction.
+    /// The flag lets importers reconcile rows without scheduling network fetches.
+    pub message_reference_syncs: Vec<MessageReferenceSync>,
+    /// App-owned account disconnects run inside User::deactivate, before its status save.
+    pub user_deactivation_hooks: Vec<UserDeactivationHook>,
 }
+
+pub type UserDeactivationHook = fn(&mut Tx<'_>, &crate::User) -> Result<()>;
+
+pub type MessageReferenceSync = fn(&mut Tx<'_>, &crate::Message, bool) -> Result<()>;
 
 impl Default for Env {
     fn default() -> Self {
@@ -58,6 +67,8 @@ impl Default for Env {
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 12,
             default_url_origin: "http://example.com".into(),
+            message_reference_syncs: Vec::new(),
+            user_deactivation_hooks: Vec::new(),
         }
     }
 }
@@ -197,6 +208,15 @@ impl<'c> Tx<'c> {
                 .push(AfterCommit::RecordBroadcast { table, id, event });
         } else {
             self.env.sink.emit(event);
+        }
+    }
+
+    /// Active Record registers one commit callback per record in a transaction.
+    /// Used for identical, session-independent broadcast descriptions, never jobs.
+    pub fn broadcast_after_commit_once<B: crate::Broadcast>(&mut self, broadcast: &B) {
+        let event = Event::broadcast(broadcast);
+        if !self.after_commit.iter().any(|pending| matches!(pending, AfterCommit::Event(existing) if existing == &event)) {
+            self.emit_after_commit(event);
         }
     }
 

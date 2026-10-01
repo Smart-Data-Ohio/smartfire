@@ -25,6 +25,8 @@ pub mod pwa;
 pub mod autocompletable;
 pub mod rooms;
 pub mod messages;
+pub mod github;
+pub mod integration_health;
 pub mod searches;
 pub mod events;
 

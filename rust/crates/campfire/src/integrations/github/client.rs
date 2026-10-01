@@ -22,6 +22,8 @@ pub enum ErrorKind {
     Unauthorized,
     Refused,
     Other,
+    /// PullRequestFetcher::FetchError: HTTP refusal, rescued by review/check/file fetches.
+    Fetch,
     // `authenticated_login` calls `fetch` outside WriteClient's request rescue.
     KeyError,
     TypeError,
@@ -36,7 +38,7 @@ pub struct Error {
 }
 
 impl Error {
-    fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
+    pub(super) fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
         Self {
             kind,
             message: message.into(),
@@ -520,14 +522,14 @@ impl ReadClient {
         };
         let body = Http::body(response).await?;
         if let Some(message) = message {
-            return Err(Error::new(ErrorKind::Other, message));
+            return Err(Error::new(ErrorKind::Fetch, message));
         }
         serde_json::from_slice(&body).map_err(|_| Error::json())
     }
 }
 
 // Ruby `value["key"]`: JSON strings use substring lookup; non-indexable values raise.
-fn ruby_field(value: &Value, key: &str) -> Result<Option<Value>, Error> {
+pub(super) fn ruby_field(value: &Value, key: &str) -> Result<Option<Value>, Error> {
     match value {
         Value::Object(object) => Ok(object.get(key).cloned()),
         Value::String(text) => Ok(text.contains(key).then(|| Value::String(key.into()))),
@@ -551,10 +553,10 @@ pub(super) fn present(value: Option<&Value>) -> bool {
         _ => true,
     }
 }
-pub(super) fn ruby_strip(s: &str) -> &str {
+pub(crate) fn ruby_strip(s: &str) -> &str {
     s.trim_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c', '\0'])
 }
-pub(super) fn ruby_to_i(s: &str) -> i64 {
+pub(crate) fn ruby_to_i(s: &str) -> i64 {
     let s = s.trim_start_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c']);
     let (negative, s) = match s.as_bytes().first() {
         Some(b'-') => (true, &s[1..]),
@@ -574,7 +576,7 @@ pub(super) fn ruby_to_i(s: &str) -> i64 {
     }
     if negative { -value } else { value }
 }
-fn ruby_string(value: &Value) -> String {
+pub(crate) fn ruby_string(value: &Value) -> String {
     match value {
         Value::Null => String::new(),
         Value::String(s) => s.clone(),

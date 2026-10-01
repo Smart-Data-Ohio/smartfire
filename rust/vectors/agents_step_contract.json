@@ -1,0 +1,134 @@
+{
+  "reference_pin": "d7c7de92",
+  "validation": {
+    "blank": {
+      "name": [
+        "can't be blank"
+      ]
+    },
+    "no_parent": {
+      "base": [
+        "Step must belong to exactly one message or thread"
+      ]
+    },
+    "both": {
+      "base": [
+        "Step must belong to exactly one message or thread"
+      ]
+    },
+    "foreign": {
+      "message": [
+        "must be the agent's own message"
+      ]
+    },
+    "unowned": {
+      "channel_thread": [
+        "must be work the agent owns"
+      ]
+    },
+    "oversized": {
+      "name": [
+        "is too long (maximum is 120 characters)"
+      ],
+      "status": [
+        "is not included in the list"
+      ],
+      "input_summary": [
+        "is too long (maximum is 1000 characters)"
+      ],
+      "output_summary": [
+        "is too long (maximum is 1000 characters)"
+      ],
+      "duration_ms": [
+        "must be greater than or equal to 0"
+      ]
+    },
+    "boundary": {},
+    "blank_summary": {},
+    "orphan": {},
+    "limit": {
+      "base": [
+        "Steps are limited to 50 per message or thread"
+      ]
+    }
+  },
+  "results": {
+    "created": {
+      "status": 201,
+      "error": null,
+      "payload": {
+        "id": 900050001,
+        "message_id": 900060001,
+        "name": "Run tests",
+        "status": "running",
+        "duration_ms": 1200,
+        "position": 0,
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "updated_at": "2026-03-02T16:00:00.000Z"
+      }
+    },
+    "updated": {
+      "status": 200,
+      "error": null,
+      "payload": {
+        "id": 900050001,
+        "message_id": 900060001,
+        "name": "Run tests",
+        "status": "done",
+        "output_summary": "",
+        "duration_ms": 1500,
+        "position": 0,
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "updated_at": "2026-03-02T16:00:00.000Z"
+      }
+    },
+    "no_parent": {
+      "status": 422,
+      "error": "Exactly one of message_id or thread_id is required",
+      "payload": null
+    },
+    "foreign": {
+      "status": 404,
+      "error": "Message not found",
+      "payload": null
+    },
+    "missing_step": {
+      "status": 404,
+      "error": "Step not found",
+      "payload": null
+    },
+    "thread": {
+      "status": 201,
+      "error": null,
+      "payload": {
+        "id": 900050002,
+        "thread_id": 900060003,
+        "name": "Reproduce",
+        "status": "running",
+        "output_summary": "Found",
+        "position": 0,
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "updated_at": "2026-03-02T16:00:00.000Z"
+      }
+    },
+    "missing_post_grant": {
+      "status": 403,
+      "error": "Forbidden: agent lacks post_messages capability",
+      "payload": null
+    },
+    "revoked_update": {
+      "status": 403,
+      "error": "Forbidden: agent lacks post_messages capability",
+      "payload": null
+    },
+    "revoked_thread": {
+      "status": 403,
+      "error": "Forbidden: agent lacks manage_threads capability",
+      "payload": null
+    }
+  },
+  "positions": {
+    "replacement": 50,
+    "count": 50
+  }
+}

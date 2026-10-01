@@ -6,6 +6,13 @@
 require "socket"
 require "zlib"
 require "base64"
+require "active_support/testing/time_helpers"
+extend ActiveSupport::Testing::TimeHelpers
+travel_to Time.utc(2026, 3, 2, 16)
+# Transport-response probes only: map the already-authorized address to a private test
+# socket. Guard decisions are recorded without this substitution in the WS11 oracle.
+original_guard = RestrictedHTTP::PrivateNetworkGuard.method(:resolve)
+RestrictedHTTP::PrivateNetworkGuard.define_singleton_method(:resolve) { |host| host == "webhook.example" ? "127.0.0.1" : original_guard.call(host) }
 
 dir = File.expand_path("..", __dir__)
 cases = JSON.parse(File.read(File.join(dir, "webhook_cases.json")))
@@ -47,11 +54,12 @@ end
 
 results = cases.map do |c|
   $requests = []
-  webhook = Webhook.new(url: c["url"] || "http://127.0.0.1:#{port}/#{c["name"]}")
+  webhook = Webhook.new(url: c["url"] || "http://webhook.example:#{port}/#{c["name"]}")
   reply = nil
-  webhook.define_singleton_method(:payload) { |_message| %({"message":"hi"}) }
+  webhook.define_singleton_method(:payload) { |_message, **_options| %({"message":"hi"}) }
   webhook.define_singleton_method(:receive_text_reply_to) { |_room, text:| reply = { "text_b64" => Base64.strict_encode64(text), "encoding" => text.encoding.to_s, "valid" => text.valid_encoding? } }
-  webhook.define_singleton_method(:receive_attachment_reply_to) { |_room, attachment:| reply = { "attachment" => attachment } }
+  webhook.define_singleton_method(:receive_text_reply) { |_trigger, text:| reply = { "text_b64" => Base64.strict_encode64(text), "encoding" => text.encoding.to_s, "valid" => text.valid_encoding? } }
+  webhook.define_singleton_method(:receive_attachment_reply) { |_trigger, attachment:| reply = { "attachment" => attachment } }
   message = Struct.new(:room).new(nil)
 
   outcome = begin

@@ -194,7 +194,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let (show, fetches, twitter_fetches) = c
+    let (show, fetches, twitter_fetches, refreshes) = c
         .app()
         .db
         .read(move |conn| {
@@ -224,13 +224,14 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                         app.db.env().now(),
                     )?,
             };
-            Ok((show, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
+            Ok((show, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
         })
         .await
         .map_err(db_error)?;
     super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
         .await
         .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
     let response = page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::Show { ctx, show: &show }).await?;
     let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &show.messages, &c.url_for(""));
     Ok(response.with_cached_fragments(fragments))

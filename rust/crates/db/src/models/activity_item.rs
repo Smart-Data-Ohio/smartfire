@@ -172,6 +172,17 @@ impl ActivityItem {
         Ok(())
     }
 
+    /// Approval settlement preserves an earlier read timestamp and broadcasts once
+    /// for each newly handled item. The event sink runs only after commit.
+    pub(crate) fn handle_for_source(tx: &mut Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
+        let items = crate::sql::query_all(tx.conn(), "SELECT * FROM activity_items WHERE source_type=? AND source_id=? AND handled_at IS NULL ORDER BY id", params![source_type,source_id],Self::from_row)?;
+        for item in items {
+            tx.conn().execute("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?",params![tx.now(),tx.now(),tx.now(),item.id])?;
+            Self::broadcast_change(tx,item.user_id,item.id)?;
+        }
+        Ok(())
+    }
+
     /// `has_many :activity_items, as: :source, dependent: :destroy`
     pub(crate) fn destroy_for_source(tx: &Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
         tx.conn().execute_cached(

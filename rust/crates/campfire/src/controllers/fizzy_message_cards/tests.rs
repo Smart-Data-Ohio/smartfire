@@ -9,14 +9,7 @@ use axum::http::{Method, StatusCode};
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
-
-// Worker-local ports keep simultaneous fresh-clone checks isolated.
-fn case_port() -> u16 {
-    std::env::var("WS15E_FIZZY_MESSAGE_CASE_PORT")
-        .ok()
-        .map(|port| port.parse().expect("Fizzy case port"))
-        .unwrap_or(51598)
-}
+use std::os::fd::{AsFd, OwnedFd};
 
 #[tokio::test]
 async fn ws15e_fizzy_message_creation_http_matrix() {
@@ -42,6 +35,13 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
         "no_connection",
         "direct_bots",
     ] {
+        // Keep the allocated socket open across exec, rather than choosing a port and rebinding.
+        // stdin carries the listener; the child gets its own configured origin without mutating ENV.
+        let listener = crate::test_support::bind_listener()
+            .await
+            .into_std()
+            .expect("reserve an isolated Fizzy API listener");
+        let base = format!("http://{}", listener.local_addr().unwrap());
         let output = tokio::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
@@ -50,10 +50,8 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
                 "--test-threads=8",
             ])
             .env("WS15E_FIZZY_MESSAGE_CASE", case)
-            .env(
-                "FIZZY_API_BASE_URL",
-                format!("http://127.0.0.1:{}", case_port()),
-            )
+            .env("FIZZY_API_BASE_URL", &base)
+            .stdin(OwnedFd::from(listener))
             .output()
             .await
             .unwrap();
@@ -67,10 +65,16 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
             stdout.contains("1 passed; 0 failed"),
             "must execute: {stdout}"
         );
-        println!("Fizzy message cards Rails case {case}: 1 passed; 0 failed");
+        println!("Fizzy message cards Rails case {case} at {base}: 1 passed; 0 failed");
     }
 }
 async fn run(case: &str) {
+    let listener =
+        std::net::TcpListener::from(std::io::stdin().as_fd().try_clone_to_owned().unwrap());
+    let base = crate::integrations::fizzy::client::api_base_url();
+    assert_eq!(base, format!("http://{}", listener.local_addr().unwrap()));
+    listener.set_nonblocking(true).unwrap();
+    let listener = tokio::net::TcpListener::from_std(listener).unwrap();
     let mut app = TestApp::boot().await.expect("pinned seeds required");
     app.booted
         .jobs
@@ -158,17 +162,24 @@ async fn run(case: &str) {
             .await
             .unwrap();
     }
-    if case == "direct_bots" {
-        app.db().write(move|tx| {tx.conn().execute("INSERT OR IGNORE INTO memberships (room_id,user_id,created_at,updated_at) VALUES (?,?,?,?)",rusqlite::params![room_id,BENDER,tx.now(),tx.now()])?;Ok(())}).await.unwrap();
-    }
+    let legacy_bot = if case == "direct_bots" {
+        Some(app.db().write(move |tx| {
+            // Bender is agent-backed in the seed: Rails excludes it from legacy delivery.
+            let bot = campfire_db::User::create_integration_bot(tx, "Fizzy legacy fixture")?;
+            campfire_db::Webhook::create(tx, bot.id, Some("https://example.test/legacy"))?;
+            for user in [BENDER, bot.id] {
+                tx.conn().execute("INSERT OR IGNORE INTO memberships (room_id,user_id,created_at,updated_at) VALUES (?,?,?,?)", rusqlite::params![room_id,user,tx.now(),tx.now()])?;
+            }
+            Ok(bot.id)
+        }).await.unwrap())
+    } else { None };
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
-    let base = format!("http://127.0.0.1:{}/897362094/cards/580", case_port());
     let url = if case == "long_reply" {
         format!("https://example.com/{}", "x".repeat(60000))
     } else {
-        base
+        format!("{base}/897362094/cards/580")
     };
     let create_status = if matches!(case, "readonly" | "revoked" | "probe_failure") {
         401
@@ -185,9 +196,6 @@ async fn run(case: &str) {
         "new_rejected" => 401,
         _ => 200,
     };
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1", case_port()))
-        .await
-        .unwrap();
     let server = FakeServer::on_listener(
         vec![
             Route::new("GET", "127.0.0.1", "/897362094/boards.json", board_status).body(
@@ -315,10 +323,10 @@ async fn run(case: &str) {
     }
     if case == "direct_bots" {
         let jobs = app.db().read(campfire_jobs::inspect::all).await.unwrap();
-        assert_eq!(
-            jobs.iter().filter(|j| j.class == "Bot::WebhookJob").count(),
-            1
-        );
+        let jobs: Vec<_> = jobs.iter().filter(|j| j.class == "Bot::WebhookJob").collect();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].arguments["bot_id"], legacy_bot.unwrap());
+        assert!(jobs.iter().all(|j| j.arguments["bot_id"] != BENDER), "agent-backed bot bypassed its ledger");
     }
     if case == "enqueue_rollback" {
         app.db().read(|c| {assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_references WHERE message_id NOT IN (SELECT id FROM messages)",[],|r|r.get::<_,i64>(0))?,0);assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_caches",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();

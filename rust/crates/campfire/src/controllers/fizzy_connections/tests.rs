@@ -12,14 +12,6 @@ use axum::http::{Method, StatusCode};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
 
-// Worker-local ports keep simultaneous fresh-clone checks isolated.
-fn case_port() -> u16 {
-    std::env::var("WS15E_FIZZY_CONNECTION_CASE_PORT")
-        .ok()
-        .map(|port| port.parse().expect("Fizzy case port"))
-        .unwrap_or(51597)
-}
-
 #[tokio::test]
 async fn ws15e_fizzy_connection_http_matrix() {
     if let Ok(case) = std::env::var("WS15E_FIZZY_CONNECTION_CASE") {
@@ -45,10 +37,7 @@ async fn ws15e_fizzy_connection_http_matrix() {
                 "--test-threads=8",
             ])
             .env("WS15E_FIZZY_CONNECTION_CASE", case)
-            .env(
-                "FIZZY_API_BASE_URL",
-                format!("http://127.0.0.1:{}", case_port()),
-            )
+            .env("FIZZY_API_BASE_URL", crate::integrations::test_support::fixture_http_base(51597, 1))
             .output()
             .await
             .unwrap();
@@ -76,7 +65,8 @@ async fn run(case: &str) {
     } else {
         json!({"accounts":[{"slug":"/897362094","name":"Smart Data","user":{"id":"03user1","name":"David"}}]})
     };
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1", case_port()))
+    let api_base = crate::integrations::fizzy::client::api_base_url();
+    let listener = tokio::net::TcpListener::bind(api_base.strip_prefix("http://").unwrap())
         .await
         .unwrap();
     let server = FakeServer::on_listener(

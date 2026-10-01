@@ -7,12 +7,101 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 repo = root.parent
 names = {
-    'test/jobs/github/perform_agent_action_job_test.rb': [None] * 30 + [
+    'test/jobs/audit_log_github_execution_test.rb': ['github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails'] * 4 + ['github_claim_audit_failure_does_not_skip_webhook_and_queue_failure_rolls_back','github_claim_persisted_outcomes_and_audits_match_pinned_rails'],
+    'test/integration/github_pr_cards_test.rb': ['github_room_cards_real_pages_match_pinned_rails_card_containers'] * 7 + ['github_room_refresh_claims_dedupe_many_messages_and_different_viewers','github_room_cards_real_pages_match_pinned_rails_card_containers',None] + ['github_room_refresh_claims_dedupe_many_messages_and_different_viewers'] * 3 + ['github_room_cards_security_redirects_nonmembers_without_card_data',None,'webhook_security_rejects_bad_or_missing_signatures_before_parsing'],
+    'test/controllers/agents/github/pull_request_actions_controller_test.rb': ['github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails'] * 15 + ['github_agent_http_races_fanout_rollback_expiry_and_real_approved_job'] * 2 + ['github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails'] * 4,
+    'test/controllers/github/pull_request_comments_controller_test.rb': ['github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails'] * 2 + ['github_write_security_checks_room_and_mapping_before_own_token_access'] + ['github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails'] * 6 + ['github_write_security_checks_room_and_mapping_before_own_token_access',None],
+    'test/controllers/github/pull_request_reviews_controller_test.rb': ['github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails'] * 4 + ['github_write_security_checks_room_and_mapping_before_own_token_access'] + ['github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails'] * 4,
+    'test/controllers/github/pull_request_review_requests_controller_test.rb': ['github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails'] * 3 + ['github_write_security_checks_room_and_mapping_before_own_token_access'] + ['github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails'] * 8 + ['github_write_security_checks_room_and_mapping_before_own_token_access','github_write_bot_credentials_are_forbidden_and_never_reach_github',None],
+    'test/controllers/github/pull_request_write_actions_controller_test.rb': ['github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails'] * 3 + ['github_write_security_checks_room_and_mapping_before_own_token_access',None],
+    'test/models/github/review_logins_test.rb': ['github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries'] * 5,
+    'test/controllers/github/pull_request_threads_controller_test.rb': ['github_discuss_http_redirect_persistence_membership_and_fetch_match_rails'] * 2 + [None,None] + ['github_discuss_security_requires_membership_root_parent_and_exact_reference'] * 3,
+    'test/controllers/github/connections_controller_test.rb': ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 5 + [None,None] + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 3 + ['round2_profile_fragment_is_reachable_from_the_seed_page',None,None],
+    'test/controllers/github/app_connections_controller_test.rb': ['github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange'] * 2 + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 3 + ['github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange'] + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 7,
+    'test/controllers/accounts/bots/github_connections_controller_test.rb': ['github_connections_http_identity_flash_revocation_and_audits_match_rails',None,'github_connections_security_enforces_sudo_admin_active_bot_and_single_use_state'] + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 5 + ['round2_bot_fragment_is_reachable_from_the_seed_page','github_user_and_bot_deactivation_disconnects_inside_real_user_transaction'],
+    'test/controllers/rooms/github_subscriptions_controller_test.rb': [
+        'github_subscription_http_status_flash_token_events_and_membership_match_rails',
+    ] * 7 + ['github_subscription_http_security_rejects_nonmembers_plain_members_direct_deleted_and_cross_room'] * 3 + [
+        'github_subscription_sections_match_rails_bytes_and_real_edit_page_permissions',
+    ] + ['github_subscription_http_status_flash_token_events_and_membership_match_rails'] * 5 + [
+        'github_subscription_sections_match_rails_bytes_and_real_edit_page_permissions',
+    ],
+    'test/controllers/rooms/github/pull_request_cards_controller_test.rb': [
+        'github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails',
+    ] * 6 + [None, None] + [
+        'github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails',
+    ] * 3 + ['github_viewer_card_security_checks_membership_and_exact_context_before_token_access'] * 4,
+    'test/models/github/pull_request_url_test.rb': ['github_url_extraction_and_non_code_html_match_pinned_rails'] * 10,
+    'test/helpers/github_pull_requests_helper_test.rb': ['github_pr_and_thread_stamps_invalidate_message_fragments_without_touching_message'] + [None] * 17 + ['review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure'] * 2,
+    'test/models/github/pull_request_thread_test.rb': [
+        'github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails',
+    ] * 9 + ['github_pr_agent_payload_security_hides_private_and_unknown_details_without_owner_access'] * 2,
+    'test/models/github/repository_subscription_test.rb': ['github_subscriptions_validation_and_bot_membership_callbacks_match_rails'] * 10,
+    'test/models/github/notification_test.rb': ['github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription'] * 3,
+    'test/models/github/pull_request_test.rb': [
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_case_collapse_repoints_links_and_mappings_without_destroying_threads',
+        'github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet',
+        'github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet',
+        'github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet',
+        None,
+    ] + [
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_reference_security_ignores_code_and_caps_before_case_normalization',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+     ] + [
+        'github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements',
+        'github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements',
+    ],
+    'test/jobs/github/deliver_subscription_event_job_test.rb': [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 2 + ['github_notifier_security_redacts_per_subscription_and_neutralizes_mentions'] + [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 3 + [None] + ['github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails'] + [None] + [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 10 + ['github_notifier_durable_handler_publishes_real_room_and_thread_frames'] + [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 3 + [None] + ['github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails'] * 5 + [
+        'github_notifier_durable_handler_publishes_real_room_and_thread_frames',
+    ] + ['github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails'] * 2 + [
+        'github_notifier_security_redacts_per_subscription_and_neutralizes_mentions',
+    ] * 5,
+    'test/jobs/github/fetch_pull_request_job_test.rb': [
+        'github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails',
+    ] * 13 + [
+        'github_fetch_transport_failure_persists_error_without_changing_card_or_files',
+    ] + ['github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails'] * 6 + [None] * 2,
+    'test/jobs/github/perform_agent_action_job_test.rb': [
+        None,  # WS11 owns AgentApproval::decide! and its enqueue callback.
+    ] + ['github_agent_rechecks_payload_and_linked_identity_before_any_write'] * 3 + [None] + [
+        'github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails',
+    ] * 4 + ['github_agent_rechecks_authority_before_any_write'] * 7 + [
+        'github_agent_rechecks_payload_and_linked_identity_before_any_write',
+    ] * 2 + ['github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails'] * 2 + [
+        'github_agent_rechecks_payload_and_linked_identity_before_any_write',
+    ] * 2 + [
+        'github_agent_concurrent_duplicates_share_one_claim_and_one_outbound_write',
+        'github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails',
+        'github_agent_concurrent_duplicates_share_one_claim_and_one_outbound_write',
+        'github_agent_concurrent_duplicates_share_one_claim_and_one_outbound_write',
+        'github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails',
+        'github_agent_completion_index_is_scoped_to_agent_approval_and_event_type',
+        'github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails',
+        'github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails',
         'github_claim_persisted_outcomes_and_audits_match_pinned_rails',
         'github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once',
         'github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once',
         'github_claim_sweep_fails_only_overdue_running_claims_and_preserves_metadata',
-    ] + [None] * 2,
+    ] + ['github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails'] * 2,
+    'test/models/github/agent_pull_request_action_test.rb': [
+        'github_agent_action_validation_summary_payload_and_normalization_match_rails',
+    ] * 10 + ['github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails'],
     'test/controllers/github/webhooks_controller_test.rb': [
         None,  # Fetch persistence and the card broadcast are the next slices.
         'webhook_http_status_body_selection_and_privacy_match_rails',
@@ -89,13 +178,22 @@ names = {
 }
 paths = sorted(p for p in subprocess.check_output(['git', '-C', str(repo), 'ls-tree', '-r', '--name-only', 'd7c7de92', 'test'], text=True).splitlines() if 'github' in p and p.endswith('_test.rb'))
 rows = []
+file_counts = []
 covered = 0
-rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text()
+rust_tests = (root / 'crates/campfire/src/integrations/github/pull_requests/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/references/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/notifier/tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/card_tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/subscription_tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/connection_tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/discussion_tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/write_tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/lifecycle_tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/agent_tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/fragment_tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/room_card_tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)
     mapped = names.get(path, [None] * len(tests))
     assert len(mapped) == len(tests), path
+    file_counts.append((path,len(tests),sum(target is not None for target in mapped)))
     rows.append(f'## `{path}` ({len(tests)} tests)\n\n| Rails test | Status and owner | Rust coverage |\n|---|---|---|')
     for name, target in zip(tests, mapped):
         if target:
@@ -106,10 +204,17 @@ for path in paths:
             status += '; WS11 owns authentication middleware'
         if not target and path.endswith('write_client_test.rb'):
             status += ' (warning-log assertion; error/privacy assertions already covered)'
+        if not target and path.endswith('pull_request_cards_controller_test.rb'):
+            status += ' (relink through Connection HTTP; transport failure followed by recovery through the same frame)'
+        if not target and path.endswith('deliver_subscription_event_job_test.rb'):
+            status += ' (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder)'
         rows.append(f'| {name.replace(chr(124), chr(92)+chr(124))} | {status} | {"`" + target + "`" if target else "—"} |')
     rows.append('')
 count = sum(len(re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True), re.M)) for path in paths)
 summary = f'{count} Rails cases in {len(paths)} files: {covered} mapped to Rust assertions; {count-covered} explicitly deferred.'
-header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue and the shared stuck-claim sweep with runtime periodic registration are covered. Job handlers, card broadcasts and view/system parity, other HTTP controllers, PR persistence/fetch, notifications/subscriptions and agent write actions remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
-(root / 'plans/ws15g-rails-tests.md').write_text((header + '\n'.join(rows)).rstrip() + '\n')
+header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; the GitHub profile/bot sections are wired, with exact seed fragment bytes and real HTTP callers; manual profile login-edit policy remains deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Room-card integration is 14/16 covered through actual room requests and pinned full card-container bytes; constant-query preload and the open-room join page remain deferred. Execution-audit cases are 6/6 mapped to regenerated Rails execution/sweep vectors, including audit outages and retry dedupe. Other room-page/controller/system parity and helper cache cases remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
+groups = '| Rails file | Cases passing grouped assertions | Deferred |\n|---|---:|---:|\n' + '\n'.join(f'| `{path}` | {passed}/{total} | {total-passed} |' for path,total,passed in sorted(file_counts,key=lambda entry:entry[1]-entry[2],reverse=True)) + '\n\n'
+(root / 'plans/ws15g-rails-tests.md').write_text((header + groups + '\n'.join(rows)).rstrip() + '\n')
 print('GitHub Rails inventory: ' + summary)
+for path,total,passed in sorted(file_counts,key=lambda entry:entry[1]-entry[2],reverse=True):
+    print(f'{path}: {passed}/{total} mapped case groups passing; {total-passed} deferred')

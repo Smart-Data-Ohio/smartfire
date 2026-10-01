@@ -1,0 +1,142 @@
+[
+  {
+    "input": null,
+    "expected": []
+  },
+  {
+    "input": "",
+    "expected": []
+  },
+  {
+    "input": " @Alice, alice @BOB,bob ",
+    "expected": [
+      "alice",
+      "bob"
+    ]
+  },
+  {
+    "input": "-a",
+    "expected": null
+  },
+  {
+    "input": "a-",
+    "expected": null
+  },
+  {
+    "input": "a--b",
+    "expected": null
+  },
+  {
+    "input": "a_b",
+    "expected": null
+  },
+  {
+    "input": "user!!",
+    "expected": null
+  },
+  {
+    "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected": [
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ]
+  },
+  {
+    "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected": null
+  },
+  {
+    "input": [
+      "user1",
+      "user2",
+      "user3",
+      "user4",
+      "user5",
+      "user6",
+      "user7",
+      "user8",
+      "user9",
+      "user10",
+      "user11",
+      "user12",
+      "user13",
+      "user14",
+      "user15"
+    ],
+    "expected": [
+      "user1",
+      "user2",
+      "user3",
+      "user4",
+      "user5",
+      "user6",
+      "user7",
+      "user8",
+      "user9",
+      "user10",
+      "user11",
+      "user12",
+      "user13",
+      "user14",
+      "user15"
+    ]
+  },
+  {
+    "input": [
+      "user1",
+      "user2",
+      "user3",
+      "user4",
+      "user5",
+      "user6",
+      "user7",
+      "user8",
+      "user9",
+      "user10",
+      "user11",
+      "user12",
+      "user13",
+      "user14",
+      "user15",
+      "user16"
+    ],
+    "expected": null
+  },
+  {
+    "input": [
+      "alice, bob",
+      "@Alice"
+    ],
+    "expected": [
+      "alice",
+      "bob"
+    ]
+  },
+  {
+    "input": false,
+    "expected": [
+      "false"
+    ]
+  },
+  {
+    "input": 12,
+    "expected": [
+      "12"
+    ]
+  },
+  {
+    "input": "ſame",
+    "expected": [
+      "ſame"
+    ]
+  },
+  {
+    "input": "Kate",
+    "expected": [
+      "kate"
+    ]
+  },
+  {
+    "input": "alice bob",
+    "expected": null
+  }
+]

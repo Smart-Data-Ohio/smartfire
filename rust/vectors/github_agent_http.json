@@ -1,0 +1,1892 @@
+[
+  {
+    "name": "bad",
+    "secret": "bad",
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 401,
+    "body": null,
+    "statuses": [
+      401
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": false,
+    "agent_seen": false
+  },
+  {
+    "name": "suspended",
+    "suspended": true,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 401,
+    "body": null,
+    "statuses": [
+      401
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": false,
+    "agent_seen": false
+  },
+  {
+    "name": "expired_credential",
+    "expired": true,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 401,
+    "body": null,
+    "statuses": [
+      401
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": false,
+    "agent_seen": false
+  },
+  {
+    "name": "revoked_credential",
+    "revoked": true,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 401,
+    "body": null,
+    "statuses": [
+      401
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": false,
+    "agent_seen": false
+  },
+  {
+    "name": "nonmember",
+    "member": false,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 404,
+    "body": null,
+    "statuses": [
+      404
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "unknown_room",
+    "room": 999,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/999/agents/github/pull_request_actions",
+    "status": 404,
+    "body": null,
+    "statuses": [
+      404
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "unmapped",
+    "mapping": false,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 404,
+    "body": null,
+    "statuses": [
+      404
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "cross_room",
+    "room": 825,
+    "other_member": true,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/825/agents/github/pull_request_actions",
+    "status": 404,
+    "body": null,
+    "statuses": [
+      404
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "missing_pr",
+    "missing_pr": true,
+    "request_body": {
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 404,
+    "body": null,
+    "statuses": [
+      404
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "no_grant",
+    "grant": "post_messages",
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 403,
+    "body": {
+      "error": "Forbidden: agent lacks external_action capability"
+    },
+    "statuses": [
+      403
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "cross_grant",
+    "grant_room": 825,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 403,
+    "body": {
+      "error": "Forbidden: agent lacks external_action capability"
+    },
+    "statuses": [
+      403
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "no_account",
+    "linked": false,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 422,
+    "body": {
+      "error": "Agent has no usable GitHub account"
+    },
+    "statuses": [
+      422
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "disconnected",
+    "disconnected": true,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 422,
+    "body": {
+      "error": "Agent has no usable GitHub account"
+    },
+    "statuses": [
+      422
+    ],
+    "cache_control": "no-cache",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "blank_comment",
+    "submitted": {
+      "kind": "comment",
+      "body": " "
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": " "
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 422,
+    "body": {
+      "errors": {
+        "body": [
+          "is required for a comment"
+        ]
+      }
+    },
+    "statuses": [
+      422
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "blank_changes",
+    "submitted": {
+      "kind": "request_changes"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "request_changes"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 422,
+    "body": {
+      "errors": {
+        "body": [
+          "is required when requesting changes"
+        ]
+      }
+    },
+    "statuses": [
+      422
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "invalid_reviewers",
+    "submitted": {
+      "kind": "request_review",
+      "reviewers": "alice, bob!!"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "request_review",
+      "reviewers": "alice, bob!!"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 422,
+    "body": {
+      "errors": {
+        "reviewers": [
+          "Enter GitHub usernames separated by commas."
+        ]
+      }
+    },
+    "statuses": [
+      422
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "bad_kind",
+    "submitted": {
+      "kind": "merge"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "merge"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 422,
+    "body": {
+      "errors": {
+        "kind": [
+          "must be one of: comment, approve, request_changes, request_review"
+        ]
+      }
+    },
+    "statuses": [
+      422
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "comment",
+    "submitted": {
+      "kind": "comment",
+      "body": " Nice work ",
+      "external_id": "gh-1"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": " Nice work ",
+      "external_id": "gh-1"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 202,
+    "body": {
+      "id": 1,
+      "status": "pending",
+      "expires_at": "2026-01-02T12:00:00.000Z"
+    },
+    "statuses": [
+      202
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice work",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "Nice work",
+          "reviewers": null
+        },
+        "external_id": "gh-1",
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      }
+    ],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "approve",
+    "submitted": {
+      "kind": "approve"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "approve"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 202,
+    "body": {
+      "id": 1,
+      "status": "pending",
+      "expires_at": "2026-01-02T12:00:00.000Z"
+    },
+    "statuses": [
+      202
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [
+      {
+        "action": "github.approve",
+        "summary": "Approve rails/rails#12",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "approve",
+          "body": null,
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      }
+    ],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "changes",
+    "submitted": {
+      "kind": "request_changes",
+      "body": "Fix the typo"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "request_changes",
+      "body": "Fix the typo"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 202,
+    "body": {
+      "id": 1,
+      "status": "pending",
+      "expires_at": "2026-01-02T12:00:00.000Z"
+    },
+    "statuses": [
+      202
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [
+      {
+        "action": "github.request_changes",
+        "summary": "Request changes on rails/rails#12",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_changes",
+          "body": "Fix the typo",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      }
+    ],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "reviewers",
+    "submitted": {
+      "kind": "request_review",
+      "reviewers": " @Alice, alice @BOB "
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "request_review",
+      "reviewers": " @Alice, alice @BOB "
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 202,
+    "body": {
+      "id": 1,
+      "status": "pending",
+      "expires_at": "2026-01-02T12:00:00.000Z"
+    },
+    "statuses": [
+      202
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [
+      {
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @alice, @bob",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      }
+    ],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "array_reviewers",
+    "submitted": {
+      "kind": "request_review",
+      "reviewers": [
+        "alice",
+        "@bob"
+      ]
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "request_review",
+      "reviewers": [
+        "alice",
+        "@bob"
+      ]
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 202,
+    "body": {
+      "id": 1,
+      "status": "pending",
+      "expires_at": "2026-01-02T12:00:00.000Z"
+    },
+    "statuses": [
+      202
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [
+      {
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @alice, @bob",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      }
+    ],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "replay",
+    "submitted": {
+      "kind": "comment",
+      "body": "First",
+      "external_id": "gh-dup"
+    },
+    "replay": {
+      "status": 200,
+      "body": {
+        "id": 1,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00.000Z"
+      }
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "First",
+      "external_id": "gh-dup"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 202,
+    "body": {
+      "id": 1,
+      "status": "pending",
+      "expires_at": "2026-01-02T12:00:00.000Z"
+    },
+    "statuses": [
+      202
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "approvals": [
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: First",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "First",
+          "reviewers": null
+        },
+        "external_id": "gh-dup",
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      }
+    ],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "budget",
+    "cap": 0,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 429,
+    "body": {
+      "error": "Daily external action budget exceeded (0/day)",
+      "cap": "external_actions",
+      "limit": 0,
+      "retry_after": 43199
+    },
+    "statuses": [
+      429
+    ],
+    "cache_control": "no-store",
+    "retry_after": null,
+    "replay": null,
+    "approvals": [],
+    "credential_used": true,
+    "agent_seen": true
+  },
+  {
+    "name": "throttle",
+    "repeat": 61,
+    "request_body": {
+      "pull_request_id": 816,
+      "kind": "comment",
+      "body": "hi"
+    },
+    "path": "/rooms/815/agents/github/pull_request_actions",
+    "status": 429,
+    "body": {
+      "error": "rate_limited"
+    },
+    "statuses": [
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      202,
+      429
+    ],
+    "cache_control": "no-cache",
+    "retry_after": "60",
+    "replay": null,
+    "approvals": [
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      },
+      {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: hi",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "hi",
+          "reviewers": null
+        },
+        "external_id": null,
+        "status": "pending",
+        "expires_at": "2026-01-02T12:00:00Z",
+        "agent_id": 881,
+        "agent_credential_id": 882,
+        "room_id": 815,
+        "github_login": "machine",
+        "inbox": true
+      }
+    ],
+    "credential_used": true,
+    "agent_seen": true
+  }
+]
