@@ -12,6 +12,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -122,6 +127,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -206,6 +216,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -290,6 +305,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -374,6 +394,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -458,6 +483,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -542,6 +572,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -652,6 +687,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -736,6 +776,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -820,6 +865,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -903,6 +953,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -984,6 +1039,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1063,6 +1123,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1295,6 +1360,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1374,6 +1444,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1453,6 +1528,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1516,6 +1596,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1580,6 +1665,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1632,6 +1722,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1684,6 +1779,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1736,6 +1836,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1788,6 +1893,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1851,6 +1961,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1903,6 +2018,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -1955,6 +2075,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2006,6 +2131,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2055,6 +2185,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2102,6 +2237,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2283,6 +2423,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2332,6 +2477,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2379,6 +2529,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2440,6 +2595,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2483,6 +2643,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2526,6 +2691,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2618,6 +2788,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2658,6 +2833,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2696,6 +2876,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2738,6 +2923,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2778,6 +2968,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2883,6 +3078,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2926,6 +3131,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -2969,6 +3184,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3012,6 +3237,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3057,6 +3292,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3113,6 +3358,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3167,6 +3422,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3211,6 +3476,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3255,6 +3530,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3301,6 +3586,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3347,6 +3642,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3403,6 +3708,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3446,6 +3761,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3603,6 +3923,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3707,6 +4032,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3819,6 +4149,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -3931,6 +4266,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4041,6 +4381,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4145,6 +4490,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4249,6 +4599,11 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4401,6 +4756,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4544,6 +4909,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4705,6 +5080,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4859,6 +5244,339 @@
       "index": 69,
       "spec": {
         "purpose": "sign_in",
+        "scenario": "provision_secondary_hosted",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 9000000001,
+            "subject": "controller-member",
+            "email": "new-member@cnbssoftware.com",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "user.create",
+            "actor_id": 9000000001,
+            "target_id": 9000000001,
+            "target_type": "User",
+            "target_label": "Fixture member <new-member@cnbssoftware.com>",
+            "details": {
+              "method": "google"
+            }
+          },
+          {
+            "action": "session.sign_in.success",
+            "actor_id": 9000000001,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 9000000001,
+            "name": "Fixture member",
+            "email_address": "new-member@cnbssoftware.com",
+            "role": "member",
+            "status": "active"
+          },
+          "password_present": false,
+          "memberships": [
+            104393281,
+            201306877,
+            699448327
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 70,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "provision_org",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@example.org"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 9000000001,
+            "subject": "controller-member",
+            "email": "new-member@example.org",
+            "domain": "example.org"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "user.create",
+            "actor_id": 9000000001,
+            "target_id": 9000000001,
+            "target_type": "User",
+            "target_label": "Fixture member <new-member@example.org>",
+            "details": {
+              "method": "google"
+            }
+          },
+          {
+            "action": "session.sign_in.success",
+            "actor_id": 9000000001,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 9000000001,
+            "name": "Fixture member",
+            "email_address": "new-member@example.org",
+            "role": "member",
+            "status": "active"
+          },
+          "password_present": false,
+          "memberships": [
+            104393281,
+            201306877,
+            699448327
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 71,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "external_password",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is only available for @smartdata.net and @cnbssoftware.com. Other email addresses can sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy@external.test",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@external.test",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        },
+        "password_login": {
+          "status": 302,
+          "location": "http://campfire.test/two_factor_challenge",
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
+          "calls": [],
+          "delta": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "markers": {},
+          "flow_present": false,
+          "identities": [],
+          "email": "legacy@external.test",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "session.sign_in.failure",
+              "actor_id": null,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "google"
+              }
+            }
+          ],
+          "lifecycle": {
+            "user": {
+              "id": 712064548,
+              "name": "Kevin",
+              "email_address": "legacy@external.test",
+              "role": "administrator",
+              "status": "active"
+            },
+            "password_present": true,
+            "memberships": [
+              201306877,
+              340026324,
+              654632876,
+              699448325,
+              699448326,
+              699448327,
+              699448329,
+              699448330,
+              699448331
+            ],
+            "history_preserved": true
+          }
+        }
+      }
+    },
+    {
+      "index": 72,
+      "spec": {
+        "purpose": "sign_in",
         "scenario": "immutable_email",
         "lifecycle": true
       },
@@ -4866,6 +5584,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -4927,7 +5655,7 @@
       }
     },
     {
-      "index": 70,
+      "index": 73,
       "spec": {
         "purpose": "sign_in",
         "scenario": "deactivated",
@@ -4937,6 +5665,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5004,7 +5742,7 @@
       }
     },
     {
-      "index": 71,
+      "index": 74,
       "spec": {
         "purpose": "sign_in",
         "scenario": "banned",
@@ -5014,6 +5752,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5081,7 +5829,7 @@
       }
     },
     {
-      "index": 72,
+      "index": 75,
       "spec": {
         "purpose": "sign_in",
         "scenario": "bot",
@@ -5091,6 +5839,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5158,7 +5916,7 @@
       }
     },
     {
-      "index": 73,
+      "index": 76,
       "spec": {
         "purpose": "sign_in",
         "scenario": "retained_deactivated",
@@ -5168,6 +5926,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5242,7 +6010,7 @@
       }
     },
     {
-      "index": 74,
+      "index": 77,
       "spec": {
         "purpose": "sign_in",
         "scenario": "retained_banned",
@@ -5252,6 +6020,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5326,7 +6104,7 @@
       }
     },
     {
-      "index": 75,
+      "index": 78,
       "spec": {
         "purpose": "sign_in",
         "scenario": "different_subject",
@@ -5336,6 +6114,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5410,7 +6198,7 @@
       }
     },
     {
-      "index": 76,
+      "index": 79,
       "spec": {
         "purpose": "sign_in",
         "scenario": "self_changed",
@@ -5420,6 +6208,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5487,7 +6285,7 @@
       }
     },
     {
-      "index": 77,
+      "index": 80,
       "spec": {
         "purpose": "sign_in",
         "scenario": "admin_allowed",
@@ -5497,6 +6295,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5569,7 +6377,7 @@
       }
     },
     {
-      "index": 78,
+      "index": 81,
       "spec": {
         "purpose": "sign_in",
         "scenario": "linking_disabled",
@@ -5579,6 +6387,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5646,7 +6464,7 @@
       }
     },
     {
-      "index": 79,
+      "index": 82,
       "spec": {
         "purpose": "sign_in",
         "scenario": "policy_changed",
@@ -5656,6 +6474,16 @@
       "jz_id": 773523953,
       "start": {
         "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
         "authorize": {
           "scope": "openid email profile",
           "code_challenge_method": "S256",
@@ -5719,6 +6547,293 @@
             699448331
           ],
           "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 83,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "forged_state"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in expired. Try again or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 84,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "missing_state"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in expired. Try again or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 85,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "replay"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 773523960,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "user.create",
+            "actor_id": 773523960,
+            "target_id": 773523960,
+            "target_type": "User",
+            "target_label": "Fixture member <david@smartdata.net>",
+            "details": {
+              "method": "google"
+            }
+          },
+          {
+            "action": "session.sign_in.success",
+            "actor_id": 773523960,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "replay": {
+          "status": 302,
+          "location": "http://campfire.test/two_factor_setup",
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
+          "calls": [],
+          "delta": [
+            1,
+            1,
+            1,
+            0
+          ],
+          "markers": {},
+          "flow_present": false,
+          "identities": [
+            {
+              "user_id": 773523960,
+              "subject": "controller-member",
+              "email": "david@smartdata.net",
+              "domain": "smartdata.net"
+            }
+          ],
+          "email": "kevin@37signals.com",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "user.create",
+              "actor_id": 773523960,
+              "target_id": 773523960,
+              "target_type": "User",
+              "target_label": "Fixture member <david@smartdata.net>",
+              "details": {
+                "method": "google"
+              }
+            },
+            {
+              "action": "session.sign_in.success",
+              "actor_id": 773523960,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "google"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 86,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "unconfigured_password"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 404,
+        "page": {
+          "status": 200,
+          "google_mark": false,
+          "domain_sentence": null
+        }
+      },
+      "result": {
+        "status": 404,
+        "location": null,
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [],
+        "password_login": {
+          "status": 302,
+          "location": "http://campfire.test/two_factor_challenge",
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
+          "calls": [],
+          "delta": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "markers": {},
+          "flow_present": false,
+          "identities": [],
+          "email": "kevin@37signals.com",
+          "password_preserved": true,
+          "audits": []
         }
       }
     }

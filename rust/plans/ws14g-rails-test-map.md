@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 186 ported domain/API/controller cases; 425 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 194 ported domain/API/controller cases; 417 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -166,17 +166,17 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/sessions/google_configuration_test.rb
 
-- **Deferred** — missing domain configuration disables Google while password login remains available — WS14g continuation.
-- **Deferred** — another company can enable its own domain without application changes — WS14g continuation.
-- **Deferred** — removing a domain takes effect on an already started Google login — WS14g continuation.
-- **Deferred** — allowed email and hosted domains can differ for secondary Workspace domains — WS14g continuation.
+- **Ported** — missing domain configuration disables Google while password login remains available — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
+- **Ported** — another company can enable its own domain without application changes — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
+- **Ported** — removing a domain takes effect on an already started Google login — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
+- **Ported** — allowed email and hosted domains can differ for secondary Workspace domains — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
 
 ## test/controllers/sessions/google_controller_test.rb
 
 - **Ported** — login page offers Google sign-in with the mark, domains, and password note — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (all three complete login HTTP bodies; request entropy fixed before rendering; approved #163 layout and only validated asset URL fingerprints may drift).
 - **Ported** — login page hides the Google button when credentials are missing — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
 - **Ported** — login page hides the Google button when domains are explicitly empty — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
-- **Partial** — start redirects to Google with identity-only scope, nonce, and PKCE — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — start redirects to Google with identity-only scope, nonce, and PKCE — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
 - **Ported** — start requires CSRF protection — `app::google_tests::google_sessions_csrf_pkce_and_signed_in_guards_match_rails`.
 - **Ported** — start and callback 404 when Google credentials are missing — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
 - **Ported** — start and callback 404 when sign-in domains are explicitly empty — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
@@ -187,7 +187,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — existing account links by verified email, preserving id, history, role, and password — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Ported** — subsequent logins resolve the immutable subject across email changes — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Ported** — post-auth return destination survives the Google round trip — `app::google_tests::google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity`.
-- **Partial** — external Google account is rejected while password sign-in still works — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — external Google account is rejected while password sign-in still works — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
 - **Ported** — missing hd is rejected: the email suffix alone proves nothing — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
 - **Ported** — spoofed hd with an external email domain is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
 - **Ported** — allowed email with an external hd is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
@@ -213,9 +213,9 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — id_token with a non-RS256 algorithm is rejected — `app::google_tests::google_sessions_malformed_signature_algorithm_and_unknown_key_fail_closed_through_router`.
 - **Ported** — unknown signing key refetches once and still fails closed — `app::google_tests::google_sessions_malformed_signature_algorithm_and_unknown_key_fail_closed_through_router`.
 - **Partial** — key rotation succeeds through a bounded refetch — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — callback with a forged or missing state is rejected without contacting Google — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — callback with a forged or missing state is rejected without contacting Google — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
 - **Ported** — callback with an expired flow is rejected — `app::google_tests::google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_contact_google`.
-- **Partial** — callback state cannot be replayed — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — callback state cannot be replayed — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (87 real pinned request/state/audit cases; initial page/domain sentence; nonce, signed state and PKCE bound to the stored flow; actual password fallback).
 - **Ported** — cancelled grant redirects without signing in — `app::google_tests::google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_contact_google`.
 - **Ported** — callback without a code is rejected — `app::google_tests::google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_contact_google`.
 - **Ported** — failed code exchange sends PKCE and fails without signing in — `app::google_tests::google_sessions_denied_missing_token_and_transport_outages_have_exact_notices`.
@@ -853,3 +853,7 @@ Owner availability was rechecked at remote main b908ebc2 after the requested 434
 ## WS11 key-provider integration handoff
 
 Checked `origin/rust/ws11-agents` while merging requested main `b908ebc2`. WS11's `sync_message_references` and `sync_message_reference_phase` reuse boot's `app.ar_encryption`. Retain that reuse when #176 merges. Retain `Secrets::ar_encryption_key` and its OnceLock in `rails_compat`: boot's object and any other object share exactly that provider's derivation, with no global/phase cache and no derived-byte change. Existing pinned cipher vectors and the concurrent provider regression cover both construction and reuse. The three Drive agent-delivery declarations above remain deferred to WS11's real polling/webhook APIs.
+
+### Requested b908ebc2 continuation: authentication
+
+The controller matrix now compares 87 complete request/state observations, including the initial configured/disabled login page and domain sentence, verified signed state, nonce and PKCE binding, a new company, secondary hosted domains, external rejection plus password fallback, disabled Google plus password success, forged/missing state and authenticated replay. The remaining malformed-response declarations still need their explicit follow-redirect HTML assertions; cookie flash equality alone does not close them.

@@ -3,6 +3,7 @@ require 'json'
 require 'openssl'
 require 'action_dispatch/testing/integration'
 require 'fileutils'
+Rails.logger=ActiveSupport::Logger.new($stderr)
 ActiveJob::Base.queue_adapter = :test
 ActionController::Base.allow_forgery_protection = false
 Rails.application.routes.default_url_options.merge!(host: 'campfire.test', protocol: 'http')
@@ -81,7 +82,8 @@ end
 [nil,[],42,'unexpected',{'id_token'=>[]},{'id_token'=>{}}].each { |payload| specs << {purpose:'sign_in',scenario:'token_shape',payload:} }
 [nil,[],42,{'keys'=>nil},{'keys'=>'unexpected'},{'keys'=>[nil,42,'invalid',{'kty'=>'RSA','kid'=>[],'n'=>{},'e'=>42}]}].each { |payload| specs << {purpose:'sign_in',scenario:'key_shape',payload:} }
 %w[consume_backup consume_device consume_all_devices consume_disable before_reauth_expiry at_reauth_expiry after_reauth_expiry wrong_credential_preserves].each { |scenario|specs << {purpose:'reauth',scenario:} }
-%w[legacy_password provision provision_secondary immutable_email deactivated banned bot retained_deactivated retained_banned different_subject self_changed admin_allowed linking_disabled policy_changed].each { |scenario|specs << {purpose:'sign_in',scenario:,lifecycle:true} }
+%w[legacy_password provision provision_secondary provision_secondary_hosted provision_org external_password immutable_email deactivated banned bot retained_deactivated retained_banned different_subject self_changed admin_allowed linking_disabled policy_changed].each { |scenario|specs << {purpose:'sign_in',scenario:,lifecycle:true} }
+specs += %w[forged_state missing_state replay unconfigured_password].map { |scenario| {purpose:'sign_in',scenario:} }
 rows=[]
 specs.each_with_index do |spec,index|
   # Restore the isolated reference database between cases. An enclosing rollback
@@ -94,7 +96,8 @@ specs.each_with_index do |spec,index|
   begin
     $controller_now=BASE
     ENV['GOOGLE_CLIENT_ID']='test-client-id';ENV['GOOGLE_CLIENT_SECRET']='FAKE-google-client-secret'
-    ENV['GOOGLE_SIGN_IN_DOMAINS']=spec[:scenario]=='unconfigured' ? '' : 'smartdata.net,cnbssoftware.com'
+    ENV['GOOGLE_SIGN_IN_DOMAINS']=%w[unconfigured unconfigured_password].include?(spec[:scenario]) ? '' : 'smartdata.net,cnbssoftware.com'
+    ENV['GOOGLE_SIGN_IN_DOMAINS']='EXAMPLE.ORG' if spec[:scenario]=='provision_org'
     Rails.cache.clear
     Google::SignIn::KeyStore.clear!
     GoogleIdentity.delete_all;AuditLog.delete_all
@@ -102,7 +105,7 @@ specs.each_with_index do |spec,index|
     $controller_password=kevin.password_digest
     purpose=spec[:purpose];scenario=spec[:scenario]
     if spec[:lifecycle]
-      kevin.update_columns(email_address:'legacy@smartdata.net',role:1,google_email_link_allowed:true,email_self_changed_at:nil)
+      kevin.update_columns(email_address:scenario=='external_password' ? 'legacy@external.test' : 'legacy@smartdata.net',role:1,google_email_link_allowed:true,email_self_changed_at:nil)
       kevin.update_columns(status:1) if %w[deactivated retained_deactivated].include?(scenario)
       kevin.update_columns(status:2) if %w[banned retained_banned].include?(scenario)
       kevin.update_columns(role:2) if scenario=='bot'
@@ -120,7 +123,9 @@ specs.each_with_index do |spec,index|
     subject='controller-member';email=purpose=='link' ? 'kevin.w@smartdata.net' : 'david@smartdata.net'
     email=case scenario
       when 'provision' then 'new-member@smartdata.net'
-      when 'provision_secondary' then 'new-member@cnbssoftware.com'
+      when 'provision_secondary','provision_secondary_hosted' then 'new-member@cnbssoftware.com'
+      when 'provision_org' then 'new-member@example.org'
+      when 'external_password' then 'legacy@external.test'
       when 'immutable_email' then 'changed@smartdata.net'
       else 'LEGACY@smartdata.net'
     end if spec[:lifecycle]
@@ -137,13 +142,21 @@ specs.each_with_index do |spec,index|
     if %w[consume_device consume_all_devices].include?(scenario)
       device, = TwoFactorRememberedDevice.create_for!(actor,user_agent:"Controller fixture",ip_address:"127.0.0.1")
     end
+    initial=nil
+    if purpose=='sign_in'
+      client.get('/session/new')
+      initial={status:client.response.status,google_mark:client.response.body.include?('Sign in with Google'),domain_sentence:client.response.body[/Google sign-in for (.*?) accounts/,1]}
+    end
     before=counts
     path={'reauth'=>'/two_factor_reauthentication','sudo'=>'/sudo/google','link'=>'/user/profile/google_sign_in_link','sign_in'=>'/session/google'}.fetch(purpose)
     $controller_calls=[];$controller_transport=false;$controller_key_payload=JWKS
     client.post(path)
     start={status:client.response.status}
+    start[:page]=initial if initial
     query=client.response.location && Rack::Utils.parse_query(URI(client.response.location).query)
     if query && query['state']
+      flow=client.request.session[:google_sign_in_request]
+      start[:bound_entropy]={nonce:query['nonce']==flow['nonce'] && flow['nonce'].length==32,state:Rails.application.message_verifier('google_sign_in_state').verify(query['state'])==flow['state'],pkce:query['code_challenge']==Base64.urlsafe_encode64(Digest::SHA256.digest(flow['verifier']),padding:false)}
       start[:authorize]=query.slice('scope','code_challenge_method','prompt','max_age','redirect_uri')
       if scenario=='signed_out' || scenario=='other_member'
         client.delete('/session')
@@ -155,17 +168,19 @@ specs.each_with_index do |spec,index|
       auth_offset={'stale'=>-360,'before_auth_boundary'=>-331,'at_auth_boundary'=>-330,'after_auth_boundary'=>-329}.fetch(scenario,0)
       claims={'iss'=>'https://accounts.google.com','aud'=>'test-client-id','sub'=>scenario=='wrong_subject' ? 'controller-attacker' : subject,'email'=>email,'email_verified'=>true,'hd'=>scenario=='wrong_domain' ? 'wrong.test' : 'smartdata.net','name'=>'Fixture member','nonce'=>scenario=='wrong_nonce' ? 'forged' : query['nonce'],'exp'=>BASE.to_i+3600,'auth_time'=>BASE.to_i+auth_offset}
       claims['hd']='cnbssoftware.com' if scenario=='provision_secondary'
+      claims['hd']='example.org' if scenario=='provision_org'
+      claims['hd']='external.test' if scenario=='external_password'
       claims.delete('auth_time') if scenario=='missing_auth'
       $controller_token_payload={'id_token'=>JWT.encode(claims,KEY,'RS256',{kid:'fixture'})}
       $controller_token_payload=spec[:payload] if scenario=='token_shape'
       $controller_key_payload=spec[:payload] if scenario=='key_shape'
       $controller_transport=scenario=='unavailable'
       call_before=$controller_calls.length
-      client.get('/session/google/callback',params:{state:query['state'],code:'fixture-code',**(scenario=='cancelled' ? {error:'access_denied'} : {})})
+      client.get('/session/google/callback',params:{state:scenario=='forged_state' ? 'forged' : scenario=='missing_state' ? nil : query['state'],code:'fixture-code',**(scenario=='cancelled' ? {error:'access_denied'} : {})})
       result=observation(client,before,call_before)
       if spec[:lifecycle]
         result[:lifecycle]=lifecycle_observation
-        if %w[legacy_password provision provision_secondary].include?(scenario)
+        if %w[legacy_password provision provision_secondary external_password].include?(scenario)
           client.get(client.response.location)
           client.delete('/session')
           client.get('/session/new')
@@ -200,6 +215,11 @@ specs.each_with_index do |spec,index|
       end
     else
       result=observation(client,before,0)
+      if scenario=='unconfigured_password'
+        client.get('/session/new')
+        client.post('/session',params:{email_address:kevin.email_address,password:'secret123456'})
+        result[:password_login]=observation(client,before,0)
+      end
     end
     rows << {index:,spec:,actor_id:actor.id,jz_id:jz.id,start:,result:}
   ensure

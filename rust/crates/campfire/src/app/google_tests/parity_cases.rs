@@ -122,7 +122,9 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         let scenario = row["spec"]["scenario"].as_str().unwrap();
         let lifecycle = row["spec"]["lifecycle"].as_bool().unwrap_or(false);
         a.booted.app.google.install(SignIn::with_client(
-            config(if scenario == "unconfigured" {
+            config(if scenario == "provision_org" {
+                &["example.org"]
+            } else if matches!(scenario, "unconfigured" | "unconfigured_password") {
                 &[]
             } else {
                 &["smartdata.net", "cnbssoftware.com"]
@@ -149,6 +151,7 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
                 if lifecycle {
                     let scenario = owned_scenario.as_str();
                     tx.conn().execute("UPDATE users SET email_address='legacy@smartdata.net',role=1,google_email_link_allowed=1,email_self_changed_at=NULL WHERE id=?",[KEVIN])?;
+                    if scenario=="external_password" {tx.conn().execute("UPDATE users SET email_address='legacy@external.test' WHERE id=?",[KEVIN])?;}
                     if scenario=="bot" {tx.conn().execute("UPDATE users SET role=2 WHERE id=?",[KEVIN])?;}
                     if matches!(scenario,"self_changed"|"admin_allowed") {tx.conn().execute("UPDATE users SET google_email_link_allowed=0,email_self_changed_at=? WHERE id=?",rusqlite::params![tx.now(),KEVIN])?;}
                     if scenario=="linking_disabled" {tx.conn().execute("UPDATE users SET google_email_link_allowed=0 WHERE id=?",[KEVIN])?;}
@@ -192,12 +195,13 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         } else {
             a.sign_in(actor).await
         };
-        b.get(if purpose == "sign_in" {
-            "/session/new"
-        } else {
-            "/users/me/profile"
-        })
-        .await;
+        let initial_page = b
+            .get(if purpose == "sign_in" {
+                "/session/new"
+            } else {
+                "/users/me/profile"
+            })
+            .await;
         let device = if matches!(scenario, "consume_device" | "consume_all_devices") {
             Some(
                 a.db()
@@ -239,6 +243,11 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         };
         let start_reply = b.write(Req::new(Method::POST, path)).await;
         let mut started = json!({"status":start_reply.status.as_u16()});
+        if purpose == "sign_in" {
+            let html = initial_page.text();
+            let domains = regex::Regex::new("Google sign-in for (.*?) accounts").unwrap();
+            started["page"] = json!({"status":initial_page.status.as_u16(), "google_mark":html.contains("Sign in with Google"), "domain_sentence":domains.captures(&html).map(|c|c[1].to_owned())});
+        }
         let q = start_reply
             .location()
             .and_then(|l| url::Url::parse(l).ok())
@@ -249,6 +258,13 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             })
             .unwrap_or_default();
         let actual = if q.contains_key("state") {
+            let flow = session(&a, &b)["google_sign_in_request"].clone();
+            use sha2::Digest;
+            started["bound_entropy"] = json!({
+                "nonce": q["nonce"] == flow["nonce"].as_str().unwrap() && q["nonce"].len() == 32,
+                "state": rails_compat::app_verifier(&a.booted.app.secrets, "google_sign_in_state").verify(&q["state"], None, a.booted.app.clock.now()).ok() == Some(flow["state"].clone()),
+                "pkce": URL_SAFE_NO_PAD.encode(sha2::Sha256::digest(flow["verifier"].as_str().unwrap().as_bytes())) == q["code_challenge"],
+            });
             started["authorize"] = json!(
                 q.iter()
                     .filter(|(k, _)| matches!(
@@ -281,7 +297,11 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             let email = if lifecycle {
                 match scenario {
                     "provision" => "new-member@smartdata.net",
-                    "provision_secondary" => "new-member@cnbssoftware.com",
+                    "provision_secondary" | "provision_secondary_hosted" => {
+                        "new-member@cnbssoftware.com"
+                    }
+                    "provision_org" => "new-member@example.org",
+                    "external_password" => "legacy@external.test",
                     "immutable_email" => "changed@smartdata.net",
                     _ => "LEGACY@smartdata.net",
                 }
@@ -303,6 +323,12 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             claims["name"] = json!("Fixture member");
             if scenario == "provision_secondary" {
                 claims["hd"] = json!("cnbssoftware.com");
+            }
+            if scenario == "provision_org" {
+                claims["hd"] = json!("example.org");
+            }
+            if scenario == "external_password" {
+                claims["hd"] = json!("external.test");
             }
             claims["exp"] = json!(now.as_second() + 3600);
             claims["auth_time"] = json!(
@@ -340,7 +366,15 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             }
             let callback_path = format!(
                 "/session/google/callback?state={}&code=fixture-code{}",
-                crate::controllers::presenters::test_support::encode(&q["state"]),
+                crate::controllers::presenters::test_support::encode(
+                    if scenario == "forged_state" {
+                        "forged"
+                    } else if scenario == "missing_state" {
+                        ""
+                    } else {
+                        &q["state"]
+                    }
+                ),
                 if scenario == "cancelled" {
                     "&error=access_denied"
                 } else {
@@ -353,7 +387,7 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
                 observed["lifecycle"] = lifecycle_observation(&a, &history).await;
                 if matches!(
                     scenario,
-                    "legacy_password" | "provision" | "provision_secondary"
+                    "legacy_password" | "provision" | "provision_secondary" | "external_password"
                 ) {
                     b.get(cb.location().unwrap()).await;
                     b.write(Req::new(Method::DELETE, "/session")).await;
@@ -425,7 +459,19 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             }
             observed
         } else {
-            observation(&a, &b, &start_reply, &before, &r, 0, &password).await
+            let mut observed = observation(&a, &b, &start_reply, &before, &r, 0, &password).await;
+            if scenario == "unconfigured_password" {
+                b.get("/session/new").await;
+                let response = b
+                    .write(Req::new(Method::POST, "/session").form(&[
+                        ("email_address", "kevin@37signals.com"),
+                        ("password", "secret123456"),
+                    ]))
+                    .await;
+                observed["password_login"] =
+                    observation(&a, &b, &response, &before, &r, 0, &password).await;
+            }
+            observed
         };
         assert_eq!(started, row["start"], "{}: authorize", row["spec"]);
         assert_eq!(
