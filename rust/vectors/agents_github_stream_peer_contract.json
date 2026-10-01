@@ -1,0 +1,39 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "start": {
+      "claimed": null,
+      "streaming": true,
+      "references": [],
+      "fetches": 0
+    },
+    "append": {
+      "claimed": null,
+      "streaming": true,
+      "references": [],
+      "fetches": 0
+    },
+    "final": {
+      "claimed": true,
+      "streaming": false,
+      "references": [
+        2
+      ],
+      "fetches": 1
+    },
+    "repeat": {
+      "claimed": false,
+      "streaming": false,
+      "references": [
+        2
+      ],
+      "fetches": 1
+    },
+    "quiet": {
+      "claimed": true,
+      "streaming": false,
+      "references": [],
+      "fetches": 1
+    }
+  }
+}

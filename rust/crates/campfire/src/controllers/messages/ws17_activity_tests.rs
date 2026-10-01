@@ -55,7 +55,7 @@ async fn ws17_keyword_http_records_inbox_during_dnd_and_mention_wins() {
 }
 #[tokio::test]
 async fn ws17_keyword_http_insert_failure_rolls_back_message_index_and_jobs() {
-    let app = TestApp::boot().await.expect("parity seed");
+    let app = TestApp::boot().await.expect("parity seed").without_job_runner().await;
     let mut browser = app.david();
     browser.authenticity_token().await;
     app.db().write(|tx| {KeywordAlert::create(tx,JASON,"deploy")?;tx.conn().execute_batch("CREATE TRIGGER ws17_reject_activity BEFORE INSERT ON activity_items BEGIN SELECT RAISE(ABORT,'ws17 rejected activity'); END")?;Ok(())}).await.unwrap();

@@ -317,7 +317,7 @@ async fn huddle_gateway_request_response_vectors_match_pinned_rails() {
             return;
         };
         // Inspect the enqueue from this request before the real cleanup worker consumes it.
-        app.stop_jobs().await;
+        let app = app.without_job_runner().await;
         let seen = case["seen"] == true;
         let revoked = case["revoked"] == true;
         let removed = case["removed"] == true;
@@ -388,6 +388,7 @@ async fn huddle_sighting_enqueue_rejection_rolls_back_http_request() {
     let Some(app) = TestApp::boot_with_huddle(config()).await else {
         return;
     };
+    let app = app.without_job_runner().await;
     let grant = grant(&app).await;
     let token = bearer(&app, &grant, 0);
     app.db().write(|tx| Ok(tx.conn().execute_batch("CREATE TRIGGER reject_huddle_sighting BEFORE INSERT ON background_jobs WHEN NEW.job_class='Huddle::JoinNoticeJob' BEGIN SELECT RAISE(ABORT,'fixture queue failure'); END;")?)).await.unwrap();

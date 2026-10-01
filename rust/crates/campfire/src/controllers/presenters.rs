@@ -7,6 +7,7 @@ pub mod github;
 #[cfg(test)]
 mod message_links;
 pub mod status_settings;
+pub mod agent_payload;
 pub mod agent_profile;
 pub mod attachments;
 pub mod events;
@@ -196,6 +197,9 @@ pub struct Presenter<'a> {
     /// `Current.request_host`, which opengraph embeds are checked against.
     pub request_host: Option<String>,
     pub cache_base_url: Option<String>,
+    pub current_user_id: Option<i64>,
+    #[allow(dead_code)] // WS11-api calls agent_message_payload after its branch merges.
+    agent_payload: &'a agent_payload::State,
     /// The viewer's zone for token-free request partials; detached jobs default to UTC.
     pub render_zone: campfire_views::time::Zone,
     github_refreshes: std::rc::Rc<RefCell<BTreeSet<i64>>>,
@@ -225,6 +229,8 @@ impl<'a> Presenter<'a> {
             now: app.clock.now(),
             request_host,
             cache_base_url: None,
+            current_user_id: None,
+            agent_payload: &app.agent_message_payload,
             render_zone: page::renderer_time_zone(),
             github_refreshes: Default::default(),
             users: RefCell::default(),
@@ -290,6 +296,8 @@ impl<'a> Presenter<'a> {
             now: self.now,
             request_host: self.request_host.clone(),
             cache_base_url: self.cache_base_url.clone(),
+            current_user_id: self.current_user_id,
+            agent_payload: self.agent_payload,
             render_zone: self.render_zone.clone(),
             users: RefCell::default(),
             room_names: RefCell::default(),
@@ -1059,6 +1067,11 @@ impl<'a> Presenter<'a> {
         campfire_richtext::Content::load(body, &ctx)
             .and_then(|content| content.to_rendered_html_with_layout(&ctx))
             .map_err(|error| campfire_db::Error::Other(error.to_string()))
+    }
+
+    /// Compatibility entry point used by the bot and agent readers.
+    pub fn editable_body(&self, message: &Message) -> Result<String> {
+        self.rendered_body_html(message)
     }
 
     /// Message#editable_markdown_source passes rendered Content, not Content#to_html.

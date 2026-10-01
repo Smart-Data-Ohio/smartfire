@@ -14,6 +14,11 @@ pub const ALWAYS_READABLE: [&str; 3] = [
     "github_action_completed",
     "fizzy_action_completed",
 ];
+pub const DELIVERABLE_TYPES: [&str; 10] = [
+    "mention", "direct_message", "reply", "approval_decided",
+    "github_action_completed", "fizzy_action_completed", "work_assigned",
+    "work_unassigned", "work_handed_off", "slash_command",
+];
 pub const MAX_ATTEMPTS: i64 = 5;
 pub const RATE_LIMIT: i64 = 20;
 
@@ -54,7 +59,7 @@ pub struct AgentEvent {
     pub webhook_next_attempt_at: Option<Timestamp>,
     pub webhook_last_error: Option<String>,
 }
-#[derive(Default)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct NewEvent {
     pub agent_id: i64,
     pub room_id: Option<i64>,
@@ -102,20 +107,20 @@ impl AgentEvent {
             Self::from_row,
         )
     }
-    pub fn create(tx: &Tx<'_>, mut a: NewEvent) -> Result<Self> {
+    pub fn create(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
+        Self::create_record(tx,a,false)
+    }
+    /// Thread's after_destroy_commit keeps its already-loaded belongs_to Agent,
+    /// even if the outer transaction deleted that row. Rails has no ledger FK.
+    /// This is only for an identity captured by the deletion callback; ordinary
+    /// event creation still validates an agent_id against the database.
+    pub(crate) fn create_captured(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
+        Self::create_record(tx,a,true)
+    }
+    fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
         let mut errors = Errors::default();
-        if !MESSAGE_TYPES.contains(&a.event_type.as_str())
-            && !WORK_TYPES.contains(&a.event_type.as_str())
-            && !ALWAYS_READABLE.contains(&a.event_type.as_str())
-            && ![
-                "slash_command",
-                "posted",
-                "delivery_suppressed_rate_limit",
-                "delivery_suppressed_hop_limit",
-                "delivery_suppressed_revoked",
-            ]
-            .contains(&a.event_type.as_str())
-        {
+        if !DELIVERABLE_TYPES.contains(&a.event_type.as_str())
+            && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&a.event_type.as_str())        {
             if campfire_richtext::ruby::is_blank(&a.event_type) {
                 errors.add("event_type", "can't be blank");
             }
@@ -129,6 +134,7 @@ impl AgentEvent {
         }
         for (table, field, id) in [("agents", "agent", Some(a.agent_id))] {
             if let Some(id) = id
+                && !captured_agent
                 && !exists(
                     tx.conn(),
                     &format!("SELECT 1 FROM {table} WHERE id=?"),
@@ -148,6 +154,36 @@ impl AgentEvent {
             params![a.agent_id,a.room_id,a.message_id,a.actor_id,a.agent_approval_id,a.agent_credential_id,a.event_type,a.outcome,a.chain_id,(!a.metadata.is_null()).then_some(&a.metadata),a.hop,a.detail,tx.now()],|r|r.get(0))?;
         Ok(Self::find(tx.conn(), id)?.expect("inserted event"))
     }
+    /// The unfiltered ledger association. Polling must use agent_event_access,
+    /// which checks live access before applying its page limit.
+    pub fn for_agent(conn: &Connection, agent_id: i64) -> Result<Vec<Self>> {
+        query_all(conn, "SELECT * FROM agent_events WHERE agent_id=? ORDER BY id", [agent_id], Self::from_row)
+    }
+    pub fn deliverable_for_agent(conn: &Connection, agent_id: i64) -> Result<Vec<Self>> {
+        Self::of_types(conn, agent_id, &DELIVERABLE_TYPES)
+    }
+    pub fn message_deliverable_for_agent(conn: &Connection, agent_id: i64) -> Result<Vec<Self>> {
+        Self::of_types(conn, agent_id, &MESSAGE_TYPES)
+    }
+    fn of_types(conn: &Connection, agent_id: i64, types: &[&str]) -> Result<Vec<Self>> {
+        query_all(conn, "SELECT * FROM agent_events WHERE agent_id=? AND event_type IN (SELECT value FROM json_each(?)) ORDER BY id", params![agent_id, json!(types)], Self::from_row)
+    }
+    /// Low-level acknowledged! model transition. HTTP/polling callers keep the
+    /// authorization gate in agent_event_access::acknowledge.
+    pub fn acknowledge(&mut self, tx: &Tx<'_>) -> Result<()> {
+        if self.outcome.as_deref() != Some("acknowledged") {
+            let mut errors=Errors::default();
+            if !DELIVERABLE_TYPES.contains(&self.event_type.as_str()) && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&self.event_type.as_str()) {
+                if campfire_richtext::ruby::is_blank(&self.event_type) { errors.add("event_type", "can't be blank"); }
+                errors.add("event_type", "is not included in the list");
+            }
+            if !exists(tx.conn(), "SELECT 1 FROM agents WHERE id=?", [self.agent_id])? { errors.add("agent", "must exist"); }
+            errors.into_result()?;
+            tx.conn().execute("UPDATE agent_events SET outcome='acknowledged' WHERE id=?",[self.id])?;
+            self.outcome=Some("acknowledged".into());
+        }
+        Ok(())
+    }
     pub fn hop(&self) -> i64 {
         if self.hop != 0 {
             self.hop
@@ -156,7 +192,7 @@ impl AgentEvent {
         }
     }
 }
-pub(crate) fn ruby_i64(v: &Value) -> i64 {
+pub fn ruby_i64(v: &Value) -> i64 {
     match v {
         Value::Number(n) => n
             .as_i64()

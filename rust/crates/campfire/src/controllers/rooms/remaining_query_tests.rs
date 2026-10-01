@@ -41,7 +41,7 @@ async fn remaining_gateway_steady_state_has_no_transaction_and_denial_revokes_on
     let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
-    test.stop_jobs().await;
+    let test = test.without_job_runner().await;
     let grant = active(&test, ALL_TALK, DAVID).await;
     let path = format!("/internal/huddle/grants/{}", grant.id);
     let probe = SqlProbe::start(test.db(), test.booted.app.config.db_readers, None).await;
@@ -108,7 +108,7 @@ async fn remaining_presence_uses_one_grants_query_and_one_batched_user_preload()
     let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
-    test.stop_jobs().await;
+    let test = test.without_job_runner().await;
     let channel = test
         .db()
         .write(|tx| Room::create_for(tx, RoomType::Closed, Some("Second"), DAVID, &[DAVID, JASON]))
@@ -154,7 +154,7 @@ async fn remaining_stage_edit_checks_hosts_and_inserts_members_in_the_same_immed
     let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
-    test.stop_jobs().await;
+    let test = test.without_job_runner().await;
     let room = test
         .db()
         .write(|tx| {
@@ -222,7 +222,7 @@ async fn remaining_huddle_membership_revocation_between_scope_and_issue_is_a_con
     let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
-    test.stop_jobs().await;
+    let test = test.without_job_runner().await;
     let mut browser = test.sign_in(DAVID).await;
     let member = test
         .db()

@@ -74,6 +74,20 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
             crate::controllers::presenters::twitter_cards::broadcast_updates(app, event.post_id)
         }),
+        campfire_db::models::user::lifecycle::QuietStreamFinal::KIND => decode::<campfire_db::models::user::lifecycle::QuietStreamFinal>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            let copy = app.clone();
+            app.db.read_blocking(move |conn| {
+                let message = campfire_db::Message::find(conn, event.message_id)?;
+                let room = campfire_db::Room::find(conn, message.room_id)?;
+                let view = crate::controllers::presenters::Presenter::new(conn, &copy, None).message(&message)?;
+                let html = crate::controllers::presenters::page::render_detached(&copy, None, |ctx| campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders"));
+                copy.broadcasts.turbo(&super::broadcasts::Stream::conversation(&room, &message), Action::Replace,
+                    &super::broadcasts::message_dom_id(&message, None), Some(&html), false);
+                Ok(())
+            })?;
+            Ok(())
+        }),
         crate::integrations::github::notifier::MessageCreated::KIND => decode(request).and_then(|broadcast| {
             let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
             super::github_notifier::publish(app, &broadcast)
@@ -105,6 +119,32 @@ fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updat
 /// directory partial descriptions belongs to WS8br; message/poll/pin partials use WS8b-m's seam.
 fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::{Broadcast, TurboAction};
+    if let Broadcast::Turbo(frame) = broadcast
+        && matches!(frame.action, campfire_db::broadcasts::TurboAction::Append | campfire_db::broadcasts::TurboAction::Replace)
+        && let Some(campfire_db::broadcasts::Partial::Message {message_id} | campfire_db::broadcasts::Partial::MessageReplace {message_id}) = &frame.partial
+    {
+        let app=app.ok_or_else(||anyhow::anyhow!("app not booted"))?;
+        let copy=app.clone();let message_id=*message_id;
+        let html=app.db.read_blocking(move|conn| {
+            let message=campfire_db::Message::find(conn,message_id)?;
+            let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
+            // APP_URL supplies route defaults. Without it ActionController's
+            // renderer uses example.org, independent of mail's example.com fallback.
+            let origin=copy.config.mail.app_url.as_deref().unwrap_or("http://example.org");
+            // Rails broadcasts render the partial directly. A stream update can
+            // keep its frozen updated_at, so the collection cache would be stale.
+            Ok(crate::controllers::presenters::page::render_detached_at(&copy,None,origin,|ctx|campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders")))
+        })?;
+        if campfire_views::helpers::request_forgery::has_token_slots(&html) {
+            anyhow::bail!("refusing unresolved CSRF token slots in a message replacement");
+        }
+        let streamables:Vec<_>=frame.streamables.iter().map(|s|s.to_param()).collect();
+        let streamables:Vec<_>=streamables.iter().map(String::as_str).collect();
+        let attrs:&[(&str,Option<&str>)]=if frame.maintain_scroll {&[("maintain_scroll",Some("true"))]} else {&[]};
+        let action=if frame.action == campfire_db::broadcasts::TurboAction::Append {Action::Append} else {Action::Replace};
+        cable.broadcast_action_to(&streamables,action,Target::Target(&frame.target),Some(&html),attrs);
+        return Ok(());
+    }
     if let Some((stream, payload)) = template_free_broadcast(broadcast) {
         match broadcast {
             Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
@@ -229,3 +269,6 @@ mod tests {
         assert!(!configured(&vars));
     }
 }
+
+#[cfg(test)]
+mod stream_tests;

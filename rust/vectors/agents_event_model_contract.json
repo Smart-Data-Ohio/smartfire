@@ -1,0 +1,50 @@
+{
+  "types": [
+    "mention",
+    "direct_message",
+    "reply",
+    "approval_decided",
+    "github_action_completed",
+    "fizzy_action_completed",
+    "work_assigned",
+    "work_unassigned",
+    "work_handed_off",
+    "slash_command",
+    "delivery_suppressed_rate_limit",
+    "delivery_suppressed_hop_limit",
+    "delivery_suppressed_revoked",
+    "posted"
+  ],
+  "invalid_type": {
+    "event_type": [
+      "is not included in the list"
+    ]
+  },
+  "invalid_outcome": {
+    "outcome": [
+      "is not included in the list"
+    ]
+  },
+  "deliverable": [
+    "approval_decided",
+    "direct_message",
+    "github_action_completed",
+    "mention",
+    "reply",
+    "work_assigned",
+    "work_unassigned"
+  ],
+  "message_deliverable": [
+    "direct_message",
+    "mention",
+    "reply"
+  ],
+  "hop": [
+    0,
+    2
+  ],
+  "acknowledgments": [
+    "acknowledged",
+    "acknowledged"
+  ]
+}
