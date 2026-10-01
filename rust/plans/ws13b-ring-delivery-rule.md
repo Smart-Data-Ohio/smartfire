@@ -20,7 +20,7 @@ Rails has no deferred Cable ring job. These are the source rules, inspected with
 - `app/jobs/huddle/push_invitation_job.rb:2-6`: the actual deferred job reloads
   the activity item by ID. `app/models/huddle/invitation_pusher.rb:6-10,25-44`
   resolves current associations, evaluates policy and hands the actual payload
-  and subscription scope to the push pool. It does not replay Cable frames.
+and subscription scope to the push pool. It does not replay Cable frames.
 
 Rust now emits Cable frames after commit, before returning from the triggering
 write. Its old durable ring envelopes are retained, marked delivered, and
@@ -30,11 +30,12 @@ changes for the same caller/room/recipient, and ending a call cancels only unrea
 started envelopes. Handled frames remain deliverable. Tests explicitly remove
 the delivered marker only to simulate persisted pre-upgrade envelopes.
 
-The oracle records actual ActionCable broadcast calls. ActiveJob's test adapter
+The oracle records actual ActionCable broadcast calls for every affected client,
+including the caller and continuing group participants. ActiveJob's test adapter
 stores real serialized jobs, and the generator executes those job classes in
 selected orders. It records the real WebPush pool handoff, not a reconstructed
-pusher payload. The real pinned Stimulus controller consumes those recorded
-frames with its timers advanced after every operation. There is no pending-ring
+pusher payload. Independent instances of the real pinned Stimulus controller consume each
+client's own recorded frames, with timers advanced after every operation. There is no pending-ring
 projection, lifecycle reducer or manually constructed expected delivery payload.
 
 The two PRNG seeds are 388013012 (0x17209bd4) and 3620200082 (0xd7c7de92).

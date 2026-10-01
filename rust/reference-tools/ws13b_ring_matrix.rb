@@ -109,6 +109,7 @@ class WS13bRingMatrix
     ENV["LIVEKIT_API_SECRET"] = "ws13b-review-fixture-value"
     ENV.delete("LIVEKIT_URL"); ENV.delete("LIVEKIT_INTERNAL_URL")
     @caller, @recipient = %w[david jason].map { |key| User.find(ActiveRecord::FixtureSet.identify(key)) }
+    spec[:recipient_id] = @recipient.id
     @room = Room.find(ActiveRecord::FixtureSet.identify("david_and_jason"))
     @member = @room.memberships.find_by!(user: @caller)
     @session = @caller.sessions.create!(token: "ws13b-matrix-session")
@@ -125,8 +126,8 @@ class WS13bRingMatrix
   end
 
   def observe(stream,payload)
-    return unless (stream == ActivityChannel.stream_name_for(@recipient.id) && payload[:huddleInvitation]) ||
-      (stream == HuddleNoticeChannel.stream_name_for(@recipient.id) && payload[:huddleJoinNotice])
+    return unless (stream.match?(/\Auser_\d+_activity\z/) && payload[:huddleInvitation]) ||
+      (stream.match?(/\Auser_\d+_huddle_notices\z/) && payload[:huddleJoinNotice])
     @frames << {stream: stream, payload: JSON.parse(JSON.generate(payload))}
   end
   def push(payload,subscriptions)

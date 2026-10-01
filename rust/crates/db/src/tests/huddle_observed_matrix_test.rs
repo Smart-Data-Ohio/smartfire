@@ -14,8 +14,9 @@ fn room() -> i64 {crate::fixtures::identify("david_and_jason")}
 fn collect(db: &TestDb, pending: &mut Vec<crate::JobRequest>, frames: &mut Vec<Value>, pushes: &mut Vec<Value>) {
     for event in db.sink.take() {
         if let Some(crate::broadcasts::Broadcast::Cable {stream,payload}) = event.as_broadcast()
-            && ((stream == format!("user_{}_activity",recipient()) && !payload["huddleInvitation"].is_null())
-                || (stream == format!("user_{}_huddle_notices",recipient()) && !payload["huddleJoinNotice"].is_null())) {
+            && stream.starts_with("user_")
+            && ((stream.ends_with("_activity") && !payload["huddleInvitation"].is_null())
+                || (stream.ends_with("_huddle_notices") && !payload["huddleJoinNotice"].is_null())) {
             frames.push(json!({"stream":stream,"payload":payload}));
         }
         if let Event::Job(job) = event {
@@ -163,7 +164,7 @@ fn partition(part: usize) {
         if index % 8 != part {continue;}
         let actual = run_case(case);
         let mut expected = case["phases"].clone();
-        for phase in expected.as_array_mut().unwrap() {phase.as_object_mut().unwrap().remove("banner");}
+        for phase in expected.as_array_mut().unwrap() {phase.as_object_mut().unwrap().remove("banners");}
         observations.push(json!({"spec":case["spec"],"phases":actual}));
         if actual != *expected.as_array().unwrap() {
             let phase = actual.iter().zip(expected.as_array().unwrap()).position(|(a,e)|a!=e).unwrap();
@@ -185,7 +186,7 @@ fn named_regression(name: &str) {
     let oracle = oracle();
     let case = oracle["cases"].as_array().unwrap().iter().find(|case| case["spec"]["name"] == name).unwrap();
     let mut expected = case["phases"].clone();
-    for phase in expected.as_array_mut().unwrap() {phase.as_object_mut().unwrap().remove("banner");}
+    for phase in expected.as_array_mut().unwrap() {phase.as_object_mut().unwrap().remove("banners");}
     assert_eq!(json!(run_case(case)),expected,"{name}");
 }
 #[test]

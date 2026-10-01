@@ -66,7 +66,8 @@ def check(oracle, directory):
         changed=copy.deepcopy(actual)
         if kind=='banner':
             phase=changed['cases'][0]['phases'][0]
-            phase['banner']['hidden']=not phase['banner']['hidden']
+            client=next(iter(phase['banners'].values()))
+            client['hidden']=not client['hidden']
         elif kind=='push':
             phase=next(p for c in changed['cases'] for p in c['phases'] if p['pushes'])
             phase['pushes'][0]['payload']['title']='CORRUPTED'
