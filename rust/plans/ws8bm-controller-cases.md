@@ -1,6 +1,6 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 48 further declarations now have explicit existing-test attribution across root messages, boosts, threads, replies and forwards; this records assertion scope, not new test executions. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 103 of 156 declarations have scoped evidence; 53 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
@@ -64,27 +64,27 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - system note actions report no edit or delete — WS8bm. Attributed to `messages::root_tests::actions_match_rails_for_two_members_without_shared_viewer_state` (complete actions JSON for two viewers includes the system-note fixture).
 ## test/controllers/messages_drive_attachments_test.rb
 
-19 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+19 named declarations; all have scoped Rust evidence below. Reference execution counts are in the main report.
 
-- create with drive_file_ids stores them in order — WS8bm.
-- create with attachments and no text is valid — WS8bm.
-- create deduplicates repeated ids and strips blanks — WS8bm.
-- create with an invalid id answers 422 and creates nothing — WS8bm.
-- create with more than 10 attachments answers 422 — WS8bm.
-- update with a new set replaces the stored set — WS8bm.
-- update with a submitted set broadcasts the attachments block to the room — WS8bm.
-- update without the key does not broadcast the attachments block — WS8bm.
-- update with a scalar drive_file_ids answers 422 and keeps the stored set — WS8bm.
-- update without the key leaves the set alone — WS8bm.
-- update with only the blank sentinel removes all attachments — WS8bm.
-- removing every attachment from a textless message answers 422 and keeps the set — WS8bm.
-- update with an invalid id answers 422 and keeps the stored set — WS8bm.
-- a non-creator cannot change attachments — WS8bm.
-- JSON message shape includes drive_attachments with file_id and url only — WS8bm.
-- JSON message shape carries an empty drive_attachments array without attachments — WS8bm.
-- rendered message carries the generic chip with the open link and no file name — WS8bm.
-- viewers with and without Drive consent receive identical attachment markup — WS14g; WS8bm attachment rendering.
-- edit form lists attachments as removable chips with the blank sentinel — WS8bm.
+- create with drive_file_ids stores them in order — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create with attachments and no text is valid — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create deduplicates repeated ids and strips blanks — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create with an invalid id answers 422 and creates nothing — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create with more than 10 attachments answers 422 — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with a new set replaces the stored set — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with a submitted set broadcasts the attachments block to the room — WS8bm. Attributed to `channels::tests::hub_test::message_parity::submitted_drive_sets_publish_rails_bytes_and_omitted_sets_publish_no_attachment_frame` (30 actual root/thread requests; 93 complete Rails frames through WS7, with silence checks after omitted fields and refusals).
+- update without the key does not broadcast the attachments block — WS8bm. Attributed to `channels::tests::hub_test::message_parity::submitted_drive_sets_publish_rails_bytes_and_omitted_sets_publish_no_attachment_frame` (30 actual root/thread requests; 93 complete Rails frames through WS7, with silence checks after omitted fields and refusals).
+- update with a scalar drive_file_ids answers 422 and keeps the stored set — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update without the key leaves the set alone — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with only the blank sentinel removes all attachments — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- removing every attachment from a textless message answers 422 and keeps the set — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with an invalid id answers 422 and keeps the stored set — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- a non-creator cannot change attachments — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- JSON message shape includes drive_attachments with file_id and url only — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- JSON message shape carries an empty drive_attachments array without attachments — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- rendered message carries the generic chip with the open link and no file name — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- viewers with and without Drive consent receive identical attachment markup — WS14g; WS8bm attachment rendering. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- edit form lists attachments as removable chips with the blank sentinel — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
 
 ## test/controllers/messages/cached_fragment_csrf_test.rb
 
@@ -169,21 +169,21 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - thread system notes cannot be edited or deleted — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (note_update/note_delete exact Rails refusals; rows retained).
 ## test/controllers/channel_thread_messages_drive_attachments_test.rb
 
-13 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+13 named declarations; all have scoped Rust evidence below. Reference execution counts are in the main report.
 
-- create with drive_file_ids stores them and reports them in JSON — WS8bm.
-- create with attachments and no text is valid — WS8bm.
-- create with an invalid id answers 422 and creates nothing — WS8bm.
-- create with a scalar drive_file_ids answers 422 and creates nothing — WS8bm.
-- create with more than 10 attachments answers 422 — WS8bm.
-- update with a new set replaces the stored set — WS8bm.
-- update without the key leaves the set alone — WS8bm.
-- update with only the blank sentinel removes all attachments — WS8bm.
-- update with an invalid id answers 422 and keeps the stored set — WS8bm.
-- update with a scalar drive_file_ids answers 422 and keeps the stored set — WS8bm.
-- a non-creator cannot change thread attachments — WS8bm.
-- update with a submitted set broadcasts the attachments block over the thread stream — WS8bm.
-- update without the key does not broadcast the attachments block — WS8bm.
+- create with drive_file_ids stores them and reports them in JSON — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create with attachments and no text is valid — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create with an invalid id answers 422 and creates nothing — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create with a scalar drive_file_ids answers 422 and creates nothing — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- create with more than 10 attachments answers 422 — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with a new set replaces the stored set — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update without the key leaves the set alone — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with only the blank sentinel removes all attachments — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with an invalid id answers 422 and keeps the stored set — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with a scalar drive_file_ids answers 422 and keeps the stored set — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- a non-creator cannot change thread attachments — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
+- update with a submitted set broadcasts the attachments block over the thread stream — WS8bm. Attributed to `channels::tests::hub_test::message_parity::submitted_drive_sets_publish_rails_bytes_and_omitted_sets_publish_no_attachment_frame` (30 actual root/thread requests; 93 complete Rails frames through WS7, with silence checks after omitted fields and refusals).
+- update without the key does not broadcast the attachments block — WS8bm. Attributed to `channels::tests::hub_test::message_parity::submitted_drive_sets_publish_rails_bytes_and_omitted_sets_publish_no_attachment_frame` (30 actual root/thread requests; 93 complete Rails frames through WS7, with silence checks after omitted fields and refusals).
 
 ## test/controllers/message_forwards_controller_test.rb
 

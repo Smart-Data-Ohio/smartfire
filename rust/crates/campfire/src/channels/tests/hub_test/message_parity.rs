@@ -275,3 +275,32 @@ async fn thread_lifecycle_publishes_only_rails_delete_indicator_frames() {
         client.assert_silent().await;
     }
 }
+
+#[tokio::test]
+async fn submitted_drive_sets_publish_rails_bytes_and_omitted_sets_publish_no_attachment_frame() {
+    use crate::controllers::messages::drive_tests;
+    let hub = boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let mut checked = 0;
+    for row in drive_tests::oracle()["rows"].as_array().unwrap() {
+        let fixture = row.clone();
+        hub.app.db().write(move |tx| drive_tests::setup(tx, &fixture)).await.unwrap();
+        let (mut client, streams) = subscriber(&hub, row["thread_id"].as_i64()).await;
+        let response = hub.app.sign_in(row["viewer"].as_i64().unwrap()).await.write(drive_tests::request(row)).await;
+        assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16);
+        for frame in row["frames"].as_array().unwrap().iter().filter(|frame| streams.contains(&frame["stream"].as_str().unwrap().to_string())) {
+            let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
+            if actual["message"] != frame["payload"] {
+                crate::controllers::presenters::test_support::rails_mismatch(&actual["message"].to_string(), &frame["payload"].to_string(), &format!("Drive {}/{}",row["mode"],row["name"]));
+            }
+            if let Some(html) = actual["message"].as_str() {
+                assert_eq!(campfire_cable::turbo::session_bound(html), None);
+                assert!(!campfire_views::helpers::request_forgery::has_token_slots(html));
+            }
+            checked += 1;
+        }
+        // Rails emits no attachment replacement when the field is absent, nor any frame
+        // for validation/authorization refusals. A leaked extra frame fails here.
+        client.assert_silent().await;
+    }
+    println!("WS8bm Drive broadcasts: {checked} complete Rails frames through WS7 publisher/guard/socket; 30 root/thread requests; no extra frames");
+}
