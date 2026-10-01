@@ -20,10 +20,23 @@ pub(crate) async fn setup() -> (Database, Arc<ArEncryption>, tempfile::TempDir) 
     struct Sink(campfire_jobs::JobQueue);
     impl campfire_db::EventSink for Sink {
         fn persist(&self, tx: &campfire_db::Tx<'_>, event: &Event) -> campfire_db::Result<()> {
-            if let Event::Job(request) = event {
-                self.0.enqueue(tx, request)?;
+            if matches!(event, Event::Broadcast(_)) {
+                return Err(campfire_db::Error::Other(
+                    "Slack test captured an unintended broadcast".into(),
+                ));
+            }
+            if let Some(request) = crate::jobs::request_for(event) {
+                self.0.enqueue(tx, &request)?;
             }
             Ok(())
+        }
+        fn sync_message_references(
+            &self,
+            tx: &mut campfire_db::Tx<'_>,
+            message: &campfire_db::Message,
+            enqueue: bool,
+        ) -> campfire_db::Result<()> {
+            crate::integrations::sync_message_references(tx, message, enqueue, None)
         }
         fn emit(&self, _: Event) {}
     }
@@ -33,6 +46,20 @@ pub(crate) async fn setup() -> (Database, Arc<ArEncryption>, tempfile::TempDir) 
         Env {
             clock: Arc::new(clock),
             sink: Arc::new(Sink(queue)),
+            rich_text: Arc::new(crate::rich_text::AppRichText::new(
+                Arc::new(rails_compat::Secrets::new(
+                    serde_json::from_str::<serde_json::Value>(include_str!(
+                        "../../../../../../vectors/slack/crypto.json"
+                    ))
+                    .unwrap()["secret_key_base"]
+                        .as_str()
+                        .unwrap(),
+                )),
+                Arc::new(campfire_kit::clock::FrozenClock::new(
+                    "2026-03-02T16:00:00.123456Z".parse().unwrap(),
+                )),
+            )),
+            message_reference_syncs: vec![crate::integrations::github::references::sync],
             ..Default::default()
         },
     )

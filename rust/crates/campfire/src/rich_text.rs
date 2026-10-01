@@ -44,7 +44,7 @@ struct Brand {
 const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
 static BRANDS: LazyLock<Vec<Brand>> =
     LazyLock::new(|| serde_yaml::from_str(ICON_CONFIG).expect("vendored config/icons.yml"));
-fn icons(conn: &Connection) -> Result<IconCatalog, String> {
+pub(crate) fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     let mut icons = IconCatalog::default();
     for brand in BRANDS.iter() {
         let icon = Icon::Brand {
