@@ -108,6 +108,8 @@ async function acceptance(base,caseName,probe={}) {
           await page.getByRole('menuitem',{name:'Create thread',exact:true}).click();
         } else {
           await page.locator('[data-thread-panel-target="browserToggle"]:visible').click();
+          // Match the pinned open_threads helper's actual open-state assertion.
+          await panel.locator(':scope[aria-hidden="false"]').waitFor();
           await panel.getByRole('button',{name:'New thread',exact:true}).click();
         }
         await panel.locator('[data-thread-panel-target="create"]').waitFor();
@@ -120,6 +122,7 @@ async function acceptance(base,caseName,probe={}) {
       }
       async function finishCreate(name,page=author) {
         const panel=page.locator('#thread-panel');
+        assert.equal(await panel.locator('[data-thread-panel-target="createName"]').inputValue(),name,'the completed name must survive until submission');
         await panel.locator('[data-thread-panel-target="createSubmit"]').click();
         try {await panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}).waitFor();}
         catch(error) {
