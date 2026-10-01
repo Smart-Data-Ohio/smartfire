@@ -22,7 +22,7 @@ fn vectors() -> Value {
 async fn whole_profile_matches_rails_seed_without_masks() {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let now = SEED_NOW.parse().unwrap();
-    let (user, account, memberships, appearance, sections, avatar) = app
+    let (user, account, memberships, appearance, mut sections, avatar) = app
         .db()
         .read(move |c| {
             let user = campfire_db::User::find(c, DAVID)?;
@@ -79,6 +79,7 @@ async fn whole_profile_matches_rails_seed_without_masks() {
         let user = campfire_db::UserStatusSettings::find(conn, DAVID)?;
         presenters::status_settings::forms(conn, &user, campfire_db::Errors::default(), campfire_db::Timestamp::from_jiff(now), false)
     }).await.unwrap();
+    sections.fizzy = presenters::fizzy_profile::connection(&app.booted.app, DAVID).await.unwrap();
     let v = vectors();
     let summary = presenters::user_summary(&app.booted.app.secrets, &user);
     let transfer = presenters::accounts::transfer_id(&app.booted.app.secrets, DAVID, now);

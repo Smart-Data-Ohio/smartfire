@@ -11,20 +11,7 @@
 
   {{ self.github_connection() }}
 
-  <section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="fizzy-connection-title">
-  <h2 id="fizzy-connection-title" class="txt-large">Fizzy</h2>
-
-
-{% if sections.fizzy.connected() %}    <p>Connected as {{ sections.fizzy.name() }} ({{ sections.fizzy.workspace() }})</p>
-    <p>Card links in messages preview with <strong>your</strong> Fizzy access, and cards you create from messages are created as <strong>{{ sections.fizzy.name() }}</strong> on Fizzy.</p>
-    {{ h::button_to_form("/fizzy/connection", h::attrs().method("delete").class("btn btn--negative"), h::attrs().data("turbo_confirm", "Disconnect Fizzy? Card previews will stop working and you will no longer be able to create cards from messages."), "Disconnect Fizzy") }}
-{% else %}{% if sections.fizzy.exists() %}      <p>Fizzy rejected the connection{% if let Some(reason) = sections.fizzy.reason() %} ({{ reason }}){% endif %}. Paste a new token to reconnect.</p>
-{% else %}      <p>Paste a personal access token to preview Fizzy cards in messages and create cards from them. Generate one in Fizzy under your profile → API → Personal access tokens; card creation needs <strong>Read + Write</strong>. The token is validated with Fizzy before it is stored and is never shown again.</p>
-{% endif %}{% let connect = h::form_with("/fizzy/connection").class("flex align-center gap") %}    {% filter form_with(connect) %}
-      {{ connect.password_field("access_token", h::attrs().class("input flex-item-grow").placeholder("Fizzy token…").autocomplete("off").required(true).attr("aria-label", "Fizzy personal access token")) }}
-      {{ h::legacy_tag("input", h::attrs().type_("submit").name("commit").value(sections.fizzy.connect_label("Fizzy")).class("btn").data("disable_with", sections.fizzy.connect_label("Fizzy"))) }}
-{% endfilter %}{% endif %}</section>
-
+  {{ self.fizzy_connection() }}
 
   <section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="slack-import-title">
   <h2 id="slack-import-title" class="txt-large">Slack import</h2>

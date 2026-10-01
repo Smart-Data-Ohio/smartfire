@@ -1,5 +1,5 @@
 //! Read-only presentation seams: WS11 inbox/agents, WS13 calls, WS14g Google,
-//! WS15g GitHub, WS15e Fizzy/Slack, WS17 status/notifications. No clients or mutations here.
+//! Merged GitHub/Fizzy connection and WS17 forms render directly. No credentials here.
 use super::*;
 #[derive(Clone, Default)]
 pub struct ProfileSections {
@@ -285,5 +285,18 @@ impl StatusFields {
             .get(key)
             .filter(|v| !v.is_empty())
             .map(|v| h::to_sentence(v, " and "))
+    }
+}
+
+/// Complete pinned Fizzy connection fragment; credentials stay in the owner model.
+#[derive(Template)]
+#[template(path = "users/profiles/_fizzy_connection.html")]
+pub struct FizzyConnection<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub panel: &'a ConnectionPanel,
+}
+impl ProfileShow<'_> {
+    pub(super) fn fizzy_connection(&self) -> h::Html {
+        h::raw(FizzyConnection {ctx:self.ctx, panel:&self.sections.fizzy}.render().expect("Fizzy profile"))
     }
 }

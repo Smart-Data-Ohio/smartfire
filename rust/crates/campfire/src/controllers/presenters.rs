@@ -631,3 +631,5 @@ mod tests {
 }
 
 pub(crate) mod profile_sections;
+
+pub mod fizzy_profile;

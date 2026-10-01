@@ -200,3 +200,6 @@ mod profile_effective_ooo_tests;
 
 #[cfg(test)]
 mod agent_profile_tests;
+
+#[cfg(test)]
+mod fizzy_profile_tests;

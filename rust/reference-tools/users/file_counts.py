@@ -6,6 +6,7 @@ import sys
 
 log = Path(sys.argv[1]).read_text()
 files = {
+    "controllers::users::fizzy_profile_tests": ("controllers/users/fizzy_profile_tests.rs", 6),
     "controllers::users::agent_profile_tests": ("controllers/users/agent_profile_tests.rs", 10),
     "controllers::accounts::attachment_tests": ("controllers/accounts/attachment_tests.rs", 2),
     "controllers::public_pages::sign_in_google_tests": ("controllers/public_pages/sign_in_google_tests.rs", 1),
@@ -34,4 +35,4 @@ for prefix, (file, expected) in files.items():
     results = re.findall(r"^test " + re.escape(prefix) + r"::[^\s]+ \.\.\. (ok|FAILED|ignored)", log, re.M)
     assert len(results) == expected and all(result == "ok" for result in results), (file, results)
     print(f"{file}: {len(results)} passed; 0 failed; 0 ignored")
-print("WS8br2 file accounting: 134 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 24 account/ban cases, 9 individual exactly-one audit checks and one owner-removal with exactly two distinct Rails audits, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 10 complete bot profile HTML/nav cases; 8 signed icon/logo assignments and durable rollback")
+print("WS8br2 file accounting: 140 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 24 account/ban cases, 9 individual exactly-one audit checks and one owner-removal with exactly two distinct Rails audits, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 10 complete bot profile HTML/nav cases; 6 complete Fizzy fragments and real profile HTTP/side-effect cases; 8 signed icon/logo assignments and durable rollback")

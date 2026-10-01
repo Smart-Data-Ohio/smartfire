@@ -1,6 +1,6 @@
 //! Flagged read-only profile projections. Owners replace these with their domain APIs.
 //! WS11: inbox/agent keys; WS13: call values; WS14g: Google configuration and connection;
-//! WS15g/WS15e: GitHub/Fizzy usable-token checks; WS17: status/notification effective facts.
+//! GitHub and Fizzy connection fragments and WS17 effective status use merged owner APIs.
 use campfire_db::Result;
 use campfire_richtext::ruby::is_blank;
 use campfire_views::users::*;
@@ -24,9 +24,6 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
         let reason:Option<String>=r.get(1)?;Ok(if reason.as_deref().is_some_and(|s|!is_blank(s)){ConnectionPanel::Rejected{reason}}else{ConnectionPanel::Connected{name:r.get(0)?,workspace:None,app_token:r.get::<_,String>(2)?=="app"}})
     }).optional()?.unwrap_or_default();
     fields.github_verified = fields.github.connected();
-    fields.fizzy=c.query_row("SELECT fizzy_user_name,fizzy_account_name,disconnected_reason FROM fizzy_connected_accounts WHERE user_id=?",[id],|r| {
-        let reason:Option<String>=r.get(2)?;Ok(if reason.as_deref().is_some_and(|s|!is_blank(s)){ConnectionPanel::Rejected{reason}}else{ConnectionPanel::Connected{name:r.get::<_,Option<String>>(0)?.unwrap_or_default(),workspace:r.get(1)?,app_token:false}})
-    }).optional()?.unwrap_or_default();
     // WS14g replaces this public metadata adapter with GoogleAccount display facts.
     // The Rails template uses connected?/scopes, never usable?/decrypted credentials.
     if let Some((email, scopes, reason)) = c

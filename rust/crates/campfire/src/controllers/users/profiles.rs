@@ -178,6 +178,7 @@ async fn render_show(
     if let Some(changes) = preview_settings {
         presenters::profile_sections::preview(&mut sections, &changes, &errors);
     }
+    sections.fizzy = presenters::fizzy_profile::connection(c.app(), user.id).await.map_err(Error::internal)?;
     let github = presenters::github::connection(c.app(), user.id).await.map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
