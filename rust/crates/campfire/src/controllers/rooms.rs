@@ -506,3 +506,6 @@ mod owner_panel_tests;
 
 #[cfg(test)]
 mod full_page_tests;
+
+#[cfg(test)]
+mod queue_recovery_tests;
