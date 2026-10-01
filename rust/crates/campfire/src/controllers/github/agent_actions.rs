@@ -11,7 +11,7 @@ fn render(c: &mut Ctx, reply: Reply) -> campfire_kit::Response {
     let status = StatusCode::from_u16(reply.status).expect("domain status");
     match reply.body {
         Some(body) => c.render(status, &format::JSON, rails_compat::json_encode(&body)),
-        None => c.head(status),
+        None => c.head(status).content_type("text/html"),
     }
 }
 pub async fn create(c: &mut Ctx) -> Result {

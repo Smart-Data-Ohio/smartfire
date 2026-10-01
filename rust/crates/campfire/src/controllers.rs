@@ -1063,3 +1063,6 @@ mod agent_fizzy_action_tests;
 
 #[cfg(test)]
 mod agent_reads_tests;
+
+#[cfg(test)]
+mod agent_pins_tests;

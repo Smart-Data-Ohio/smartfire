@@ -21,9 +21,14 @@
         "status": "idle",
         "last_seen_at": "2026-03-02T16:00:00.000Z"
       },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"idle\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -49,9 +54,14 @@
         "last_seen_at": "2026-03-02T16:00:00.000Z",
         "working_presence": "Thinking"
       },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"working\",\"status_note\":\"Tests\",\"status_changed_at\":\"2026-03-02T16:00:00.000Z\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\",\"working_presence\":\"Thinking\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -65,9 +75,14 @@
       "response": {
         "error": "Status is not included in the list"
       },
+      "response_body": "{\"error\":\"Status is not included in the list\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -92,9 +107,14 @@
         "status_changed_at": "2026-03-02T16:00:00.000Z",
         "last_seen_at": "2026-03-02T16:00:00.000Z"
       },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"working\",\"status_note\":\"Tests\",\"status_changed_at\":\"2026-03-02T16:00:00.000Z\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -120,9 +140,14 @@
         "last_seen_at": "2026-03-02T16:00:00.000Z",
         "working_presence": "Thinking"
       },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"working\",\"status_note\":\"f\",\"status_changed_at\":\"2026-03-02T16:00:00.000Z\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\",\"working_presence\":\"Thinking\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -148,10 +173,14 @@
         ],
         "next_since": 900000002
       },
+      "response_body": "{\"events\":[{\"id\":900000001,\"event_type\":\"github_action_completed\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"github_action\":{\"action\":\"github.comment\",\"status\":\"done\"}}],\"next_since\":900000002}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "x-smartfire-next-since": "900000002"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "900000002"
       }
     },
     {
@@ -174,10 +203,14 @@
           }
         }
       ],
+      "response_body": "[{\"id\":900000001,\"event_type\":\"github_action_completed\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"github_action\":{\"action\":\"github.comment\",\"status\":\"done\"}}]",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "x-smartfire-next-since": "900000002"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "900000002"
       }
     },
     {
@@ -192,10 +225,14 @@
         "events": [],
         "next_since": 900000002
       },
+      "response_body": "{\"events\":[],\"next_since\":900000002}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "x-smartfire-next-since": "900000002"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "900000002"
       }
     },
     {
@@ -210,9 +247,14 @@
         "id": 900000001,
         "outcome": "acknowledged"
       },
+      "response_body": "{\"id\":900000001,\"outcome\":\"acknowledged\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -227,9 +269,14 @@
         "id": 900000001,
         "outcome": "acknowledged"
       },
+      "response_body": "{\"id\":900000001,\"outcome\":\"acknowledged\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -241,9 +288,14 @@
       "token": "ws11api-fixture-credential",
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -255,8 +307,14 @@
       "token": "ws11api-fixture-credential",
       "status": 403,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -268,8 +326,14 @@
       "token": "ws11api-unknown",
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -281,8 +345,14 @@
       "token": "ws11api-fixture-credential",
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -294,8 +364,14 @@
       "token": "ws11api-fixture-credential",
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -309,8 +385,14 @@
       "response": {
         "error": "Forbidden: agent lacks read_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -324,9 +406,14 @@
       "response": {
         "error": "Exactly one of message_id or thread_id is required"
       },
+      "response_body": "{\"error\":\"Exactly one of message_id or thread_id is required\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -338,9 +425,14 @@
       "token": "ws11api-fixture-credential",
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -361,9 +453,14 @@
         "created_at": "2026-03-02T16:00:00.000Z",
         "updated_at": "2026-03-02T16:00:00.000Z"
       },
+      "response_body": "{\"id\":1,\"message_id\":935961918,\"name\":\"Inspect\",\"status\":\"running\",\"duration_ms\":4,\"position\":0,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -384,9 +481,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"must be an integer\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -407,9 +509,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"is not a number\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -430,9 +537,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"is not a number\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -453,9 +565,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"is not a number\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -476,9 +593,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"must be an integer\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -496,9 +618,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -516,9 +643,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -530,8 +662,14 @@
       "token": "ws11api-fixture-credential",
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -545,8 +683,14 @@
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -560,8 +704,14 @@
       "response": {
         "error": "Name is invalid"
       },
+      "response_body": "{\"error\":\"Name is invalid\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -579,8 +729,14 @@
         "agent_id": 773018776,
         "takes_arguments": false
       },
+      "response_body": "{\"name\":\"inspect\",\"description\":\"Check\",\"room_id\":486777696,\"agent_id\":773018776,\"takes_arguments\":false}",
       "response_headers": {
-        "cache-control": "max-age=0, private, must-revalidate"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -598,8 +754,14 @@
         "agent_id": 773018776,
         "takes_arguments": false
       },
+      "response_body": "{\"name\":\"inspect\",\"description\":\"Check\",\"room_id\":486777696,\"agent_id\":773018776,\"takes_arguments\":false}",
       "response_headers": {
-        "cache-control": "max-age=0, private, must-revalidate"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -611,8 +773,14 @@
       "token": "ws11api-fixture-credential",
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -626,9 +794,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     }
   ]

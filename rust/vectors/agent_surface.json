@@ -11,9 +11,14 @@
       },
       "status": 200,
       "response": [],
+      "response_body": "[]",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -37,9 +42,14 @@
         "expires_at": "2026-03-03T16:00:00.000Z",
         "created_at": "2026-03-02T16:00:00.000Z"
       },
+      "response_body": "{\"id\":900100001,\"action\":\"deploy\",\"summary\":\"Existing\",\"room_id\":486777696,\"room_name\":\"All Talk\",\"external_id\":\"surface-replay\",\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\",\"created_at\":\"2026-03-02T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -63,9 +73,14 @@
         "expires_at": "2026-03-02T15:59:00.000Z",
         "created_at": "2026-03-02T16:00:00.000Z"
       },
+      "response_body": "{\"id\":900100001,\"action\":\"deploy\",\"summary\":\"Existing\",\"room_id\":486777696,\"room_name\":\"All Talk\",\"external_id\":\"surface-replay\",\"status\":\"expired\",\"expires_at\":\"2026-03-02T15:59:00.000Z\",\"created_at\":\"2026-03-02T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -89,9 +104,14 @@
         "expires_at": "2026-03-03T16:00:00.000Z",
         "created_at": "2026-03-02T16:00:00.000Z"
       },
+      "response_body": "{\"id\":900100001,\"action\":\"deploy\",\"summary\":\"Existing\",\"room_id\":486777696,\"room_name\":\"All Talk\",\"external_id\":\"surface-replay\",\"status\":\"cancelled\",\"expires_at\":\"2026-03-03T16:00:00.000Z\",\"created_at\":\"2026-03-02T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -107,9 +127,14 @@
       "response": {
         "error": "Request is already approved"
       },
+      "response_body": "{\"error\":\"Request is already approved\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -122,9 +147,14 @@
       },
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -141,9 +171,14 @@
         "status": "pending",
         "expires_at": "2026-03-02T17:00:00.000Z"
       },
+      "response_body": "{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-02T17:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -160,9 +195,14 @@
         "status": "pending",
         "expires_at": "2026-03-03T16:00:00.000Z"
       },
+      "response_body": "{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -177,9 +217,14 @@
       "response": {
         "error": "Action is invalid and Summary can't be blank"
       },
+      "response_body": "{\"error\":\"Action is invalid and Summary can't be blank\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -194,9 +239,14 @@
       "response": {
         "error": "Invalid expires_in"
       },
+      "response_body": "{\"error\":\"Invalid expires_in\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -211,9 +261,14 @@
       "response": {
         "error": "github.* actions are requested through /rooms/:room_id/agents/github/pull_request_actions"
       },
+      "response_body": "{\"error\":\"github.* actions are requested through /rooms/:room_id/agents/github/pull_request_actions\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -228,9 +283,14 @@
       "response": {
         "error": "fizzy.* actions are requested through /agents/fizzy/card_actions"
       },
+      "response_body": "{\"error\":\"fizzy.* actions are requested through /agents/fizzy/card_actions\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -243,9 +303,14 @@
       },
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -260,9 +325,14 @@
       "response": {
         "error": "Forbidden: agent lacks external_action capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks external_action capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -281,9 +351,14 @@
         "status": "pending",
         "expires_at": "2026-03-03T16:00:00.000Z"
       },
+      "response_body": "{\"id\":900100001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -302,9 +377,14 @@
         "limit": 0,
         "retry_after": 28799
       },
+      "response_body": "{\"error\":\"Daily external action budget exceeded (0/day)\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":28799}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -320,9 +400,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -338,9 +423,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -370,9 +460,14 @@
           "isError": false
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -401,9 +496,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Action can't be blank, Action is invalid, and Summary can't be blank\"}],\"structuredContent\":{\"error\":\"Action can't be blank, Action is invalid, and Summary can't be blank\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -440,9 +540,14 @@
           "isError": false
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":900100001,\\\"action\\\":\\\"deploy\\\",\\\"summary\\\":\\\"Existing\\\",\\\"room_id\\\":486777696,\\\"room_name\\\":\\\"All Talk\\\",\\\"external_id\\\":\\\"surface-replay\\\",\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":900100001,\"action\":\"deploy\",\"summary\":\"Existing\",\"room_id\":486777696,\"room_name\":\"All Talk\",\"external_id\":\"surface-replay\",\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\",\"created_at\":\"2026-03-02T16:00:00.000Z\"},\"isError\":false}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -471,9 +576,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Approval not found\"}],\"structuredContent\":{\"error\":\"Approval not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -502,9 +612,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks external_action capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks external_action capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -537,9 +652,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Daily external action budget exceeded (0/day)\"}],\"structuredContent\":{\"error\":\"Daily external action budget exceeded (0/day)\",\"status\":\"too_many_requests\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":28799},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -552,9 +672,14 @@
       "response": {
         "error": "message_id or thread_id is required"
       },
+      "response_body": "{\"error\":\"message_id or thread_id is required\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -565,9 +690,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -582,8 +712,14 @@
       "response": {
         "error": "Forbidden: agent lacks read_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -596,9 +732,14 @@
       "response": {
         "error": "Message is not in the given thread"
       },
+      "response_body": "{\"error\":\"Message is not in the given thread\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -609,9 +750,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -624,9 +770,14 @@
       "response": {
         "error": "Cannot open a DM with a bot"
       },
+      "response_body": "{\"error\":\"Cannot open a DM with a bot\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -639,9 +790,14 @@
       "response": {
         "error": "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -656,9 +812,14 @@
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -669,8 +830,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -685,8 +852,14 @@
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -704,8 +877,14 @@
         "limit": 0,
         "retry_after": 28799
       },
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -716,9 +895,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -733,9 +917,14 @@
       "response": {
         "error": "Message is not streaming"
       },
+      "response_body": "{\"error\":\"Message is not streaming\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -751,9 +940,14 @@
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -764,9 +958,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -777,8 +976,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -793,8 +998,14 @@
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -805,8 +1016,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -821,8 +1038,14 @@
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -833,8 +1056,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -847,8 +1076,14 @@
       "response": {
         "error": "Poll needs between 2 and 10 options"
       },
+      "response_body": "{\"error\":\"Poll needs between 2 and 10 options\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -861,8 +1096,14 @@
       "response": {
         "error": "Question can't be blank"
       },
+      "response_body": "{\"error\":\"Question can't be blank\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -873,8 +1114,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -889,8 +1136,14 @@
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -901,8 +1154,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -915,8 +1174,14 @@
       "response": {
         "error": "Room is not a board"
       },
+      "response_body": "{\"error\":\"Room is not a board\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -931,8 +1196,14 @@
       "response": {
         "error": "Forbidden: agent lacks read_messages capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -945,8 +1216,14 @@
       "response": {
         "error": "Forbidden: agent lacks manage_threads capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks manage_threads capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -964,8 +1241,14 @@
       "response": {
         "error": "Room is not a board"
       },
+      "response_body": "{\"error\":\"Room is not a board\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -976,9 +1259,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -989,9 +1277,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1002,9 +1295,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1015,9 +1313,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1033,9 +1336,14 @@
       "response": {
         "error": "Forbidden: agent lacks manage_threads capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks manage_threads capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1054,9 +1362,14 @@
       "response": {
         "error": "Markdown can't be blank"
       },
+      "response_body": "{\"error\":\"Markdown can't be blank\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1083,9 +1396,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"message_id or thread_id is required\"}],\"structuredContent\":{\"error\":\"message_id or thread_id is required\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1112,9 +1430,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1141,9 +1464,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"room_id or thread_id is required\"}],\"structuredContent\":{\"error\":\"room_id or thread_id is required\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1170,9 +1498,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Pass only one of room_id, thread_id\"}],\"structuredContent\":{\"error\":\"Pass only one of room_id, thread_id\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1199,9 +1532,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Room not found\"}],\"structuredContent\":{\"error\":\"Room not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1230,9 +1568,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks read_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks read_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1259,9 +1602,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1279,9 +1627,14 @@
           "message": "body or markdown_source is required"
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32602,\"message\":\"body or markdown_source is required\"}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1308,9 +1661,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Room not found\"}],\"structuredContent\":{\"error\":\"Room not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1342,9 +1700,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Daily message budget exceeded (0/day)\"}],\"structuredContent\":{\"error\":\"Daily message budget exceeded (0/day)\",\"status\":\"too_many_requests\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1371,9 +1734,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"User not found\"}],\"structuredContent\":{\"error\":\"User not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1400,9 +1768,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Cannot open a DM with a bot\"}],\"structuredContent\":{\"error\":\"Cannot open a DM with a bot\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1429,9 +1802,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1458,9 +1836,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1487,9 +1870,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1516,9 +1904,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1536,9 +1929,14 @@
           "message": "options must be an array"
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32602,\"message\":\"options must be an array\"}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1565,9 +1963,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Poll needs between 2 and 10 options\"}],\"structuredContent\":{\"error\":\"Poll needs between 2 and 10 options\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1594,9 +1997,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Poll not found\"}],\"structuredContent\":{\"error\":\"Poll not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1623,9 +2031,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Room not found\"}],\"structuredContent\":{\"error\":\"Room not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1654,9 +2067,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message is not streaming\"}],\"structuredContent\":{\"error\":\"Message is not streaming\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1683,9 +2101,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1712,9 +2135,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Room is not a board\"}],\"structuredContent\":{\"error\":\"Room is not a board\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1741,9 +2169,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks manage_threads capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks manage_threads capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1770,9 +2203,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Work not found\"}],\"structuredContent\":{\"error\":\"Work not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1799,9 +2237,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Work not found\"}],\"structuredContent\":{\"error\":\"Work not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1834,9 +2277,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Markdown can't be blank\"}],\"structuredContent\":{\"error\":\"Markdown can't be blank\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1863,9 +2311,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Work not found\"}],\"structuredContent\":{\"error\":\"Work not found\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1880,9 +2333,14 @@
       "response": {
         "error": "Forbidden: agent lacks fizzy capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks fizzy capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1897,9 +2355,14 @@
       "response": {
         "error": "Forbidden: agent lacks fizzy capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks fizzy capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1914,9 +2377,14 @@
       "response": {
         "error": "Forbidden: agent lacks fizzy capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks fizzy capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1931,9 +2399,14 @@
       "response": {
         "error": "Forbidden: agent lacks fizzy capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks fizzy capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1948,9 +2421,14 @@
       "response": {
         "error": "Forbidden: agent lacks external_action capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks external_action capability\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1965,9 +2443,14 @@
       "response": {
         "error": "Agent owner has no usable Fizzy account"
       },
+      "response_body": "{\"error\":\"Agent owner has no usable Fizzy account\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -1983,9 +2466,14 @@
       "response": {
         "error": "Agent has no owner recorded"
       },
+      "response_body": "{\"error\":\"Agent has no owner recorded\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2001,9 +2489,14 @@
       "response": {
         "error": "Not found in Fizzy"
       },
+      "response_body": "{\"error\":\"Not found in Fizzy\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2019,9 +2512,14 @@
       "response": {
         "error": "Not found in Fizzy"
       },
+      "response_body": "{\"error\":\"Not found in Fizzy\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2037,9 +2535,14 @@
       "response": {
         "error": "Invalid card number"
       },
+      "response_body": "{\"error\":\"Invalid card number\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2055,9 +2558,14 @@
       "response": {
         "error": "Missing query"
       },
+      "response_body": "{\"error\":\"Missing query\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2072,9 +2580,14 @@
       "response": {
         "error": "Agent owner has no usable Fizzy account"
       },
+      "response_body": "{\"error\":\"Agent owner has no usable Fizzy account\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2090,9 +2603,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2108,9 +2626,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2121,8 +2644,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2133,8 +2662,14 @@
       "setup": {},
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2150,8 +2685,14 @@
       "response": {
         "error": "Forbidden: agent lacks external_action capability"
       },
+      "response_body": "{\"error\":\"Forbidden: agent lacks external_action capability\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2167,8 +2708,14 @@
       "response": {
         "error": "Agent has no usable GitHub account"
       },
+      "response_body": "{\"error\":\"Agent has no usable GitHub account\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2197,9 +2744,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks fizzy capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks fizzy capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2228,9 +2780,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2259,9 +2816,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks fizzy capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks fizzy capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2290,9 +2852,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2321,9 +2888,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks fizzy capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks fizzy capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2352,9 +2924,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2383,9 +2960,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks fizzy capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks fizzy capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2414,9 +2996,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2445,9 +3032,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks external_action capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks external_action capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2476,9 +3068,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2507,9 +3104,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks external_action capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks external_action capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2538,9 +3140,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2569,9 +3176,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks external_action capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks external_action capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2600,9 +3212,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2631,9 +3248,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks external_action capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks external_action capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2662,9 +3284,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2693,9 +3320,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks external_action capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks external_action capability\",\"status\":\"forbidden\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2724,9 +3356,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2756,9 +3393,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Invalid card number\"}],\"structuredContent\":{\"error\":\"Invalid card number\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2788,9 +3430,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Not found in Fizzy\"}],\"structuredContent\":{\"error\":\"Not found in Fizzy\",\"status\":\"not_found\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2811,9 +3458,14 @@
           "message": "Missing required argument: q"
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: q\"}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2839,9 +3491,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"kind\":[\"must be one of: create, comment, move, close, reopen\"],\"account_id\":[\"is invalid\"],\"board_id\":[\"is invalid\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2864,9 +3521,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"board_id\":[\"is required to create a card\"],\"title\":[\"is required to create a card\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2889,9 +3551,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"number\":[\"is required\"],\"body\":[\"is required for a comment\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2914,9 +3581,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"number\":[\"is required\"],\"column_id\":[\"is required to move a card\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2942,9 +3614,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"title\":[\"is too long (maximum is 500 characters)\"],\"description\":[\"is too long (maximum is 3500 characters)\"],\"body\":[\"is too long (maximum is 3500 characters)\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2964,9 +3641,14 @@
         "limit": 0,
         "retry_after": 28799
       },
+      "response_body": "{\"error\":\"Daily external action budget exceeded (0/day)\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":28799}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -2986,9 +3668,14 @@
         "status": "pending",
         "expires_at": "2026-03-03T16:00:00.000Z"
       },
+      "response_body": "{\"id\":900100001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3005,9 +3692,14 @@
       "response": {
         "error": "Agent owner has no usable Fizzy account"
       },
+      "response_body": "{\"error\":\"Agent owner has no usable Fizzy account\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3024,8 +3716,14 @@
       "response": {
         "error": "Agent has no usable GitHub account"
       },
+      "response_body": "{\"error\":\"Agent has no usable GitHub account\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3046,9 +3744,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"kind\":[\"must be one of: comment, approve, request_changes, request_review\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3069,9 +3772,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"body\":[\"is required for a comment\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3092,9 +3800,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"reviewers\":[\"Enter GitHub usernames separated by commas.\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3115,9 +3828,14 @@
           ]
         }
       },
+      "response_body": "{\"errors\":{\"body\":[\"is too long (maximum is 3500 characters)\"]}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3138,9 +3856,14 @@
         "limit": 0,
         "retry_after": 28799
       },
+      "response_body": "{\"error\":\"Daily external action budget exceeded (0/day)\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":28799}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3161,9 +3884,118 @@
         "status": "pending",
         "expires_at": "2026-03-03T16:00:00.000Z"
       },
+      "response_body": "{\"id\":900100001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "github_success_comment",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"comment\",\"body\":\"Review α \\u0026 β\",\"reviewers\":[\"@octocat\"],\"external_id\":\"wire-comment\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "agent_pat"
+      },
+      "status": 202,
+      "response": {
+        "id": 1,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_body": "{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "github_success_approve",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"approve\",\"body\":\"Review α \\u0026 β\",\"reviewers\":[\"@octocat\"],\"external_id\":\"wire-approve\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "agent_pat"
+      },
+      "status": 202,
+      "response": {
+        "id": 1,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_body": "{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "github_success_request_changes",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"request_changes\",\"body\":\"Review α \\u0026 β\",\"reviewers\":[\"@octocat\"],\"external_id\":\"wire-request_changes\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "agent_pat"
+      },
+      "status": 202,
+      "response": {
+        "id": 1,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_body": "{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "github_success_request_review",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"request_review\",\"body\":\"Review α \\u0026 β\",\"reviewers\":[\"@octocat\"],\"external_id\":\"wire-request_review\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "agent_pat"
+      },
+      "status": 202,
+      "response": {
+        "id": 1,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_body": "{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3181,9 +4013,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3213,9 +4050,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Column is invalid and Number is required\"}],\"structuredContent\":{\"error\":\"Column is invalid and Number is required\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3249,9 +4091,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Daily external action budget exceeded (0/day)\"}],\"structuredContent\":{\"error\":\"Daily external action budget exceeded (0/day)\",\"status\":\"too_many_requests\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":28799},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3264,8 +4111,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3278,9 +4131,14 @@
       },
       "status": 404,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3293,8 +4151,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3310,7 +4174,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_2",
@@ -3322,8 +4194,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3338,8 +4216,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3352,8 +4236,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3369,7 +4259,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_4",
@@ -3381,8 +4279,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3397,8 +4301,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3411,8 +4321,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3427,8 +4343,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3441,8 +4363,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3457,8 +4385,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3471,8 +4405,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3487,8 +4427,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3502,8 +4448,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3519,8 +4471,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3534,8 +4492,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3551,8 +4515,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3566,8 +4536,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3584,7 +4560,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_11",
@@ -3597,8 +4581,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3615,7 +4605,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_12",
@@ -3627,8 +4625,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3643,8 +4647,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3657,8 +4667,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3674,7 +4690,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_14",
@@ -3686,8 +4710,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3702,8 +4732,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3716,8 +4752,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3732,8 +4774,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3746,8 +4794,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3762,8 +4816,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3776,8 +4836,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3792,8 +4858,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3806,8 +4878,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3822,8 +4900,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3836,8 +4920,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3852,8 +4942,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3866,8 +4962,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3882,8 +4984,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3896,8 +5004,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3912,8 +5026,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3926,8 +5046,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3942,8 +5068,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3956,8 +5088,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3972,8 +5110,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -3986,8 +5130,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4002,8 +5152,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4016,8 +5172,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4032,8 +5194,14 @@
       "response": {
         "error": "Forbidden: Bearer agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: Bearer agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4046,8 +5214,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4063,7 +5237,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_27",
@@ -4075,8 +5257,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4092,7 +5280,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_28",
@@ -4104,8 +5300,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4121,7 +5323,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_29",
@@ -4133,8 +5343,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4149,8 +5365,14 @@
       "response": {
         "error": "Forbidden: agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4163,8 +5385,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4179,8 +5407,14 @@
       "response": {
         "error": "Forbidden: agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4193,8 +5427,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4209,8 +5449,14 @@
       "response": {
         "error": "Forbidden: agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4223,8 +5469,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4239,8 +5491,14 @@
       "response": {
         "error": "Forbidden: agent token required"
       },
+      "response_body": "{\"error\":\"Forbidden: agent token required\"}",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4253,8 +5511,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4270,7 +5534,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_invalid_34",
@@ -4282,8 +5554,14 @@
       },
       "status": 401,
       "response": null,
+      "response_body": "",
       "response_headers": {
-        "cache-control": "no-cache"
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4299,7 +5577,15 @@
         "status": 422,
         "error": "Unprocessable Content"
       },
-      "response_headers": {}
+      "response_body": "{\"status\":422,\"error\":\"Unprocessable Content\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
     },
     {
       "name": "matrix_rest_rate_0",
@@ -4319,9 +5605,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4342,9 +5633,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4365,9 +5661,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4388,9 +5689,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4411,9 +5717,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4434,9 +5745,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4457,9 +5773,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4480,9 +5801,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4503,9 +5829,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4526,9 +5857,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4549,9 +5885,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4572,9 +5913,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4595,9 +5941,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4618,9 +5969,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4641,9 +5997,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4664,9 +6025,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4687,9 +6053,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4710,9 +6081,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4733,9 +6109,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4756,9 +6137,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4779,9 +6165,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4802,9 +6193,14 @@
       "response": {
         "error": "rate_limited"
       },
+      "response_body": "{\"error\":\"rate_limited\"}",
       "response_headers": {
-        "cache-control": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4833,10 +6229,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4865,10 +6265,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4897,10 +6301,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4929,10 +6337,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4962,10 +6374,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -4995,10 +6411,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5027,10 +6447,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5059,10 +6483,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5091,10 +6519,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5123,10 +6555,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5155,10 +6591,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5187,10 +6627,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5219,10 +6663,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5251,10 +6699,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5283,10 +6735,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5315,10 +6771,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5347,10 +6807,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5379,10 +6843,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5411,10 +6879,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5443,10 +6915,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5475,10 +6951,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5507,10 +6987,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5539,10 +7023,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5571,10 +7059,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5603,10 +7095,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5635,10 +7131,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5667,10 +7167,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5699,10 +7203,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     },
     {
@@ -5731,10 +7239,14 @@
           "isError": true
         }
       },
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"rate_limited: retry after 60 seconds\"}],\"structuredContent\":{\"error\":\"rate_limited\",\"retry_after\":60},\"isError\":true}}",
       "response_headers": {
-        "cache-control": "no-store",
-        "pragma": "no-cache",
-        "retry-after": "60"
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
       }
     }
   ]

@@ -143,6 +143,10 @@ contract("github_reviewers", :post, "/rooms/486777696/agents/github/pull_request
 contract("github_body_length", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "comment", body: "x" * 3501 }, { grant: "external_action", github_pr: true, github_account: "agent_pat" })
 contract("github_budget", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "approve" }, { grant: "external_action", github_pr: true, github_account: "owner_app", cap: 0 })
 contract("github_replay", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "bad", external_id: "surface-replay" }, { grant: "external_action", github_pr: true, github_account: "owner_app", cap: 0, approval: "pending" })
+# Successful writes still only request approval. The production owner service is used.
+%w[comment approve request_changes request_review].each do |kind|
+  contract("github_success_#{kind}", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: kind, body: "Review α & β", reviewers: ["@octocat"], external_id: "wire-#{kind}" }, { grant: "external_action", github_pr: true, github_account: "agent_pat" })
+end
 contract("github_rate", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "bad" }, { grant: "external_action", github_pr: true, github_account: "agent_pat", repeat: 60 })
 tool("move_fizzy_card", { number: "abc", column_id: "bad/id" }, { grant: "external_action", fizzy_account: true }, "fizzy_move_invalid")
 tool("close_fizzy_card", { number: 0 }, { grant: "external_action", fizzy_account: true, cap: 0 }, "fizzy_close_budget")
@@ -240,7 +244,7 @@ travel_to Time.utc(2026, 3, 2, 16) do
     (item[:setup][:repeat] || 0).times { session.public_send(item[:method], item[:path], params: raw, headers: headers) }
     session.public_send(item[:method], item[:path], params: raw, headers: headers)
     response = session.response
-    item.merge(body: raw, status: response.status, response: response.body.blank? ? nil : JSON.parse(response.body), response_headers: response.headers.slice("Cache-Control", "Pragma", "Retry-After"))
+    item.merge(body: raw, status: response.status, response: response.body.blank? ? nil : JSON.parse(response.body), response_body: response.body, response_headers: %w[Content-Type Cache-Control Pragma Retry-After Location X-Smartfire-Next-Since].to_h { |key| [key,response.headers[key]] })
   end
   puts JSON.pretty_generate({ reference_pin: "d7c7de92", cases: result })
 end

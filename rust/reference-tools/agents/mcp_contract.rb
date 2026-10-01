@@ -19,8 +19,8 @@ travel_to Time.utc(2026, 3, 2, 16) do
       headers: { "Authorization" => ["Bearer", secret].join(" "), "Accept" => "application/json", "Content-Type" => "application/json" }.merge(headers))
     response = session.response
     cases << { name: name, method: method, body: raw, headers: headers, status: response.status,
-      response: response.body.blank? ? nil : JSON.parse(response.body),
-      response_headers: response.headers.slice("Cache-Control", "Pragma", "Retry-After") }
+      response: response.body.blank? ? nil : JSON.parse(response.body), response_body: response.body,
+      response_headers: %w[Content-Type Cache-Control Pragma Retry-After Location X-Smartfire-Next-Since].to_h { |key| [key,response.headers[key]] } }
   end
   rpc = lambda { |method, params = {}| { jsonrpc: "2.0", id: 7, method: method, params: params } }
   versions = Agents::McpServer::SUPPORTED_VERSIONS

@@ -87,6 +87,11 @@ async fn check(case: &Value) {
         reply.json()
     };
     assert_eq!(body, case["response"], "{name}");
+    assert_eq!(
+        reply.text(),
+        case["response_body"].as_str().unwrap(),
+        "{name}: raw body"
+    );
     for (key, expected) in case["response_headers"].as_object().unwrap() {
         assert_eq!(reply.header(key), expected.as_str(), "{name}: {key}");
     }

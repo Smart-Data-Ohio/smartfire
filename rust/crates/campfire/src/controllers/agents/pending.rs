@@ -44,21 +44,41 @@ pub async fn operation(
     operation: &str,
     args: Value,
 ) -> Result<ServiceResult> {
-    dispatch(c,agent_id,operation,args,false).await
+    dispatch(c, agent_id, operation, args, false).await
 }
-async fn dispatch(c: &Ctx, agent_id: i64, operation: &str, args: Value, rest: bool) -> Result<ServiceResult> {
+async fn dispatch(
+    c: &Ctx,
+    agent_id: i64,
+    operation: &str,
+    args: Value,
+    rest: bool,
+) -> Result<ServiceResult> {
     match operation {
-        "start_stream" | "append_stream" | "finalize_stream" => return super::conversations::stream(c,agent_id,operation,args,rest).await,
-        "get_context" => return super::conversations::context(c,agent_id,args).await,
-        "post_message" => return super::conversations::post(c,agent_id,args,rest).await,
-        "open_dm" => return super::conversations::dm(c,agent_id,args,rest).await,
+        "start_stream" | "append_stream" | "finalize_stream" => {
+            return super::conversations::stream(c, agent_id, operation, args, rest).await;
+        }
+        "get_context" => return super::conversations::context(c, agent_id, args).await,
+        "post_message" => return super::conversations::post(c, agent_id, args, rest).await,
+        "open_dm" => return super::conversations::dm(c, agent_id, args, rest).await,
         _ => {}
     }
-    let reader = matches!(operation, "list_rooms" | "read_messages" | "list_work" | "get_work" | "list_board_posts");
+    let reader = matches!(
+        operation,
+        "list_rooms" | "read_messages" | "list_work" | "get_work" | "list_board_posts"
+    );
     let op = operation.to_owned();
     let fields = args.clone();
-    let result = c.app().db.write(move |tx|preflight(tx, agent_id, &op, fields)).await.map_err(db_error)?;
-    if reader && result.is_ok() {super::reads::operation(c,agent_id,operation,args).await} else {Ok(result)}
+    let result = c
+        .app()
+        .db
+        .write(move |tx| preflight(tx, agent_id, &op, fields))
+        .await
+        .map_err(db_error)?;
+    if reader && result.is_ok() {
+        super::reads::operation(c, agent_id, operation, args).await
+    } else {
+        Ok(result)
+    }
 }
 fn preflight(
     tx: &mut Tx<'_>,
@@ -307,8 +327,14 @@ fn preflight(
             )));
         }
     }
-    if matches!(op, "list_rooms" | "read_messages" | "list_work" | "get_work" | "list_board_posts") {
-        return Ok(ServiceResult::ok(Value::Null,200));
+    if matches!(
+        op,
+        "list_rooms" | "read_messages" | "list_work" | "get_work" | "list_board_posts"
+    ) {
+        return Ok(ServiceResult::ok(Value::Null, 200));
+    }
+    if matches!(op, "pin_message" | "unpin_message") {
+        return super::pins::operation(tx, agent_id, op, args);
     }
     campfire_db::models::agent_api_pending::execute(tx, agent_id, op, args)
 }
@@ -350,7 +376,8 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
             .await
             .map_err(db_error)?;
         if found.is_none() {
-            return Ok(c.head(StatusCode::NOT_FOUND));
+            // Rails head :not_found uses HTML before any explicit JSON render.
+            return Ok(c.head(StatusCode::NOT_FOUND).content_type("text/html"));
         }
     }
     let identity = if room_first {
@@ -419,8 +446,10 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
     let result = dispatch(c, identity.agent_id, op, args, true).await?;
     // Pinned Agents::MessagesController calls an undefined render_room_not_found
     // in this rescue. Match its production 500; MCP retains the service's 404.
-    if op=="post_message" && result.error.as_deref()==Some("Reply target not found") {
-        return Err(Error::internal(anyhow::anyhow!("Rails render_room_not_found is undefined")));
+    if op == "post_message" && result.error.as_deref() == Some("Reply target not found") {
+        return Err(Error::internal(anyhow::anyhow!(
+            "Rails render_room_not_found is undefined"
+        )));
     }
     render_result(c, result)
 }

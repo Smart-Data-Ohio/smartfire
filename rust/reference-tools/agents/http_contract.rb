@@ -24,8 +24,8 @@ travel_to Time.utc(2026, 3, 2, 16) do
     response = session.response
     decoded = response.body.blank? ? nil : JSON.parse(response.body)
     cases << { name: name, method: method, path: path, body: raw, headers: headers, token: token,
-      status: response.status, response: decoded,
-      response_headers: response.headers.slice("Cache-Control", "Pragma", "Retry-After", "X-Smartfire-Next-Since") }
+      status: response.status, response: decoded, response_body: response.body,
+      response_headers: %w[Content-Type Cache-Control Pragma Retry-After Location X-Smartfire-Next-Since].to_h { |key| [key,response.headers[key]] } }
   end
   capture.call("profile_get", :get, "/agents/me")
   capture.call("profile_update", :patch, "/agents/me", { status: "working", status_note: "Tests", working_presence: "  Thinking  ", provider: "ignored", daily_message_cap: 1 })
