@@ -54,3 +54,57 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1000 filtered ou
 The delivery rule was written first in `ws13b-ring-delivery-rule.md`. Rails does not have an asynchronous in-app ring job: its actual asynchronous invitation job is a push job identified by item ID. The immutable Rust queue row identifies its extra deferred emission. Only an actual later invitation emission supersedes that row, atomically with the new enqueue. Dedupe is a no-op for that identity; banner last_issued_at is not an invitation generation.
 
 The 180-case Rails-generated matrix records actual synchronous emissions and push enqueues, full item state, and an explicitly documented deferred-delivery projection. Rust uses real queue persistence, retained worker arguments, its real ring handler and ActivityChannel. Initial and legitimate retry banners survive deduped reissues; genuinely newer emissions supersede old jobs; stale rings do not survive access removal or call end. No fixture masks or timing thresholds change.
+
+## Fourth pass: cross-form and handled/end failures, first on 09bd4b62
+
+The three unchanged real-handler reviewer probes were appended before production
+edits or the main merge. `reviewer_r4_` failed in all three tests: a banner/item
+retry delivered two rings in either order; dismissing the retry still delivered
+an unread old banner; handling then ending delivered zero handled frames against
+one. Command (at 09bd4b62 plus the new tests only):
+
+```sh
+CARGO_BUILD_JOBS=2 CI=1 TMPDIR="$PWD/.scratch" CABLE_TEST_PORT_RANGE=53000-53049 MAIL_TEST_PORT_RANGE=53050-53099 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever reviewer_r4_ -- --test-threads=8 --nocapture
+```
+
+```text
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 1006 filtered out; finished in 2.83s
+```
+
+The former 180-case delivery projection is removed. Its named operation sequences
+remain, but expectations now come exclusively from actual Rails Cable broadcasts
+and actual serialized ActiveJob executions, including real push-pool handoffs.
+The pinned Stimulus controller consumes those frames with timers after every
+step. Rust now broadcasts after commit synchronously, matching Rails. Its marked
+queue envelopes acknowledge without replay. Legacy persisted envelopes are
+explicitly simulated by removing only the new delivered marker; their prior
+regressions remain meaningful and executable.
+
+## Random differential: identical-time handled callbacks
+
+Seeds: `388013012` and `3620200082`. The random differential found one additional
+production defect: a handled update that changes neither read_at nor handled_at
+still broadcasts in Rust. Rails' `saved_change_to_*` guard emits no callback.
+Every mismatch was delta-debugged against real Rails and the compiled pre-fix
+Rust test executable. Ten minimized sequences (3–5 operations) are committed in
+`reference-tools/ws13b_shrunk_sequences.json`, with original seed/index in each
+name. They cover repeated handling directly, handling immediately after rejoin,
+and switching from a banner to an item before repeating the answer.
+
+The minimized observed corpus fails on the pre-fix executable:
+
+```text
+test result: FAILED. 0 passed; 8 failed; 0 ignored; 0 measured; 893 filtered out; finished in 0.50s
+```
+
+All ten reach frame assertions, not compilation failures. Named tests additionally
+identify the three minimal scenario families. `ActivityItem::mark_handled` now
+matches Rails' timestamp-change guard (`activity_item.rb:192,215-218`).
+
+The recorder also exposed two harness isolation errors: deleting SQLite rows did
+not establish independent ID baselines, and restoring a database did not clear
+Rails' query cache. Each case now restores a byte-identical fixture database,
+clears query caches, Current and Rails cache. A 199-case prefix agrees exactly
+with standalone replay. These were recorder repairs, not application fixes or
+comparison masks. The comparator rejects five injected output corruptions:
+lost/duplicate frames, changed metadata, changed push payload and banner state.

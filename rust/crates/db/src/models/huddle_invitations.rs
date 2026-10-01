@@ -1,5 +1,5 @@
 //! `HuddleGrant#after_issued!` and `Huddle::InvitationResolver`.
-//! WS17 supplies the sound policy; a typed durable ring request preserves the full payload.
+//! Rings broadcast after commit; the durable envelope acknowledges that emission.
 use crate::broadcasts::Broadcast;
 use crate::models::{
     huddle_grant::HuddleGrant,
@@ -28,28 +28,35 @@ impl Job for RingRequest {
     const CLASS: &'static str = "Notifications::HuddleRingJob";
 }
 
-/// Rails broadcasts synchronously. The queue row identifies Rust's deferred
-/// emission; transport reissuance does not create or invalidate that emission.
+/// Acknowledge new synchronous emissions; safely drain persisted pre-upgrade
+/// requests using their authoritative row, never a worker's cached arguments.
 pub fn publish_queued_ring(tx: &mut Tx<'_>, id: i64) -> Result<()> {
     let arguments: Option<serde_json::Value> = tx.conn().query_row_cached(
         "SELECT arguments FROM background_jobs WHERE id=? AND job_class=?",
         params![id, RingRequest::CLASS], |row| row.get(0),
     ).optional()?;
     let Some(arguments) = arguments else { return Ok(()); };
-    if arguments["cancelled"] == 1 || arguments["superseded"] == 1 { return Ok(()); }
+    if arguments["delivered"] == 1 || arguments["cancelled"] == 1 || arguments["superseded"] == 1 { return Ok(()); }
     let request = serde_json::from_value(arguments).map_err(|error| crate::Error::Other(error.to_string()))?;
     publish_ring_with_policy(tx, &request, None)
 }
 
-/// Only an actual Rails callback/emission supersedes the prior pending callback
-/// for this logical target. All changes share the invitation/enqueue transaction.
+/// The next callback supersedes legacy pending frames for this caller/room,
+/// across banner and item forms. Dedupe never calls this function.
 fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
     let item = request.invitation["activityItemId"].as_i64().unwrap_or_default();
     tx.conn().execute_cached(
-        "UPDATE background_jobs SET arguments=json_set(arguments,'$.superseded',1) WHERE job_class=? AND json_extract(arguments,'$.recipient_id')=? AND json_extract(arguments,'$.invitation.roomId')=? AND json_extract(arguments,'$.invitation.activityItemId')=? AND (?!=0 OR json_extract(arguments,'$.sender_id')=?)",
+        "UPDATE background_jobs SET arguments=json_set(arguments,'$.superseded',1) WHERE job_class=? AND json_extract(arguments,'$.recipient_id')=? AND json_extract(arguments,'$.invitation.roomId')=? AND (json_extract(arguments,'$.invitation.activityItemId')=? AND ?!=0 OR json_extract(arguments,'$.sender_id')=?)",
         params![RingRequest::CLASS, request.recipient_id, request.invitation["roomId"].as_i64(), item, item, request.sender_id],
     )?;
-    tx.emit_after_commit(Event::job(request));
+    // Rails sends this callback synchronously after commit (activity_item.rb:224,
+    // huddle_grant.rb:562). Retain an acknowledged queue envelope for compatibility
+    // with older workers; it must never deliver the same frame a second time.
+    let mut event = Event::job(request);
+    if let Event::Job(job) = &mut event { job.arguments["delivered"] = serde_json::json!(1); }
+    tx.emit_after_commit(event);
+    let sound = ring_allowed(tx.conn(), request.recipient_id, Some(request.sender_id), tx.now(), None)?;
+    publish_current_ring(tx, request, sound);
     Ok(())
 }
 

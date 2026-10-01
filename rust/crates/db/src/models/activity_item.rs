@@ -171,8 +171,12 @@ impl ActivityItem {
 
     /// `mark_handled!`: preserve an existing read timestamp when accepting a late invite.
     pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<Self> {
-        tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;
-        Self::broadcast_change(tx,self.user_id,self.id)?;
+        // Rails' saved-change callback watches the state timestamps. Repeating
+        // an answer at the same timestamp is a no-op (activity_item.rb:215-218).
+        if self.read_at.is_none() || self.handled_at != Some(tx.now()) {
+            tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;
+            Self::broadcast_change(tx,self.user_id,self.id)?;
+        }
         Self::find(tx.conn(),self.id)
 
     }

@@ -1,7 +1,7 @@
 //! Persist every step of the original invitation declarations, including devices,
 //! retries, handled history, timeouts and the real leave/revoke callbacks.
 use crate::models::huddle_grant::HuddleGrant;
-use crate::models::huddle_invitations::{self, RingRequest};
+use crate::models::huddle_invitations;
 use crate::models::huddle_notices::PushInvitationJob;
 use crate::models::room_delete::HuddleConfig;
 use crate::tests::{TestDb, huddle_invitations_test, huddle_notices_test, huddle_revocation_test};
@@ -52,6 +52,11 @@ fn run(number: i64, test: &str) {
         tx.conn().execute("DELETE FROM sqlite_sequence WHERE name IN ('huddle_grants','activity_items','huddle_cleanups')", [])?;
         Ok(())
     });
+    // This Rails declaration injects a quiet check. Exercise the production
+    // policy path with equivalent real DND settings instead of replaying rings.
+    if case["sound_allowed"] == false {
+        db.write(|tx| Ok(tx.conn().execute("UPDATE users SET dnd_enabled=1",[])?));
+    }
     db.sink.take();
     for expected in case["results"].as_array().unwrap() {
         let op = expected["operation"].clone();
@@ -158,12 +163,7 @@ fn run(number: i64, test: &str) {
                 .iter()
                 .all(|e| !matches!(e, Event::Job(j) if j.wait.is_some()))
         );
-        for request in events.iter().filter_map(|e| e.as_job::<RingRequest>()) {
-            let sound = case["sound_allowed"].as_bool().unwrap();
-            db.write(move |tx| huddle_invitations::publish_ring(tx, &request, sound));
-        }
-        let broadcasts = db
-            .events()
+        let broadcasts = events
             .iter()
             .filter_map(|e| match e.as_broadcast()? {
                 crate::broadcasts::Broadcast::Cable { stream, payload } => {

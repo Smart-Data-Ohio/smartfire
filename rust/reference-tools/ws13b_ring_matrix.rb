@@ -1,34 +1,12 @@
 require "json"
 require "digest"
 require "active_support/testing/time_helpers"
+require "active_job/test_helper"
 
-# Rails has synchronous Cable rings, not Notifications::HuddleRingJob. Observe
-# those real callbacks first; project their delivery through Rust's extra queue.
-# Never infer an invitation emission from last_issued_at or from a case name.
-module WS13bRingMatrixItemObserver
-  def broadcast_activity_change
-    WS13bRingMatrix.current.with_context(kind: "item", item: self) { super }
-  end
-end
-module WS13bRingMatrixGrantObserver
-  def broadcast_suppressed_invitation!(recipient)
-    WS13bRingMatrix.current.with_context(kind: "banner", grant: self) { super }
-  end
-  def broadcast_call_ended_to_invitee
-    probe = WS13bRingMatrix.current
-    probe.end_call(room_id) if room && user && !others_in_call?
-    super
-  end
-end
-ActivityItem.prepend(WS13bRingMatrixItemObserver)
-HuddleGrant.prepend(WS13bRingMatrixGrantObserver)
-
+# Observe real after-commit Cable callbacks and execute actual ActiveJob classes.
+# The only replaced boundary is the outbound pool (no network transport in probes).
 class WS13bRingMatrix
   include ActiveSupport::Testing::TimeHelpers
-  class << self
-    attr_accessor :current
-  end
-
   def specs
     families = []
     [0, 1, 120, 121, 181].each do |delay|
@@ -68,109 +46,119 @@ class WS13bRingMatrix
 
   def step(action, seconds = 0) = {action: action, seconds: seconds}
 
+
+  SEEDS = [0x17209bd4, 0xd7c7de92].freeze
+  ACTIONS = %w[issue issue banner inbox retry dismiss handled end quiet_revoke regrant rejoin drain drain].freeze
+  DELAYS = [0, 1, 20, 21, 45, 46, 60, 61, 119, 120, 121, 180, 181, 600, 601].freeze
+
+  def random_specs(count)
+    SEEDS.flat_map do |seed|
+      rng = Random.new(seed)
+      Array.new(count / SEEDS.size) do |index|
+        steps = [step("issue")]
+        rng.rand(12..28).times do
+          action = ACTIONS.sample(random: rng)
+          seconds = action == "retry" ? [121, 181, 601].sample(random: rng) : DELAYS.sample(random: rng)
+          operation = step(action, seconds)
+          operation[:order] = %w[oldest newest shuffled].sample(random: rng) if action == "drain"
+          operation[:limit] = rng.rand(1..4) if action == "drain" && rng.rand(2).zero?
+          steps << operation
+        end
+        steps << step("drain").merge(order: "oldest")
+        {name: "random/#{seed}/#{index}", seed: seed, banner: rng.rand(2).zero?, newest_first: false, steps: steps}
+      end
+    end
+  end
+
+  def regressions
+    families = {
+      "review_r4_cross_form" => [step("issue"), step("toggle_preferences",181), step("issue"), step("drain")],
+      "review_r4_dismissed_cross_form" => [step("issue"),step("inbox",181),step("issue"),step("dismiss",1),step("drain")],
+      "review_r4_handled_end" => [step("issue"),step("drain"),step("handled",1),step("end",1),step("drain")],
+      "review_r2_delayed_handled_retry" => [step("issue"),step("drain"),step("handled",1),step("issue",181),step("drain")]
+    }
+    cases = families.flat_map do |name, steps|
+      [false,true].product([false,true]).map { |banner,newest| {name: "#{name}/#{banner}/#{newest}",banner: banner,newest_first:newest,steps: steps} }
+    end
+    cases + JSON.parse(File.read(File.join(__dir__,"ws13b_shrunk_sequences.json")),symbolize_names: true)
+  end
+
   def setup(spec)
-    self.class.current = self
-    ActiveRecord::Schema.verbose = false
-    load Rails.root.join("db/schema.rb")
-    ActiveRecord::FixtureSet.reset_cache
-    ActiveRecord::FixtureSet.create_fixtures(Rails.root.join("test/fixtures"), %w[accounts users rooms memberships])
+    connection = ActiveRecord::Base.connection
+    unless @fixture_database
+      ActiveRecord::Schema.verbose = false
+      load Rails.root.join("db/schema.rb")
+      ActiveRecord::FixtureSet.reset_cache
+      ActiveRecord::FixtureSet.create_fixtures(Rails.root.join("test/fixtures"), %w[accounts users rooms memberships push/subscriptions])
+      @database_path = ActiveRecord::Base.connection_db_config.database
+      connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+      ActiveRecord::Base.connection_pool.disconnect!
+      @fixture_database = File.binread(@database_path)
+    end
+    # Each sequence starts with a byte-identical copy of the real fixture DB.
+    # Disconnect before replacing our private reference runner database, so no
+    # statement, WAL or AUTOINCREMENT state leaks from the previous sequence.
+    ActiveRecord::Base.connection_pool.disconnect!
+    ["-wal", "-shm"].each { |suffix| File.delete(@database_path + suffix) if File.exist?(@database_path + suffix) }
+    File.binwrite(@database_path, @fixture_database)
+    ActiveRecord::Base.clear_query_caches_for_current_thread
+    ActiveRecord::Base.connection.clear_query_cache
+    Current.reset
+    Rails.cache.clear
     travel_to Time.utc(2026, 1, 1, 12)
     ENV["LIVEKIT_API_SECRET"] = "ws13b-review-fixture-value"
     ENV.delete("LIVEKIT_URL"); ENV.delete("LIVEKIT_INTERNAL_URL")
-    @caller = User.find(ActiveRecord::FixtureSet.identify("david"))
-    @recipient = User.find(ActiveRecord::FixtureSet.identify("jason"))
+    @caller, @recipient = %w[david jason].map { |key| User.find(ActiveRecord::FixtureSet.identify(key)) }
     @room = Room.find(ActiveRecord::FixtureSet.identify("david_and_jason"))
     @member = @room.memberships.find_by!(user: @caller)
     @session = @caller.sessions.create!(token: "ws13b-matrix-session")
     @recipient.update!(inbox_preferences: {huddle_invitations: false}) if spec[:banner]
-    @pending, @emissions, @immediate, @pushes = [], [], [], []
-    @next_emission = 0
-    @context = nil
-    @projection = false
+    @recipient_session = nil
+    @grant = nil
+    @frames, @pushes = [], []
+    @adapter = ActiveJob::QueueAdapters::TestAdapter.new
+    ActiveJob::Base.queue_adapter = @adapter
+    @rng = Random.new(spec[:seed] || 172)
     probe = self
-    ActionCable.server.define_singleton_method(:broadcast) { |stream, payload| probe.observe(stream, payload) }
-    Huddle::PushInvitationJob.define_singleton_method(:perform_later) { |id| probe.push(id) }
+    ActionCable.server.define_singleton_method(:broadcast) { |stream,payload| probe.observe(stream,payload) }
+    Rails.configuration.x.web_push_pool.define_singleton_method(:queue) { |payload,subscriptions| probe.push(payload,subscriptions) }
   end
 
-  def with_context(context)
-    previous = @context
-    @context = context
-    yield
-  ensure
-    @context = previous
+  def observe(stream,payload)
+    return unless (stream == ActivityChannel.stream_name_for(@recipient.id) && payload[:huddleInvitation]) ||
+      (stream == HuddleNoticeChannel.stream_name_for(@recipient.id) && payload[:huddleJoinNotice])
+    @frames << {stream: stream, payload: JSON.parse(JSON.generate(payload))}
   end
-
-  def push(id) = @pushes << id
-
-  def observe(stream, payload)
-    return unless stream == ActivityChannel.stream_name_for(@recipient.id) && payload[:huddleInvitation]
-    frame = JSON.parse(JSON.generate(payload))
-    if @projection
-      @projected << frame
-    elsif @context
-      @emissions << frame
-      @next_emission += 1
-      item = @context[:item]
-      grant = item ? item.source : @context[:grant]
-      target = item ? ["item", item.id] : ["banner", @recipient.id, grant.room_id, grant.user_id]
-      @pending.each { |old| old[:superseded] = true if old[:target] == target }
-      @pending << {id: @next_emission, target: target, item_id: item&.id, source_id: grant.id,
-        created_at: item&.created_at, event_type: item&.event_type, state: item&.state, room_id: grant.room_id}
-    else
-      @immediate << frame
-    end
+  def push(payload,subscriptions)
+    # Pool handoffs, including empty scopes, are observed rather than predicted.
+    @pushes << {payload: payload, subscription_ids: subscriptions.order(:id).pluck(:id)}
   end
-
-  # Observe the guarded last-participant end callback, even when its banner's
-  # one-minute ended-frame window has expired. This is explicitly queue projection.
-  def end_call(room_id)
-    @pending.each { |job| job[:ended] = true if job[:room_id] == room_id && (!job[:item_id] || job[:event_type] == "huddle_started") }
-  end
-
   def issue = @grant = HuddleGrant.issue!(session: @session, membership: @member)
+  def item = ActivityItem.where(user: @recipient,source_type: "HuddleGrant").order(:id).last
 
-  def drain(spec)
-    @projected = []
-    jobs = @pending.sort_by { |job| job[:id] }
-    jobs.reverse! if spec[:newest_first]
-    jobs.each do |job|
-      next if job[:superseded] || job[:ended]
-      grant = HuddleGrant.find_by(id: job[:source_id])
-      next unless grant && @recipient.reload.active? && !@recipient.bot?
-      membership = Membership.find_by(room_id: grant.room_id, user_id: @recipient.id)
-      next unless membership
-      item = ActivityItem.find_by(id: job[:item_id]) if job[:item_id]
-      if job[:item_id]
-        next unless item && item.user_id == @recipient.id && item.source_id == job[:source_id] &&
-          item.created_at == job[:created_at] && item.event_type == job[:event_type] && item.state == job[:state]
-      end
-      if !item || (item.event_type == "huddle_started" && item.unread?)
-        next unless Room.alive.exists?(id: grant.room_id)
-        next if %w[nothing invisible].include?(membership.involvement)
-        next if grant.revoked? && !HuddleGrant.active.in_call.where(room_id: grant.room_id).exists?
-      end
-      @projection = true
-      if item
-        # Invoke the Rails payload builder; no hand-authored expected payloads.
-        observe(ActivityChannel.stream_name_for(@recipient.id), item.send(:activity_broadcast_payload))
-      else
-        grant.send(:broadcast_suppressed_invitation!, @recipient)
-      end
-      @projection = false
+  def drain(spec,operation)
+    jobs = @adapter.enqueued_jobs.select { |row| [Huddle::PushInvitationJob,Huddle::JoinNoticeJob,Huddle::BroadcastPresenceJob].include?(row[:job]) }
+    originals = jobs.dup
+    jobs.reverse! if operation[:order] == "newest" || (!operation[:order] && spec[:newest_first])
+    jobs.shuffle!(random: @rng) if operation[:order] == "shuffled"
+    jobs = jobs.first(operation[:limit]) if operation[:limit]
+    operation[:job_order] = jobs.map { |row| originals.index(row) }
+    jobs.each do |row|
+      @adapter.enqueued_jobs.delete(row)
+      ActiveJob::Base.execute(row.except(:job,:args,:queue,:priority,:at))
     end
-    @pending.clear
-    @projected
-  ensure
-    @projection = false
   end
 
   def apply(action)
     case action
-    when "issue" then issue
+    when "issue", "retry", "regrant" then issue
+    when "banner", "inbox", "toggle_preferences"
+      enabled = action == "inbox" || (action == "toggle_preferences" && !@recipient.reload.inbox_preferences.huddle_invitations)
+      @recipient.update!(inbox_preferences: {huddle_invitations: enabled})
     when "new_session"
       @session = @caller.sessions.create!(token: "ws13b-matrix-second-session")
       issue
-    when "quiet_revoke" then @grant.revoke!(create_cleanup: false)
+    when "quiet_revoke" then @grant&.reload&.revoke!(create_cleanup: false)
     when "live_revoke" then @grant.record_seen!; @grant.revoke!(create_cleanup: false)
     when "end" then @grant.record_seen!; @grant.mark_out_of_call!
     when "remove_recipient" then @room.memberships.find_by!(user: @recipient).destroy!
@@ -179,43 +167,53 @@ class WS13bRingMatrix
     when "group_continues"
       other = User.find(ActiveRecord::FixtureSet.identify("kevin"))
       member = @room.memberships.create!(user: other, involvement: "everything")
-      session = other.sessions.create!(token: "ws13b-matrix-group-session")
-      live = HuddleGrant.issue!(session: session, membership: member)
-      live.record_seen!
-      @grant.record_seen!
-      @grant.revoke!(create_cleanup: false)
-    when "read" then item.mark_read!
-    when "handled" then item.mark_handled!
+      live = HuddleGrant.issue!(session: other.sessions.create!(token: "ws13b-matrix-group-session"),membership: member)
+      live.record_seen!; @grant.record_seen!; @grant.revoke!(create_cleanup: false)
+    when "rejoin"
+      member = @room.memberships.find_by!(user: @recipient)
+      @recipient_session ||= @recipient.sessions.create!(token: "ws13b-recipient-session")
+      HuddleGrant.issue!(session: @recipient_session,membership: member).record_seen!
+    when "read", "dismiss" then item&.mark_read!
+    when "handled" then item&.mark_handled!
     when "missed" then Huddle::InvitationResolver.resolve_overdue!(user: @recipient)
-    when "unread_cycle" then item.mark_handled!; item.mark_unread!
+    when "unread_cycle" then item&.mark_handled!; item&.mark_unread!
     else raise "unknown action #{action}"
     end
   end
-
-  def item = ActivityItem.find_by!(user: @recipient, source_type: "HuddleGrant")
-
   def snapshot
-    ActivityItem.where(user: @recipient, source_type: "HuddleGrant").order(:id).map do |row|
-      {id: row.id, source_id: row.source_id, event_type: row.event_type, state: row.state, created_at: row.created_at.iso8601(6)}
-    end
+    ActivityItem.where(user: @recipient,source_type: "HuddleGrant").order(:id).map { |row|
+      {id:row.id,source_id:row.source_id,event_type:row.event_type,state:row.state,created_at:row.created_at.iso8601(6)} }
   end
-
-  def run
-    cases = specs.map do |spec|
+  def run(definitions_override = nil)
+    count = Integer(ARGV.fetch(0,"512"))
+    definitions = definitions_override || (specs + regressions + random_specs(count))
+    definitions = JSON.parse(ENV["WS13B_SPEC_JSON"],symbolize_names: true) if ENV["WS13B_SPEC_JSON"]
+    cases = definitions.map { |spec| Marshal.load(Marshal.dump(spec)) }.each_with_index.map do |spec,index|
       setup(spec)
-      phases = spec[:steps].map do |step|
-        travel step[:seconds]
-        delivered = step[:action] == "drain" ? drain(spec) : (apply(step[:action]); [])
-        {emissions: @emissions.shift(@emissions.size), immediate: @immediate.shift(@immediate.size),
-         pushes: @pushes.shift(@pushes.size), delivered: delivered, items: snapshot}
+      phases = spec[:steps].map do |operation|
+        travel operation[:seconds]
+        operation[:action] == "drain" ? drain(spec,operation) : apply(operation[:action])
+        {frames:@frames.shift(@frames.size),pushes:@pushes.shift(@pushes.size),items:snapshot}
       end
-      {spec: spec, phases: phases}
+      warn "observed Rails #{index+1}/#{definitions.size}" if (index+1) % 100 == 0
+      {spec:spec,phases:phases}
     end
-    files = %w[app/models/huddle_grant.rb app/models/activity_item.rb app/models/huddle/ring_policy.rb app/models/huddle/invitation_resolver.rb app/jobs/huddle/push_invitation_job.rb app/models/huddle/invitation_pusher.rb]
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", source_sha256: files.to_h { |file| [file, Digest::SHA256.file(Rails.root.join(file)).hexdigest] },
-      projection: "Rails synchronous callback emissions through Rust deferred queue; not a Rails ring job", cases: cases)
+    files = %w[app/models/huddle_grant.rb app/models/activity_item.rb app/models/huddle/ring_policy.rb app/models/huddle/invitation_resolver.rb app/jobs/huddle/push_invitation_job.rb app/models/huddle/invitation_pusher.rb app/jobs/huddle/join_notice_job.rb app/models/huddle/join_notifier.rb app/models/huddle/join_pusher.rb app/javascript/controllers/huddle_invitation_controller.js]
+    puts JSON.generate(reference_pin:"d7c7de92",source_sha256: files.to_h { |file| [file,Digest::SHA256.file(Rails.root.join(file)).hexdigest] },seeds:SEEDS,random_count:count,cases:cases)
   ensure
     travel_back
   end
 end
-WS13bRingMatrix.new.run
+if ENV["WS13B_STREAM"] == "1"
+  matrix = WS13bRingMatrix.new
+  STDIN.each_line do |line|
+    begin
+      matrix.run(JSON.parse(line,symbolize_names: true))
+    rescue StandardError => error
+      puts JSON.generate(error: error.class.name)
+    end
+    STDOUT.flush
+  end
+else
+  WS13bRingMatrix.new.run
+end

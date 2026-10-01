@@ -256,6 +256,7 @@ mod review_tests {
                 let member = Membership::find_by_room_and_user(tx.conn(), DIRECT_DAVID_JASON, DAVID)?.unwrap();
                 HuddleGrant::issue(tx, session.id, member.id, member.room_id, &campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13b-review-fixture-value".into()), admin_configured:false})
             }).await.unwrap();
+            app.db.write(|tx| {tx.conn().execute("UPDATE background_jobs SET arguments=json_remove(arguments,'$.delivered') WHERE job_class='Notifications::HuddleRingJob'", [])?; Ok(())}).await.unwrap();
             let rows = app.db.read(campfire_jobs::inspect::all).await.unwrap();
             let queued = rows.iter().find(|j| j.class == RingRequest::CLASS).unwrap();
             let retained = serde_json::from_value::<RingRequest>(queued.arguments.clone()).unwrap();
@@ -324,6 +325,7 @@ mod reviewer_probes {
                 let member = Membership::find_by_room_and_user(tx.conn(), DIRECT_DAVID_JASON, DAVID)?.unwrap();
                 HuddleGrant::issue(tx, session.id, member.id, member.room_id, &campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13b-review-fixture-value".into()), admin_configured:false})
             }).await.unwrap();
+            app.db.write(|tx| {tx.conn().execute("UPDATE background_jobs SET arguments=json_remove(arguments,'$.delivered') WHERE job_class='Notifications::HuddleRingJob'", [])?; Ok(())}).await.unwrap();
             let rows = app.db.read(campfire_jobs::inspect::all).await.unwrap();
             let queued = rows.iter().find(|j| j.class == RingRequest::CLASS).unwrap();
             let retained = serde_json::from_value::<RingRequest>(queued.arguments.clone()).unwrap();
@@ -343,6 +345,7 @@ mod reviewer_probes {
                 let grant = HuddleGrant::find_by_id(tx.conn(), new_id)?.unwrap();
                 HuddleGrant::issue(tx, grant.session_id, grant.membership_id, grant.room_id, &campfire_db::models::room_delete::HuddleConfig {api_secret:Some("review-value".into()),admin_configured:false})
             }).await.unwrap();
+            app.db.write(|tx| {tx.conn().execute("UPDATE background_jobs SET arguments=json_remove(arguments,'$.delivered') WHERE job_class='Notifications::HuddleRingJob'", [])?; Ok(())}).await.unwrap();
             let rows = app.db.read(campfire_jobs::inspect::all).await.unwrap();
             let new_row = rows.into_iter().find(|row| row.class==RingRequest::CLASS && row.id != execution.id && row.arguments["cancelled"] != 1 && row.arguments["invitation"]["state"]=="unread").expect("fresh retry job");
             // Subscribe after the ended frame. A marker detects extra frames
@@ -407,12 +410,14 @@ mod reviewer_r3_job_probes {
                 let member=Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
                 HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("review-fixture-value".into()),admin_configured:false})
             }).await.unwrap();
+            app.db.write(|tx| {tx.conn().execute("UPDATE background_jobs SET arguments=json_remove(arguments,'$.delivered') WHERE job_class='Notifications::HuddleRingJob'", [])?; Ok(())}).await.unwrap();
             let rows=app.db.read(campfire_jobs::inspect::all).await.unwrap();
             let queued=rows.into_iter().find(|j|j.class==RingRequest::CLASS).unwrap();
             let retained=serde_json::from_value::<RingRequest>(queued.arguments.clone()).unwrap();
             let execution=Execution {id:queued.id,executions:1,enqueued_at:queued.created_at,scheduled_at:queued.run_at};
             clock.advance(jiff::SignedDuration::from_secs(1));
             app.db.write(move |tx| HuddleGrant::issue(tx,grant.session_id,grant.membership_id,grant.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("review-fixture-value".into()),admin_configured:false})).await.unwrap();
+            app.db.write(|tx| {tx.conn().execute("UPDATE background_jobs SET arguments=json_remove(arguments,'$.delivered') WHERE job_class='Notifications::HuddleRingJob'", [])?; Ok(())}).await.unwrap();
             let rows=app.db.read(campfire_jobs::inspect::all).await.unwrap();
             assert_eq!(rows.iter().filter(|j|j.class==RingRequest::CLASS).count(),1,"no replacement ring job");
             assert!(rows.iter().find(|j|j.id==queued.id).unwrap().arguments["cancelled"]!=1);
