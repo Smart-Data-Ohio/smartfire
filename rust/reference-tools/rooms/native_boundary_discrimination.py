@@ -10,7 +10,7 @@ originals={path:path.read_bytes() for path in paths}
 scratch=root/'.scratch';scratch.mkdir(exist_ok=True)
 env=dict(os.environ,CI='1',TMPDIR=str(scratch),CARGO_PROFILE_TEST_DEBUG='0',CARGO_PROFILE_DEV_DEBUG='0',
          CABLE_TEST_PORT_RANGE='52100-52149',MAIL_TEST_PORT_RANGE='52100-52149')
-changes=[('list',paths[1],'.map(|list|format!("\\n    \\n{list}"))',''),
+changes=[('list',paths[1],'else { format!("\\n    \\n{list}") }','else { list }'),
          ('composer',paths[1],"let footer=format!(\"  {}\", inline.strip_prefix('\\n').unwrap_or(&inline));",'let footer=inline;'),
          ('template',paths[1],'let template=format!("{}\\n",campfire_views::channel_threads::PendingTemplate{ctx,user}.render()?);',
           'let template=campfire_views::channel_threads::PendingTemplate{ctx,user}.render()?;')]

@@ -153,6 +153,8 @@ pub struct Presenter<'a> {
 }
 
 impl<'a> Presenter<'a> {
+    pub(crate) fn app(&self) -> &AppState { self.app }
+
     pub fn new(conn: &'a Connection, app: &'a AppState, request_host: Option<String>) -> Self {
         Self {
             app,
@@ -300,8 +302,12 @@ impl<'a> Presenter<'a> {
     pub fn composer_drive_flow(&self, viewer: &User, share_picker_available: bool) -> Result<campfire_views::messages::composer::DriveFlow> {
         use campfire_views::messages::composer::DriveFlow;
         if share_picker_available { return Ok(DriveFlow::Share); }
-        let scopes = self.conn.query_row("SELECT scopes FROM google_accounts WHERE user_id = ? LIMIT 1", [viewer.id], |row| row.get::<_, Option<String>>(0)).optional()?.flatten();
-        Ok(if scopes.is_some_and(|scopes| scopes.split_whitespace().any(|scope| scope == "https://www.googleapis.com/auth/drive.file")) { DriveFlow::Metadata } else { DriveFlow::None })
+        Ok(if Self::google_drive_consent(self.conn, viewer.id)? { DriveFlow::Metadata } else { DriveFlow::None })
+    }
+
+    pub(crate) fn google_drive_consent(conn: &Connection, user_id: i64) -> Result<bool> {
+        let scopes = conn.query_row("SELECT scopes FROM google_accounts WHERE user_id = ? LIMIT 1", [user_id], |row| row.get::<_, Option<String>>(0)).optional()?.flatten();
+        Ok(scopes.is_some_and(|scopes| scopes.split_whitespace().any(|scope| scope == "https://www.googleapis.com/auth/drive.file")))
     }
 
     /// `message.room` with `room_display_name(message.room, for_user: nil)`.
@@ -398,11 +404,19 @@ impl<'a> Presenter<'a> {
     }
 
     fn renderable_message(&self, message: &Message, room_name: &str) -> Result<MessageView> {
-        let github_cards_html = github::message_cards(self.conn, self.app, message)?;
-        self.github_refreshes.borrow_mut().extend(
-            crate::integrations::github::pull_requests::PullRequest::for_message(self.conn, message.id)?
-                .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(self.now))).map(|pr| pr.id)
-        );
+        let (github_cards_html, github_cards_stamp) = if let Some(data) = &self.search_preloads {
+            if let Some(github) = data.github.get(&message.id) {
+                self.github_refreshes.borrow_mut().extend(github.refreshes.iter().copied());
+                (Some(github.html.clone()), github.stamp.clone())
+            } else { (None, String::new()) }
+        } else {
+            let html = github::message_cards(self.conn, self.app, message)?;
+            self.github_refreshes.borrow_mut().extend(
+                crate::integrations::github::pull_requests::PullRequest::for_message(self.conn, message.id)?
+                    .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(self.now))).map(|pr| pr.id)
+            );
+            (Some(html), github::cache_stamp(self.conn, message)?)
+        };
         let plain_text = self.plain_text_body(message)?;
         Ok(MessageView {
             id: message.id,
@@ -419,8 +433,8 @@ impl<'a> Presenter<'a> {
             components: {
                 let mut components = link_embeds::components(self, message)?;
                 components.quote_references = self.quote_components(message)?.quote_references;
-                components.github_cards_html = Some(github_cards_html);
-                components.github_cards_stamp = github::cache_stamp(self.conn, message)?;
+                components.github_cards_html = github_cards_html;
+                components.github_cards_stamp = github_cards_stamp;
                 components
             },
         })
@@ -753,4 +767,34 @@ mod tests {
         assert_eq!(cache_key_with_version("messages", 1, time), "messages/1-20240601120000000123");
         assert_eq!(to_fs_number(time), "20240601120000");
     }
+}
+
+// Read-only owner adapter from WS13 498aa4e6; no icon mutation or rendering policy.
+/// `Icons.client_icon_names`: canonical brands/aliases followed by ordered workspace icons.
+pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> {
+    #[derive(serde::Deserialize)]
+    struct Brand {
+        name: String,
+        #[serde(default)]
+        aliases: Vec<String>,
+    }
+    static NAMES: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
+        let brands: Vec<Brand> = serde_yaml::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/vendor/icons.yml"
+        )))
+        .expect("brand icon registry");
+        brands
+            .into_iter()
+            .flat_map(|b| std::iter::once(b.name).chain(b.aliases))
+            .collect()
+    });
+    let mut names = NAMES.clone();
+    let mut statement = conn.prepare_cached("SELECT name FROM workspace_icons ORDER BY name")?;
+    names.extend(
+        statement
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?,
+    );
+    Ok(names)
 }

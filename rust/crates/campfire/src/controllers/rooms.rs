@@ -24,13 +24,13 @@ pub mod message_links;
 pub mod files;
 
 use askama::Template;
-use campfire_db::{Account, Message, Room, RoomType, Timeline, User};
+use campfire_db::{Account, Room, RoomType, User};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
-use crate::controllers::presenters::{Presenter, user_view};
+use crate::controllers::presenters::Presenter;
 
 /// `room_scope`: which of `Current.user.rooms` a controller may act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -398,42 +398,10 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let (show,composer,fetches,twitter_fetches,refreshes) = c
-        .app()
-        .db
-        .read(move |conn| {
-            let messages = super::presenters::room_shell::find_messages(conn,room.id,message_id)?;
-            let membership=campfire_db::Membership::find_by_room_and_user(conn,room.id,user.id)?.ok_or(campfire_db::Error::RecordNotFound("Membership"))?;
-            let divider=super::presenters::room_shell::unread_divider(conn,&membership,&messages)?;
-            let mut presenter = Presenter::new(conn, &app, request_host);
-            presenter.cache_base_url = Some(cache_base_url);
-            let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
-            let room_gid = crate::channels::room_gid(&room).to_param();
-            let drive=presenter.composer_drive_flow(&user,app.config.google_picker.is_some() && !user.is_bot())?;
-            let composer=presenter.composer_facts(&room,&user,None,drive)?;
-            let list=super::presenters::room_native::message_list(&presenter,&messages,divider.message_id,divider.count)?;
-            Ok((campfire_views::rooms::ShowView {
-                shell:campfire_views::rooms::ShellComponents{message_list:Some(list),pins_count:campfire_db::MessagePin::count_for_room(conn,room.id)?,thread_panel_name:Some(presenter.room_display_name(&room,None)?),..Default::default()},scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
-                room: presenter.room_view(&room, &user)?,
-                updated_at: room.updated_at.jiff(),
-                user: user_view(&app.secrets, &user),
-                // The page's message fragments come from the store the render then uses.
-                messages: campfire_views::fragment_cache::with(&app.fragment_cache, || presenter.messages(&messages))?,
-                invitation: original && !Message::paged(conn, Timeline::Room(room.id))?,
-                join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
-                messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
-                ooo_notice_members:
-                    crate::controllers::presenters::status_settings::ooo_notice_members(
-                        conn,
-                        &app.secrets,
-                        &room,
-                        user.id,
-                        app.db.env().now(),
-                    )?,
-            },composer,presenter.pending_link_fetches(),presenter.pending_twitter_fetches(),presenter.take_github_refreshes()))
-        })
-        .await
-        .map_err(db_error)?;
+    let native = c.app().db.read(move |conn| {
+        super::presenters::room_native::load(conn, &app, &room, &user, message_id, request_host, cache_base_url)
+    }).await.map_err(db_error)?;
+    let super::presenters::room_native::NativePage { show, composer, link_fetches: fetches, twitter_fetches, github_refreshes: refreshes } = native;
     super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches).await.map_err(db_error)?;
     crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
     let response = super::presenters::view_context::page_or_frame(c,StatusCode::OK,
@@ -535,3 +503,6 @@ mod query_probe;
 #[cfg(test)]
 #[path = "rooms/owner_panel_tests.rs"]
 mod owner_panel_tests;
+
+#[cfg(test)]
+mod full_page_tests;

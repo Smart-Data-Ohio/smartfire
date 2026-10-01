@@ -55,7 +55,7 @@ impl Layout {
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
         let app_now = app.db.env().now();
-        let (account, has_logo, mut preferences, recent_searches) = app
+        let (account, has_logo, mut preferences, recent_searches, brand_icon_names) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -75,7 +75,7 @@ impl Layout {
                     Some(id) => campfire_db::Search::recent_for_user(conn,id)?.into_iter().map(|s|campfire_views::layouts::RecentSearch{id:s.id,query:s.query}).collect(),
                     None => Vec::new(),
                 };
-                Ok((account, has_logo, preferences, recent_searches))
+                Ok((account, has_logo, preferences, recent_searches, super::client_icon_names(conn)?))
             })
             .await
             .map_err(Error::internal)?;
@@ -99,7 +99,7 @@ impl Layout {
         });
         let chrome = Chrome {
             service_worker_auto_register: true,
-            brand_icon_names: Vec::new(),
+            brand_icon_names,
             google_picker: app.config.google_picker.clone(),
             huddle_configured: false,
             global_search_query: if c.request.path().starts_with("/searches") { crate::controllers::searches::display_query(c) } else { None },
@@ -232,7 +232,7 @@ pub fn current_user(secrets: &rails_compat::Secrets, user: &User) -> CurrentUser
 /// The `users` columns the layout reads straight off `Current.user` (theme, text size, time zone,
 /// tour, voice settings). The settings other domains derive (notification sounds, Google Drive)
 /// stay at their defaults until their owners fill them in.
-fn user_preferences(
+pub(crate) fn user_preferences(
     conn: &campfire_db::Connection,
     user_id: i64,
     now: campfire_db::Timestamp,
@@ -256,6 +256,8 @@ fn user_preferences(
     )?;
     let settings = campfire_db::UserStatusSettings::find(conn, user_id)?;
     apply_settings_preferences(&mut preferences, &settings, now);
+    // Use the same token-free Google consent fact as the message-owner composer.
+    preferences.google_drive = super::Presenter::google_drive_consent(conn, user_id)?;
     Ok(preferences)
 }
 
