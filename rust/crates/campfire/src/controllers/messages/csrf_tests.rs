@@ -9,7 +9,9 @@ use crate::controllers::presenters::{Presenter, test_support::*};
 fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/cached-csrf.json")).unwrap() }
 
 async fn fixture() -> TestApp {
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    // Rails queues a fetch for a new reference even when its fixture card is fresh.
+    // These cache/form tests supply the fetched card and never execute network jobs.
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
     app.db().write(|tx| {
         let pr=crate::integrations::github::pull_requests::PullRequest::for_reference(tx,"rails","rails",3141)?;
         tx.conn().execute("UPDATE github_pull_requests SET private=0,title='Cached card',state='open',fetched_at=?,fetch_requested_at=NULL,updated_at=? WHERE id=?",(tx.now(),tx.now(),pr.id))?;

@@ -129,7 +129,7 @@ Rails itself needs no such array for its uncached initial room render.
 | Generic embed site/title/description/image and message-specific URL/position | `app/views/link_embeds/_card.html.erb:7`, `:11`, `:14`, `:19`, `:23`; `app/models/link_embed_reference.rb:11`; `app/helpers/link_embeds_helper.rb:11`, `:24` | Exact embed pairs plus **reference** and embed individual versions, including URL/position changes with an unchanged card stamp. |
 | Boost creation order/content/classification, grouped reactor ids/count/names, legacy booster title/name/bio/avatar/accessibility labels and delete controls | `app/views/messages/boosts/_reactions.html.erb:1`; `app/views/messages/boosts/_reaction.html.erb:4`, `:29`; `app/views/messages/boosts/_boost.html.erb:3`, `:5`, `:9`, `:14`; `app/models/boost.rb:5` | Boost touches Message; independent Boost and every booster/reactor User version. Removed the non-Rails nested HTML boost cache. |
 | Reaction/boost shortcode title/character/brand or workspace image | `app/helpers/boosts_helper.rb:4`, `:15`, `:29`; `app/models/icons.rb:145`, `:173`, `:182` | Only resolved workspace icon versions (also consulted by rendered bot avatars and Markdown; search room icons have their own suffix); compiled brand/gemoji/config/assets live with the app. |
-| Thread indicator count/hidden state/pluralized label and fixed icon | `app/views/messages/_thread_indicator.html.erb:10`; `app/models/channel_thread.rb:206` | Literal helper count slot; parent Message stamp from count refresh; Thread record identity/version. The thread's reply bodies/authors are not rendered by this indicator. |
+| Thread indicator count/hidden state/pluralized label and fixed icon; reply routing | `app/views/messages/_thread_indicator.html.erb:9`, `:12`, `:14`; `app/helpers/message_threads_helper.rb:19`; `app/helpers/github/pull_requests_helper.rb:42`; `app/models/channel_thread.rb:206`; `app/helpers/messages_helper.rb:64`, `:94` | Literal helper count slot and parent Message stamp from count refresh. Replies' URLs/outlet use their own Message's `thread_id`; saving it versions the Message. No Thread record version: thread name/activity, other reply bodies/authors and thread-wide timestamps are absent from the partial. Parent count changes invalidate its fragment; posting another reply or renaming preserves existing replies' fragments, and rename preserves the parent's fragment. |
 | Unrenderable fallback | `app/helpers/messages_helper.rb:84`; `app/views/messages/_unrenderable.html.erb:1` | Dependencies disappearing change the individual record set; fixed template fallback. |
 | URL origin, configuration/signing inputs and assets | `app/helpers/messages_helper.rb:93`; `app/views/users/_mention.html.erb:1`; `app/helpers/users/avatars_helper.rb:33` | Verified origin remains in the key; signer/config/asset resolver and cache share one app lifetime. Viewer CSRF tokens are excluded by Rails' forms. |
 
@@ -633,6 +633,106 @@ Raw Rails reproduction/source verification summaries:
 WS8bm cache stability: 2 unrelated HTTP writes preserve Rails helper keys and HTML
 WS8bm rendered dependencies: 14 warm-room update/reload pairs from pinned Rails
 WS8bm golden check: 3 Rails oracles re-run; 4 golden files byte-identical
+WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
+WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
+```
+
+## Thread activity review (4c9ebb97)
+
+The remaining over-invalidation came from including `channel_threads.updated_at`
+for both a message's containing thread and its child thread in the added rendered
+record array. `ChannelThread#post_message!` updates `last_activity_at` and therefore
+that record's version (`app/models/channel_thread.rb:486`, `:497`). Renaming also
+versions the thread, although neither input appears in the message fragment.
+
+The narrowed guard omits Thread record versions. The parent indicator reads only
+`messages_count` (`app/helpers/message_threads_helper.rb:19`;
+`app/views/messages/_thread_indicator.html.erb:9`, `:12`, `:14`). Rails already
+includes that literal count in its helper array
+(`app/helpers/github/pull_requests_helper.rb:42`), and counter refreshes stamp the
+parent Message (`app/models/channel_thread.rb:206`, `:210`). A reply's URLs and
+composer outlet use its own `thread_id`, covered by its Message version
+(`app/helpers/messages_helper.rb:64`, `:94`). There is no thread-title or reply-body
+preview in the parent indicator. Actual reply/quote previews retain their existing
+source-message, author, attachment and mention dependencies.
+
+`thread-cache-stability.rb` records actual pinned Rails room and scrolling-thread
+reloads. Its three states cover two existing replies, a third reply posted through
+HTTP, then a thread rename. Every helper key and full fragment is asserted against
+Rails. Rust additionally asserts unchanged fragment keys and `Arc::ptr_eq` for
+existing replies after posting, and for both parent and replies after renaming.
+The separate parent regression asserts that the displayed count changes from
+`2 replies` to `3 replies`, changes its fragment key and replaces its allocation.
+Before the production fix, posting/renaming failed their key assertions while the
+parent-count regression passed:
+
+```text
+Thread post: helper_key_unchanged=true; html_unchanged=true; fragment_key_unchanged=false; allocation_reused=false
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 1859 filtered out; finished in 1.60s
+```
+
+The accepted scrolling-cache freshness decision still applies: retained per-message
+rendered dependencies refresh current data where Rails' collection might stay stale.
+Removing an unrendered Thread version preserves those freshness dependencies and
+Rails' actual parent-count invalidation.
+
+### Fresh GitHub card fixture
+
+Pinned Rails does **not** skip fetching a fresh card when a new reference is created.
+`app/models/github/pull_request_reference_sync.rb:23` schedules for a newly created
+reference **or** a stale card, subject to the atomic claim at
+`app/models/github/pull_request.rb:46`. Rust's existing scheduling matches it.
+`fresh-github-reference.rb` records one queued fetch for a new reference with
+`stale? == false`, then no additional fetch when reconciling the existing fresh
+reference with the claim cleared. Its Rails adapter records jobs without executing
+them; the Rust regression uses the existing stopped-runner integration fixture.
+
+The cache-sharing/form fixture now calls `TestApp::without_job_runner()` before
+creating references. Its supplied fresh card cannot be overwritten by an actual
+fetch/error. The targeted Rust tests also run in a container with external networking
+disabled. Production fetch behavior is unchanged.
+
+### Verification for this round
+
+Rust 1.98.1, fresh `default`/`first_run` parity seeds, `CI=1`, two build jobs,
+at most eight test threads, ports 54000–54049, and the unchanged four-slot host
+rustc throttle. The release-input build uses one compiler under one host slot.
+All gates passed. No `.claude/delegation` files changed.
+
+```sh
+cargo test --locked -p campfire controllers::messages:: -- --test-threads=8
+cargo test --locked -p campfire controllers::messages::rendered_dependency_tests:: -- --nocapture --test-threads=8
+cargo test --locked -p campfire cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_across_sessions -- --test-threads=8
+cargo test --locked -p campfire integrations::github::references::tests:: -- --test-threads=8
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo metadata --locked --format-version 1
+bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
+PARITY_IMAGE=triage-reference-d7c7de92 python3 rust/reference-tools/messaging/check-goldens.py thread-cache-stability fresh-github-reference cache-stability rendered-dependencies cache-reaction-review
+PARITY_IMAGE=triage-reference-d7c7de92 python3 rust/reference-tools/messaging/reference-check.py
+```
+
+Raw final summaries, in command order (only terminal color escapes removed):
+
+```text
+test result: ok. 108 passed; 0 failed; 0 ignored; 0 measured; 1754 filtered out; finished in 61.54s
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 1843 filtered out; finished in 10.26s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1861 filtered out; finished in 2.05s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1856 filtered out; finished in 1.59s
+    Finished `dev` profile [unoptimized] target(s) in 1m 54s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 20s
+```
+
+Locked metadata exited 0 and parsed as workspace metadata.
+
+Raw Arc reuse witness and Rails reproduction/source checks:
+
+```text
+Thread post: helper_key_unchanged=true; html_unchanged=true; fragment_key_unchanged=true; allocation_reused=true
+WS8bm thread cache stability: replies retain Rails helper keys/HTML after post and rename; parent count refreshes
+WS8bm fresh GitHub reference: Rails enqueues the new reference; unchanged fresh reference enqueues nothing
+WS8bm cache stability: 2 unrelated HTTP writes preserve Rails helper keys and HTML
+WS8bm rendered dependencies: 14 warm-room update/reload pairs from pinned Rails
+WS8bm golden check: 5 Rails oracles re-run; 6 golden files byte-identical
 WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
 WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
 ```

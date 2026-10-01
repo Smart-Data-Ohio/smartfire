@@ -80,7 +80,7 @@ rendered_keys = ->(message) do
   users += message.poll&.poll_votes&.filter_map(&:user) || []
   records = sources + users + sources.filter_map(&:rich_text_body)
   records += [*message.boosts, *message.message_pins, *message.agent_steps, *message.drive_attachments,
-    message.poll, *message.poll&.poll_options, *message.poll&.poll_votes, message.channel_thread, message.thread,
+    message.poll, *message.poll&.poll_options, *message.poll&.poll_votes,
     *message.message_references, *message.github_pull_request_references, *message.github_pull_requests,
     *message.fizzy_card_references, *message.fizzy_cards, *message.twitter_post_references, *message.twitter_posts,
     *message.event_references, *message.events, *message.link_embed_references, *message.link_embeds]

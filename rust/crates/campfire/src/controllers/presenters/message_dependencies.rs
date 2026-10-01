@@ -182,6 +182,9 @@ impl Presenter<'_> {
         let attachments = format!(
             "(record_type='Message' AND name='attachment' AND record_id IN ({id_list})) OR (record_type='User' AND name='avatar' AND record_id IN ({user_list})) OR (record_type='ActionText::RichText' AND name='embeds' AND record_id IN (SELECT id FROM action_text_rich_texts WHERE record_type='Message' AND record_id IN ({id_list}) AND name='body'))"
         );
+        // app/views/messages/_thread_indicator.html.erb:9 renders only the parent's
+        // count, already in the original helper key (pull_requests_helper.rb:42).
+        // Replies render their own thread_id URLs, not thread names/activity stamps.
         let queries = [
             ("active_storage/attachments", format!("SELECT id,NULL FROM active_storage_attachments WHERE {attachments}")),
             ("active_storage/blobs", format!("SELECT id,NULL FROM active_storage_blobs WHERE id IN (SELECT blob_id FROM active_storage_attachments WHERE {attachments})")),
@@ -194,7 +197,6 @@ impl Presenter<'_> {
             ("polls", "SELECT id,updated_at FROM polls WHERE message_id=?1".into()),
             ("poll_options", "SELECT id,updated_at FROM poll_options WHERE poll_id IN (SELECT id FROM polls WHERE message_id=?1)".into()),
             ("poll_votes", "SELECT id,updated_at FROM poll_votes WHERE poll_id IN (SELECT id FROM polls WHERE message_id=?1)".into()),
-            ("channel_threads", "SELECT id,updated_at FROM channel_threads WHERE parent_message_id=?1 OR id IN (SELECT thread_id FROM messages WHERE id=?1)".into()),
             ("message_references", "SELECT id,updated_at FROM message_references WHERE message_id=?1".into()),
             ("github/pull_request_threads", "SELECT id,updated_at FROM github_pull_request_threads WHERE room_id IN (SELECT room_id FROM messages WHERE id=?1) AND github_pull_request_id IN (SELECT github_pull_request_id FROM github_pull_request_references WHERE message_id=?1)".into()),
         ];
