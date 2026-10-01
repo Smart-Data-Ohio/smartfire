@@ -333,7 +333,7 @@ impl CalendarEvent {
             tx.after_commit(move |after| {
                 // Rails after_create_commit: earlier successful side effects survive
                 // a rejected announcement. Each write keeps its own jobs atomic.
-                crate::run_write(after.conn(), after.env(), |tx| created.invite(tx))?;
+                created.invite_after_commit(after)?;
                 crate::run_write(after.conn(), after.env(), |tx| {
                     created.announce_in_channel(tx)
                 })
@@ -362,16 +362,22 @@ impl CalendarEvent {
         attendance::EventAttendance::record_organizer(tx, &event)?;
         Ok(event)
     }
-    fn invite(&self, tx: &mut Tx<'_>) -> Result<()> {
+    fn invite_after_commit(&self, after: &mut Tx<'_>) -> Result<()> {
         let ids = query_all(
-            tx.conn(),
+            after.conn(),
             "SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id \
             WHERE m.room_id=? AND u.id<>? AND u.status=0 AND u.role<>2 AND m.involvement IN ('mentions','everything') ORDER BY u.id",
             params![self.room_id, self.organizer_id],
             |r| r.get::<_, i64>(0),
         )?;
         for user_id in ids {
-            ActivityItem::refresh_unread(tx, user_id, "Event", self.id, "event_invitation")?;
+            // Rails' create_or_find_by! commits each recipient independently.
+            // A later failure stops fan-out and announcement, retaining earlier
+            // rows and their already-published after-commit activity frames.
+            crate::run_write(after.conn(), after.env(), |tx| {
+                ActivityItem::refresh_unread(tx, user_id, "Event", self.id, "event_invitation")
+                    .map(|_| ())
+            })?;
         }
         Ok(())
     }

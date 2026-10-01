@@ -58,6 +58,63 @@ fn count(t: &TestDb, table: &str) -> i64 {
 }
 
 #[test]
+fn pr174_invitation_failure_preserves_committed_recipients() {
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "calendar_event_test/invitation-boundaries.json"
+    ))
+    .unwrap();
+    for case in oracle.as_array().unwrap() {
+        let t = frozen();
+        let rejected = case["rejected"].as_i64().unwrap();
+        t.write(move |tx| {
+            tx.conn().execute_batch(&format!("CREATE TEMP TRIGGER ws14e_reject_invitation BEFORE INSERT ON activity_items WHEN NEW.source_type='Event' AND NEW.user_id={rejected} BEGIN SELECT RAISE(ABORT, 'ws14e rejected invitation'); END"))?;
+            Ok(())
+        });
+        let a = attrs(&t);
+        assert!(t.try_write(move |tx| CalendarEvent::create(tx, a)).is_err());
+        let event = t.read(|c| {
+            let eid = c.query_row(
+                "SELECT id FROM events WHERE title='Planning session'",
+                [],
+                |r| r.get(0),
+            )?;
+            CalendarEvent::find(c, eid)
+        });
+        let invited: Vec<i64> = t.read(|c| {
+            let mut s = c.prepare("SELECT user_id FROM activity_items WHERE source_type='Event' AND source_id=? AND event_type='event_invitation' ORDER BY user_id")?;
+            Ok(s.query_map([event.id], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?)
+        });
+        assert_eq!(
+            serde_json::to_value(invited).unwrap(),
+            case["invited"],
+            "recipient position {}",
+            case["position"]
+        );
+        assert!(case["persisted"].as_bool().unwrap());
+        assert_eq!(
+            t.read(|c| event.response_for(c, Some(id("david")))),
+            Some(case["organizer_response"].as_str().unwrap().into())
+        );
+        assert_eq!(
+            t.read(|c| Ok(c.query_row(
+                "SELECT COUNT(*) FROM event_references WHERE event_id=?",
+                [event.id],
+                |r| r.get::<_, i64>(0)
+            )?)),
+            case["announcements"].as_i64().unwrap()
+        );
+        // The primary write's sync callback still runs after a failed invitation.
+        assert_eq!(
+            t.events()
+                .iter()
+                .filter(|e| matches!(e, Event::Job(j) if j.class == "Calendar::SyncEntryJob"))
+                .count(),
+            1
+        );
+    }
+}
+
+#[test]
 fn event_validations_match_rails_messages() {
     let t = frozen();
     type ValidationCase = (fn(&mut NewCalendarEvent), &'static str, &'static str);
