@@ -182,8 +182,25 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
             .cloned()
             .map(Value::Object)
             .unwrap_or(json!({}));
-        let (status, headers, _) =
+        let (status, headers, actual) =
             wire_request(&f, method, path, body, case["bad_csrf"] == true).await;
+        let expected = case["response_body"].as_str().unwrap();
+        if actual != expected {
+            let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../../.scratch/ws16-http");
+            std::fs::write(scratch.join("full.actual.html"), &actual).unwrap();
+            std::fs::write(scratch.join("full.expected.html"), expected).unwrap();
+        }
+        assert!(
+            actual == expected,
+            "{} complete HTTP body differs at byte {}",
+            case["name"],
+            actual
+                .bytes()
+                .zip(expected.bytes())
+                .position(|(a, b)| a != b)
+                .unwrap_or(actual.len().min(expected.len()))
+        );
         assert_eq!(
             status,
             case["status_code"].as_u64().unwrap() as u16,
@@ -238,7 +255,7 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
         );
     }
     println!(
-        "Slack run HTTP parity: {} Rails action cases matched sessions, CSRF, redirects, flashes, rows, audits and durable jobs",
+        "Slack run HTTP parity: {} Rails action cases matched complete response bodies, sessions, CSRF, redirects, flashes, rows, audits and durable jobs",
         checked
     );
     assert!(checked > 0, "no selected Rails HTTP cases");
@@ -277,7 +294,14 @@ async fn wire_request_with_session(
         listener.expect("free WS16 HTTP port")
     };
     let address = listener.local_addr().unwrap();
-    let router = f.router.clone();
+    let router = f.router.clone().layer(axum::middleware::from_fn(
+        |request: axum::extract::Request, next: axum::middleware::Next| async move {
+            crate::controllers::presenters::test_support::with_fixed_render_secrets(
+                next.run(request),
+            )
+            .await
+        },
+    ));
     let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
     let raw = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, [7u8; 32]);
     values["_csrf_token"] = json!(raw);
@@ -342,6 +366,223 @@ async fn wire_request_with_session(
         body.into()
     };
     (status, headers, body)
+}
+
+#[tokio::test]
+async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
+    let mut routes = crate::integrations::slack::store::tests::routes(true);
+    let scopes = crate::integrations::slack::oauth::USER_SCOPES.join(",");
+    routes.push(crate::integrations::test_support::Route::new("POST","slack.com","/api/oauth.v2.access",200)
+        .body(json!({"ok":true,"team":{"id":"TFIXTURE","name":"Fixture"},"authed_user":{"id":"UADMIN","access_token":"fixture-user-grant","scope":scopes}}).to_string()));
+    let f = Fresh::new(0, routes).await;
+    f.workspace().await;
+    f.app
+        .db
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE slack_workspaces SET team_id='TFIXTURE'", [])?;
+            let digest =
+                campfire_db::models::user::password_digest("fixture-personal-password", 4)?;
+            tx.conn()
+                .execute("UPDATE users SET password_digest=? WHERE id=811", [digest])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let (code, _, html) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
+    assert_eq!(code, 200);
+    assert!(html.contains("Connect with your Slack account"));
+    assert!(f.server.received().is_empty());
+    let (code, headers, _) = wire_request(
+        &f,
+        "GET",
+        "/slack/oauth/start?return_to=/slack/imports",
+        Value::Null,
+        false,
+    )
+    .await;
+    assert_eq!(code, 302);
+    assert_eq!(headers["location"], "http://example.org/sudo/new");
+    let (code, headers, _) = wire_request_with_session(
+        &f,
+        "POST",
+        "/sudo",
+        json!({"password":"fixture-personal-password"}),
+        false,
+        response_session(&f, &headers),
+    )
+    .await;
+    assert_eq!(code, 302);
+    let (code, headers, _) = wire_request_with_session(
+        &f,
+        "GET",
+        "/slack/oauth/start?return_to=/slack/imports",
+        Value::Null,
+        false,
+        response_session(&f, &headers),
+    )
+    .await;
+    assert_eq!(code, 302);
+    let location = url::Url::parse(headers["location"].to_str().unwrap()).unwrap();
+    assert_eq!(location.host_str(), Some("slack.com"));
+    let signed = location
+        .query_pairs()
+        .find(|(key, _)| key == "state")
+        .unwrap()
+        .1
+        .into_owned();
+    let mut query = url::form_urlencoded::Serializer::new(String::new());
+    query
+        .append_pair("state", &signed)
+        .append_pair("code", "fixture-personal-code");
+    let (code, headers, _) = wire_request_with_session(
+        &f,
+        "GET",
+        &format!("/slack/oauth/callback?{}", query.finish()),
+        Value::Null,
+        false,
+        response_session(&f, &headers),
+    )
+    .await;
+    assert_eq!(code, 302);
+    assert_eq!(headers["location"], "http://example.org/slack/imports");
+    let (_, _, html) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
+    assert!(html.contains("Connected. Reconnect to refresh the grant."));
+    assert!(html.contains("Start preview"));
+    let (code, headers, _) = wire_request(
+        &f,
+        "POST",
+        "/slack/imports",
+        json!({"mode":"dry_run"}),
+        false,
+    )
+    .await;
+    assert_eq!(code, 302);
+    let preview = headers["location"]
+        .to_str()
+        .unwrap()
+        .rsplit('/')
+        .next()
+        .unwrap()
+        .parse::<i64>()
+        .unwrap();
+    let crypto = std::sync::Arc::new(rails_compat::ar_encryption::ArEncryption::new(
+        &f.app.secrets,
+    ));
+    crate::integrations::slack::store::tests::import(
+        &f.app.db,
+        crypto.clone(),
+        preview,
+        f.app.slack_network.clone(),
+    )
+    .await;
+    let (_, _, html) = wire_request(
+        &f,
+        "GET",
+        &format!("/slack/imports/{preview}"),
+        Value::Null,
+        false,
+    )
+    .await;
+    assert!(html.contains("CPRIV"));
+    assert!(html.contains("GMPIM"));
+    assert!(html.contains("DIM"));
+    let (code,headers,_)=wire_request(&f,"POST","/slack/imports",json!({"mode":"import","dry_run_id":preview,"conversation_ids":["CPRIV","GMPIM","DIM"],"preset":"full"}),false).await;
+    assert_eq!(code, 302);
+    let id = headers["location"]
+        .to_str()
+        .unwrap()
+        .rsplit('/')
+        .next()
+        .unwrap()
+        .parse::<i64>()
+        .unwrap();
+    let row = crate::integrations::slack::store::tests::import(
+        &f.app.db,
+        crypto,
+        id,
+        f.app.slack_network.clone(),
+    )
+    .await;
+    assert_eq!(row.kind, "personal");
+    assert!(row.stats["counts"]["messages"].as_i64().unwrap() > 0);
+    let (code, _, html) = wire_request(
+        &f,
+        "GET",
+        &format!("/slack/imports/{id}/status"),
+        Value::Null,
+        false,
+    )
+    .await;
+    assert_eq!(code, 200);
+    assert!(html.contains("completed"));
+    let (code, _, _) = wire_request(
+        &f,
+        "POST",
+        &format!("/slack/imports/{id}/undo"),
+        json!({}),
+        true,
+    )
+    .await;
+    assert_eq!(code, 422);
+    let (code, _, _) = wire_request(
+        &f,
+        "POST",
+        &format!("/slack/imports/{id}/undo"),
+        json!({}),
+        false,
+    )
+    .await;
+    assert_eq!(code, 302);
+    for _ in 0..30 {
+        let db = f.app.db.clone();
+        crate::integrations::slack::jobs::perform_undo(
+            f.app.db.clone(),
+            id,
+            move |_, lease| async move {
+                crate::integrations::slack::undoer::Undoer { db, id, lease }
+                    .step()
+                    .await
+            },
+        )
+        .await
+        .unwrap();
+        if crate::integrations::slack::jobs::tests::run(&f.app.db, id)
+            .await
+            .status
+            == "undone"
+        {
+            break;
+        }
+    }
+    let (_, _, html) = wire_request(
+        &f,
+        "GET",
+        &format!("/slack/imports/{id}"),
+        Value::Null,
+        false,
+    )
+    .await;
+    assert!(html.contains("undone"));
+    f.app
+        .db
+        .read(move |c| {
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM slack_import_records WHERE slack_import_id=?",
+                    [id],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                0
+            );
+            assert!(campfire_db::User::find(c, 811)?.password_digest.is_some());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    println!(
+        "Slack personal HTTP interaction: opt-in -> sudo -> OAuth -> preview -> import -> CSRF-protected undo matched"
+    );
 }
 
 #[tokio::test]

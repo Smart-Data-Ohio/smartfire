@@ -28,11 +28,19 @@ impl Fresh {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws16-http");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
+        let environment = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../parity/.env.reference"
+        ))
+        .unwrap();
         let config = Config::from_lookup(|key| match key {
-            "SECRET_KEY_BASE" => Some("a".repeat(128)),
             "CAMPFIRE_STORAGE_PATH" => Some(dir.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
-            _ => None,
+            _ => environment.lines().find_map(|line| {
+                line.split_once('=')
+                    .filter(|(name, _)| *name == key)
+                    .map(|(_, value)| value.to_owned())
+            }),
         })
         .unwrap();
         let boot = app::boot_with_network(

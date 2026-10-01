@@ -30,7 +30,7 @@ fn base(admin: bool) -> &'static str {
 fn path(admin: bool, id: i64) -> String {
     format!("{}/{id}", base(admin))
 }
-async fn find(c: &Ctx, user: &User, admin: bool) -> Result<SlackImport> {
+async fn find(c: &mut Ctx, user: &User, admin: bool) -> Result<SlackImport> {
     let id = concerns::ruby_to_i(&param(c, "id"));
     let uid = user.id;
     c.app()
@@ -41,7 +41,15 @@ async fn find(c: &Ctx, user: &User, admin: bool) -> Result<SlackImport> {
         })
         .await
         .map_err(Error::internal)?
-        .ok_or(Error::NotFound)
+        .ok_or_else(|| {
+            if admin {
+                Error::NotFound
+            } else {
+                // ImportsController#set_run renders `head :not_found`; it does not
+                // raise RecordNotFound and therefore bypasses the public error page.
+                Error::Halt(Box::new(c.head(StatusCode::NOT_FOUND)))
+            }
+        })
 }
 async fn log(c: &Ctx, user: &User, id: i64, action: &str, changes: Option<Value>) -> Result<()> {
     let context = audit(c, user)?;

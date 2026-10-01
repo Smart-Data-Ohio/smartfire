@@ -357,6 +357,15 @@ pub struct PersonalIndex<'a> {
     pub data: &'a SetupData,
     pub runs: &'a [RunData],
 }
+// The personal controller supplies the scoped current user; detached Rails renderers
+// have no scoped route defaults and retain the unscoped profile path.
+pub fn profile_path(ctx: &ViewContext) -> &'static str {
+    if ctx.current_user.is_some() {
+        "/users/me/profile"
+    } else {
+        "/users/profile"
+    }
+}
 impl Page for PersonalIndex<'_> {
     fn page_title(&self) -> Option<String> {
         Some("Import from Slack".into())

@@ -1,6 +1,6 @@
 {% extends "layouts/application.html" %}
 {%- block head %}{% endblock %}{% block nav %}  <div class="flex-item-justify-start">
-    {{ h::link_back_to(ctx, "/users/profile") }}
+    {{ h::link_back_to(ctx, crate::slack::profile_path(ctx)) }}
   </div>
 {% endblock %}{% block content %}
 

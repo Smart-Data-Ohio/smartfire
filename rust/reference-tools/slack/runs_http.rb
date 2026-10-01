@@ -4,6 +4,14 @@ ActiveJob::Base.queue_adapter=:test
 ActionCable.server.instance_variable_set(:@pubsub,ActionCable::SubscriptionAdapter::Test.new(ActionCable.server))
 Rails.cache=ActiveSupport::Cache::MemoryStore.new
 ApplicationController.allow_forgery_protection=true
+ActionDispatch::Request.prepend(Module.new{def content_security_policy_nonce; 'NONCE'; end})
+ApplicationController.prepend(Module.new do
+ def form_authenticity_token(form_options: {})
+  action,method=form_options.values_at(:action,:method)
+  action && method ? "#{method.to_s.downcase}:#{action}" : 'GLOBAL'
+ end
+ def content_security_policy_nonce; 'NONCE'; end
+end)
 ActiveRecord::Schema.verbose=false
 travel_to Time.utc(2026,1,1,12)
 Net::HTTP.singleton_class.prepend(Module.new{define_method(:start){|*|raise 'No Slack network allowed in run controller oracle'}})
@@ -95,11 +103,11 @@ rows=cases.map do |c|
  cookies.encrypted[:_campfire_session]={value:{'session_id'=>'0123456789abcdef0123456789abcdef','_csrf_token'=>csrf}}
  cookie="session_token=#{CGI.escape(cookies[:session_token])}; _campfire_session=#{CGI.escape(cookies[:_campfire_session])}"
  masked=Base64.urlsafe_encode64(([9]*32+[14]*32).pack('C*'),padding:false)
- response=Rack::MockRequest.new(Rails.application).request(c.fetch(:method,'GET'),'http://example.org'+c[:path],'HTTP_COOKIE'=>cookie,'CONTENT_TYPE'=>'application/json','HTTP_X_CSRF_TOKEN'=>c[:bad_csrf] ? 'invalid' : masked,input:JSON.generate(c.fetch(:body,{})))
+ response=Rack::MockRequest.new(Rails.application).request(c.fetch(:method,'GET'),'http://example.org'+c[:path],'HTTP_COOKIE'=>cookie,'CONTENT_TYPE'=>'application/json','HTTP_X_CSRF_TOKEN'=>c[:bad_csrf] ? 'invalid' : masked,'action_dispatch.content_security_policy_nonce_generator'=>->(_){'NONCE'},input:JSON.generate(c.fetch(:body,{})))
  snapshot=SlackImport.order(:id).map{|r|r.attributes.slice('id','slack_workspace_id','slack_connection_id','user_id','kind','mode','status','options','state','stats','error','started_at','heartbeat_at','finished_at','created_at','updated_at')}
  audit=AuditLog.order(:id).map{|l|l.attributes.slice('action','actor_id','target_type','target_id','details')}
  jobs=ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|{'class'=>j[:job].name,'arguments'=>j[:args],'queue'=>j[:queue]}}
- {**c,status_code:response.status,location:response['Location'],flash:Thread.current[:flash],runs:snapshot,audit:,jobs:}
+ {**c,status_code:response.status,location:response['Location'],flash:Thread.current[:flash],runs:snapshot,audit:,jobs:,response_body:response.body}
 end
 File.write(File.join(ENV.fetch('PARITY_WORK'),'vectors/slack/runs_http.json'),JSON.pretty_generate(rows)+"\n")
 puts "Slack run HTTP oracle: #{rows.size} real Rails action cases with signed sessions and verified CSRF generated"
