@@ -15,7 +15,7 @@ async fn show_renders_the_room_and_remembers_it() {
     let html = reply.text();
     assert!(html.contains("<title>All Talk</title>"), "{html}");
     assert!(html.contains(r#"<meta name="current-room-id" content="486777696">"#));
-    assert_eq!(html.matches(r#"data-controller="reply""#).count(), 0, "authorized empty list placeholder until WS8b-m adapter lands");
+    assert_eq!(html.matches(r#"data-controller="reply""#).count(), 40, "main renders the gathered last page");
     let messages=app.db().read(|conn|crate::controllers::presenters::room_shell::find_messages(conn,ALL_TALK,None)).await.unwrap();
     assert_eq!(messages.len(),40,"the shell gathers the last page for its owner");
     assert!(reply.headers.get_all("set-cookie").iter().any(|c| c.to_str().unwrap().starts_with(&format!("last_room={ALL_TALK}"))));
