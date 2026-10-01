@@ -2,6 +2,10 @@
 // clipboard and drop events. These checks never replace an app response.
 import assert from 'node:assert/strict';
 export async function attachMenu({author,recipient,caseName}) {
+  const uploads=[];
+  for(const browser of [author,recipient]) browser.on('request',request=>{
+    if(request.method()==='POST'&&(/\/messages(?:\.json)?$/.test(new URL(request.url()).pathname)||new URL(request.url()).pathname.endsWith('/direct_uploads'))) uploads.push(request.url());
+  });
   const page=caseName==='+ opens the file picker directly without Drive'||caseName==='device files, paste, and drag-and-drop still preview uploads'?recipient:author;
   const button=page.locator('#composer button.composer__attachment-btn');
   const menu=page.locator('#composer .attach-menu');
@@ -62,4 +66,5 @@ export async function attachMenu({author,recipient,caseName}) {
     });
     await page.locator('#composer .composer__file').filter({hasText:'dropped'}).waitFor();assert.equal(await page.locator('#composer .composer__file').count(),3);
   } else throw new Error(`unimplemented attach menu case ${caseName}`);
+  assert.deepEqual(uploads,[],"pickers and unsent previews must not POST uploads or messages");
 }

@@ -114,12 +114,15 @@ CASES = {
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("files", nargs="*", choices=CASES)
 parser.add_argument("--case", help="run one exact pinned declaration from the selected files")
+parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
 if args.case:
     assert any(args.case in CASES[file] for file in files), "unknown/unmapped named case"
+for case in args.exclude_case:
+    assert any(case in CASES[file] for file in files), "unknown excluded named case"
 SCRATCH.mkdir(exist_ok=True)
 env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="8", PARITY_CPUS="2",
            PARITY_NAMESPACE="ws8bm-behavior", PARITY_OWNER="ws8bm", TMPDIR=str(SCRATCH))
@@ -169,7 +172,7 @@ mutation_names = set(json.loads(subprocess.check_output([
 ], cwd=ROOT, text=True))) if args.negative else set()
 for file in files:
     source = subprocess.check_output(["git", "show", f"{PIN}:test/system/{file}_test.rb"], cwd=ROOT)
-    selected = [case for case in CASES[file] if not args.case or case == args.case]
+    selected = [case for case in CASES[file] if (not args.case or case == args.case) and case not in args.exclude_case]
     if args.negative:
         if args.case:
             assert args.case in mutation_names, "no served mutant for this named check"
@@ -399,7 +402,11 @@ for file in files:
                                 actual_blobs = {row[0] for row in conn.execute("SELECT id FROM active_storage_blobs")}
                                 # Live apps may purge old unattached seed blobs. The
                                 # invariant is no new uploads, not suppressing purge.
-                                added_blobs = actual_blobs - blobs
+                                # Loading seeded image messages can legitimately create a
+                                # tracked variant (observed on pinned Rails). Only
+                                # derivatives of seed blobs may add storage rows.
+                                variants = {blob_id for blob_id, parent_id in conn.execute("SELECT attachment.blob_id,variant.blob_id FROM active_storage_attachments attachment JOIN active_storage_variant_records variant ON variant.id=attachment.record_id WHERE attachment.record_type='ActiveStorage::VariantRecord' AND attachment.name='image'") if parent_id in blobs}
+                                added_blobs = actual_blobs - blobs - variants
                                 if added_blobs:
                                     rows = [(blob_id, conn.execute("SELECT filename,content_type,byte_size FROM active_storage_blobs WHERE id=?", (blob_id,)).fetchone(), conn.execute("SELECT record_type,record_id,name FROM active_storage_attachments WHERE blob_id=?", (blob_id,)).fetchall()) for blob_id in sorted(added_blobs)]
                                     print(f"WS8bm unsent blob diagnostics: {database}: {rows!r}", flush=True)
