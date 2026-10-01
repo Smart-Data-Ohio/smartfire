@@ -9,7 +9,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[3]
 SCRATCH = ROOT / ".scratch/messaging-golden-check"
 IMAGE = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
-ORACLES = ["preview", "fragments", "root", "paging", "broadcasts", "thread-memberships", "collection", "room-list", "message-states", "thread-message-reads", "thread-message-writes", "thread-pages", "thread-lifecycle", "thread-content", "forwards", "forward-success", "modern-boosts", "signed-attachments", "boost-pages", "thread-review", "thread-upload-coverage", "client-retries"]
+ORACLES = ["preview", "fragments", "root", "paging", "broadcasts", "thread-memberships", "collection", "room-list", "message-states", "thread-message-reads", "thread-message-writes", "thread-pages", "thread-lifecycle", "thread-content", "forwards", "forward-success", "modern-boosts", "signed-attachments", "boost-pages", "thread-review", "thread-upload-coverage", "client-retries", "avatar-logo-uploads"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("names", nargs="*", choices=ORACLES)
 parser.add_argument("--write", action="store_true", help="regenerate committed vectors from Rails")
