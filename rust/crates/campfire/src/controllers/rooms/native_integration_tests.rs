@@ -117,7 +117,7 @@ async fn native_room_page_provider_cards_match_rails_bytes() {
     assert_eq!(populated, 3, "the seed must exercise all three merged provider bodies");
 }
 
-async fn cards_in_viewer_zones(zones: &[Option<&str>], thread: bool) {
+async fn zone_fixture_app() -> (TestApp, serde_json::Value) {
     let app = TestApp::boot_frozen().await.expect("default seed required");
     let oracle: serde_json::Value = serde_json::from_str(include_str!("event_zones.json")).unwrap();
     let rows = oracle["rows"].clone();
@@ -144,6 +144,11 @@ async fn cards_in_viewer_zones(zones: &[Option<&str>], thread: bool) {
             (github["updated_at"].as_str().unwrap(), github["id"].as_i64().unwrap()))?;
         Ok(())
     }).await.unwrap();
+    (app, oracle)
+}
+
+async fn cards_in_viewer_zones(zones: &[Option<&str>], thread: bool) {
+    let (app, oracle) = zone_fixture_app().await;
     let mut browser = app.david();
     for zone in zones {
         let stored = zone.map(str::to_owned);
@@ -186,4 +191,173 @@ async fn native_room_event_cards_match_rails_utc_and_invalid_zone_fallbacks() {
 #[tokio::test]
 async fn native_thread_header_matches_rails_viewer_zones() {
     cards_in_viewer_zones(&[Some("Hawaii"), Some("Eastern Time (US & Canada)"), Some("UTC"), Some("Hawaii")], true).await;
+}
+
+fn write_zone_oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!("card_write_zones.json")).unwrap()
+}
+
+fn zone_cases<'a>(oracle: &'a serde_json::Value, kind: &str, defaults: bool) -> Vec<&'a serde_json::Value> {
+    oracle["cases"].as_array().unwrap().iter().filter(|case| {
+        case["kind"] == kind && matches!(case["zone"].as_str(), None | Some("UTC" | "" | "Not a real zone")) == defaults
+    }).collect()
+}
+
+async fn set_audit_zone(app: &TestApp, case: &serde_json::Value) {
+    let zone = case["zone"].as_str().map(str::to_owned);
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE users SET time_zone=? WHERE id=?", (zone, DAVID))?;
+        Ok(())
+    }).await.unwrap();
+}
+
+fn assert_audit_card(body: &str, case: &serde_json::Value, expected: &str) {
+    let actual = card_container(body, case["target"].as_str().unwrap());
+    if actual != expected { rails_mismatch(actual, expected, &format!("{} {:?}: {}", case["kind"], case["zone"], case["path"])); }
+    assert_eq!(campfire_cable::turbo::session_bound(actual), None);
+}
+
+async fn audit_message_creation(defaults: bool) {
+    let (app, _) = zone_fixture_app().await;
+    let oracle = write_zone_oracle();
+    let (mut clients, server) = audit_subscribers(&app).await;
+    let mut browser = app.david();
+    for case in zone_cases(&oracle, "message_create", defaults) {
+        set_audit_zone(&app, case).await;
+        let sequence = case["message_id"].as_i64().unwrap() - 1;
+        app.db().write(move |tx| {
+            tx.conn().execute("UPDATE sqlite_sequence SET seq=? WHERE name='messages'", [sequence])?;
+            Ok(())
+        }).await.unwrap();
+        let response = browser.write(Req::new(axum::http::Method::POST, case["path"].as_str().unwrap())
+            .header("accept", "text/vnd.turbo-stream.html").form(&[
+                ("message[client_message_id]", case["client_id"].as_str().unwrap()),
+                ("message[markdown_source]", case["source"].as_str().unwrap()),
+            ])).await;
+        assert_eq!(response.status.as_u16(), case["status"].as_u64().unwrap() as u16);
+        assert_audit_card(&response.text(), case, case["html"].as_str().unwrap());
+        for client in &mut clients {
+            let frame: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
+            assert_audit_card(frame["message"].as_str().unwrap(), case, case["broadcast_html"].as_str().unwrap());
+        }
+        let reload = browser.get(&format!("/rooms/{ALL_TALK}")).await;
+        assert_eq!(reload.status, StatusCode::OK);
+        assert_audit_card(&reload.text(), case, case["html"].as_str().unwrap());
+        // Retries render in the current request zone without repeating the creation.
+        let retry = browser.write(Req::new(axum::http::Method::POST, case["path"].as_str().unwrap())
+            .header("accept", "text/vnd.turbo-stream.html").form(&[("message[client_message_id]", case["client_id"].as_str().unwrap())])).await;
+        assert_eq!(retry.status, StatusCode::OK);
+        assert_audit_card(&retry.text(), case, case["html"].as_str().unwrap());
+    }
+    for client in &mut clients { client.assert_silent().await; }
+    drop(clients);
+    server.abort();
+}
+
+async fn audit_github_messages(defaults: bool) {
+    let (app, _) = zone_fixture_app().await;
+    let oracle = write_zone_oracle();
+    let mut browser = app.david();
+    let cases = zone_cases(&oracle, "github_message", defaults);
+    // Revisit the first viewer after other zones warm the same message caches.
+    for case in cases.iter().copied().chain(cases.iter().take(4).copied()) {
+        set_audit_zone(&app, case).await;
+        let path = case["path"].as_str().unwrap();
+        let response = browser.send(Req::new(axum::http::Method::GET, path).header("accept",
+            if path.contains("refresh") { "text/vnd.turbo-stream.html" } else { "text/html" })).await;
+        assert_eq!(response.status.as_u16(), case["status"].as_u64().unwrap() as u16, "{path}");
+        assert_audit_card(&response.text(), case, case["html"].as_str().unwrap());
+    }
+}
+
+async fn audit_socket(app: &TestApp, url: &str, origin: &str, user: i64) -> crate::channels::tests::support::Client {
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    let browser = app.sign_in(user).await;
+    let mut request = url.into_client_request().unwrap();
+    request.headers_mut().insert("cookie", browser.cookie_header().parse().unwrap());
+    request.headers_mut().insert("origin", origin.parse().unwrap());
+    request.headers_mut().insert("sec-websocket-protocol", "actioncable-v1-json".parse().unwrap());
+    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    let mut client = crate::channels::tests::support::Client { socket };
+    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
+    client
+}
+
+async fn audit_subscribers(app: &TestApp) -> ([crate::channels::tests::support::Client; 2], tokio::task::JoinHandle<()>) {
+    app.db().write(|tx| {
+        tx.conn().execute("UPDATE users SET time_zone='Asia/Kolkata' WHERE id=?", [JASON])?;
+        Ok(())
+    }).await.unwrap();
+    let listener = crate::test_support::bind_listener().await;
+    let address = listener.local_addr().unwrap();
+    let router = app.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let room = app.db().read(|conn| campfire_db::Room::find(conn, ALL_TALK)).await.unwrap();
+    let stream = crate::channels::room_gid(&room).to_param();
+    let signed = rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&stream, "messages"]);
+    let channel = crate::channels::tests::support::identifier(serde_json::json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}));
+    let mut clients = [audit_socket(app, &format!("ws://{address}/cable"), &format!("http://{address}"), DAVID).await,
+        audit_socket(app, &format!("ws://{address}/cable"), &format!("http://{address}"), JASON).await];
+    for client in &mut clients { client.confirm(&channel).await; }
+    (clients, server)
+}
+
+async fn assert_audit_frame(clients: &mut [crate::channels::tests::support::Client], frame: &serde_json::Value) {
+    let expected = frame["payload"].as_str().unwrap();
+    for client in clients {
+        let message: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
+        let actual = message["message"].as_str().unwrap();
+        if actual != expected { rails_mismatch(actual, expected, "shared actor-zone event broadcast"); }
+        assert_eq!(campfire_cable::turbo::session_bound(actual), None);
+    }
+}
+
+async fn audit_event_broadcasts(defaults: bool) {
+    let (app, _) = zone_fixture_app().await;
+    let oracle = write_zone_oracle();
+    let (mut clients, server) = audit_subscribers(&app).await;
+    let room = app.db().read(|conn| campfire_db::Room::find(conn, ALL_TALK)).await.unwrap();
+    let stream = crate::channels::room_gid(&room).to_param();
+    let mut browser = app.david();
+    for case in zone_cases(&oracle, "event_edit", defaults) {
+        set_audit_zone(&app, case).await;
+        assert_eq!(case["frame"]["stream"], format!("{stream}:messages"));
+        let response = browser.write(Req::new(axum::http::Method::PATCH, case["path"].as_str().unwrap())
+            .form(&[("event[title]", case["title"].as_str().unwrap()), ("event[starts_at]", "2026-03-08T06:30"),
+                ("event[ends_at]", "2026-03-08T07:30"), ("event[time_zone]", "UTC")])).await;
+        assert_eq!(response.status.as_u16(), case["status"].as_u64().unwrap() as u16);
+        assert_audit_frame(&mut clients, &case["frame"]).await;
+        // Validation failure must restore the writer scope too; later jobs have no actor.
+        let invalid = browser.write(Req::new(axum::http::Method::PATCH, case["path"].as_str().unwrap())
+            .form(&[("event[title]", "")])).await;
+        assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY);
+        app.db().write(|tx| campfire_db::CalendarEvent::update(tx, 8000000601,
+            campfire_db::models::calendar_event::changes::EventChanges { title: Some("Background UTC".into()), ..Default::default() })).await.unwrap();
+        assert_audit_frame(&mut clients, &oracle["background"]).await;
+    }
+    for client in &mut clients { client.assert_silent().await; }
+    drop(clients);
+    server.abort();
+}
+
+#[tokio::test]
+async fn zone_audit_message_creation_matches_rails_and_reload() {
+    audit_message_creation(false).await;
+}
+
+#[tokio::test]
+async fn zone_audit_github_message_cards_match_rails_with_warm_zones() {
+    audit_github_messages(false).await;
+}
+
+#[tokio::test]
+async fn zone_audit_event_broadcast_matches_rails_actor_zone_for_every_recipient() {
+    audit_event_broadcasts(false).await;
+}
+
+#[tokio::test]
+async fn zone_audit_utc_and_invalid_zone_fallbacks_cover_all_three_paths() {
+    audit_message_creation(true).await;
+    audit_github_messages(true).await;
+    audit_event_broadcasts(true).await;
 }

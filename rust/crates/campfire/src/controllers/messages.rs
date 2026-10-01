@@ -104,14 +104,16 @@ async fn create_action(c: &mut Ctx) -> Result {
     let kind = room_kind(room.room_type);
     let app = c.app().clone();
     let base_url = c.url_for("");
+    let viewer_id = require_current_user(c)?.id;
     let html = c
         .app()
         .db
         .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
+            let mut presenter = Presenter::new(conn, &app, None);
+            presenter.use_viewer_zone(viewer_id)?;
             let item = campfire_views::fragment_cache::with(&app.fragment_cache, || presenter.message_item(&message))?;
             let account = campfire_db::Account::first(conn)?;
-            page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::CreateStream { ctx, message: &item, room_kind: kind }.render())
+            page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::CreateStream { ctx, message: &item, room_kind: kind }.render())
                 .map_err(|e| campfire_db::Error::Other(e.to_string()))
         })
         .await
@@ -678,13 +680,15 @@ pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> 
 pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
     let base_url = page::renderer_base_url(c);
+    let viewer_id = require_current_user(c)?.id;
     let refreshes = c.app()
         .db
         .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
+            let mut presenter = Presenter::new(conn, &app, None);
+            presenter.use_viewer_zone(viewer_id)?;
             let view = presenter.message(&message)?;
             let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::uncached_message(ctx, &view));
+            let html = page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::uncached_message(ctx, &view));
             let partials = Rendered { message: Some(html), ..Rendered::default() };
             app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
             Ok(presenter.take_github_refreshes())
