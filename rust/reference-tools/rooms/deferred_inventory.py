@@ -76,6 +76,21 @@ files = [
 ]
 handoff_controllers={'public_pages','first_runs','welcome','users','accounts','workspace_icons','pwa','qr_code'}
 handoff_systems={'audit_log','first_run_tour','icons','service_worker','timezone_detection','workspace_icons'}
+# Keep historical source denominators; geometry is not remaining acceptance work.
+pixel_only={
+    'the profile page fits phone widths without scrolling sideways',
+    'headers outside the workspace shell stay opaque over scrolled content',
+    'headers outside the workspace shell never cover the page or its scrollbar',
+}
+mixed_pixels={
+    'mobile drawer animates in, lands in place, and returns focus with motion on',
+    'member selection mode moves no rows and resizes nothing',
+    'people directory bar shifts no rows when toggling',
+    'people directory bar stays stuck while scrolling',
+    'room menu measures at full scale when clamping to the viewport edge',
+    'member rows render without checkboxes and stay inline on desktop and phone',
+    'the new-DM picker does not overflow at phone width',
+}
 def owner(file):
     if file=='test/controllers/audit_log/rooms_audit_test.rb': return 'WS8br room cases; WS8br2 account cases'
     if file.startswith('test/controllers/users/') and '/sidebars_' not in file: return 'WS8br2'
@@ -96,8 +111,17 @@ for file in files:
     cases=[]
     for match in re.finditer(r"^\s*(?:test\s+([\"'])(.*?)\1\s+do|def\s+(test_\w+))",source,re.M):
         cases.append(dict(name=match[2] or match[3],line=source.count('\n',0,match.start())+1))
+    if file.startswith('test/system/'):
+        for case in cases:
+            if case['name'] in pixel_only:
+                case['acceptance_phase']='outside current phase: geometry/style only; not remaining work'
+            else:
+                case['acceptance_phase']='behaviour/system interactions only; no screenshot or pixel comparisons'
+                if case['name'] in mixed_pixels:
+                    case['omitted_assertions']='geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only'
     result.append(dict(file=file,owner=owner(file),reference_file_present=True,source_sha256=hashlib.sha256(pinned.stdout).hexdigest(),declared_cases=cases,declared_count=len(cases),rails_tests_run=0,rails_pass_count=0,status='full-file acceptance deferred'))
 output=dict(reference=args.reference,note='These are source declarations, not dynamically expanded Rails tests. Equivalent Rust subsets are reported separately; no full-file Rails acceptance is claimed.',files=result)
+output['pixel_phase']='Historical source counts retain excluded declarations. Geometry/style-only cases and geometry assertions within mixed cases are outside the current phase, not remaining work.'
 if args.test_log:
     receipts=args.test_log.read_text()
     groups=[

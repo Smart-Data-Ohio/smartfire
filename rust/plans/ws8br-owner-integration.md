@@ -57,8 +57,8 @@ bytes for three rooms and two viewers; no membership or presence write occurs.
 `presenter.composer_facts(&room, &viewer, None, drive_flow)` supplies WS8bm's root
 composer with room ID/kind, viewer-relative domain display name, `thread: None`, the
 static slash-command registry followed by room-scoped agent slash commands, and the
-Drive flow. Drive consent scopes currently select `None` or `Metadata`; the unresolved
-WS14 Picker availability comes from WS13's public configuration adapter: all of
+Drive flow. Drive consent scopes select `None` or `Metadata`; public
+Picker availability comes from WS13's configuration adapter: all of
 `GOOGLE_CLIENT_ID`, `GOOGLE_PICKER_API_KEY` and `GOOGLE_CLOUD_PROJECT_NUMBER` must
 be nonblank, and the viewer must be human. The same facts populate the layout
 meta tags and the root/thread composer input. Eight complete root composer
@@ -148,7 +148,10 @@ each exact Rails/Rust region; the strict checker still exits 1. The owner messag
 list and composer internals are unchanged. The app suite proves native
 mounting and controller behavior, not byte-identical full-page acceptance.
 
-Browser/system acceptance is inventoried for the end-to-end phase. Previously shipped
-DM and inbound-email probes remain tracked, but are not rerun or claimed in this
-continuation. The controller source inventory distinguishes named native passes from
-actual pinned Rails Minitest runs and from unexecuted browser declarations.
+Headless browser interaction probes now pass on Rails and Rust for DM selection/forms,
+keyboard room/person switching, member drawers/focus, header/thread/pin panels, and
+inbound-email create/cancel/rotate/authorization/persistence. Their exact interactions
+and discrimination checks are in `ws8br-browser-acceptance.json`. These are probes,
+not complete original Rails system-file mappings. No screenshot or pixel comparison
+is performed. The controller source inventory distinguishes named native passes from
+actual pinned Rails Minitest runs and unexecuted system declarations.

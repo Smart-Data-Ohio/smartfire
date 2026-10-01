@@ -23,8 +23,8 @@
         {
           "name": "show renders collapsed work-thread guidance in the new-thread panel",
           "line": 17,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm thread-panel rendering"
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_renders_collapsed_work_thread_guidance_in_the_new_thread_panel",
+          "rust_result": "passed"
         },
         {
           "name": "shows records the last room visited in a cookie",
@@ -186,10 +186,10 @@
       "declared_count": 29,
       "rails_tests_run": 29,
       "rails_pass_count": 29,
-      "status": "27 source-declared cases individually executed in Rust; 2 deferred",
-      "rust_cases_run": 27,
-      "rust_pass_count": 27,
-      "rust_cases_deferred": 2,
+      "status": "28 source-declared cases individually executed in Rust; 1 deferred",
+      "rust_cases_run": 28,
+      "rust_pass_count": 28,
+      "rust_cases_deferred": 1,
       "rust_extra_tests": [],
       "rails_assertions": 153
     },
@@ -2311,11 +2311,13 @@
       "declared_cases": [
         {
           "name": "admin browses filters and exports the audit log",
-          "line": 12
+          "line": 12,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "audit log stays usable at phone width",
-          "line": 36
+          "line": 36,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 2,
@@ -2331,19 +2333,23 @@
       "declared_cases": [
         {
           "name": "members are online across channels and go offline after signing out",
-          "line": 21
+          "line": 21,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a bot with a checked-in agent shows online in the member panel",
-          "line": 49
+          "line": 49,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "closing one tab keeps a member online until their last tab closes",
-          "line": 63
+          "line": 63,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the member panel follows channel access and remains usable on a phone",
-          "line": 82
+          "line": 82,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 4,
@@ -2359,31 +2365,38 @@
       "declared_cases": [
         {
           "name": "switching channels hides the progress bar and lands without a reload",
-          "line": 10
+          "line": 10,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "browser back returns to the previous channel without a reload",
-          "line": 34
+          "line": 34,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "slow back and forward restores never flash the channel loader",
-          "line": 53
+          "line": 53,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "canceling a channel visit does not suppress the next page loader",
-          "line": 78
+          "line": 78,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "shared message links also navigate without a channel loader",
-          "line": 95
+          "line": 95,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "channel switch from the mobile drawer closes the drawer without a reload",
-          "line": 110
+          "line": 110,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "non-room visits still show the progress bar",
-          "line": 130
+          "line": 130,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 7,
@@ -2399,19 +2412,23 @@
       "declared_cases": [
         {
           "name": "a new member is walked through the tour by keyboard and finishing persists",
-          "line": 7
+          "line": 7,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "escape skips the tour and it never auto-starts again",
-          "line": 44
+          "line": 44,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the tour restarts from the help menu",
-          "line": 58
+          "line": 58,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "members who completed the tour never see it auto-start",
-          "line": 72
+          "line": 72,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 4,
@@ -2427,19 +2444,23 @@
       "declared_cases": [
         {
           "name": "colon autocomplete inserts a brand shortcode that renders in both themes",
-          "line": 19
+          "line": 19,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "room icon picker sets an icon that shows in the sidebar and header",
-          "line": 47
+          "line": 47,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "icon rooms suppress the search arrow marker",
-          "line": 67
+          "line": 67,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "lobehub brand icons render visibly in both themes",
-          "line": 80
+          "line": 80,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 4,
@@ -2455,59 +2476,73 @@
       "declared_cases": [
         {
           "name": "? opens the shortcut sheet everywhere except while typing",
-          "line": 8
+          "line": 8,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "? while typing stays in the composer",
-          "line": 28
+          "line": 28,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "ctrl+k fires while typing and inserts no link markup",
-          "line": 37
+          "line": 37,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "alt+up and alt+down move between rooms",
-          "line": 49
+          "line": 49,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "alt+shift+arrows jump between unread rooms",
-          "line": 65
+          "line": 65,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "escape marks the current room read",
-          "line": 78
+          "line": 78,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "escape while typing leaves the room unread",
-          "line": 88
+          "line": 88,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "escape with a menu open closes the menu instead of marking read",
-          "line": 99
+          "line": 99,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "escape with the huddle theater open yields to the theater instead of marking read",
-          "line": 111
+          "line": 111,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "escape in full screen leaves the room unread",
-          "line": 148
+          "line": 148,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "alt+arrows while typing stay in the room",
-          "line": 189
+          "line": 189,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "ctrl+k ignores IME composition",
-          "line": 204
+          "line": 204,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "ctrl+k does not open over an open modal dialog",
-          "line": 216
+          "line": 216,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "ctrl+k still toggles the switcher closed",
-          "line": 231
+          "line": 231,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 14,
@@ -2523,75 +2558,94 @@
       "declared_cases": [
         {
           "name": "member rows render without checkboxes and stay inline on desktop and phone",
-          "line": 17
+          "line": 17,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only"
         },
         {
           "name": "a plain click opens the profile card outside selection mode and toggles inside it",
-          "line": 37
+          "line": 37,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "ctrl-click and cmd-click toggle members, and dropping to zero exits the mode",
-          "line": 56
+          "line": 56,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "ctrl-shift-click selects a range across groups and skips your own row",
-          "line": 76
+          "line": 76,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "ctrl-shift-click on a checked checkbox adds the range instead of clearing it",
-          "line": 104
+          "line": 104,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a plain click opens the profile card again after the selected member leaves",
-          "line": 121
+          "line": 121,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "esc and the exit button leave selection mode with the panel open",
-          "line": 135
+          "line": 135,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the exit button returns focus to the last-touched row",
-          "line": 152
+          "line": 152,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the exit button falls back to the first row when the last-touched row is gone",
-          "line": 161
+          "line": 161,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "unchecking the last box returns focus to that row",
-          "line": 175
+          "line": 175,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "esc closes the mobile drawer when only a departed member's hidden selection remains",
-          "line": 184
+          "line": 184,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "esc on desktop leaves a departed member's hidden selection alone",
-          "line": 205
+          "line": 205,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "esc with the row menu open closes only the menu",
-          "line": 222
+          "line": 222,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the selection count is announced through a dedicated status element",
-          "line": 238
+          "line": 238,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "space toggles the focused row without opening the profile card",
-          "line": 254
+          "line": 254,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "selection, mode, and anchor survive a presence re-render",
-          "line": 268
+          "line": 268,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the star row menu works in and out of selection mode",
-          "line": 283
+          "line": 283,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a phone long-press enters selection mode, then taps toggle and Message submits the set",
-          "line": 310
+          "line": 310,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 18,
@@ -2607,23 +2661,28 @@
       "declared_cases": [
         {
           "name": "the profile page fits phone widths without scrolling sideways",
-          "line": 47
+          "line": 47,
+          "acceptance_phase": "outside current phase: geometry/style only; not remaining work"
         },
         {
           "name": "headers outside the workspace shell stay opaque over scrolled content",
-          "line": 60
+          "line": 60,
+          "acceptance_phase": "outside current phase: geometry/style only; not remaining work"
         },
         {
           "name": "headers outside the workspace shell never cover the page or its scrollbar",
-          "line": 84
+          "line": 84,
+          "acceptance_phase": "outside current phase: geometry/style only; not remaining work"
         },
         {
           "name": "pages outside the workspace shell show no drawer toggle that opens nothing",
-          "line": 113
+          "line": 113,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "every drawer destination has one toggle that opens the drawer on itself",
-          "line": 123
+          "line": 123,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 5,
@@ -2639,39 +2698,53 @@
       "declared_cases": [
         {
           "name": "motion is off by default in the test environment",
-          "line": 18
+          "line": 18,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "mobile drawer animates in, lands in place, and returns focus with motion on",
-          "line": 25
+          "line": 25,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only"
         },
         {
           "name": "member selection mode moves no rows and resizes nothing",
-          "line": 72
+          "line": 72,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only"
         },
         {
           "name": "people directory bar shifts no rows when toggling",
-          "line": 102
+          "line": 102,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only"
         },
         {
           "name": "people directory bar stays stuck while scrolling",
-          "line": 118
+          "line": 118,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only"
         },
         {
           "name": "room menu measures at full scale when clamping to the viewport edge",
-          "line": 148
+          "line": 148,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only"
         },
         {
           "name": "mobile drawer keeps the room list scroll position across close and reopen",
-          "line": 176
+          "line": 176,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "mobile drawer reveals a current room far down the list on first open",
-          "line": 240
+          "line": 240,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "mobile drawer reopens on the current room when it is already in view",
-          "line": 259
+          "line": 259,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 9,
@@ -2687,79 +2760,99 @@
       "declared_cases": [
         {
           "name": "clicking a message author opens their profile card and Message lands in the DM",
-          "line": 7
+          "line": 7,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the profile card opens by keyboard, traps focus, and returns it on Esc",
-          "line": 26
+          "line": 26,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Esc with a closed profile card stays unhandled for later listeners",
-          "line": 42
+          "line": 42,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the sidebar avatar trigger opens the profile card by keyboard",
-          "line": 61
+          "line": 61,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "multi-selecting three people in the directory lands in their group DM",
-          "line": 71
+          "line": 71,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the member panel multi-select starts a huddle with exactly that set",
-          "line": 89
+          "line": 89,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "shift-click extends the checkbox range",
-          "line": 111
+          "line": 111,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "long-press selects a row on touch",
-          "line": 125
+          "line": 125,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "agents are selectable for messages but excluded from huddles",
-          "line": 153
+          "line": 153,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "start huddle keeps agents in the DM but out of the call",
-          "line": 166
+          "line": 166,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the new-DM picker filters as you type with no suggestion bubble or submit button",
-          "line": 180
+          "line": 180,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "picker selections survive filtering and Message starts the DM",
-          "line": 212
+          "line": 212,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Enter in the picker filter selects the single visible match",
-          "line": 242
+          "line": 242,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "clicking a picker row toggles it while the name still opens the profile card",
-          "line": 273
+          "line": 273,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the new-DM picker does not overflow at phone width",
-          "line": 287
+          "line": 287,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only"
         },
         {
           "name": "group members rename, add, and leave with system notes in the timeline",
-          "line": 309
+          "line": 309,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "starting a group huddle rings every other member",
-          "line": 340
+          "line": 340,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Esc closes only the profile card inside the mobile member panel",
-          "line": 360
+          "line": 360,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Tab cycles within the profile card opened from the member panel",
-          "line": 384
+          "line": 384,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 19,
@@ -2775,23 +2868,28 @@
       "declared_cases": [
         {
           "name": "keyboard-only room jump filters and opens with enter",
-          "line": 9
+          "line": 9,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "arrow keys move the active option",
-          "line": 20
+          "line": 20,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "escape closes the switcher",
-          "line": 43
+          "line": 43,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "empty query leads with recent rooms",
-          "line": 51
+          "line": 51,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "choosing a person without a DM opens a new one",
-          "line": 62
+          "line": 62,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 5,
@@ -2807,39 +2905,48 @@
       "declared_cases": [
         {
           "name": "phone header keeps members, call, search and More with the rest in the menu",
-          "line": 17
+          "line": 17,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "tablet header keeps notifications and settings visible with the rest in the menu",
-          "line": 70
+          "line": 70,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "desktop header is unchanged with no More button",
-          "line": 111
+          "line": 111,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "every phone overflow menu item works",
-          "line": 139
+          "line": 139,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the overflow menu scrolls within a landscape phone viewport",
-          "line": 236
+          "line": 236,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "opening threads from the menu returns focus to More on close",
-          "line": 278
+          "line": 278,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the overflow menu is keyboard accessible and closes on outside tap",
-          "line": 298
+          "line": 298,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the overflow dot lights for unread threads, not pins, and the pins badge hides at zero",
-          "line": 327
+          "line": 327,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the tour restarts from the overflow menu on phones",
-          "line": 375
+          "line": 375,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 9,
@@ -2855,11 +2962,13 @@
       "declared_cases": [
         {
           "name": "the worker caches static assets and never authenticated responses",
-          "line": 9
+          "line": 9,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the offline shell renders with working retry behavior",
-          "line": 26
+          "line": 26,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 2,
@@ -2875,27 +2984,33 @@
       "declared_cases": [
         {
           "name": "favouriting from the room menu moves the room to Favourites",
-          "line": 7
+          "line": 7,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "favourites reorder from the keyboard with move up and down",
-          "line": 23
+          "line": 23,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "favourites reorder with drag and drop",
-          "line": 44
+          "line": 44,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "muted rooms dim and stay quiet until mentioned",
-          "line": 59
+          "line": 59,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "channel categories organize, collapse and persist",
-          "line": 84
+          "line": 84,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "categories rename and delete",
-          "line": 114
+          "line": 114,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 6,
@@ -2911,67 +3026,83 @@
       "declared_cases": [
         {
           "name": "an admin deletes a channel from the room menu",
-          "line": 4
+          "line": 4,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the creator sees Delete on their own room but not on others",
-          "line": 22
+          "line": 22,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a plain member does not see Delete",
-          "line": 36
+          "line": 36,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Cancel and Escape keep the room",
-          "line": 44
+          "line": 44,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "deleting the room you are in navigates you home",
-          "line": 66
+          "line": 66,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Delete is offered on every room kind for admins",
-          "line": 82
+          "line": 82,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a group dm shows Delete only for admins",
-          "line": 107
+          "line": 107,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "one-to-one dms follow the server delete rule",
-          "line": 124
+          "line": 124,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Delete is reachable by arrow keys",
-          "line": 139
+          "line": 139,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "deleting from the long-press menu on phones",
-          "line": 158
+          "line": 158,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a member leaves an open channel and rejoins through the join page",
-          "line": 183
+          "line": 183,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "leaving a private channel warns about being re-added",
-          "line": 208
+          "line": 208,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "leaving the room you are in sends you home",
-          "line": 228
+          "line": 228,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the last member out leaves the room behind for no one to lose",
-          "line": 243
+          "line": 243,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Leave is offered on every room kind and never deletes",
-          "line": 256
+          "line": 256,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a member leaves a group dm from the menu",
-          "line": 291
+          "line": 291,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 16,
@@ -2987,19 +3118,23 @@
       "declared_cases": [
         {
           "name": "starring from the profile card floats the person into a Starred group",
-          "line": 18
+          "line": 18,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the member row menu stars and unstars, by mouse and keyboard",
-          "line": 43
+          "line": 43,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "Escape still dismisses the row menu after the profile card takes focus",
-          "line": 87
+          "line": 87,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the Starred group works on a phone",
-          "line": 108
+          "line": 108,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 4,
@@ -3015,11 +3150,13 @@
       "declared_cases": [
         {
           "name": "the browser does not report its zone without a CSRF token",
-          "line": 4
+          "line": 4,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the browser reports its detected zone once",
-          "line": 17
+          "line": 17,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 2,
@@ -3035,23 +3172,28 @@
       "declared_cases": [
         {
           "name": "few unread render the divider above the first new message and keep the bottom scroll",
-          "line": 8
+          "line": 8,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "many unread scroll the room to the divider",
-          "line": 23
+          "line": 23,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "the jump pill shows while the divider is off-screen and returns to it",
-          "line": 48
+          "line": 48,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "unread older than the last page keeps the last page and the pill links to the first unread",
-          "line": 73
+          "line": 73,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "mark unread from the message menu points the divider at that message",
-          "line": 97
+          "line": 97,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 5,
@@ -3067,11 +3209,13 @@
       "declared_cases": [
         {
           "name": "sending messages between two users",
-          "line": 7
+          "line": 7,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "channel and DM rows keep exactly one unread badge next to the huddle stack",
-          "line": 27
+          "line": 27,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 2,
@@ -3087,7 +3231,8 @@
       "declared_cases": [
         {
           "name": "upload post in both themes then delete falls back to the shortcode",
-          "line": 16
+          "line": 16,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 1,
@@ -3103,7 +3248,8 @@
       "declared_cases": [
         {
           "name": "the browser launches with a managed profile under the worker TMPDIR",
-          "line": 11
+          "line": 11,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 1,
@@ -3119,23 +3265,28 @@
       "declared_cases": [
         {
           "name": "signing in through the real login form lands on the signed-in page",
-          "line": 54
+          "line": 54,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations",
-          "line": 81
+          "line": 81,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a Turbo visit to the event form fills the time zone with no violations",
-          "line": 115
+          "line": 115,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "a forced inline script without the nonce is blocked and reported",
-          "line": 137
+          "line": 137,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         },
         {
           "name": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
-          "line": 153
+          "line": 153,
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
         }
       ],
       "declared_count": 5,
@@ -3143,5 +3294,6 @@
       "rails_pass_count": 0,
       "status": "full-file acceptance deferred"
     }
-  ]
+  ],
+  "pixel_phase": "Historical source counts retain excluded declarations. Geometry/style-only cases and geometry assertions within mixed cases are outside the current phase, not remaining work."
 }
