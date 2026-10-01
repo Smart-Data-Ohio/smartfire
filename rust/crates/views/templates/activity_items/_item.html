@@ -7,7 +7,7 @@
   <div class="activity-item__content">
 {% if let Some(approval) = item.approval %}    {{ self.card(approval)? }}
 {% else %}    <h2 class="activity-item__title">{{ item.title }}</h2>
-{% if let Some(author) = item.author %}      <p class="activity-item__author">{{ author }}</p>
+{% if item.created_at.is_some() %}      <p class="activity-item__author">{{ item.author.as_deref().unwrap_or("") }}</p>
 {% endif %}      <p class="activity-item__body">{{ item.body }}</p>
 {% endif %}  </div>
 

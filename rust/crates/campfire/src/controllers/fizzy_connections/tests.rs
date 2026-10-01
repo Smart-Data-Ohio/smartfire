@@ -11,7 +11,6 @@ use crate::{
 use axum::http::{Method, StatusCode};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
-use std::os::fd::{AsFd, OwnedFd};
 
 #[tokio::test]
 async fn ws15e_fizzy_connection_http_matrix() {

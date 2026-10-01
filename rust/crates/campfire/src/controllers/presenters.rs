@@ -6,8 +6,6 @@ pub mod accounts;
 pub mod activity;
 pub mod agents;
 pub mod agent_payload;
-#[cfg(test)]
-pub mod agent_profile;
 pub mod attachments;
 pub mod events;
 pub mod fizzy_cards;

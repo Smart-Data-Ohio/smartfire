@@ -11,8 +11,6 @@ mod sidebar;
 pub use sidebar::*;
 mod summary;
 pub use summary::*;
-mod agent_profile;
-pub use agent_profile::*;
 mod people;
 pub use people::*;
 mod settings;

@@ -99,11 +99,15 @@ impl Inbox<'_> {
     fn pagination(&self) -> h::Html {
         self.next_cursor
             .map(|id| {
-                h::link_to_text(
-                    "Older activity",
-                    &path(self.filter, self.type_filter, Some(id), false),
-                    h::attrs().class("btn btn--plain activity-inbox__older"),
-                )
+                h::raw(format!(
+                    "  {}\n",
+                    h::link_to_text(
+                        "Older activity",
+                        &path(self.filter, self.type_filter, Some(id), false),
+                        h::attrs().class("btn btn--plain activity-inbox__older"),
+                    )
+                    .0
+                ))
             })
             .unwrap_or_else(h::empty)
     }
@@ -142,7 +146,7 @@ impl List<'_> {
         .render()
         .map(|html| {
             h::raw(if item.approval.is_some() {
-                format!("  {html}\n\n\n")
+                format!("  {html}\n\n")
             } else {
                 format!("{html}\n")
             })

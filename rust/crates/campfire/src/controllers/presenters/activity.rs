@@ -1,54 +1,8 @@
-//! FLAGGED WS12 read seam: exact pinned ActivityItem.accessible_to SQL. No writes.
-//! Replace the query with WS12's owner reader when available; approval expiry uses WS11.
+//! Rails activity presentation over the owner's permission-filtered ActivityItem APIs.
 use campfire_db::{ActivityItem, Connection, Result, User};
 use campfire_views::activity::Item;
 pub fn accessible(conn: &Connection, user: &User) -> Result<Vec<ActivityItem>> {
-    if !user.is_active() || user.is_bot() {
-        return Ok(Vec::new());
-    }
-    let mut statement = conn.prepare(&format!(
-        "{} ORDER BY activity_items.updated_at DESC, activity_items.id DESC",
-        include_str!("activity_access.sql")
-    ))?;
-    let ids = statement
-        .query_map([user.id], |r| r.get::<_, i64>(0))?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
-    ids.into_iter()
-        .map(|id| ActivityItem::find(conn, id))
-        .collect()
-}
-pub fn state(item: &ActivityItem) -> &'static str {
-    if item.handled_at.is_some() {
-        "handled"
-    } else if item.read_at.is_some() {
-        "read"
-    } else {
-        "unread"
-    }
-}
-pub fn matches_type(item: &ActivityItem, kind: &str) -> bool {
-    let types: &[&str] = match kind {
-        "mentions" => &["mention", "reply", "keyword_alert"],
-        "threads" => &[
-            "thread_activity",
-            "work_update",
-            "work_assignment",
-            "work_sla",
-        ],
-        "events" => &[
-            "event_invitation",
-            "event_update",
-            "event_cancelled",
-            "event_reminder",
-        ],
-        "agents" => &["agent_approval_request", "agent_budget_exceeded"],
-        "github" => &["pr_review_request"],
-        "huddles" => &["huddle_started", "huddle_missed"],
-        "reminders" => &["message_reminder"],
-        "security" => &["new_sign_in", "two_factor_lockout"],
-        _ => return true,
-    };
-    types.contains(&item.event_type.as_str())
+    ActivityItem::accessible_to(conn, user)
 }
 pub fn item(
     conn: &Connection,
@@ -58,7 +12,7 @@ pub fn item(
 ) -> Result<Item> {
     let mut result = Item {
         id: item.id,
-        state: state(item).into(),
+        state: item.state().into(),
         event_label: event_label(&item.event_type).into(),
         created_at: None,
         approval: None,
@@ -136,51 +90,210 @@ pub fn item(
             result.author = Some(user.name);
         }
         "Event" => {
-            type EventFacts = (
-                campfire_db::Timestamp,
-                i64,
-                String,
-                i64,
-                campfire_db::Timestamp,
-                Option<String>,
-                Option<String>,
-                Option<campfire_db::Timestamp>,
-            );
-            let (created,room_id,title,organizer,starts,zone,recurrence,until):EventFacts=conn.query_row(
-                "SELECT created_at,room_id,title,organizer_id,starts_at,time_zone,recurrence_rule,recurrence_until FROM events WHERE id=?",
-                [item.source_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?)))?;
-            result.created_at = Some(created.jiff());
+            let event =
+                campfire_db::models::calendar_event::CalendarEvent::find(conn, item.source_id)?;
+            result.created_at = Some(event.created_at.jiff());
             result.title = format!(
-                "{} · {title}",
+                "{} · {}",
                 super::accounts::room_display_name(
                     conn,
-                    &campfire_db::Room::find(conn, room_id)?,
+                    &campfire_db::Room::find(conn, event.room_id)?,
                     viewer
-                )?
+                )?,
+                event.title
             );
-            result.author = campfire_db::User::find_by_id(conn, organizer)?.map(|u| u.name);
-            let start = campfire_views::time::Zone::for_user(zone.as_deref())
-                .format(starts.jiff(), "%B %-d, %Y at %-I:%M %p %Z");
+            result.author =
+                campfire_db::User::find_by_id(conn, event.organizer_id)?.map(|u| u.name);
+            let start = campfire_views::time::Zone::for_user(Some(&event.time_zone))
+                .format(event.starts_at.jiff(), "%B %-d, %Y at %-I:%M %p %Z");
             result.body = match item.event_type.as_str() {
                 "event_invitation" => {
-                    if recurrence.is_some() && until.is_some() {
-                        return Err(campfire_db::Error::Other(
-                            "WS14e recurring event phrase reader not yet exported".into(),
-                        ));
+                    if let (Some(rule), Some(until)) = (
+                        event
+                            .recurrence_rule
+                            .as_deref()
+                            .filter(|r| !campfire_richtext::ruby::is_blank(r)),
+                        event.recurrence_until,
+                    ) {
+                        format!(
+                            "You are invited: {start} (repeats {} until {}).",
+                            campfire_db::models::calendar_event::recurrence::phrase(rule),
+                            until.strftime("%B %-d, %Y")
+                        )
                     } else {
                         format!("You are invited: {start}.")
                     }
                 }
                 "event_update" => format!("The time changed: {start}."),
                 "event_cancelled" => "This event was cancelled.".into(),
+                "event_reminder" => {
+                    if let Some(id) = event.venue_room_id {
+                        format!(
+                            "Starts in 15 minutes: {} in {}.",
+                            event.title,
+                            campfire_db::Room::find(conn, id)?.name.unwrap_or_default()
+                        )
+                    } else {
+                        format!("Starts in 15 minutes: {}.", event.title)
+                    }
+                }
                 _ => format!("Event updated: {start}."),
             };
         }
-        // Other source presentation remains an explicit continuation, rather than
-        // silently pretending a missing source has been deleted.
+        "HuddleGrant" => {
+            let grant =
+                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, item.source_id)?
+                    .ok_or(campfire_db::Error::RecordNotFound("HuddleGrant"))?;
+            result.created_at = Some(grant.created_at.jiff());
+            result.title = super::accounts::room_display_name(
+                conn,
+                &campfire_db::Room::find(conn, grant.room_id)?,
+                viewer,
+            )?;
+            result.author = campfire_db::User::find_by_id(conn, grant.user_id)?.map(|u| u.name);
+            let caller = result.author.as_deref().unwrap_or("Someone");
+            result.body = if item.event_type == "huddle_missed" {
+                format!("You missed a huddle from {caller}")
+            } else {
+                format!("{caller} started a huddle")
+            };
+        }
+        "WorkThreadEvent" => {
+            // FLAGGED WS12 WorkThreadEvent facts reader; domain access stays in ActivityItem.
+            let (thread,actor,from,to,from_id,to_id,from_name,to_name,created) = conn.query_row(
+                "SELECT channel_thread_id,actor_id,from_status,to_status,from_owner_id,to_owner_id,from_owner_name,to_owner_name,created_at FROM work_thread_events WHERE id=?",[item.source_id],
+                |r| Ok((r.get::<_,i64>(0)?,r.get::<_,Option<i64>>(1)?,r.get::<_,Option<String>>(2)?,r.get::<_,Option<String>>(3)?,r.get::<_,Option<i64>>(4)?,r.get::<_,Option<i64>>(5)?,r.get::<_,Option<String>>(6)?,r.get::<_,Option<String>>(7)?,r.get::<_,campfire_db::Timestamp>(8)?)))?;
+            let thread = campfire_db::ChannelThread::find(conn, thread)?;
+            result.created_at = Some(created.jiff());
+            result.title = format!(
+                "{} · {}",
+                super::accounts::room_display_name(
+                    conn,
+                    &campfire_db::Room::find(conn, thread.room_id)?,
+                    viewer
+                )?,
+                thread.name
+            );
+            result.author = Some(
+                actor
+                    .map(|id| campfire_db::User::find_by_id(conn, id))
+                    .transpose()?
+                    .flatten()
+                    .map(|u| u.name)
+                    .unwrap_or_else(|| "Work thread".into()),
+            );
+            let mut changes = Vec::new();
+            if from != to {
+                changes.push(format!(
+                    "Status: {} → {}",
+                    humanize(from.as_deref()),
+                    humanize(to.as_deref())
+                ));
+            }
+            if from_id != to_id {
+                let name = |value: Option<String>| {
+                    value
+                        .filter(|v| !campfire_richtext::ruby::is_blank(v))
+                        .unwrap_or_else(|| "unassigned".into())
+                };
+                changes.push(format!("Owner: {} → {}", name(from_name), name(to_name)));
+            }
+            result.body = if changes.is_empty() {
+                "Work thread updated".into()
+            } else {
+                campfire_views::helpers::to_sentence(&changes, " and ")
+            };
+        }
+        "BoardSlaNudge" => {
+            // FLAGGED WS12 BoardSlaNudge facts reader; no writer is implemented here.
+            let (thread,status,stage,entered,created) = conn.query_row("SELECT channel_thread_id,work_status,stage,status_entered_at,created_at FROM board_sla_nudges WHERE id=?",[item.source_id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,campfire_db::Timestamp>(3)?,r.get::<_,campfire_db::Timestamp>(4)?)))?;
+            let thread = campfire_db::ChannelThread::find(conn, thread)?;
+            result.created_at = Some(created.jiff());
+            result.title = format!(
+                "{} · {}",
+                super::accounts::room_display_name(
+                    conn,
+                    &campfire_db::Room::find(conn, thread.room_id)?,
+                    viewer
+                )?,
+                thread.name
+            );
+            let minutes = (app.db.env().now().jiff().as_second() - entered.jiff().as_second())
+                .div_euclid(60)
+                .max(0);
+            let age = if minutes >= 60 {
+                format!("{:.1} hours", (minutes as f64 / 6.0).round() / 10.0)
+            } else {
+                format!("{minutes} minutes")
+            };
+            let status = humanize(Some(&status));
+            result.body = format!(
+                "{}sitting in {status} for {age}",
+                if stage == "escalation" {
+                    "Escalated: "
+                } else {
+                    ""
+                }
+            );
+            if stage != "escalation" {
+                result.body.replace_range(..1, "S");
+            }
+        }
+        "ScheduledMessage" => {
+            let scheduled = campfire_db::models::scheduled_message::ScheduledMessage::find(
+                conn,
+                item.source_id,
+            )?;
+            result.created_at = Some(scheduled.created_at.jiff());
+            result.title = super::accounts::room_display_name(
+                conn,
+                &campfire_db::Room::find(conn, scheduled.room_id)?,
+                viewer,
+            )?;
+            result.author = campfire_db::User::find_by_id(conn, scheduled.user_id)?.map(|u| u.name);
+            result.body = if let Some(reason) = scheduled
+                .drop_reason
+                .filter(|s| !campfire_richtext::ruby::is_blank(s))
+            {
+                format!(
+                    "Your scheduled message was not sent ({reason}): {}",
+                    scheduled.markdown_source
+                )
+            } else {
+                format!(
+                    "You no longer have access to this room, so your scheduled message was not sent: {}",
+                    scheduled.markdown_source
+                )
+            };
+        }
+        "TwoFactorCredential" => {
+            // FLAGGED WS9 credential timestamp reader; the activity domain owns permission checks.
+            let created: campfire_db::Timestamp = conn.query_row(
+                "SELECT created_at FROM two_factor_credentials WHERE id=?",
+                [item.source_id],
+                |r| r.get(0),
+            )?;
+            result.created_at = Some(created.jiff());
+            result.title = "Two-step sign-in".into();
+            result.body = "Several wrong sign-in codes were entered for your account.".into();
+        }
+        "Session" => {
+            let session = campfire_db::Session::find(conn, item.source_id)?;
+            result.created_at = Some(session.created_at.jiff());
+            result.title = "Account security".into();
+            let at = item
+                .created_at
+                .jiff()
+                .to_zoned(jiff::tz::TimeZone::UTC)
+                .strftime("%B %-d, %Y at %-I:%M %p %Z");
+            result.body = format!(
+                "New sign-in to your account from {}, {at}. Wasn't you? Review your sessions.",
+                crate::authentication::device_description(&session)
+            );
+        }
         other => {
             return Err(campfire_db::Error::Other(format!(
-                "WS12 activity source presentation not yet ported: {other}"
+                "Unknown activity source: {other}"
             )));
         }
     }
@@ -213,4 +326,164 @@ fn event_label(kind: &str) -> &str {
         "new_sign_in" => "New sign-in",
         _ => kind,
     }
+}
+
+#[derive(serde::Serialize)]
+pub struct Payload {
+    id: i64,
+    event_type: String,
+    state: &'static str,
+    read_at: Option<String>,
+    handled_at: Option<String>,
+    created_at: String,
+    pub source: Option<Source>,
+}
+#[derive(serde::Serialize)]
+pub struct Source {
+    #[serde(rename = "type")]
+    kind: String,
+    id: i64,
+    room_id: Option<i64>,
+    thread_id: Option<i64>,
+    creator_id: Option<i64>,
+    body: String,
+    pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<String>,
+}
+pub fn payload(
+    conn: &Connection,
+    app: &crate::app::AppState,
+    row: &ActivityItem,
+    viewer: &User,
+) -> Result<Payload> {
+    let view = item(conn, app, row, viewer)?;
+    let mut source = Source {
+        kind: row.source_type.clone(),
+        id: row.source_id,
+        room_id: None,
+        thread_id: None,
+        creator_id: None,
+        body: view.body,
+        path: "/activity".into(),
+        status: None,
+    };
+    let source = match row.source_type.as_str() {
+        "Message" | "SavedItem" => {
+            let id = if row.source_type == "SavedItem" {
+                campfire_db::models::saved_item::SavedItem::find(conn, row.source_id)?.message_id
+            } else {
+                row.source_id
+            };
+            let message = campfire_db::Message::find(conn, id)?;
+            source.room_id = Some(message.room_id);
+            source.thread_id = message.thread_id;
+            source.creator_id = Some(message.creator_id);
+            source.path = if let Some(thread) = message.thread_id {
+                format!(
+                    "/rooms/{}?thread={thread}&message_id={}",
+                    message.room_id, message.id
+                )
+            } else {
+                campfire_routes::room_at_message(message.room_id, message.id)
+            };
+            // Message JSON uses plain text directly; SavedItem uses the reminder helper.
+            if row.source_type == "Message" {
+                source.body = truncate(message.plain_text_body(conn, &*app.db.env().rich_text)?);
+            }
+            Some(source)
+        }
+        "HuddleGrant" => {
+            let grant =
+                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
+                    .ok_or(campfire_db::Error::RecordNotFound("HuddleGrant"))?;
+            source.room_id = Some(grant.room_id);
+            source.creator_id = Some(grant.user_id);
+            source.path = format!("/rooms/{}", grant.room_id);
+            Some(source)
+        }
+        "WorkThreadEvent" => {
+            // FLAGGED WS12 WorkThreadEvent facts reader; access and mutations use ActivityItem.
+            let (thread, actor): (i64, Option<i64>) = conn.query_row(
+                "SELECT channel_thread_id,actor_id FROM work_thread_events WHERE id=?",
+                [row.source_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )?;
+            let thread = campfire_db::ChannelThread::find(conn, thread)?;
+            source.room_id = Some(thread.room_id);
+            source.thread_id = Some(thread.id);
+            source.creator_id = actor;
+            source.path = format!("/rooms/{}?thread={}", thread.room_id, thread.id);
+            Some(source)
+        }
+        "Event" => {
+            let event =
+                campfire_db::models::calendar_event::CalendarEvent::find(conn, row.source_id)?;
+            source.room_id = Some(event.room_id);
+            source.creator_id = Some(event.organizer_id);
+            source.path = format!("/rooms/{}/events/{}", event.room_id, event.id);
+            Some(source)
+        }
+        "AgentApproval" => {
+            let approval = campfire_db::AgentApproval::find(conn, row.source_id)?
+                .ok_or(campfire_db::Error::RecordNotFound("AgentApproval"))?;
+            let agent = campfire_db::Agent::find(conn, approval.agent_id)?
+                .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            source.room_id = approval.room_id;
+            source.creator_id = Some(agent.user_id);
+            source.body = truncate(approval.summary.clone());
+            source.path = format!("/agents/{}/approvals", agent.id);
+            source.status = Some(approval.effective_status(app.db.env().now()).into());
+            Some(source)
+        }
+        "AgentBudgetNotice" => {
+            // FLAGGED WS11 AgentBudgetNotice facts reader (owner has not exported a model).
+            let (id, cap): (i64, String) = conn.query_row(
+                "SELECT agent_id,cap FROM agent_budget_notices WHERE id=?",
+                [row.source_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )?;
+            let agent = campfire_db::Agent::find(conn, id)?
+                .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            source.creator_id = Some(agent.user_id);
+            source.path = format!("/account/bots/{}/edit", agent.user_id);
+            source.status = Some(cap);
+            Some(source)
+        }
+        "Session" => {
+            source.path = "/users/me/sessions".into();
+            Some(source)
+        }
+        // Rails intentionally has no JSON source branch for these three models.
+        "BoardSlaNudge" | "ScheduledMessage" | "TwoFactorCredential" => None,
+        _ => None,
+    };
+    let stamp = |t: campfire_db::Timestamp| t.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+    Ok(Payload {
+        id: row.id,
+        event_type: row.event_type.clone(),
+        state: row.state(),
+        read_at: row.read_at.map(stamp),
+        handled_at: row.handled_at.map(stamp),
+        created_at: stamp(row.created_at),
+        source,
+    })
+}
+fn truncate(text: String) -> String {
+    if text.chars().count() > 500 {
+        text.chars().take(497).collect::<String>() + "..."
+    } else {
+        text
+    }
+}
+fn humanize(value: Option<&str>) -> String {
+    let value = value
+        .filter(|v| !campfire_richtext::ruby::is_blank(v))
+        .unwrap_or("None")
+        .replace('_', " ");
+    let mut chars = value.chars();
+    chars
+        .next()
+        .map(|c| c.to_uppercase().to_string() + &rails_compat::unicode::downcase(chars.as_str()))
+        .unwrap_or_default()
 }

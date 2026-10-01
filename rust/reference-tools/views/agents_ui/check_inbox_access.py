@@ -2,7 +2,7 @@
 """Prove the inbox privacy test rejects the wrong administrator role; restore source."""
 import os, pathlib, subprocess
 root = pathlib.Path(__file__).resolve().parents[4]
-source = root/'rust/crates/campfire/src/controllers/presenters/activity_access.sql'
+source = root/'rust/crates/db/src/models/activity_item/access.sql'
 original = source.read_bytes()
 mutant = original.replace(b'OR users.role = 1', b'OR users.role = 0')
 assert mutant != original

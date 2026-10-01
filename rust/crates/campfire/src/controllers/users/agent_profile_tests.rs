@@ -36,17 +36,27 @@ async fn replay(name: &str) {
     }).await.unwrap();
     let viewer_id = row["viewer_id"].as_i64().unwrap();
     let now: jiff::Timestamp = SEED_NOW.parse().unwrap();
+    let secrets = app.booted.app.secrets.clone();
     let (user, viewer, agent, manage) = app
         .db()
         .read(move |c| {
             let user = campfire_db::User::find(c, BENDER)?;
             let viewer = campfire_db::User::find(c, viewer_id)?;
-            let (agent, manage) = presenters::agent_profile::load(
+            let zone: Option<String> =
+                c.query_row("SELECT time_zone FROM users WHERE id=?", [viewer.id], |r| {
+                    r.get(0)
+                })?;
+            let agent = presenters::agents::profile(
                 c,
-                &user,
+                &secrets,
+                user.id,
                 &viewer,
                 campfire_db::Timestamp::from_jiff(now),
+                &campfire_views::time::Zone::for_user(zone.as_deref()),
             )?;
+            let manage = user.is_bot()
+                && (viewer.is_administrator()
+                    || agent.as_ref().is_some_and(|a| a.management.is_some()));
             Ok((user, viewer, agent, manage))
         })
         .await
@@ -65,7 +75,7 @@ async fn replay(name: &str) {
                     transfer_id: transfer.clone(),
                     profile_status: None,
                     agent_profile: agent.clone(),
-                    can_manage_bot: manage,
+                    now,
                 };
                 if part {
                     page.as_nav().render().unwrap()
@@ -96,7 +106,7 @@ async fn replay(name: &str) {
     assert_eq!(body.contains("Manage capability grants"), manage);
     assert_eq!(
         body.contains("Last 24 hours:"),
-        agent.as_ref().is_some_and(|a| a.activity_summary.is_some())
+        agent.as_ref().is_some_and(|a| a.management.is_some())
     );
     if let Some(agent) = agent {
         for (id, _) in agent.rooms {
