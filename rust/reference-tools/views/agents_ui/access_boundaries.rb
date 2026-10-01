@@ -41,3 +41,18 @@ browser.post("/account/bots/#{bot.id}/grants",params:{agent_grant:{capability:'e
 raise "unique rescue failed #{browser.response.status}" unless browser.response.status==302
 raise 'unique failure committed the trigger row' if bot.agent.agent_grants.active.where(capability:'external_action',room:).exists?
 puts 'Rails credential/grant boundaries: 4 writes survive rejected audits; 2 re-revokes are idempotent; 1 uniqueness rescue rolls back the grant transaction; 7 requests passed'
+# A rejected owner save is distinct from a rejected later audit.
+connection.execute('DROP TRIGGER collide_access_grant')
+connection.execute("CREATE TRIGGER reject_access_credential BEFORE INSERT ON agent_credentials BEGIN SELECT RAISE(FAIL,'fixture access write rejection'); END;")
+connection.execute("CREATE TRIGGER reject_access_grant BEFORE INSERT ON agent_grants BEGIN SELECT RAISE(FAIL,'fixture access write rejection'); END;")
+[['credentials', {agent_credential: {name: 'Rolled back'}}], ['grants', {agent_grant: {capability: 'react'}}]].each do |area, params|
+  begin
+    browser.post("/account/bots/#{bot.id}/#{area}", params:, headers:)
+    raise "owner write expected 500, got #{browser.response.status}" unless browser.response.status == 500
+  rescue ActiveRecord::StatementInvalid => e
+    raise unless e.message.include?('fixture access write rejection')
+  end
+end
+raise 'rejected credential persisted' if AgentCredential.where(name: 'Rolled back').exists?
+raise 'rejected grant persisted' if AgentGrant.where(capability: 'react').exists?
+puts 'Rails failed credential/grant writes: 2 requests return 500; 0 new rows; 0 audits'

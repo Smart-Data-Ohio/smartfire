@@ -643,7 +643,10 @@ async fn concurrent_grant_creation_writes_one_grant_and_audit() {
     let mut second = test.browser("198.51.100.233");
     // This test needs two verified sessions, not a replay of one frozen TOTP.
     // Use Rails' committed seed device for the second browser's real password login.
-    second.cookies.insert(rails_compat::cookies::TWO_FACTOR_REMEMBER.into(), test.label("two_factor_cookies.david"));
+    second.cookies.insert(
+        rails_compat::cookies::TWO_FACTOR_REMEMBER.into(),
+        test.label("two_factor_cookies.david"),
+    );
     second.sign_in(&test.label("emails.david")).await;
     second.grant_sudo_access();
     let path = format!("/account/bots/{}/grants", test.label("users.bender"));
@@ -789,9 +792,11 @@ async fn credential_and_grant_revocation_are_scoped_to_requested_bot() {
         .unwrap();
 }
 #[tokio::test]
-async fn failed_creation_audit_rolls_back_credential_and_grant() {
+async fn failed_creation_writes_roll_back_credential_and_grant() {
     let test = boot_seed("default").await.expect("default seed");
-    test.booted.app.db.write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_management_audit BEFORE INSERT ON audit_logs WHEN NEW.action IN ('agent.credential.create','agent.grant.create') BEGIN SELECT RAISE(FAIL,'audit rejected'); END")?;Ok(())}).await.unwrap();
+    // Pinned access_boundaries.rb separately proves owner-write rollback and
+    // audit-failure persistence. These triggers fail the actual owner inserts.
+    test.booted.app.db.write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_management_credential BEFORE INSERT ON agent_credentials BEGIN SELECT RAISE(FAIL,'credential rejected'); END; CREATE TRIGGER reject_management_grant BEFORE INSERT ON agent_grants BEGIN SELECT RAISE(FAIL,'grant rejected'); END;")?;Ok(())}).await.unwrap();
     let mut admin = test.browser("198.51.100.236");
     admin.sign_in(&test.label("emails.david")).await;
     admin.grant_sudo_access();
