@@ -1,6 +1,6 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 120 of 156 declarations have scoped evidence; 36 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 123 of 156 declarations have scoped evidence; 33 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
@@ -187,15 +187,15 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/message_forwards_controller_test.rb
 
-7 named declarations; 4 have scoped Rust evidence below, and 3 await attribution/signoff. Reference execution counts are in the main report.
+7 named declarations; all have scoped Rust evidence below. WS12 still owns board panes. Reference execution counts are in the main report.
 
 - destinations returns reachable rooms and unlocked threads without caching — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (destinations/global_destinations exact body and no-store response).
 - nested destination endpoint supports a thread message — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (nested_destinations exact response body/headers).
-- destinations excludes board rooms — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- create refuses board destinations on the server — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim). Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (board request rejected with exact Rails body and unchanged message count; WS12 still owns board panes).
-- direct destinations use the other participant's display name — WS8bm.
+- destinations excludes board rooms — WS8bm picker; WS12 owns board panes. `message_forwards_tests::forward_picker_excludes_boards_names_directs_and_keeps_query_count_constant`: actual no-store GET excludes an accessible board; existing full Rails response also excludes it.
+- create refuses board destinations on the server — WS8bm forward endpoint; WS12 owns board panes. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (board request rejected with exact Rails body and unchanged message count; WS12 still owns board panes).
+- direct destinations use the other participant's display name — WS8bm. `message_forwards_tests::forward_picker_excludes_boards_names_directs_and_keeps_query_count_constant`: actual direct-room label and isolated reader-query capture before/after six reachable rooms with threads; existing complete Rails picker bytes retained.
 - destinations show stale threads as closed without writing — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (stale picker status in exact body; closed_at remains NULL after all requests).
-- destinations cost a constant number of queries as reachable rooms grow — WS8bm.
+- destinations cost a constant number of queries as reachable rooms grow — WS8bm. `message_forwards_tests::forward_picker_excludes_boards_names_directs_and_keeps_query_count_constant`: actual direct-room label and isolated reader-query capture before/after six reachable rooms with threads; existing complete Rails picker bytes retained.
 ## test/controllers/message_forward_sources_controller_test.rb
 
 2 named declarations have scoped Rust evidence below. Reference execution counts are in the main report.
