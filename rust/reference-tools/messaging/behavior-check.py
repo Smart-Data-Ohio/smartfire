@@ -394,9 +394,12 @@ for file in files:
                             elif file == "composer_attach_menu":
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
-                                    blobs = seed.execute("SELECT COUNT(*) FROM active_storage_blobs").fetchone()[0]
+                                    blobs = {row[0] for row in seed.execute("SELECT id FROM active_storage_blobs")}
                                 assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
-                                assert conn.execute("SELECT COUNT(*) FROM active_storage_blobs").fetchone()[0] == blobs, "previews/pickers must not upload unsent files"
+                                actual_blobs = {row[0] for row in conn.execute("SELECT id FROM active_storage_blobs")}
+                                # Live apps may purge old unattached seed blobs. The
+                                # invariant is no new uploads, not suppressing purge.
+                                assert actual_blobs <= blobs, "previews/pickers must not upload unsent files"
                             elif file == "boosting_messages":
                                 if case == "boosting a message":
                                     assert conn.execute("SELECT booster_id FROM boosts WHERE message_id=607264868 AND content='Good morning'").fetchall() == [(712064548,)]

@@ -31,6 +31,9 @@ export async function attachMenu({author,recipient,caseName}) {
     await button.click();await expanded(true);await page.locator('.room-header__name').click();await expanded(false);
   } else if(caseName==='phone layout keeps the menu above the composer with no horizontal overflow') {
     await page.setViewportSize({width:390,height:844});await button.click();await menu.getByRole('menuitem',{name:'From Google Drive',exact:true}).waitFor();
+    // Measure an actionable, settled menu, after its enter transform. This
+    // is an interaction-state wait, with no fixed sleep or changed bounds.
+    await menu.getByRole('menuitem',{name:'From Google Drive',exact:true}).click({trial:true});
     const geometry=await page.evaluate(()=>{
       const menu=document.querySelector('.attach-menu').getBoundingClientRect(),button=document.querySelector('button.composer__attachment-btn').getBoundingClientRect();
       return {menu:{left:menu.left,right:menu.right,top:menu.top,bottom:menu.bottom,height:menu.height},buttonTop:button.top,
@@ -39,7 +42,7 @@ export async function attachMenu({author,recipient,caseName}) {
     });
     assert.equal(geometry.overflow,false);assert.ok(geometry.menu.left>=0);assert.ok(geometry.menu.right<=geometry.viewportWidth+1);
     assert.ok(geometry.menu.bottom<=geometry.buttonTop+1,'menu sits above +');assert.ok(geometry.items.length);
-    for(const height of geometry.items) {assert.ok(height>=44);assert.ok(height<=64);}
+    for(const height of geometry.items) {assert.ok(height>=44,JSON.stringify(geometry));assert.ok(height<=64,JSON.stringify(geometry));}
     assert.ok(geometry.menu.height<=geometry.items.reduce((a,b)=>a+b,0)+40);
   } else if(caseName==='device files, paste, and drag-and-drop still preview uploads') {
     await page.evaluate(()=>{
