@@ -320,6 +320,9 @@ async fn huddle_gateway_request_response_vectors_match_pinned_rails() {
         let revoked = case["revoked"] == true;
         let removed = case["removed"] == true;
         app.db().write(move |tx| {
+            // Assert committed producer intents even when the real worker has
+            // already consumed the row. This audit rolls back with the INSERT.
+            tx.conn().execute_batch("CREATE TABLE ws13_gateway_enqueues (job_class TEXT NOT NULL); CREATE TRIGGER ws13_gateway_enqueued AFTER INSERT ON background_jobs WHEN NEW.job_class LIKE 'Huddle::%' BEGIN INSERT INTO ws13_gateway_enqueues(job_class) VALUES(NEW.job_class); END;")?;
             let session = Session::start(tx, DAVID, None, None)?;
             let membership = Membership::find_by_room_and_user(tx.conn(), ALL_TALK, DAVID)?.unwrap();
             let stamp = tx.now();
@@ -364,7 +367,7 @@ async fn huddle_gateway_request_response_vectors_match_pinned_rails() {
         assert_eq!(response, case["body"], "{}", case["name"]);
         let (seen_after, jobs) = app.db().read(|conn| {
             let grant = HuddleGrant::find_by_id(conn, 17)?.unwrap();
-            let mut query = conn.prepare("SELECT job_class FROM background_jobs WHERE job_class LIKE 'Huddle::%' ORDER BY id")?;
+            let mut query = conn.prepare("SELECT job_class FROM ws13_gateway_enqueues ORDER BY rowid")?;
             let jobs = query.query_map([], |r| r.get::<_, String>(0))?.collect::<std::result::Result<Vec<_>, _>>()?.into_iter().map(|c| match c.as_str() {"Huddle::BroadcastPresenceJob" => "presence", "Huddle::JoinNoticeJob" => "join", "Huddle::CleanupJob" => "cleanup", _ => panic!("unexpected job {c}")}).collect::<Vec<_>>();
             Ok((grant.last_seen_at.map(Timestamp::as_second), jobs))
         }).await.unwrap();
