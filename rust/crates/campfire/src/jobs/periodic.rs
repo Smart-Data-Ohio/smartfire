@@ -253,23 +253,6 @@ pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> 
     Ok(healed)
 }
 
-#[cfg(test)]
-mod ws17_tests {
-    use super::*;
-    #[test]
-    fn ws17_calendar_sweeps_are_registered_once_each_minute() {
-        let tasks = periodic(PeriodicIntervals {
-            reminders: Duration::from_secs(30),
-            retention: Duration::from_secs(24 * HOUR),
-        });
-        for name in ["meeting status", "out of office"] {
-            let matching: Vec<_> = tasks.tasks().filter(|task| task.name() == name).collect();
-            assert_eq!(matching.len(), 1, "{name}");
-            assert_eq!(matching[0].interval(), Duration::from_secs(MINUTE));
-        }
-    }
-}
-
 /// Rails rescues each recovery enqueue independently. Each row's job and stamp still commit
 /// atomically on the durable queue, including when a different candidate's queue write fails.
 pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
@@ -297,4 +280,21 @@ pub(crate) async fn streaming_messages(db:&Database)->anyhow::Result<()> {
         }).await {tracing::error!(message_id=id,%error,"stream finalize failed");}
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod ws17_tests {
+    use super::*;
+    #[test]
+    fn ws17_calendar_sweeps_are_registered_once_each_minute() {
+        let tasks = periodic(PeriodicIntervals {
+            reminders: Duration::from_secs(30),
+            retention: Duration::from_secs(24 * HOUR),
+        });
+        for name in ["meeting status", "out of office"] {
+            let matching: Vec<_> = tasks.tasks().filter(|task| task.name() == name).collect();
+            assert_eq!(matching.len(), 1, "{name}");
+            assert_eq!(matching[0].interval(), Duration::from_secs(MINUTE));
+        }
+    }
 }

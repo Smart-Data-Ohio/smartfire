@@ -404,7 +404,7 @@ async fn bot_edit_calls_github_owner_usability_and_marks_unreadable_tokens_disco
     let stamp = test.booted.app.db.read(move |conn| {
         let account = Account::find(conn,id)?.unwrap();
         assert_eq!(account.disconnected_reason.as_deref(),Some(UNREADABLE_TOKEN_REASON));
-        assert!(account.updated_at.to_db() > "2026-03-01 00:00:00.000000".to_string());
+        assert!(account.updated_at.to_db().as_str() > "2026-03-01 00:00:00.000000");
         Ok(account.updated_at)
     }).await.unwrap();
     assert_eq!(admin.get(&format!("/account/bots/{bot}/edit")).await.status,StatusCode::OK);
