@@ -1,0 +1,30 @@
+<article class="room-events__item" role="listitem" aria-labelledby="{{ event.title_id() }}">
+  <div class="room-events__item-main">
+    <h3 id="{{ event.title_id() }}" class="room-events__item-title">
+      {{ h::link_to_text(&event.card.title,&event.card.path(),h::attrs()) }}
+    </h3>
+    <p class="room-events__item-meta">
+      {{ event.card.start_tag(&ctx.time_zone) }}
+{% if event.card.ends_at.is_some() %}        &ndash; {{ event.card.end_tag(&ctx.time_zone) }}
+{% endif %}      <span class="room-events__zone">{{ event.zone_label() }}</span>
+      <span aria-hidden="true">·</span> organized by {{ event.card.organizer_name }}
+    </p>
+{% if let Some(venue) = event.venue %}      <p class="room-events__item-meta">
+        Where:
+        <span class="{{ venue.kind() }}"><span class="sidebar-item__icon" aria-hidden="true"></span></span>
+{% if venue.member %}          {{ h::link_to_text(&venue.name,&venue.path(),h::attrs()) }}
+{% else %}          {{ venue.name }}
+{% endif %}{% if venue.stage && venue.member %}          {{ event.live_dot(venue,true) }}
+{% endif %}      </p>
+{% endif %}  </div>
+
+  <p class="room-events__item-counts">
+    {{ event.counts("going") }},
+    {{ event.counts("maybe") }}
+  </p>
+
+{% if let Some(label) = event.recurrence_label %}    <p class="room-events__series-label">
+      {{ label }}
+{% if let Some(remaining) = event.remaining %}        · {{ event.remaining_text() }} remaining
+{% endif %}    </p>
+{% endif %}</article>

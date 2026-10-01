@@ -481,6 +481,7 @@ impl Message {
     /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
     /// must not warm previews. Import callers pass false to retain DB references without fetches.
     pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        crate::models::calendar_event::references::sync(tx, self)?;
         for sync in tx.env().message_reference_syncs.clone() {
             sync(tx, self, enqueue)?;
         }
