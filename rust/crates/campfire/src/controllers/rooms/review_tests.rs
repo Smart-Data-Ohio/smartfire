@@ -20,6 +20,149 @@ fn recheck_oracle() -> serde_json::Value {
     .unwrap()
 }
 
+fn unicode_oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/huddle_unicode_order.json"
+    ))
+    .unwrap()
+}
+
+async fn unicode_call() -> (TestApp, i64) {
+    use campfire_db::models::{huddle_grant::HuddleGrant, room_delete::HuddleConfig};
+    use campfire_db::{Session, User, UserChanges};
+    let test = TestApp::boot_with_huddle(configured())
+        .await
+        .expect("seed")
+        .without_job_runner()
+        .await;
+    let room = test
+        .db()
+        .write(|tx| {
+            let oracle = unicode_oracle();
+            for (index, id) in [JASON, KEVIN].into_iter().enumerate() {
+                User::find(tx.conn(), id)?.update(
+                    tx,
+                    UserChanges {
+                        name: Some(oracle["input_names"][index].as_str().unwrap().into()),
+                        ..Default::default()
+                    },
+                )?;
+            }
+            let room = Room::create_for(
+                tx,
+                RoomType::Closed,
+                Some("Sigma review"),
+                DAVID,
+                &[DAVID, JASON, KEVIN],
+            )?;
+            for id in [JASON, KEVIN] {
+                let session = Session::start(tx, id, None, None)?;
+                let member =
+                    campfire_db::Membership::find_by_room_and_user(tx.conn(), room.id, id)?
+                        .unwrap();
+                let mut grant = HuddleGrant::issue(
+                    tx,
+                    session.id,
+                    member.id,
+                    room.id,
+                    &HuddleConfig {
+                        api_secret: Some("ws13-fixture-api-secret".into()),
+                        admin_configured: false,
+                    },
+                )?;
+                grant.record_seen(tx)?;
+            }
+            Ok(room.id)
+        })
+        .await
+        .unwrap();
+    (test, room)
+}
+
+#[tokio::test]
+async fn review_unicode_sidebar_avatars_match_rails_and_the_per_room_endpoint() {
+    let (test, room) = unicode_call().await;
+    let mut browser = test.david();
+    let per_room = browser
+        .get(&format!("/rooms/{room}/huddle/participants"))
+        .await;
+    assert_eq!(per_room.status, StatusCode::OK);
+    let names: Vec<_> = per_room
+        .json()
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|u| u["name"].clone())
+        .collect();
+    assert_eq!(
+        serde_json::json!(names),
+        unicode_oracle()["participant_names"]
+    );
+    let response = browser.get("/users/me/sidebar").await;
+    assert_eq!(response.status, StatusCode::OK);
+    let html = response.text();
+    let content = campfire_richtext::Content::wrap(&html).unwrap();
+    let dom = &content.dom;
+    let stack_id = format!("sidebar_voice_participants_rooms_closed_{room}");
+    let stack = dom
+        .descendants(content.root)
+        .into_iter()
+        .find(|&n| dom.attr(n, "id") == Some(stack_id.as_str()))
+        .expect("sidebar presence stack");
+    let avatars: Vec<_> = dom
+        .descendants(stack)
+        .into_iter()
+        .filter(|&n| dom.name(n) == "img" && dom.attr(n, "class") == Some("voice-stack__avatar"))
+        .map(|n| dom.attr(n, "title").unwrap().to_owned())
+        .collect();
+    assert_eq!(
+        serde_json::json!(avatars),
+        unicode_oracle()["sidebar_names"],
+        "Rails downcase keeps sidebar avatars in the same order as the per-room poll"
+    );
+}
+
+#[tokio::test]
+async fn review_unicode_presence_matches_rails_and_the_per_room_endpoint() {
+    let (test, room) = unicode_call().await;
+    let mut browser = test.david();
+    let per_room = browser
+        .get(&format!("/rooms/{room}/huddle/participants"))
+        .await;
+    assert_eq!(per_room.status, StatusCode::OK);
+    let names: Vec<_> = per_room
+        .json()
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|u| u["name"].clone())
+        .collect();
+    assert_eq!(
+        serde_json::json!(names),
+        unicode_oracle()["participant_names"]
+    );
+    let response = browser.get("/users/huddle_presence").await;
+    assert_eq!(response.status, StatusCode::OK);
+    let data = response.json();
+    let call = data
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["room_id"] == room)
+        .expect("live room");
+    let participants: Vec<_> = call["participants"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|u| u["name"].clone())
+        .collect();
+    assert_eq!(
+        serde_json::json!(participants),
+        unicode_oracle()["presence_names"],
+        "Rails downcase keeps aggregate presence in the same order as the per-room poll"
+    );
+}
+
 #[tokio::test]
 async fn review_dm_peers_do_not_grow_total_sidebar_selects() {
     use campfire_db::{NewUser, User};

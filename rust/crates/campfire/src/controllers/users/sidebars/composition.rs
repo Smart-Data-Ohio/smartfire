@@ -3,6 +3,7 @@ use crate::app::App;
 use crate::controllers::{presenters, rooms::call_channels};
 use campfire_db::{Account, Connection, Involvement, Membership, Room, RoomCategory, User};
 use campfire_views::users::sidebar_composition::{Category, Person, Row, Sidebar};
+use rails_compat::unicode;
 fn person(app: &App, user: &User) -> Person {
     Person {
         id: user.id,
@@ -190,7 +191,7 @@ fn call_facts(app: &App, conn: &Connection, user_id: i64) -> campfire_db::Result
         let mut users = std::collections::BTreeMap::<i64, Vec<User>>::new();
         for (room_id, user) in rows { users.entry(room_id).or_default().push(user); }
         for (room_id, mut users) in users {
-            users.sort_by_key(|u| u.name.to_lowercase());
+            users.sort_by_key(|u| unicode::downcase(&u.name));
             result.entry(room_id).or_default().participants = users.iter().map(|u| campfire_views::huddle::Participant {id: u.id, name: u.name.clone(), avatar_path: presenters::avatar_path(&app.secrets,u)}).collect();
         }
     }

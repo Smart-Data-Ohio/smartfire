@@ -1,0 +1,23 @@
+{
+  "reference_pin": "d7c7de92",
+  "input_names": [
+    "ΟΣ",
+    "οςa"
+  ],
+  "downcase": [
+    "οσ",
+    "οςa"
+  ],
+  "sidebar_names": [
+    "οςa",
+    "ΟΣ"
+  ],
+  "presence_names": [
+    "οςa",
+    "ΟΣ"
+  ],
+  "participant_names": [
+    "οςa",
+    "ΟΣ"
+  ]
+}

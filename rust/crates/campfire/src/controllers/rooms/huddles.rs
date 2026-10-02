@@ -10,7 +10,7 @@ use campfire_db::models::{
 };
 use campfire_db::{Membership, Room, Timestamp, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode, halt};
-use rails_compat::jwt::livekit;
+use rails_compat::{jwt::livekit, unicode};
 use serde_json::{Value, json};
 
 type PresentParticipants = Vec<(User, Vec<String>)>;
@@ -186,7 +186,7 @@ pub async fn presence(c: &mut Ctx) -> Result {
                 participants.push((user.clone(),vec![identity]));
             }
         }
-        for (_, participants) in &mut rooms { participants.sort_by_key(|(user,_)|user.name.to_lowercase()); }
+        for (_, participants) in &mut rooms { participants.sort_by_key(|(user,_)|unicode::downcase(&user.name)); }
         Ok(rooms)
     }).await.map_err(db_error)?;
     let rooms: Vec<_> = rooms.into_iter().map(|(room_id,users)| json!({"room_id":room_id,"participants":users.into_iter().map(|(user,identities)| participant(c,&user,identities)).collect::<Vec<_>>()})).collect();
