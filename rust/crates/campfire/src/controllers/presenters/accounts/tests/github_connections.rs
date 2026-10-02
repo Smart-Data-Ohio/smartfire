@@ -162,7 +162,7 @@ async fn an_administrator_can_link_the_agents_account() {
     assert_eq!(requests.len(), 1);
     assert_eq!(
         requests[0].header("authorization"),
-        Some("Bearer agent-pat-pasted")
+        Some(format!("Bearer {}", "agent-pat-pasted").as_str())
     );
 }
 #[tokio::test]

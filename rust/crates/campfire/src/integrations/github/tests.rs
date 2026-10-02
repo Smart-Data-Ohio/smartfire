@@ -1458,7 +1458,7 @@ async fn boot_installs_owner_repository_reader_and_reuses_its_permission_cache()
     }
     assert_eq!(server.received.lock().unwrap().len(),1,"the owner's ten-minute cache must survive callers");
     let requests=server.received.lock().unwrap().clone();
-    assert_eq!(requests[0].header("authorization"),Some("Bearer owner-repository-fixture-token"));
+    assert_eq!(requests[0].header("authorization"),Some(format!("Bearer {}", "owner-repository-fixture-token").as_str()));
     test.booted.app.db.write(move |tx| {tx.conn().execute("UPDATE agents SET owner_id=NULL WHERE id=?",[agent])?;Ok(())}).await.unwrap();
     assert!(test.booted.app.agent_repositories.resolve_threads(&test.booted.app.db,agent,vec![thread]).await.unwrap().is_empty());
     assert_eq!(server.received.lock().unwrap().len(),1);

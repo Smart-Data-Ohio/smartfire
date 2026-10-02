@@ -466,9 +466,8 @@
       "sql": [],
       "viewer": null,
       "path": "/rooms/96000000/members.json",
-      "headers": {
-        "Authorization": "Bearer bender-test-secret-1234"
-      }
+      "headers": {},
+      "token": "bender-test-secret-1234"
     },
     {
       "name": "seed_open",

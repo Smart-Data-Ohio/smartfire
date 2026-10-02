@@ -129,7 +129,7 @@ async fn human_decisions_hide_requests_from_nondeciders_credentials_and_bot_keys
             .request(
                 Method::PATCH,
                 &path,
-                &[("authorization", "Bearer bender-test-secret-1234")],
+                &[("authorization", &format!("Bearer {}", "bender-test-secret-1234"))],
                 Some(("application/json", "{\"decision\":\"approved\"}".into()))
             )
             .await

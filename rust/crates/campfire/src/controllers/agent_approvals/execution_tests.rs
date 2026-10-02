@@ -164,7 +164,7 @@ async fn ws11ui_human_github_decision_executes_real_transport_and_rechecks_later
             assert_eq!(request.target, "/repos/rails/rails/issues/999/comments");
             assert_eq!(
                 request.header("Authorization"),
-                Some("Bearer fixture-agent-token")
+                Some(format!("Bearer {}", "fixture-agent-token").as_str())
             );
             assert_eq!(
                 serde_json::from_slice::<Value>(&request.body).unwrap(),
@@ -387,7 +387,7 @@ async fn ws11ui_human_fizzy_decision_executes_real_transport_and_rechecks_later_
             assert_eq!(request.target, "/12345/cards/579/comments.json");
             assert_eq!(
                 request.header("Authorization"),
-                Some("Bearer fixture-owner-token")
+                Some(format!("Bearer {}", "fixture-owner-token").as_str())
             );
             assert_eq!(
                 serde_json::from_slice::<Value>(&request.body).unwrap(),

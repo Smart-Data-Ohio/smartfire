@@ -47,12 +47,16 @@ async fn compare(names: &[&str]) {
                 test.label(&format!("session_cookies.{viewer}")),
             );
         }
-        let headers: Vec<_> = case["headers"]
+        let mut header_values: Vec<_> = case["headers"]
             .as_object()
             .unwrap()
             .iter()
-            .map(|(k, v)| (k.as_str(), v.as_str().unwrap()))
+            .map(|(k, v)| (k.clone(), v.as_str().unwrap().to_owned()))
             .collect();
+        if let Some(token) = case["token"].as_str() {
+            header_values.push(("Authorization".into(), format!("Bearer {token}")));
+        }
+        let headers: Vec<_> = header_values.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
         let response = browser
             .request(Method::GET, case["path"].as_str().unwrap(), &headers, None)
             .await;

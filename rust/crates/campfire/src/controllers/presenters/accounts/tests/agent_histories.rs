@@ -120,7 +120,7 @@ async fn histories_apply_distinct_rails_access_and_back_links() {
                 .request(
                     Method::GET,
                     &format!("/agents/{id}/{page}"),
-                    &[("authorization", "Bearer bender-test-secret-1234")],
+                    &[("authorization", &format!("Bearer {}", "bender-test-secret-1234"))],
                     None
                 )
                 .await

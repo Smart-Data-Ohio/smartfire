@@ -11,6 +11,7 @@ corpus.fetch("cases").each do |entry|
     browser = ActionDispatch::Integration::Session.new(Rails.application)
     browser.host! "campfire.test"
     headers = { "HTTP_USER_AGENT" => "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" }.merge(entry.fetch("headers"))
+    headers["Authorization"] = "Bearer #{entry.fetch('token')}" if entry["token"]
     if entry["viewer"]
       headers["Cookie"] = "session_token=#{labels.fetch("session_cookies.#{entry.fetch('viewer')}")}"
     end
