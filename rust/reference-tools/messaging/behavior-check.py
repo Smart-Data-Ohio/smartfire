@@ -299,6 +299,8 @@ for file in files:
             shutil.copytree(RUST / "parity/.seed/default", fixture)
             if file == "channel_threads_controller":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "work-controller", case], cwd=ROOT, env=env, check=True)
+            elif file == "mobile_layout":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "mobile-layout"], cwd=ROOT, env=env, check=True)
             elif file == "message_list_a11y":
                 fixture_kind = "board-touch" if case.startswith("text fields") else "history" if case.startswith("paginated history") else "message_list"
                 if any(name in CASES[file][20:28] for name in batch):

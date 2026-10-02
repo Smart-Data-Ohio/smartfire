@@ -41,6 +41,15 @@ async function acceptance(base,caseName,probe={},variant='default') {
       const context=await browser.newContext({viewport:{width:1440,height},...(negative||selectedMutant?{serviceWorkers:'block'}:{})});
       contexts.push(context);
       await installVisibility(context);
+      // These pinned system cases run with Rails.env.test? and the layout's
+      // data-test-motion="off" input (application.html.erb:2). Our servers use
+      // the production reference image. Supply that test-only input before
+      // parsing either app; this does not claim the server emits the attribute.
+      const pinnedTestMotion = continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      if(pinnedTestMotion) await context.addInitScript(()=>{
+        const apply=()=>document.documentElement?.setAttribute('data-test-motion','off');
+        apply();new MutationObserver(apply).observe(document,{childList:true,subtree:true});
+      });
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
       const page=await context.newPage();

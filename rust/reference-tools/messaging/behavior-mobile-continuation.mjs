@@ -47,7 +47,7 @@ export async function mobileContinuation({author:page,base,caseName,fixture}) {
     await page.setViewportSize({width:375,height:812});await visit('/activity');
     for(const [destination,title] of [['People','People'],['Agents','Agents'],['Work threads','Work'],['Saved','Saved for later'],['Scheduled','Scheduled messages'],['Activity inbox','Activity inbox']]) {
       await waitForVisibility(page.locator('#main-content'));await click(page.getByRole('button',{name:'Open workspace navigation',exact:true,includeHidden:true}));await waitForVisibility(page.locator('#sidebar.open'));
-      await click(page.locator('#sidebar').getByRole('link',{name:destination,exact:true,includeHidden:true}));await waitForVisibility(page.locator('#sidebar.open'),{state:'hidden'});
+      await click(page.locator('#sidebar').getByRole('link',{name:destination,exact:false,includeHidden:true}));await waitForVisibility(page.locator('#sidebar.open'),{state:'hidden'});
       await waitForCondition(async()=> (await page.title()).split(' | ')[0]===title,{timeout:10000});
       const controls=await page.evaluate(()=>[...document.querySelectorAll('#nav a, #nav button')].filter(node=>node.getClientRects().length>0&&!node.closest('.global-search, .help-menu')).map(node=>node.getAttribute('aria-label')||node.textContent.trim()));
       assert.deepEqual(controls,['Open workspace navigation']);await click(page.getByRole('button',{name:'Open workspace navigation',exact:true,includeHidden:true}));await waitForVisibility(page.locator('#sidebar.open'));

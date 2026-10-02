@@ -7,6 +7,13 @@ if %w[message_list message_destinations history boosts toolbar interactions acti
   Room.find(654632876).root_messages.where.not(id: [309456473, 908005739, 607264868]).destroy_all
 end
 case kind
+when "mobile-layout"
+  # MobileLayoutTest signs in JZ from the ordinary fixtures, which contain no
+  # enrolled credential or remembered device. The rich parity seed adds both
+  # for authentication coverage; remove just those unrelated extras here.
+  user=User.find(773523953)
+  user.two_factor_credential&.destroy!
+  TwoFactorRememberedDevice.where(user:).destroy_all
 when "board-touch"
   user=User.find(773523953)
   board=Rooms::Board.create_for({name:"Launch",creator:user},users:[user])
