@@ -1,0 +1,269 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "polling_drive_false",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "setup": {
+        "polling": true,
+        "drive": false
+      },
+      "status": 200,
+      "response_body": "{\"events\":[{\"id\":1900950001,\"event_type\":\"mention\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"hop\":0,\"room\":{\"id\":486777696,\"name\":\"All Talk\"},\"actor\":{\"id\":127326141,\"name\":\"David\"},\"message\":{\"id\":1900700001,\"client_message_id\":\"read-source\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Source α & β\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Source α &amp; β</p></div>\",\"markdown_source\":\"Source α & β\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700001\"},\"pull_request\":null}],\"next_since\":1900950001}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "1900950001"
+      }
+    },
+    {
+      "name": "mcp_polling_drive_false",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "setup": {
+        "polling": true,
+        "drive": false
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"events\\\":[{\\\"id\\\":1900950001,\\\"event_type\\\":\\\"mention\\\",\\\"outcome\\\":\\\"delivered\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"hop\\\":0,\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\"},\\\"actor\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\"},\\\"message\\\":{\\\"id\\\":1900700001,\\\"client_message_id\\\":\\\"read-source\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Source α & β\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Source α &amp; β</p></div>\\\",\\\"markdown_source\\\":\\\"Source α & β\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1900700001\\\"},\\\"pull_request\\\":null}],\\\"next_since\\\":1900950001}\"}],\"structuredContent\":{\"events\":[{\"id\":1900950001,\"event_type\":\"mention\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"hop\":0,\"room\":{\"id\":486777696,\"name\":\"All Talk\"},\"actor\":{\"id\":127326141,\"name\":\"David\"},\"message\":{\"id\":1900700001,\"client_message_id\":\"read-source\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Source α & β\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Source α &amp; β</p></div>\",\"markdown_source\":\"Source α & β\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700001\"},\"pull_request\":null}],\"next_since\":1900950001},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "polling_drive_true",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "setup": {
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"events\":[{\"id\":1900950001,\"event_type\":\"mention\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"hop\":0,\"room\":{\"id\":486777696,\"name\":\"All Talk\"},\"actor\":{\"id\":127326141,\"name\":\"David\"},\"message\":{\"id\":1900700001,\"client_message_id\":\"read-source\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Source α & β\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Source α &amp; β</p></div>\",\"markdown_source\":\"Source α & β\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[{\"file_id\":\"1AbcDefGhIjKlMnOpQrSt\",\"url\":\"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\"},{\"file_id\":\"2BcdEfgHiJkLmNoPqRsTu\",\"url\":\"https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu\"}],\"url\":\"http://campfire.test/rooms/486777696/@1900700001\"},\"pull_request\":null}],\"next_since\":1900950001}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "1900950001"
+      }
+    },
+    {
+      "name": "mcp_polling_drive_true",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "setup": {
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"events\\\":[{\\\"id\\\":1900950001,\\\"event_type\\\":\\\"mention\\\",\\\"outcome\\\":\\\"delivered\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"hop\\\":0,\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\"},\\\"actor\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\"},\\\"message\\\":{\\\"id\\\":1900700001,\\\"client_message_id\\\":\\\"read-source\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Source α & β\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Source α &amp; β</p></div>\\\",\\\"markdown_source\\\":\\\"Source α & β\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[{\\\"file_id\\\":\\\"1AbcDefGhIjKlMnOpQrSt\\\",\\\"url\\\":\\\"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\\\"},{\\\"file_id\\\":\\\"2BcdEfgHiJkLmNoPqRsTu\\\",\\\"url\\\":\\\"https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu\\\"}],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1900700001\\\"},\\\"pull_request\\\":null}],\\\"next_since\\\":1900950001}\"}],\"structuredContent\":{\"events\":[{\"id\":1900950001,\"event_type\":\"mention\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"hop\":0,\"room\":{\"id\":486777696,\"name\":\"All Talk\"},\"actor\":{\"id\":127326141,\"name\":\"David\"},\"message\":{\"id\":1900700001,\"client_message_id\":\"read-source\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Source α & β\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Source α &amp; β</p></div>\",\"markdown_source\":\"Source α & β\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[{\"file_id\":\"1AbcDefGhIjKlMnOpQrSt\",\"url\":\"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\"},{\"file_id\":\"2BcdEfgHiJkLmNoPqRsTu\",\"url\":\"https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu\"}],\"url\":\"http://campfire.test/rooms/486777696/@1900700001\"},\"pull_request\":null}],\"next_since\":1900950001},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "polling_authority_0",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "setup": {
+        "grant": [
+          "post_messages"
+        ],
+        "polling": true,
+        "drive": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "mcp_polling_authority_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "setup": {
+        "grant": [
+          "post_messages"
+        ],
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks read_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks read_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "polling_authority_1",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "revoked": true,
+        "polling": true,
+        "drive": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "mcp_polling_authority_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "revoked": true,
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks read_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks read_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "polling_authority_2",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "grant_room": 201306877,
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"events\":[],\"next_since\":0}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "0"
+      }
+    },
+    {
+      "name": "mcp_polling_authority_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "grant_room": 201306877,
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"events\\\":[],\\\"next_since\\\":0}\"}],\"structuredContent\":{\"events\":[],\"next_since\":0},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "polling_authority_3",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "setup": {
+        "remove_member": true,
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"events\":[],\"next_since\":0}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "0"
+      }
+    },
+    {
+      "name": "mcp_polling_authority_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "setup": {
+        "remove_member": true,
+        "polling": true,
+        "drive": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"events\\\":[],\\\"next_since\\\":0}\"}],\"structuredContent\":{\"events\":[],\"next_since\":0},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    }
+  ]
+}

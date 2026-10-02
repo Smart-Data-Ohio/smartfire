@@ -2,7 +2,9 @@
 //! frame layout for Turbo-Frame requests), and partials rendered outside a request for
 //! broadcasts (`ApplicationController.render`).
 
-use campfire_db::{Account, Boost, Membership, Message, Room};
+use campfire_db::{Account, Membership, Message, Room};
+#[cfg(test)]
+use campfire_db::Boost;
 use campfire_kit::{Ctx, Error, Format, Result, StatusCode};
 use campfire_views::helpers as h;
 use campfire_views::layouts::{Application, FrameLayout};
@@ -167,6 +169,7 @@ pub fn render_detached_in_zone<T>(app: &AppState, account: Option<&Account>, bas
 pub struct Rendered {
     pub message: Option<String>,
     pub message_presentation: Option<String>,
+    #[cfg(test)]
     pub boost: Option<String>,
     pub shared_room: Option<String>,
     /// `users/sidebars/rooms/_direct`, per membership id.
@@ -182,6 +185,7 @@ impl Partials for Rendered {
         self.message_presentation.clone().unwrap_or_default()
     }
 
+    #[cfg(test)]
     fn boost(&self, _: &Boost) -> String {
         self.boost.clone().unwrap_or_default()
     }

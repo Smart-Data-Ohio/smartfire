@@ -5,7 +5,6 @@ use super::{accounts::Account, agent_action::Action, agent_reads::ReadResult};
 use campfire_db::{
     ActivityItem, Errors, Event, Result, Timestamp, Tx, User, broadcasts::Broadcast,
 };
-use campfire_richtext::ruby::json_value_to_s;
 use jiff::{SignedDuration, tz::TimeZone};
 use rails_compat::ar_encryption::ArEncryption;
 use rusqlite::{OptionalExtension, params};
@@ -129,6 +128,14 @@ fn budget(
         error: Some(message),
     }))
 }
+fn contains_null(value: &Value) -> bool {
+    match value {
+        Value::Null => true,
+        Value::Array(items) => items.iter().any(contains_null),
+        _ => false,
+    }
+}
+
 /// The caller has authenticated the agent and supplied its request-local time zone.
 /// All authority, replay, budget, approval and inbox writes share this transaction.
 pub fn create(
@@ -161,10 +168,32 @@ pub fn create(
             "Agent owner has no usable Fizzy account",
         ));
     };
-    let external =
-        (!super::blank(&fields["external_id"])).then(|| json_value_to_s(&fields["external_id"]));
+    // AR's relation binds arrays as IN, while String assignment stores their inspect
+    // representation (and booleans as t/f). Share WS11's request coercions.
+    use campfire_db::models::agent_posting::client_ids::{ClientId, Lookup};
+    let raw = (!super::blank(&fields["external_id"])).then_some(&fields["external_id"]);
+    let input = ClientId::from_json(raw);
+    let external = input.stored;
     if let Some(external) = &external {
-        let existing=tx.conn().query_row("SELECT id,status,expires_at FROM agent_approvals WHERE agent_id=? AND external_id=? LIMIT 1",params![agent,external],|r|Ok(Approval{id:r.get(0)?,status:r.get(1)?,expires:r.get(2)?})).optional()?;
+        let mut binds = vec![rusqlite::types::Value::Integer(agent)];
+        let predicate = match input.lookup {
+            Lookup::InvalidParameters => return Err(campfire_db::Error::Other("can't quote Hash".into())),
+            Lookup::Attribute => {
+                binds.push(rusqlite::types::Value::Text(external.clone()));
+                "external_id=?".into()
+            }
+            Lookup::Values(values) => {
+                let nullable = raw.is_some_and(contains_null);
+                let count = values.len();
+                binds.extend(values.into_iter().map(rusqlite::types::Value::Text));
+                if count == 0 {
+                    if nullable { "external_id IS NULL".into() } else { "0".into() }
+                } else {
+                    format!("(external_id IN ({}){})", vec!["?"; count].join(","), if nullable { " OR external_id IS NULL" } else { "" })
+                }
+            }
+        };
+        let existing=tx.conn().query_row(&format!("SELECT id,status,expires_at FROM agent_approvals WHERE agent_id=? AND {predicate} ORDER BY id LIMIT 1"),rusqlite::params_from_iter(binds),|r|Ok(Approval{id:r.get(0)?,status:r.get(1)?,expires:r.get(2)?})).optional()?;
         if let Some(mut existing) = existing {
             expire(tx, &mut existing)?;
             return Ok(ReadResult::ok(payload(&existing)));

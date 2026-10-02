@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 use crate::controllers::presenters::{Presenter, Result, avatar_path};
 
 pub(crate) fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
-    let room = campfire_db::Room::find(p.conn, message.room_id)?;
+    let room = payload_room(p, message.room_id)?;
     let mut body = json!({"plain_text": p.plain_text_body(message)?, "html": html(p, message)?});
     if let Some(source) = &message.markdown_source { body["markdown_source"] = source.clone().into(); }
     let mut result = json!({
@@ -18,13 +18,24 @@ pub(crate) fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base:
         "room": {"id": message.room_id, "icon_name": room.icon_name}
     });
     if let Some(id) = message.thread_id {
-        result["thread_context"] = thread(p, &ChannelThread::find(p.conn, id)?, viewer, base)?;
+        let record = match p.search_preloads.as_ref().and_then(|d|d.threads.as_ref()) {
+            Some(data)=>data.threads.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("ChannelThread"))?,
+            None=>ChannelThread::find(p.conn,id)?,
+        };
+        result["thread_context"] = thread(p, &record, viewer, base)?;
     }
-    if let Some(summary) = ChannelThread::find_by_parent_message(p.conn, message.id)? {
+    let summary = match p.search_preloads.as_ref().and_then(|d|d.threads.as_ref()) {
+        Some(data)=>data.by_parent.get(&message.id).and_then(|id|data.threads.get(id)).cloned(),
+        None=>ChannelThread::find_by_parent_message(p.conn,message.id)?,
+    };
+    if let Some(summary) = summary {
         result["thread_summary"] = thread(p, &summary, viewer, base)?;
     }
     if message.reply_to_message_id.is_some() || message.reply_target_deleted_at.is_some() {
-        let source = message.reply_to_message_id.map(|id| Message::find_by_id(p.conn, id)).transpose()?.flatten();
+        let source = match &p.search_preloads {
+            Some(data)=>message.reply_to_message_id.and_then(|id|data.records.sources.get(&id)).cloned(),
+            None=>message.reply_to_message_id.map(|id|Message::find_by_id(p.conn,id)).transpose()?.flatten(),
+        };
         let mut reply = match &source {
             Some(source) => json!({"id": source.id, "url": permalink(source, base), "deleted": false, "creator": user(p, &p.user(source.creator_id)?, base)?,
                 "body": {"plain_text": p.plain_text_body(source)?, "html": html(p, source)?}}),
@@ -39,7 +50,11 @@ pub(crate) fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base:
         if let Some(note) = &message.forward_note { forwarded["note"] = note.clone().into(); }
         result["forwarded"] = forwarded;
     }
-    result["drive_attachments"] = message.drive_file_ids(p.conn)?.into_iter().map(|id| json!({"file_id": id, "url": format!("https://drive.google.com/open?id={id}")})).collect::<Vec<_>>().into();
+    let files=match &p.search_preloads {
+        Some(data)=>data.records.drive_files.get(&message.id).cloned().unwrap_or_default(),
+        None=>message.drive_file_ids(p.conn)?,
+    };
+    result["drive_attachments"] = files.into_iter().map(|id| json!({"file_id": id, "url": format!("https://drive.google.com/open?id={id}")})).collect::<Vec<_>>().into();
     if message.streaming { result["streaming"] = true.into(); }
     result["url"] = permalink(message, base).into();
     Ok(result)
@@ -91,11 +106,24 @@ pub(crate) fn actions(p: &Presenter<'_>, message: &Message, viewer: &User, base:
     Ok(result)
 }
 
+fn payload_room(p:&Presenter<'_>,id:i64) -> Result<campfire_db::Room> {
+    match &p.search_preloads {
+        Some(data)=>data.records.rooms.get(&id).cloned().ok_or(campfire_db::Error::RecordNotFound("Room")),
+        None=>campfire_db::Room::find(p.conn,id),
+    }
+}
+
 fn html(p: &Presenter<'_>, message: &Message) -> Result<String> {
     if message.markdown() {
         let resolver = p.resolver();
-        crate::rich_text::markdown_presentation(p.conn, &message.body_html(p.conn)?.unwrap_or_default(), &resolver.render_context(p.request_host.clone()))
-            .map_err(campfire_db::Error::Other)
+        let body = p.stored_body(message)?.unwrap_or_default();
+        let context = resolver.render_context(p.request_host.clone());
+        match &p.search_preloads {
+            Some(data) => campfire_richtext::markdown::presentation(&body, &context, &data.icons, None)
+                .map_err(|error| campfire_db::Error::Other(error.to_string())),
+            None => crate::rich_text::markdown_presentation(p.conn, &body, &context)
+                .map_err(campfire_db::Error::Other),
+        }
     } else { p.editable_body(message) }
 }
 
@@ -103,12 +131,15 @@ fn permalink(message: &Message, base: &str) -> String {
     format!("{base}{}", campfire_db::message_pin::message_path(message))
 }
 
-fn user(p: &Presenter<'_>, user: &User, base: &str) -> Result<Value> {
-    let icon: Option<String> = p.conn.query_row(
-        "SELECT icon_name FROM users WHERE id = ?",
-        [user.id],
-        |row| row.get(0),
-    )?;
+pub(crate) fn user(p: &Presenter<'_>, user: &User, base: &str) -> Result<Value> {
+    let icon = match &p.search_preloads {
+        Some(data) => data.users.get(&user.id).and_then(|record| record.icon_name.clone()),
+        None => p.conn.query_row(
+            "SELECT icon_name FROM users WHERE id = ?",
+            [user.id],
+            |row| row.get::<_, Option<String>>(0),
+        )?,
+    };
     let icon_url = icon
         .as_deref()
         .and_then(|name| p.resolve_avatar_icon(name))
@@ -207,41 +238,38 @@ pub(crate) fn work_threads(
         .collect()
 }
 
-pub(crate) fn thread(
-    p: &Presenter<'_>,
-    thread: &ChannelThread,
-    viewer: &User,
-    base: &str,
-) -> Result<Value> {
-    let member = thread.membership_for(p.conn, viewer.id)?;
-    let room = thread.room(p.conn)?;
-    let settings = thread.settings_manageable_by(p.conn, viewer)?;
-    let lifecycle = thread.manageable_by(p.conn, viewer)?;
-    let work_assignment = thread.work_assignment_manageable_by(p.conn, viewer)?;
-    let work_manageable = thread.work_manageable_by(p.conn, viewer)?;
-    let owner = thread.work_owner_id.map(|id| p.user(id)).transpose()?;
-    let owner_active = match &owner {
-        Some(owner)
-            if owner.is_active()
-                && campfire_db::Membership::find_by_room_and_user(p.conn, room.id, owner.id)?
-                    .is_some() =>
-        {
-            if owner.is_bot() {
-                agent_may_post(p, owner.id, &room)?
-            } else {
-                true
-            }
+pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, base: &str) -> Result<Value> {
+    let facts=p.search_preloads.as_ref().and_then(|d|d.threads.as_ref());
+    let member=match facts {Some(d)=>d.members.get(&thread.id).cloned(),None=>thread.membership_for(p.conn,viewer.id)?};
+    let room=payload_room(p,thread.room_id)?;
+    let settings=thread.settings_manageable_in_room(&room,viewer);
+    let lifecycle=thread.manageable_in_room(&room,viewer);
+    let viewer_member=match facts {Some(d)=>d.room_members.contains(&(room.id,viewer.id)),None=>campfire_db::Membership::find_by_room_and_user(p.conn,room.id,viewer.id)?.is_some()};
+    let work_assignment=thread.work_assignment_manageable_in_room(&room,viewer,viewer_member);
+    let work_manageable=thread.work_manageable_in_room(&room,viewer,viewer_member);
+    let owner=thread.work_owner_id.map(|id|p.user(id)).transpose()?;
+    let owner_active=match &owner {
+        Some(owner) if owner.is_active()=> {
+            let member=match facts {Some(d)=>d.room_members.contains(&(room.id,owner.id)),None=>campfire_db::Membership::find_by_room_and_user(p.conn,room.id,owner.id)?.is_some()};
+            member && if owner.is_bot(){match facts {Some(d)=>d.posting.contains(&(owner.id,room.id)),None=>agent_may_post(p,owner.id,&room)?}}else{true}
         }
-        _ => false,
+        _=>false,
     };
     let owner = owner
         .map(|owner| user(p, &owner, base).map(|value| owner_user(value, &owner)))
         .transpose()?;
-    let member_count: i64 = p.conn.query_row(
-        "SELECT count(*) FROM thread_memberships WHERE thread_id = ?",
-        [thread.id],
-        |row| row.get(0),
-    )?;
+    let member_count = match facts {
+        Some(data) => data.member_counts.get(&thread.id).copied().unwrap_or(0),
+        None => p.conn.query_row(
+            "SELECT count(*) FROM thread_memberships WHERE thread_id = ?",
+            [thread.id],
+            |row| row.get::<_, i64>(0),
+        )?,
+    };
+    let message_count = match facts {
+        Some(data) => data.message_counts.get(&thread.id).copied().unwrap_or(0),
+        None => thread.message_count(p.conn)?,
+    };
     Ok(thread_with_facts(
         thread,
         base,
@@ -257,7 +285,7 @@ pub(crate) fn thread(
                 assignment: work_assignment,
                 manageable: work_manageable,
             },
-            message_count: thread.message_count(p.conn)?,
+            message_count,
             member_count,
             now: Timestamp::from_jiff(p.now),
         },

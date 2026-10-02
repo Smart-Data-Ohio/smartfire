@@ -7,12 +7,11 @@ use crate::{
 };
 use campfire_kit::{Ctx, Param, Result, StatusCode, format};
 use serde_json::json;
-use sha2::Digest;
 fn render(c: &mut Ctx, reply: Reply) -> campfire_kit::Response {
     let status = StatusCode::from_u16(reply.status).expect("domain status");
     match reply.body {
         Some(body) => c.render(status, &format::JSON, rails_compat::json_encode(&body)),
-        None => c.head(status),
+        None => c.head(status).content_type("text/html"),
     }
 }
 pub async fn create(c: &mut Ctx) -> Result {
@@ -74,33 +73,8 @@ pub async fn create(c: &mut Ctx) -> Result {
         .header("authorization")
         .unwrap_or_default()
         .to_owned();
-    if authorization
-        .get(..7)
-        .is_some_and(|s| s.eq_ignore_ascii_case("Bearer "))
-    {
-        let secret = concerns::agent_bearer_secret(Some(&authorization)).unwrap_or_default();
-        let seconds = c.app().clock.now().as_second();
-        let by = format!(
-            "{}:{:x}",
-            seconds / 60,
-            sha2::Sha256::digest(secret)
-        );
-        let limit = campfire_kit::RateLimit::new(
-            "agents/github/pull_request_actions:create",
-            60,
-            jiff::SignedDuration::from_secs(65),
-        );
-        if c.rate_limited(&limit, Some(&by))? {
-            return Ok(c
-                .render(
-                    StatusCode::TOO_MANY_REQUESTS,
-                    &format::JSON,
-                    json!({"error":"rate_limited"}).to_string(),
-                )
-                .header("Retry-After", &(60 - seconds.rem_euclid(60)).to_string()));
-        }
-    }
-    c.no_store();
+    concerns::agent_api::throttle(c, 60, "agents/github/pull_request_actions", "create")?;
+    concerns::agent_api::no_store(c);
     let secret = concerns::agent_bearer_secret(Some(&authorization))
         .unwrap_or_default()
         .to_owned();

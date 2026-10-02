@@ -1,0 +1,2151 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "legacy_create",
+      "method": "post",
+      "body": "Legacy hello",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Legacy hello",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_create_utf8",
+      "method": "post",
+      "body": "Hello 👋 α & β",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Hello 👋 α & β",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_create_blank",
+      "method": "post",
+      "body": " ",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 422,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_create_repeat",
+      "method": "post",
+      "body": "Repeat",
+      "setup": {
+        "repeat": 1
+      },
+      "suffix": "?message[client_message_id]=legacy-repeat",
+      "path": "/rooms/486777696/{key}/messages?message[client_message_id]=legacy-repeat",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100102",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 2,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Repeat",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100102,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Repeat",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_create_reply",
+      "method": "post",
+      "body": "Reply",
+      "setup": {
+        "reply": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Reply",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_read",
+      "method": "get",
+      "body": null,
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 200,
+      "response_body": "[{\"id\":935962007,\"client_message_id\":\"c42aef57-d810-5b85-a011-a1d584be1bb5\",\"created_at\":\"2026-02-28T18:51:00.000Z\",\"updated_at\":\"2026-02-28T18:51:00.000Z\",\"body\":{\"plain_text\":\"093. New plants in the kitchen.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e093. New plants in the kitchen.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962007\"},{\"id\":935962008,\"client_message_id\":\"2167aaae-32de-58d6-9f07-d0fe0163b492\",\"created_at\":\"2026-02-28T18:58:00.000Z\",\"updated_at\":\"2026-02-28T18:58:00.000Z\",\"body\":{\"plain_text\":\"094. Who took my stapler?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e094. Who took my stapler?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962008\"},{\"id\":935962009,\"client_message_id\":\"efb06faf-eb25-535a-892b-e3eafff44d1b\",\"created_at\":\"2026-02-28T19:05:00.000Z\",\"updated_at\":\"2026-02-28T19:05:00.000Z\",\"body\":{\"plain_text\":\"095. Friday demo is at 3pm.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e095. Friday demo is at 3pm.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962009\"},{\"id\":935962010,\"client_message_id\":\"cdc4e06e-7b6a-5d19-ab24-2fffc6a52d16\",\"created_at\":\"2026-02-28T19:12:00.000Z\",\"updated_at\":\"2026-02-28T19:12:00.000Z\",\"body\":{\"plain_text\":\"096. The wifi is flaky again.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e096. The wifi is flaky again.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962010\"},{\"id\":935962011,\"client_message_id\":\"de3a2648-6e91-5bc5-92b4-7010e3c5b675\",\"created_at\":\"2026-02-28T19:19:00.000Z\",\"updated_at\":\"2026-02-28T19:19:00.000Z\",\"body\":{\"plain_text\":\"097. Congrats on the launch!\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e097. Congrats on the launch!\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962011\"},{\"id\":935962012,\"client_message_id\":\"925d50ce-2ec9-534a-8e7e-dbc327b27466\",\"created_at\":\"2026-02-28T19:26:00.000Z\",\"updated_at\":\"2026-02-28T19:26:00.000Z\",\"body\":{\"plain_text\":\"098. Anyone up for a walk?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e098. Anyone up for a walk?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962012\"},{\"id\":935962013,\"client_message_id\":\"6d6a5d5f-e864-59fc-b8c4-a7fd20e2e1bb\",\"created_at\":\"2026-02-28T19:33:00.000Z\",\"updated_at\":\"2026-02-28T19:33:00.000Z\",\"body\":{\"plain_text\":\"099. Back in 5.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e099. Back in 5.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962013\"},{\"id\":935962014,\"client_message_id\":\"a97eee4d-1150-58c3-94fd-9625a03dc09b\",\"created_at\":\"2026-02-28T19:40:00.000Z\",\"updated_at\":\"2026-02-28T19:40:00.000Z\",\"body\":{\"plain_text\":\"100. Did anyone see the game last night?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e100. Did anyone see the game last night?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962014\"},{\"id\":935962015,\"client_message_id\":\"2f7e70ea-2c09-5896-912e-9eef95f309e9\",\"created_at\":\"2026-02-28T19:47:00.000Z\",\"updated_at\":\"2026-02-28T19:47:00.000Z\",\"body\":{\"plain_text\":\"101. Coffee machine is fixed!\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e101. Coffee machine is fixed!\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962015\"},{\"id\":935962016,\"client_message_id\":\"3dd9496d-5d14-5f37-bb30-132585ccb8f8\",\"created_at\":\"2026-02-28T19:54:00.000Z\",\"updated_at\":\"2026-02-28T19:54:00.000Z\",\"body\":{\"plain_text\":\"102. I'm heading out for lunch.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e102. I'm heading out for lunch.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962016\"},{\"id\":935962017,\"client_message_id\":\"297dffe5-f074-563b-8c4c-450b10f8f3c5\",\"created_at\":\"2026-02-28T20:01:00.000Z\",\"updated_at\":\"2026-02-28T20:01:00.000Z\",\"body\":{\"plain_text\":\"103. New plants in the kitchen.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e103. New plants in the kitchen.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962017\"},{\"id\":935962018,\"client_message_id\":\"0832154b-e5c4-5259-bb70-74f73a54e30c\",\"created_at\":\"2026-02-28T20:08:00.000Z\",\"updated_at\":\"2026-02-28T20:08:00.000Z\",\"body\":{\"plain_text\":\"104. Who took my stapler?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e104. Who took my stapler?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962018\"},{\"id\":935962019,\"client_message_id\":\"d02f71cf-ada6-5185-a199-f6d2398f2f1f\",\"created_at\":\"2026-02-28T20:15:00.000Z\",\"updated_at\":\"2026-02-28T20:15:00.000Z\",\"body\":{\"plain_text\":\"105. Friday demo is at 3pm.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e105. Friday demo is at 3pm.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962019\"},{\"id\":935962020,\"client_message_id\":\"f4d9d51d-e3e6-5088-9c84-c8464043ad97\",\"created_at\":\"2026-02-28T20:22:00.000Z\",\"updated_at\":\"2026-02-28T20:22:00.000Z\",\"body\":{\"plain_text\":\"106. The wifi is flaky again.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e106. The wifi is flaky again.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962020\"},{\"id\":935962021,\"client_message_id\":\"d026aa68-07ab-59db-967d-5d80421fb36e\",\"created_at\":\"2026-02-28T20:29:00.000Z\",\"updated_at\":\"2026-02-28T20:29:00.000Z\",\"body\":{\"plain_text\":\"107. Congrats on the launch!\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e107. Congrats on the launch!\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962021\"},{\"id\":935962022,\"client_message_id\":\"466c3ee5-0972-5ea2-b9fc-e3d05896a9e0\",\"created_at\":\"2026-02-28T20:36:00.000Z\",\"updated_at\":\"2026-02-28T20:36:00.000Z\",\"body\":{\"plain_text\":\"108. Anyone up for a walk?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e108. Anyone up for a walk?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962022\"},{\"id\":935962023,\"client_message_id\":\"ee5e40e3-02d7-53e7-8639-8ab8d9e7e8f7\",\"created_at\":\"2026-02-28T20:43:00.000Z\",\"updated_at\":\"2026-02-28T20:43:00.000Z\",\"body\":{\"plain_text\":\"109. Back in 5.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e109. Back in 5.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962023\"},{\"id\":935962024,\"client_message_id\":\"427f5b52-5d1c-5428-bc50-141556fd0258\",\"created_at\":\"2026-02-28T20:50:00.000Z\",\"updated_at\":\"2026-02-28T20:50:00.000Z\",\"body\":{\"plain_text\":\"110. Did anyone see the game last night?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e110. Did anyone see the game last night?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962024\"},{\"id\":935962025,\"client_message_id\":\"1cfce27b-1cb6-5002-bf47-4638b8be817f\",\"created_at\":\"2026-02-28T20:57:00.000Z\",\"updated_at\":\"2026-02-28T20:57:00.000Z\",\"body\":{\"plain_text\":\"111. Coffee machine is fixed!\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e111. Coffee machine is fixed!\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962025\"},{\"id\":935962026,\"client_message_id\":\"54a6b686-218a-5184-bfac-890d1d68256d\",\"created_at\":\"2026-02-28T21:04:00.000Z\",\"updated_at\":\"2026-02-28T21:04:00.000Z\",\"body\":{\"plain_text\":\"112. I'm heading out for lunch.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e112. I'm heading out for lunch.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962026\"},{\"id\":935962027,\"client_message_id\":\"2ca71f16-5d0b-5451-bc43-976323076203\",\"created_at\":\"2026-02-28T21:11:00.000Z\",\"updated_at\":\"2026-02-28T21:11:00.000Z\",\"body\":{\"plain_text\":\"113. New plants in the kitchen.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e113. New plants in the kitchen.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962027\"},{\"id\":935962028,\"client_message_id\":\"1642c45d-a97c-5541-be32-ab80538366eb\",\"created_at\":\"2026-02-28T21:18:00.000Z\",\"updated_at\":\"2026-02-28T21:18:00.000Z\",\"body\":{\"plain_text\":\"114. Who took my stapler?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e114. Who took my stapler?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962028\"},{\"id\":935962029,\"client_message_id\":\"80f38592-a965-5f69-9ae7-33c9dd7731c8\",\"created_at\":\"2026-02-28T21:25:00.000Z\",\"updated_at\":\"2026-02-28T21:25:00.000Z\",\"body\":{\"plain_text\":\"115. Friday demo is at 3pm.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e115. Friday demo is at 3pm.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962029\"},{\"id\":935962030,\"client_message_id\":\"9d4d2ca7-aaf0-51d4-9efd-97c3ab874f9f\",\"created_at\":\"2026-02-28T21:32:00.000Z\",\"updated_at\":\"2026-02-28T21:32:00.000Z\",\"body\":{\"plain_text\":\"116. The wifi is flaky again.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e116. The wifi is flaky again.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962030\"},{\"id\":935962031,\"client_message_id\":\"68277230-f3d6-5d50-ad71-b78e8f4f3136\",\"created_at\":\"2026-02-28T21:39:00.000Z\",\"updated_at\":\"2026-02-28T21:39:00.000Z\",\"body\":{\"plain_text\":\"117. Congrats on the launch!\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e117. Congrats on the launch!\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962031\"},{\"id\":935962032,\"client_message_id\":\"835baa38-85ab-5603-a822-e9e387a2284d\",\"created_at\":\"2026-02-28T21:46:00.000Z\",\"updated_at\":\"2026-02-28T21:46:00.000Z\",\"body\":{\"plain_text\":\"118. Anyone up for a walk?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e118. Anyone up for a walk?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962032\"},{\"id\":935962033,\"client_message_id\":\"b077853d-9a72-50cd-bd8c-6754ec6af3b0\",\"created_at\":\"2026-02-28T21:53:00.000Z\",\"updated_at\":\"2026-02-28T21:53:00.000Z\",\"body\":{\"plain_text\":\"119. Back in 5.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e119. Back in 5.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962033\"},{\"id\":935962034,\"client_message_id\":\"c7f1c2c0-09b4-5e9e-ae97-373189b2618e\",\"created_at\":\"2026-02-28T22:00:00.000Z\",\"updated_at\":\"2026-02-28T22:00:00.000Z\",\"body\":{\"plain_text\":\"120. Did anyone see the game last night?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003e120. Did anyone see the game last night?\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962034\"},{\"id\":933434481,\"client_message_id\":\"0004\",\"created_at\":\"2026-03-02T15:30:00.000Z\",\"updated_at\":\"2026-03-02T15:30:00.000Z\",\"body\":{\"plain_text\":\"You know what the fellow said – in Italy, for thirty years under the Borgias, they had warfare, terror, murder and bloodshed, but they produced Michelangelo, Leonardo da Vinci and the Renaissance. In Switzerland, they had brotherly love, they had five hundred years of democracy and peace – and what did that produce? The cuckoo clock.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  You know what the fellow said – in Italy, for thirty years under the Borgias, they had warfare, terror, murder and bloodshed, but they produced Michelangelo, Leonardo da Vinci and the Renaissance. In Switzerland, they had brotherly love, they had five hundred years of democracy and peace – and what did that produce? The cuckoo clock.\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@933434481\"},{\"id\":303968118,\"client_message_id\":\"0005\",\"created_at\":\"2026-03-02T15:31:00.000Z\",\"updated_at\":\"2026-03-02T15:31:00.000Z\",\"body\":{\"plain_text\":\"Champagne, if you are seeking the truth, is better than a lie detector.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  Champagne, if you are seeking the truth, is better than a lie detector.\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@303968118\"},{\"id\":749124092,\"client_message_id\":\"0006\",\"created_at\":\"2026-03-02T15:33:00.000Z\",\"updated_at\":\"2026-03-02T15:33:00.000Z\",\"body\":{\"plain_text\":\"The sense of unhappiness is so much easier to convey than that of happiness. In misery we seem aware of our own existence, even though it may be in the form of a monstrous egotism—this pain of mine is individual, this nerve that winces belongs to me and to no other. But happiness annihilates us—we lose our identity.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  The sense of unhappiness is so much easier to convey than that of happiness. In misery we seem aware of our own existence, even though it may be in the form of a monstrous egotism—this pain of mine is individual, this nerve that winces belongs to me and to no other. But happiness annihilates us—we lose our identity.\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@749124092\"},{\"id\":684468941,\"client_message_id\":\"0007\",\"created_at\":\"2026-03-02T15:34:00.000Z\",\"updated_at\":\"2026-03-02T15:34:00.000Z\",\"body\":{\"plain_text\":\"A story has no beginning or end—arbitrarily one chooses that moment of experience from which to look back or from which to look ahead.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  A story has no beginning or end—arbitrarily one chooses that moment of experience from which to look back or from which to look ahead.\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@684468941\"},{\"id\":366357198,\"client_message_id\":\"0008\",\"created_at\":\"2026-03-02T15:35:00.000Z\",\"updated_at\":\"2026-03-02T15:35:00.000Z\",\"body\":{\"plain_text\":\"Hate is a lack of imagination.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  Hate is a lack of imagination.\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@366357198\"},{\"id\":746403085,\"client_message_id\":\"0009\",\"created_at\":\"2026-03-02T15:36:00.000Z\",\"updated_at\":\"2026-03-02T15:36:00.000Z\",\"body\":{\"plain_text\":\"And innocence is a kind of insanity\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  And innocence is a kind of insanity\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@746403085\"},{\"id\":217777555,\"client_message_id\":\"0010\",\"created_at\":\"2026-03-02T15:37:00.000Z\",\"updated_at\":\"2026-03-02T15:37:00.000Z\",\"body\":{\"plain_text\":\"I don't care a damn about men who are loyal to the people who pay them, to organizations...I don't think even my country means all that much. There are many countries in our blood, aren't there, but only one person. Would the world be in the mess it is if we were loyal to love and not to countries?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  I don't care a damn about men who are loyal to the people who pay them, to organizations...I don't think even my country means all that much. There are many countries in our blood, aren't there, but only one person. Would the world be in the mess it is if we were loyal to love and not to countries?\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@217777555\"},{\"id\":421488677,\"client_message_id\":\"0011\",\"created_at\":\"2026-03-02T15:38:00.000Z\",\"updated_at\":\"2026-03-02T15:38:00.000Z\",\"body\":{\"plain_text\":\"People who like quotes love meaningless generalizations\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  People who like quotes love meaningless generalizations\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@421488677\"},{\"id\":925779126,\"client_message_id\":\"0012\",\"created_at\":\"2026-03-02T15:39:00.000Z\",\"updated_at\":\"2026-03-02T15:39:00.000Z\",\"body\":{\"plain_text\":\"Pain is easy to write. In pain we're all happily individual. But what can one write about happiness?\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  Pain is easy to write. In pain we're all happily individual. But what can one write about happiness?\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@925779126\"},{\"id\":935962035,\"client_message_id\":\"06954b26-06ee-50df-90de-b4ed4fc0ff20\",\"created_at\":\"2026-03-02T15:40:00.000Z\",\"updated_at\":\"2026-03-02T15:40:00.000Z\",\"body\":{\"plain_text\":\"Build 1043 passed.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  \\u003cp\\u003eBuild 1043 passed.\\u003c/p\\u003e\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962035\"},{\"id\":136976342,\"client_message_id\":\"0013\",\"created_at\":\"2026-03-02T15:55:00.000Z\",\"updated_at\":\"2026-03-02T15:55:00.000Z\",\"body\":{\"plain_text\":\"When we are not sure, we are alive.\",\"html\":\"\\u003cdiv class=\\\"trix-content\\\"\\u003e\\n  When we are not sure, we are alive.\\n\\u003c/div\\u003e\\n\"},\"creator\":{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@136976342\"},{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Starter\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003eStarter\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"Starter\"},\"creator\":{\"id\":1901100001,\"name\":\"Legacy Poster\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTEwMDAwMSwicHVyIjoidXNlci9hdmF0YXIifX0--b5d24d3b828dcfa01398d1ec9dd3c7bf803e6b667b15a1841f743086ebe7a6ad/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": "132",
+        "Link": "<http://campfire.test/rooms/486777696/1901100001-LegacyToken1/messages?before=935962007>; rel=\"next\""
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_read_reply_denied",
+      "method": "get",
+      "body": null,
+      "setup": {
+        "reply": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 403,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_nonmember",
+      "method": "post",
+      "body": "Hidden",
+      "setup": {
+        "remove_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 404,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_board",
+      "method": "post",
+      "body": "Board",
+      "setup": {
+        "board": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 422,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_update",
+      "method": "patch",
+      "body": "Edited",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Edited\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Edited\\n</div>\\n\"},\"creator\":{\"id\":1901100001,\"name\":\"Legacy Poster\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTEwMDAwMSwicHVyIjoidXNlci9hdmF0YXIifX0--b5d24d3b828dcfa01398d1ec9dd3c7bf803e6b667b15a1841f743086ebe7a6ad/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Edited",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_update_blank",
+      "method": "patch",
+      "body": "",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"\",\"html\":\"<div class=\\\"trix-content\\\">\\n  \\n</div>\\n\"},\"creator\":{\"id\":1901100001,\"name\":\"Legacy Poster\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTEwMDAwMSwicHVyIjoidXNlci9hdmF0YXIifX0--b5d24d3b828dcfa01398d1ec9dd3c7bf803e6b667b15a1841f743086ebe7a6ad/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_update_other",
+      "method": "patch",
+      "body": "Edited",
+      "setup": {
+        "other_creator": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 403,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_update_system",
+      "method": "patch",
+      "body": "Edited",
+      "setup": {
+        "system": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 403,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_update_reply",
+      "method": "patch",
+      "body": "Edited",
+      "setup": {
+        "reply": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 403,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_destroy",
+      "method": "delete",
+      "body": null,
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 204,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": null,
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": -1,
+      "state": [],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_destroy_other",
+      "method": "delete",
+      "body": null,
+      "setup": {
+        "other_creator": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 403,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "legacy_destroy_system",
+      "method": "delete",
+      "body": null,
+      "setup": {
+        "system": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 403,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "race_budget_first",
+      "method": "post",
+      "body": "Race",
+      "setup": {
+        "agent_sender": true,
+        "budget_slots": 1,
+        "budget_cap": 4
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Race",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "race_budget_overflow",
+      "method": "post",
+      "body": "Race",
+      "setup": {
+        "agent_sender": true,
+        "budget_slots": 1,
+        "repeat": 1,
+        "budget_cap": 4
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (4/day)\",\"cap\":\"messages\",\"limit\":4,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Race",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "race_replay",
+      "method": "post",
+      "body": "Race",
+      "setup": {
+        "agent_sender": true,
+        "budget_slots": 1,
+        "repeat": 1,
+        "budget_cap": 4
+      },
+      "suffix": "?message[client_message_id]=race-replay",
+      "path": "/rooms/486777696/{key}/messages?message[client_message_id]=race-replay",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Race",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "fanout_agent_legacy_0",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100002,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "fanout_agent_legacy_1",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "hop": 0,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 1,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100002,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "fanout_agent_legacy_2",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "hop": 1,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 2,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100002,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "fanout_agent_legacy_3",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "hop": 2,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 3,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "fanout_agent_legacy_4",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "inactive": true,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "fanout_agent_legacy_5",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "remove_receiver": true,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "fanout_agent_legacy_6",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "no_webhook": true,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "fanout_agent_self",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMzk0OTU5ODU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--b01cb71b7140dace27e8e8a6b0bcc4e9799352db\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Bender Bot",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "fanout_agent_duplicate",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment> and <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver and @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100002,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "fanout_legacy_self",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--2943f405f3facb20a5221432198bda1f7e3744e5\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Poster",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "fanout_legacy_agent",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMzk0OTU5ODU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--b01cb71b7140dace27e8e8a6b0bcc4e9799352db\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Hey @Bender Bot",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 1901100001,
+          "event_type": "mention",
+          "outcome": "pending",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Agent::DeliveryJob",
+          "event_id": 1901100201
+        }
+      ]
+    },
+    {
+      "name": "fanout_legacy_agent_read_revoked",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMzk0OTU5ODU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--b01cb71b7140dace27e8e8a6b0bcc4e9799352db\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {
+        "revoke_receiver": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Hey @Bender Bot",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 1901100001,
+          "event_type": "mention",
+          "outcome": "pending",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Agent::DeliveryJob",
+          "event_id": 1901100201
+        }
+      ]
+    },
+    {
+      "name": "fanout_legacy_duplicate",
+      "method": "post",
+      "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment> and <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTEwMDAwMj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--6e825947a1772074b705f8b120fb8382f9c82caf\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Hey @Legacy Receiver and @Legacy Receiver",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100002,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "fanout_legacy_plain_named",
+      "method": "post",
+      "body": "Hey @[Legacy Receiver]",
+      "setup": {},
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Hey @[Legacy Receiver]",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "fanout_direct_false",
+      "method": "post",
+      "body": "Direct hello",
+      "setup": {
+        "direct": true,
+        "agent_sender": false
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Direct hello",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 1901100001,
+          "event_type": "direct_message",
+          "outcome": "pending",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Agent::DeliveryJob",
+          "event_id": 1901100201
+        },
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100002,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "fanout_direct_inactive_false",
+      "method": "post",
+      "body": "Direct hello",
+      "setup": {
+        "direct": true,
+        "inactive": true,
+        "agent_sender": false
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Direct hello",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 1901100001,
+          "event_type": "direct_message",
+          "outcome": "pending",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Agent::DeliveryJob",
+          "event_id": 1901100201
+        }
+      ]
+    },
+    {
+      "name": "replacement_false_body",
+      "method": "patch",
+      "body": "Text edit",
+      "setup": {
+        "agent_sender": false,
+        "attachment_old": 13,
+        "attachment_kind": "body"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Text edit\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Text edit\\n</div>\\n\"},\"creator\":{\"id\":1901100001,\"name\":\"Legacy Poster\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTEwMDAwMSwicHVyIjoidXNlci9hdmF0YXIifX0--b5d24d3b828dcfa01398d1ec9dd3c7bf803e6b667b15a1841f743086ebe7a6ad/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Text edit",
+          "attachment_blob_id": 13
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "replacement_false_clear",
+      "method": "patch",
+      "body": "{\"attachment\":\"\"}",
+      "setup": {
+        "agent_sender": false,
+        "attachment_old": 13,
+        "attachment_kind": "clear"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Starter\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>Starter</p>\\n</div>\\n\"},\"creator\":{\"id\":1901100001,\"name\":\"Legacy Poster\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTEwMDAwMSwicHVyIjoidXNlci9hdmF0YXIifX0--b5d24d3b828dcfa01398d1ec9dd3c7bf803e6b667b15a1841f743086ebe7a6ad/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": [
+        {
+          "class": "ActiveStorage::PurgeJob",
+          "blob_id": 13
+        }
+      ]
+    },
+    {
+      "name": "replacement_false_invalid",
+      "method": "patch",
+      "body": "{\"attachment\":\"invalid-signature\"}",
+      "setup": {
+        "agent_sender": false,
+        "attachment_old": 13,
+        "attachment_kind": "invalid"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": 13
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "replacement_false_replace",
+      "method": "patch",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\"}",
+      "setup": {
+        "agent_sender": false,
+        "attachment_old": 13,
+        "attachment_kind": "replace"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Starter\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>Starter</p>\\n</div>\\n\"},\"creator\":{\"id\":1901100001,\"name\":\"Legacy Poster\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTEwMDAwMSwicHVyIjoidXNlci9hdmF0YXIifX0--b5d24d3b828dcfa01398d1ec9dd3c7bf803e6b667b15a1841f743086ebe7a6ad/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Starter",
+          "attachment_blob_id": 9
+        }
+      ],
+      "events": [],
+      "jobs": [
+        {
+          "class": "ActiveStorage::PurgeJob",
+          "blob_id": 13
+        }
+      ]
+    },
+    {
+      "name": "replacement_false_same",
+      "method": "patch",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6ImJsb2JfaWQifX0=--a0455e433db5e221e639c005cae8178fee0270ad\"}",
+      "setup": {
+        "agent_sender": false,
+        "attachment_old": 13,
+        "attachment_kind": "same"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Starter\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>Starter</p>\\n</div>\\n\"},\"creator\":{\"id\":1901100001,\"name\":\"Legacy Poster\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTEwMDAwMSwicHVyIjoidXNlci9hdmF0YXIifX0--b5d24d3b828dcfa01398d1ec9dd3c7bf803e6b667b15a1841f743086ebe7a6ad/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 1901100001,
+          "markdown_source": null,
+          "plain_text": "Starter",
+          "attachment_blob_id": 13
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "replacement_false_destroy",
+      "method": "delete",
+      "body": null,
+      "setup": {
+        "agent_sender": false,
+        "attachment_old": 13
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 204,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": null,
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": -1,
+      "state": [],
+      "events": [],
+      "jobs": [
+        {
+          "class": "ActiveStorage::PurgeJob",
+          "blob_id": 13
+        }
+      ]
+    },
+    {
+      "name": "fanout_direct_true",
+      "method": "post",
+      "body": "Direct hello",
+      "setup": {
+        "direct": true,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Direct hello",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100001,
+          "message_id": 1901100101
+        },
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100002,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "fanout_direct_inactive_true",
+      "method": "post",
+      "body": "Direct hello",
+      "setup": {
+        "direct": true,
+        "inactive": true,
+        "agent_sender": true
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages",
+      "status": 201,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": "http://campfire.test/messages/1901100101",
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 1,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        },
+        {
+          "id": 1901100101,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Direct hello",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [
+        {
+          "id": 1901100201,
+          "agent_id": 773018776,
+          "room_id": 486777696,
+          "message_id": 1901100101,
+          "actor_id": 394959859,
+          "event_type": "posted",
+          "outcome": "delivered",
+          "hop": 0,
+          "detail": null
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "bot_id": 1901100001,
+          "message_id": 1901100101
+        }
+      ]
+    },
+    {
+      "name": "replacement_true_body",
+      "method": "patch",
+      "body": "Text edit",
+      "setup": {
+        "agent_sender": true,
+        "attachment_old": 13,
+        "attachment_kind": "body"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Text edit\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Text edit\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Text edit",
+          "attachment_blob_id": 13
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "replacement_true_clear",
+      "method": "patch",
+      "body": "{\"attachment\":\"\"}",
+      "setup": {
+        "agent_sender": true,
+        "attachment_old": 13,
+        "attachment_kind": "clear"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Starter\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>Starter</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Starter",
+          "attachment_blob_id": null
+        }
+      ],
+      "events": [],
+      "jobs": [
+        {
+          "class": "ActiveStorage::PurgeJob",
+          "blob_id": 13
+        }
+      ]
+    },
+    {
+      "name": "replacement_true_invalid",
+      "method": "patch",
+      "body": "{\"attachment\":\"invalid-signature\"}",
+      "setup": {
+        "agent_sender": true,
+        "attachment_old": 13,
+        "attachment_kind": "invalid"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": "Starter",
+          "plain_text": "Starter",
+          "attachment_blob_id": 13
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "replacement_true_replace",
+      "method": "patch",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6OSwicHVyIjoiYmxvYl9pZCJ9fQ==--c23856e7781d3117ac0b64146ee20192b7afa09d\"}",
+      "setup": {
+        "agent_sender": true,
+        "attachment_old": 13,
+        "attachment_kind": "replace"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Starter\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>Starter</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Starter",
+          "attachment_blob_id": 9
+        }
+      ],
+      "events": [],
+      "jobs": [
+        {
+          "class": "ActiveStorage::PurgeJob",
+          "blob_id": 13
+        }
+      ]
+    },
+    {
+      "name": "replacement_true_same",
+      "method": "patch",
+      "body": "{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6ImJsb2JfaWQifX0=--a0455e433db5e221e639c005cae8178fee0270ad\"}",
+      "setup": {
+        "agent_sender": true,
+        "attachment_old": 13,
+        "attachment_kind": "same"
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 200,
+      "response_body": "{\"id\":1901100100,\"client_message_id\":\"legacy-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Starter\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>Starter</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1901100100\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": 0,
+      "state": [
+        {
+          "id": 1901100100,
+          "creator_id": 394959859,
+          "markdown_source": null,
+          "plain_text": "Starter",
+          "attachment_blob_id": 13
+        }
+      ],
+      "events": [],
+      "jobs": []
+    },
+    {
+      "name": "replacement_true_destroy",
+      "method": "delete",
+      "body": null,
+      "setup": {
+        "agent_sender": true,
+        "attachment_old": 13
+      },
+      "suffix": "",
+      "path": "/rooms/486777696/{key}/messages/1901100100",
+      "status": 204,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": null,
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Total-Count": null,
+        "Link": null
+      },
+      "delta": -1,
+      "state": [],
+      "events": [],
+      "jobs": [
+        {
+          "class": "ActiveStorage::PurgeJob",
+          "blob_id": 13
+        }
+      ]
+    }
+  ]
+}

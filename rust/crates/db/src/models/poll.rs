@@ -104,7 +104,7 @@ impl Poll {
 
     /// `Poll.normalize_labels`: stripped, blanks dropped.
     pub fn normalize_labels(labels: &[String]) -> Vec<String> {
-        labels.iter().map(|label| label.trim().to_string()).filter(|label| !label.is_empty()).collect()
+        labels.iter().map(|label| campfire_richtext::ruby::strip(label).to_string()).filter(|label| !campfire_richtext::ruby::is_blank(label)).collect()
     }
 
     /// `Poll.create_for_message!(message:, labels:, multiple:, anonymous:, closes_at:)`: never on

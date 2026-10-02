@@ -9,7 +9,7 @@ use crate::{ChannelThread, Connection, Message, Result, Room, Timestamp, User, W
 use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
+use std::collections::{HashSet,HashMap};
 
 /// An occurrence in Rails' serialization order. Repository-wide grants alone
 /// cannot distinguish a repeated private repository before and after a 401.
@@ -320,18 +320,152 @@ pub fn work_payload(
     owner_id: Option<i64>,
     access: &RepositoryAccess,
 ) -> Result<Value> {
-    let room = Room::find(conn, thread.room_id)?;
-    let owner = thread
-        .work_owner_id
-        .map(|id| User::find_by_id(conn, id))
-        .transpose()?
-        .flatten();
-    let payload = json!({"id":thread.id,"room_id":thread.room_id,"board_id":room.board().then_some(room.id),"board_name":if room.board() {room.name.as_deref()} else {None},"title":thread.name,"work_status":thread.work_status,"owner":owner.map(|u|json!({"id":u.id,"name":u.name,"agent":u.is_bot()})),"tags":thread.tag_names(conn)?,"result":thread.result_markdown,"result_updated_at":thread.result_updated_at.map(json_time),"run_url":thread.run_url,"url":format!("/rooms/{}?thread={}",thread.room_id,thread.id),"updated_at":json_time(thread.updated_at),"links":work_links(conn,thread,owner_id,access)?});
-    if !access.valid(conn)? {
-        return work_payload(conn, thread, owner_id, &RepositoryAccess::default());
-    }
-    Ok(payload)
+    Ok(work_payloads(conn,std::slice::from_ref(thread),owner_id,access)?.remove(0))
 }
+
+/// Agents::WorkPayload associations are loaded once per bounded window. WS15g still
+/// supplies occurrence-specific access; its account snapshot is checked before and after.
+pub fn work_payloads(
+    conn: &Connection,
+    threads: &[ChannelThread],
+    owner_id: Option<i64>,
+    access: &RepositoryAccess,
+) -> Result<Vec<Value>> {
+    use crate::sql::placeholders;
+    use rusqlite::params_from_iter;
+    if threads.is_empty() {
+        return Ok(vec![]);
+    }
+    let ids = threads.iter().map(|t| t.id).collect::<Vec<_>>();
+    let rooms = threads
+        .iter()
+        .map(|t| t.room_id)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let rooms = query_all(
+        conn,
+        &format!(
+            "SELECT * FROM rooms WHERE id IN ({})",
+            placeholders(rooms.len())
+        ),
+        params_from_iter(rooms),
+        Room::from_row,
+    )?
+    .into_iter()
+    .map(|r| (r.id, r))
+    .collect::<HashMap<_, _>>();
+    let owners = User::where_ids(
+        conn,
+        &threads
+            .iter()
+            .filter_map(|t| t.work_owner_id)
+            .collect::<Vec<_>>(),
+    )?
+    .into_iter()
+    .map(|u| (u.id, u))
+    .collect::<HashMap<_, _>>();
+    let mut tags: HashMap<i64, Vec<String>> = HashMap::new();
+    for tag in crate::ThreadTag::for_threads(conn, &ids)? {
+        tags.entry(tag.channel_thread_id)
+            .or_default()
+            .push(tag.name);
+    }
+    let links = query_all(
+        conn,
+        &format!(
+            "SELECT channel_thread_id,kind,url,title,github_pull_request_id,event_id,id FROM work_thread_links WHERE channel_thread_id IN ({}) ORDER BY id",
+            placeholders(ids.len())
+        ),
+        params_from_iter(&ids),
+        |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, Option<String>>(2)?,
+                r.get::<_, Option<String>>(3)?,
+                r.get::<_, Option<i64>>(4)?,
+                r.get::<_, Option<i64>>(5)?,
+                r.get::<_, i64>(6)?,
+            ))
+        },
+    )?;
+    let prs = links
+        .iter()
+        .filter_map(|r| r.4)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let prs = if prs.is_empty() {
+        HashMap::new()
+    } else {
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM github_pull_requests WHERE id IN ({})",
+                placeholders(prs.len())
+            ),
+            params_from_iter(prs),
+            |r| {
+                Ok((
+                    r.get::<_, i64>("id")?,
+                    (
+                        r.get::<_, Option<bool>>("private")? == Some(false),
+                        pull_request_row(r, true)?,
+                    ),
+                ))
+            },
+        )?
+        .into_iter()
+        .collect::<HashMap<_, _>>()
+    };
+    let events = links
+        .iter()
+        .filter_map(|r| r.5)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let events = if events.is_empty() {
+        HashMap::new()
+    } else {
+        query_all(conn,&format!("SELECT id,title,starts_at,ends_at,cancelled_at FROM events WHERE id IN ({})",placeholders(events.len())),params_from_iter(events),|r|Ok((r.get::<_,i64>(0)?,json!({"id":r.get::<_,i64>(0)?,"title":r.get::<_,String>(1)?,"starts_at":r.get::<_,Option<Timestamp>>(2)?.map(json_time),"ends_at":r.get::<_,Option<Timestamp>>(3)?.map(json_time),"cancelled":r.get::<_,Option<Timestamp>>(4)?.is_some()}))))?.into_iter().collect::<HashMap<_,_>>()
+    };
+    let mut checked = access.clone();
+    if !checked.valid(conn)? {
+        checked = RepositoryAccess::default();
+    }
+    checked.guard = None;
+    let render = |access: &RepositoryAccess| -> Result<Vec<Value>> {
+        threads.iter().map(|thread| {
+            let room=rooms.get(&thread.room_id).ok_or(crate::Error::RecordNotFound("Room"))?;
+            let owner=thread.work_owner_id.and_then(|id|owners.get(&id));
+            let mut values=Vec::new();
+            for (_,kind,url,title,pr,event,link_id) in links.iter().filter(|r|r.0==thread.id) {
+                match kind.as_str() {
+                    "drive_file"=>values.push(json!({"kind":kind,"url":url,"title":title,"pull_request":null,"event":null})),
+                    "pull_request"=>if let Some((public,record))=pr.and_then(|id|prs.get(&id)) {
+                        let mut record=record.clone();
+                        let allowed=owner_id.map(|user|access.readable(conn,RepositoryEntry::WorkLink(*link_id),user,record["owner"].as_str().unwrap(),record["repo"].as_str().unwrap())).transpose()?.unwrap_or(false);
+                        if !public && !allowed {for key in ["title","head_branch","base_branch"] {record[key]=Value::Null;}}
+                        values.push(json!({"kind":kind,"url":record["url"],"title":record["title"],"pull_request":record,"event":null}));
+                    },
+                    "event"=>if let Some(record)=event.and_then(|id|events.get(&id)) {
+                        let mut record=record.clone();record["url"]=format!("/rooms/{}/events/{}",thread.room_id,record["id"]).into();
+                        values.push(json!({"kind":kind,"url":record["url"],"title":record["title"],"pull_request":null,"event":record}));
+                    },
+                    _=>{},
+                }
+            }
+            Ok(json!({"id":thread.id,"room_id":thread.room_id,"board_id":room.board().then_some(room.id),"board_name":if room.board(){room.name.as_deref()}else{None},"title":thread.name,"work_status":thread.work_status,"owner":owner.map(|u|json!({"id":u.id,"name":u.name,"agent":u.is_bot()})),"tags":tags.get(&thread.id).cloned().unwrap_or_default(),"result":thread.result_markdown,"result_updated_at":thread.result_updated_at.map(json_time),"run_url":thread.run_url,"url":format!("/rooms/{}?thread={}",thread.room_id,thread.id),"updated_at":json_time(thread.updated_at),"links":values}))
+        }).collect()
+    };
+    let payloads = render(&checked)?;
+    if !access.valid(conn)? {
+        return render(&RepositoryAccess::default());
+    }
+    Ok(payloads)
+}
+
 pub fn pull_request_for_message(
     conn: &Connection,
     message: &Message,
@@ -383,51 +517,11 @@ fn pull_request_payload(
         conn,
         "SELECT * FROM github_pull_requests WHERE id=?",
         [id],
-        |r| {
-            let owner: String = r.get("owner")?;
-            let repo: String = r.get("repo")?;
-            let number: i64 = r.get("number")?;
-            let public = r.get::<_, Option<bool>>("private")? == Some(false);
-            let visible = public || allowed;
-            let url = r
-                .get::<_, Option<String>>("html_url")?
-                .filter(|s| !campfire_richtext::ruby::is_blank(s))
-                .unwrap_or_else(|| format!("https://github.com/{owner}/{repo}/pull/{number}"));
-            Ok(
-                json!({"url":url,"owner":owner,"repo":repo,"number":number,"title":if visible {r.get::<_,Option<String>>("title")?} else {None},"state":r.get::<_,Option<String>>("state")?,"head_branch":if visible {r.get::<_,Option<String>>("head_branch")?} else {None},"base_branch":if visible {r.get::<_,Option<String>>("base_branch")?} else {None},"review_decision":r.get::<_,Option<String>>("review_decision")?,"checks_state":r.get::<_,Option<String>>("check_status")?}),
-            )
-        },
+        |r| pull_request_row(r,r.get::<_,Option<bool>>("private")?==Some(false) || allowed),
     )
 }
-fn work_links(
-    conn: &Connection,
-    thread: &ChannelThread,
-    owner_id: Option<i64>,
-    access: &RepositoryAccess,
-) -> Result<Vec<Value>> {
-    let rows = query_all(
-        conn,
-        "SELECT kind,url,title,github_pull_request_id,event_id,id FROM work_thread_links WHERE channel_thread_id=? ORDER BY id",
-        [thread.id],
-        |r| {
-            Ok((
-                r.get::<_, String>(0)?,
-                r.get::<_, Option<String>>(1)?,
-                r.get::<_, Option<String>>(2)?,
-                r.get::<_, Option<i64>>(3)?,
-                r.get::<_, Option<i64>>(4)?,
-                r.get::<_, i64>(5)?,
-            ))
-        },
-    )?;
-    let mut links = vec![];
-    for (kind, url, title, pr, event, link_id) in rows {
-        match kind.as_str() {
-            "drive_file"=>links.push(json!({"kind":kind,"url":url,"title":title,"pull_request":null,"event":null})),
-            "pull_request"=>if let Some(pr)=pr.map(|id|pull_request_payload(conn,id,owner_id,access,RepositoryEntry::WorkLink(link_id))).transpose()?.flatten() {links.push(json!({"kind":kind,"url":pr["url"],"title":pr["title"],"pull_request":pr,"event":null}));},
-            "event"=>if let Some(event)=event.map(|id|query_one(conn,"SELECT id,title,starts_at,ends_at,cancelled_at FROM events WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"title":r.get::<_,String>(1)?,"starts_at":r.get::<_,Option<Timestamp>>(2)?.map(json_time),"ends_at":r.get::<_,Option<Timestamp>>(3)?.map(json_time),"cancelled":r.get::<_,Option<Timestamp>>(4)?.is_some(),"url":format!("/rooms/{}/events/{id}",thread.room_id)})))).transpose()?.flatten() {links.push(json!({"kind":kind,"url":event["url"],"title":event["title"],"pull_request":null,"event":event}));},
-            _=>{},
-        }
-    }
-    Ok(links)
+fn pull_request_row(r:&rusqlite::Row<'_>,visible:bool) -> rusqlite::Result<Value> {
+    let owner:String=r.get("owner")?;let repo:String=r.get("repo")?;let number:i64=r.get("number")?;
+    let url=r.get::<_,Option<String>>("html_url")?.filter(|s|!campfire_richtext::ruby::is_blank(s)).unwrap_or_else(||format!("https://github.com/{owner}/{repo}/pull/{number}"));
+    Ok(json!({"url":url,"owner":owner,"repo":repo,"number":number,"title":if visible {r.get::<_,Option<String>>("title")?} else {None},"state":r.get::<_,Option<String>>("state")?,"head_branch":if visible {r.get::<_,Option<String>>("head_branch")?} else {None},"base_branch":if visible {r.get::<_,Option<String>>("base_branch")?} else {None},"review_decision":r.get::<_,Option<String>>("review_decision")?,"checks_state":r.get::<_,Option<String>>("check_status")?}))
 }
