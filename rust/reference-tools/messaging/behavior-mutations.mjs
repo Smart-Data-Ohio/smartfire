@@ -229,13 +229,24 @@ for(const [name,variants] of visibilityAssertionMutations) {
   if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
   for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
 }
+// These served changes are allowed by explicit Rails visible: false scopes.
+// They must PASS their named checks; never schedule them as negative mutants.
+export const hiddenScopeProbes=new Map([
+  ['the main message list is a live log',new Map([
+    ['hidden-live-log-and-messages',opacity('.messages[role="log"] { visibility: hidden !important; }')],
+    ['hidden-live-log-visible-messages',opacity('.messages[role="log"] { visibility: hidden !important; } .messages[role="log"] > .message { visibility: visible !important; }')],
+  ])],
+  ['the more button opens the shared menu for its message',new Map([
+    ['hidden-open-message-toolbar',opacity('.message[data-message-actions-open] .message__toolbar { display: none !important; }')],
+  ])],
+]);
 export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
   const variants=[...(mutations.has(caseName)?['default']:[]),...(reviewMutations.get(caseName)?.keys()||[])];
   return selected?variants.filter(name=>name===selected):variants;
 }
 export async function installMutation(page,caseName,probe,variant='default') {
-  const mutation=variant==='default'?mutations.get(caseName):reviewMutations.get(caseName)?.get(variant);
+  const mutation=variant==='default'?mutations.get(caseName):reviewMutations.get(caseName)?.get(variant)||hiddenScopeProbes.get(caseName)?.get(variant);
   assert.ok(mutation,`no discrimination mutant for ${caseName}`);
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());

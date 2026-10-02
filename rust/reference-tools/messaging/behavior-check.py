@@ -19,6 +19,7 @@ import time
 import textwrap
 import urllib.request
 from behavior_action_rows import assert_action_rows
+from behavior_mutation_jobs import probe_jobs
 
 ROOT = Path(__file__).resolve().parents[3]
 RUST = ROOT / "rust"
@@ -157,13 +158,13 @@ parser.add_argument("--case", help="run one exact pinned declaration from the se
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 parser.add_argument("--mutant", help="select one served mutant variant; without --negative, diagnose its acceptance on both apps (not parity credit)")
-parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes"], help="diagnose all new visibility assertion mutants without parity credit")
+parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes", "hidden-scopes"], help="diagnose all new visibility assertion mutants without parity credit")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
 if args.mutant_set:
     assert not args.mutant and not args.case and (not args.negative or args.mutant_set == "element-scopes"), "only element-scopes supports a negative mutant-set run"
-    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
+    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations", "hidden-scopes": "hiddenScopeProbes"}.get(args.mutant_set, "visibilityAssertionMutations")
     diagnostic_variants = json.loads(subprocess.check_output([
         "node", "--input-type=module", "-e",
         f"import {{{diagnostic_export}}} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
@@ -267,14 +268,9 @@ for file in files:
     batches += [[case] for case in selected if case not in readonly + navigation]
     if file == "composer_attach_menu":
         batches = [selected]  # No server writes; new contexts for each case.
-    jobs = [(batch, args.mutant or "default") for batch in filter(None, batches)]
-    if args.mutant_set:
-        jobs = [([case], variant) for case in selected for variant in (mutation_variants[case] if args.negative else diagnostic_variants[case])]
-    if args.negative and not args.mutant and not args.mutant_set:
-        # A failed highlight check can still have posted a real message. Each
-        # additional mutant therefore gets its own seed/database/server, not
-        # just a fresh browser that would read previous mutants' saved rows.
-        jobs += [([case], variant) for case in selected for variant in mutation_variants[case] if variant != "default"]
+    jobs = probe_jobs(batches, selected, negative=args.negative, mutant=args.mutant,
+                      mutation_variants=mutation_variants,
+                      diagnostic_variants=diagnostic_variants if args.mutant_set else None)
     for batch, variant in jobs:
         case = batch[0]
         for name in batch:

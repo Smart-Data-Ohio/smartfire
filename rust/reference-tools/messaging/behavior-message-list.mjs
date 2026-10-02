@@ -5,6 +5,12 @@ import assert from 'node:assert/strict';
 import {waitForVisibility,waitForVisibleCount} from './behavior-visibility.mjs';
 export async function messageList({author:page,recipient,caseName,send,text,openEdit,field}) {
   const list=page.locator('.messages[role="log"]').first();
+  if(caseName==='the main message list is a live log') {
+    // Rails :313 includes hidden containers and does not first find a visible
+    // message. The navigation/focus cases below have their own visible scope.
+    await waitForVisibility(list.locator(':scope[aria-live="polite"][aria-relevant="additions"]'),{state:'attached',timeout:10000});
+    return;
+  }
   const editor=page.getByRole('combobox',{name:'Write a message',exact:true});
   await page.waitForFunction(()=>document.activeElement?.id==='message_markdown_source');
   await waitForVisibility(list.locator(':scope > .message[tabindex="0"]').first());
@@ -146,8 +152,6 @@ export async function messageList({author:page,recipient,caseName,send,text,open
     await menu(third);await page.evaluate(()=>document.dispatchEvent(new Event('turbo:before-cache')));
     await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'detached'});
     assert.equal(await row(third).getAttribute('aria-expanded'),'false');
-  } else if(caseName==='the main message list is a live log') {
-    await waitForVisibility(list.locator(':scope[aria-live="polite"][aria-relevant="additions"]'));
   } else if(caseName==='paginated history stays quiet past the insert, then the live region comes back') {
     await waitForVisibleCount(list.locator('.message').filter({hasText:/^History post 0$/}),0);
     await page.evaluate(()=>{

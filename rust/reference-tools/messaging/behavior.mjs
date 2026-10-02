@@ -114,7 +114,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       return;
     }
     if(file==='search_forward_edit') {
-      await searchForward({author,recipient,base,caseName,fixture,openEdit,send});
+      await searchForward({author,recipient,base,caseName,fixture,openEdit,submit});
       return;
     }
     if(file==='unread_divider') {
@@ -219,8 +219,11 @@ async function acceptance(base,caseName,probe={},variant='default') {
         // The pinned within_thread_message helper waits for the menu controller
         // to register each newly delivered/replaced row before right-clicking.
         const message=threadMessage(value);
+        // threads_test.rb:581 finds a visible row, but :583 then checks
+        // the controller's attribute with visible: false, wait: 10.
+        await waitForVisibility(message,{timeout:DELIVERY_WAIT});
         const id=await message.getAttribute('id');
-        await waitForVisibility(author.locator(`[id="${id}"][aria-haspopup="menu"]`));
+        await waitForVisibility(author.locator(`[id="${id}"][aria-haspopup="menu"]`),{state:'attached',timeout:DELIVERY_WAIT});
         await message.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
         await waitForVisibility(author.locator('#message-actions-menu:not([hidden])'));
       }

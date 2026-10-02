@@ -7,7 +7,7 @@ export async function toolbar({author:page,recipient,caseName}) {
   const row=originalMessage(page),panel=page.locator('#emoji-picker-panel');
   const search=page.getByLabel('Search emoji and icons',{exact:true});
   const option=name=>panel.getByRole('button',{name,exact:true});
-  async function hover() {await actOnVisible(row.locator('[data-reply-target="body"]'),'hover');await waitForVisibility(row.locator('.message__toolbar'),{timeout:DELIVERY_WAIT});}
+  async function hover() {await waitForVisibility(row.locator('.message__toolbar'),{state:'attached',timeout:2000});await actOnVisible(row.locator('[data-reply-target="body"]'),'hover');await waitForVisibility(row.locator('.message__toolbar'),{timeout:DELIVERY_WAIT});}
   async function picker(waitForPanel=true) {
     await hover();await row.getByRole('button',{name:'Add reaction',exact:true}).click();
     if(waitForPanel) await waitForVisibility(panel,{timeout:DELIVERY_WAIT});
@@ -37,7 +37,8 @@ export async function toolbar({author:page,recipient,caseName}) {
     await hover();await row.getByRole('button',{name:'More message actions',exact:true}).click();
     await assertMenuOpen(page);
     await waitForVisibleAttribute(row,'data-message-actions-open','');
-    assert.equal(await row.getByRole('button',{name:'More message actions',exact:true}).getAttribute('aria-expanded'),'true');
+    // message_toolbar_test.rb:49 uses visible: false after opening the menu.
+    await waitForVisibility(row.locator('button[aria-label="More message actions"][aria-expanded="true"]'),{state:'attached',timeout:2000});
     await page.keyboard.press('Escape');await closedMenu(page);
   } else if(caseName.startsWith('keyboard users')) {
     await row.focus();await page.keyboard.press('Tab');await page.keyboard.press('Tab');await focused('React with thumbs up');
