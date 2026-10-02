@@ -74,7 +74,9 @@ fn card_in_discussion(pr: &PullRequest, discussion_thread: Option<i64>) -> Resul
     })
 }
 pub fn card_with_files(conn: &Connection, pr: &PullRequest, room_id: i64) -> Result<Card> {
-    let mut data = card(conn, pr, room_id)?;
+    with_files(card(conn, pr, room_id)?, pr)
+}
+fn with_files(mut data: Card, pr: &PullRequest) -> Result<Card> {
     let summary = pr.changed_files_summary()?;
     let mut files = Vec::new();
     for file in summary["files"]
@@ -109,6 +111,12 @@ pub fn card_with_files(conn: &Connection, pr: &PullRequest, room_id: i64) -> Res
     data.files = files;
     data.files_total = summary["total_count"].as_i64().unwrap_or_default();
     Ok(data)
+}
+/// Headers have no message/Discuss control. The updated PR already supplies all
+/// their facts; a per-header discussion lookup cannot affect rendered bytes.
+pub(crate) fn thread_header_card(pr: &PullRequest) -> Result<Card> {
+    let data = shared_card_in_discussion(pr, None)?;
+    if pr.private == Some(false) { with_files(data, pr) } else { Ok(data) }
 }
 pub fn shared_card(conn: &Connection, pr: &PullRequest, room_id: i64, files: bool) -> Result<Card> {
     if pr.private != Some(false) {

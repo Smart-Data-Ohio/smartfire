@@ -160,21 +160,25 @@ impl Post {
     /// Broadcast partials render all siblings too. Claim their lost jobs on this same writer,
     /// before commit, so readers and callback delivery never acquire a second writer.
     fn request_pending_siblings(&self, tx: &mut Tx<'_>) -> Result<()> {
-        let ids = {
-            let mut query = tx.conn().prepare(
-                "SELECT DISTINCT message_id FROM twitter_post_references WHERE twitter_post_id=?",
-            )?;
-            query
-                .query_map([self.id], |r| r.get::<_, i64>(0))?
-                .collect::<rusqlite::Result<Vec<_>>>()?
-        };
+        use crate::integrations::message_batches::{self, Reference};
         let mut seen = std::collections::HashSet::new();
-        for posts in Self::for_messages(tx.conn(), &ids)?.values() {
-            for post in posts {
-                if post.fetch_pending() && seen.insert(post.id) {
-                    post.request_fetch(tx)?;
+        let mut after = None;
+        loop {
+            let messages =
+                message_batches::next(tx.conn(), Reference::TwitterPost(self.id), after)?;
+            let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+            let mut posts = Self::for_messages(tx.conn(), &ids)?;
+            for message in &messages {
+                for post in posts.remove(&message.id).unwrap_or_default() {
+                    if post.fetch_pending() && seen.insert(post.id) {
+                        post.request_fetch(tx)?;
+                    }
                 }
             }
+            if messages.len() < message_batches::SIZE {
+                break;
+            }
+            after = messages.last().map(|m| m.id);
         }
         Ok(())
     }
