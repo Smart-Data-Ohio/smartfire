@@ -4,7 +4,7 @@ use super::net::BoxFuture;
 use campfire_db::models::agent_payloads::{RepositoryAccess, RepositoryEntry};
 use campfire_db::{Agent, Connection, Database, Result};
 use rusqlite::{OptionalExtension, params};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 /// The account belongs to the Agent's owner, never to its bot or the triggering actor.
@@ -34,7 +34,10 @@ pub struct State {
 enum Surface {
     Work,
     Messages,
-    #[allow(dead_code, reason = "Combined thread seam retained for WS11-api source compatibility")]
+    #[allow(
+        dead_code,
+        reason = "Combined thread seam retained for WS11-api source compatibility"
+    )]
     Both,
 }
 impl State {
@@ -53,7 +56,10 @@ impl State {
     }
     /// Compatibility seam for callers needing both kinds of thread context.
     /// Payload-specific callers use work/messages; polling uses event order.
-    #[allow(dead_code, reason = "Combined thread seam retained for WS11-api source compatibility")]
+    #[allow(
+        dead_code,
+        reason = "Combined thread seam retained for WS11-api source compatibility"
+    )]
     pub async fn resolve_threads(
         &self,
         db: &Database,
@@ -177,24 +183,18 @@ impl State {
         let identity = requests
             .first()
             .map(|(_, _, request)| (request.user_id, request.account_id));
+        let mut guard = IdentityGuard::default();
         for (scope, entry, request) in requests {
             let (account, user) = (request.account_id, request.user_id);
             // Check before using even a cached allowance: a later occurrence of
             // the same repo must be redacted after this batch disconnects it.
-            if !db
-                .read(move |conn| current(conn, agent, user, account))
-                .await?
-            {
+            if !guard.current(db, agent, user, account).await? {
                 break;
             }
             // Accounts owns the versioned cache. A batch-local cache would
             // reuse a denial after a transient error or an allowance after relink.
             let readable = reader.readable(request.clone()).await?;
-            if readable
-                && db
-                    .read(move |conn| current(conn, agent, user, account))
-                    .await?
-            {
+            if readable && guard.current(db, agent, user, account).await? {
                 let mut scoped_access = access.in_event(scope);
                 scoped_access.allow_entry(entry, user, request.owner, request.repo);
                 access = scoped_access;
@@ -211,17 +211,48 @@ impl State {
         Ok(access)
     }
 }
-fn current(conn: &Connection, agent: i64, user: i64, account: i64) -> Result<bool> {
-    if Agent::find(conn, agent)?.and_then(|a| a.owner_id) != Some(user) {
-        return Ok(false);
+// Cache only the current identity snapshot, never a repository permission result.
+// A refresh/disconnect/relink or owner/grant write invalidates it even if an account
+// changes and changes back during a network call. Never hold a reader across await.
+#[derive(Default)]
+struct IdentityGuard {
+    cached: Option<(u64, i64, i64, i64, bool)>,
+}
+impl IdentityGuard {
+    async fn current(
+        &mut self,
+        db: &Database,
+        agent: i64,
+        user: i64,
+        account: i64,
+    ) -> Result<bool> {
+        let generation = db.write_generation();
+        if generation.is_multiple_of(2)
+            && let Some((version, a, u, c, allowed)) = self.cached
+            && (version, a, u, c) == (generation, agent, user, account)
+        {
+            return Ok(allowed);
+        }
+        let snapshot = db.clone();
+        let (before, allowed, after) = db
+            .read(move |conn| {
+                let before = snapshot.write_generation();
+                let allowed = current(conn, agent, user, account)?;
+                Ok((before, allowed, snapshot.write_generation()))
+            })
+            .await?;
+        self.cached = if before == after && after.is_multiple_of(2) {
+            Some((after, agent, user, account, allowed))
+        } else {
+            None
+        };
+        Ok(allowed)
     }
-    let reason = conn
-        .query_row(
-            "SELECT disconnected_reason FROM github_connected_accounts WHERE id=? AND user_id=?",
-            params![account, user],
-            |r| r.get::<_, Option<String>>(0),
-        )
-        .optional()?;
+}
+fn current(conn: &Connection, agent: i64, user: i64, account: i64) -> Result<bool> {
+    let reason=conn.query_row(
+        "SELECT c.disconnected_reason FROM agents a JOIN github_connected_accounts c ON c.user_id=a.owner_id WHERE a.id=? AND a.owner_id=? AND c.id=?",
+        params![agent,user,account],|r|r.get::<_,Option<String>>(0)).optional()?;
     Ok(reason.is_some_and(|reason| {
         reason
             .as_deref()
@@ -250,46 +281,68 @@ fn requests(
     if !current(conn, agent, user, account)? {
         return Ok(vec![]);
     }
+    if threads.is_empty() {
+        return Ok(vec![]);
+    }
+    let slots = std::iter::repeat_n("?", threads.len())
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut work: HashMap<i64, Vec<(i64, String, String)>> = HashMap::new();
+    if matches!(surface, Surface::Work | Surface::Both) {
+        let mut query=conn.prepare(&format!("SELECT w.channel_thread_id,w.id,p.owner,p.repo FROM work_thread_links w JOIN github_pull_requests p ON p.id=w.github_pull_request_id WHERE w.channel_thread_id IN ({slots}) AND w.kind='pull_request' AND (p.private IS NULL OR p.private!=0) ORDER BY w.id"))?;
+        for row in query.query_map(rusqlite::params_from_iter(threads), |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+            ))
+        })? {
+            let (thread, id, owner, repo) = row?;
+            work.entry(thread).or_default().push((id, owner, repo));
+        }
+    }
+    let mut messages: HashMap<i64, (String, String)> = HashMap::new();
+    if matches!(surface, Surface::Messages | Surface::Both) {
+        let mut query=conn.prepare(&format!("SELECT t.channel_thread_id,p.owner,p.repo FROM github_pull_request_threads t JOIN github_pull_requests p ON p.id=t.github_pull_request_id WHERE t.channel_thread_id IN ({slots}) AND (p.private IS NULL OR p.private!=0) ORDER BY t.id"))?;
+        for row in query.query_map(rusqlite::params_from_iter(threads), |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })? {
+            let (thread, owner, repo) = row?;
+            messages.entry(thread).or_insert((owner, repo));
+        }
+    }
     let mut result = vec![];
     let mut seen = HashSet::new();
     for &thread in threads {
         if !seen.insert(thread) {
             continue;
         }
-        if matches!(surface, Surface::Work | Surface::Both) {
-            let mut query=conn.prepare("SELECT w.id,p.owner,p.repo FROM work_thread_links w JOIN github_pull_requests p ON p.id=w.github_pull_request_id WHERE w.channel_thread_id=? AND w.kind='pull_request' AND (p.private IS NULL OR p.private!=0) ORDER BY w.id")?;
-            for row in query.query_map([thread], |r| {
-                Ok((
-                    r.get::<_, i64>(0)?,
-                    r.get::<_, String>(1)?,
-                    r.get::<_, String>(2)?,
-                ))
-            })? {
-                let (link, owner, repo) = row?;
-                result.push((
-                    RepositoryEntry::WorkLink(link),
-                    RepositoryRequest {
-                        account_id: account,
-                        user_id: user,
-                        owner: owner.to_lowercase(),
-                        repo: repo.to_lowercase(),
-                    },
-                ));
-            }
+        for (id, owner, repo) in work.remove(&thread).unwrap_or_default() {
+            result.push((
+                RepositoryEntry::WorkLink(id),
+                RepositoryRequest {
+                    account_id: account,
+                    user_id: user,
+                    owner: owner.to_lowercase(),
+                    repo: repo.to_lowercase(),
+                },
+            ));
         }
-        if matches!(surface, Surface::Messages | Surface::Both) {
-            let pr=conn.query_row("SELECT p.owner,p.repo FROM github_pull_request_threads t JOIN github_pull_requests p ON p.id=t.github_pull_request_id WHERE t.channel_thread_id=? AND (p.private IS NULL OR p.private!=0) ORDER BY t.id LIMIT 1",[thread],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?))).optional()?;
-            if let Some((owner, repo)) = pr {
-                result.push((
-                    RepositoryEntry::Thread(thread),
-                    RepositoryRequest {
-                        account_id: account,
-                        user_id: user,
-                        owner: owner.to_lowercase(),
-                        repo: repo.to_lowercase(),
-                    },
-                ));
-            }
+        if let Some((owner, repo)) = messages.remove(&thread) {
+            result.push((
+                RepositoryEntry::Thread(thread),
+                RepositoryRequest {
+                    account_id: account,
+                    user_id: user,
+                    owner: owner.to_lowercase(),
+                    repo: repo.to_lowercase(),
+                },
+            ));
         }
     }
     Ok(result)

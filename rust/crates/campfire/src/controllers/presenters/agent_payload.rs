@@ -64,6 +64,29 @@ impl State {
     }
 }
 impl Presenter<'_> {
+    pub fn agent_message_payloads(&self, messages: &[Message]) -> Result<Vec<Value>> {
+        self.agent_message_payloads_with_users(messages)
+            .map(|(values, _)| values)
+    }
+    pub fn agent_message_payloads_with_users(
+        &self,
+        messages: &[Message],
+    ) -> Result<(Vec<Value>, std::collections::HashMap<i64, User>)> {
+        let p = self.preload_payload(messages)?;
+        let users = p
+            .search_preloads
+            .as_ref()
+            .expect("payload preloads")
+            .users
+            .iter()
+            .map(|(id, record)| (*id, record.user.clone()))
+            .collect();
+        let values = messages
+            .iter()
+            .map(|m| p.agent_message_payload(m))
+            .collect::<Result<_>>()?;
+        Ok((values, users))
+    }
     /// Matches WS11-api's seam. Its Current.user is the authenticated bot.
     pub fn agent_message_payload(&self, message: &Message) -> Result<Value> {
         self.agent_payload.message(self, message)

@@ -44,7 +44,7 @@ use campfire_richtext::Presentation;
 use campfire_storage::{Storage, Variation};
 use campfire_views::fragment_cache;
 use campfire_views::messages::json::{
-    BoostJson, BoostMessageJson, IdJson, MessageBodyJson, MessageJson, UserJson,
+    BoostJson, BoostMessageJson, UserJson,
 };
 use campfire_views::messages::support::RubyNumber;
 use campfire_views::messages::support::json_time;
@@ -287,7 +287,12 @@ impl<'a> Presenter<'a> {
         }
     }
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
-        let data = super::searches::preloads::Preloads::load(self, messages)?;
+        self.with_preloads(super::searches::preloads::Preloads::load(self,messages)?,messages)
+    }
+    pub(crate) fn preload_payload(&self,messages:&[Message]) -> Result<Self> {
+        self.with_preloads(super::searches::preloads::Preloads::load_payload(self,messages)?,messages)
+    }
+    fn with_preloads(&self,data:super::searches::preloads::Preloads,messages:&[Message]) -> Result<Self> {
         let ids = data.records.body_ids(messages);
         let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
         for id in &ids {
@@ -326,7 +331,7 @@ impl<'a> Presenter<'a> {
             github_refreshes: self.github_refreshes.clone(),
         })
     }
-    fn stored_body(&self, message: &Message) -> Result<Option<String>> {
+    pub(crate) fn stored_body(&self, message: &Message) -> Result<Option<String>> {
         if let Some(data) = &self.search_preloads {
             return Ok(data.records.bodies.get(&message.id).cloned().flatten());
         }
@@ -1112,14 +1117,6 @@ impl<'a> Presenter<'a> {
         ))
     }
 
-    /// `message.body.to_s`: the stored rich text rendered inside its layout.
-    pub fn body_html(&self, message: &Message) -> Result<String> {
-        let Some(body) = self.stored_body(message)? else {
-            return Ok(String::new());
-        };
-        Ok(self.render_body_html(&body).unwrap_or_default())
-    }
-
     /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
     pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
         let Some(body) = self.stored_body(message)? else {
@@ -1153,37 +1150,6 @@ impl<'a> Presenter<'a> {
             &resolver.render_context(self.request_host.clone()),
         )
         .map_err(|error| campfire_db::Error::Other(error.to_string()))
-    }
-
-    /// `messages/_message.json.jbuilder` (`json.cache! message`).
-    pub fn message_json(&self, message: &Message, base_url: &str) -> Result<MessageJson> {
-        let key = || {
-            jbuilder_key(
-                "messages/_message",
-                &cache_key_with_version("messages", message.id, message.updated_at.jiff()),
-                base_url,
-            )
-        };
-        fragment_cache::try_fetch_value(key, || self.render_message_json(message, base_url))
-    }
-
-    fn render_message_json(&self, message: &Message, base_url: &str) -> Result<MessageJson> {
-        Ok(MessageJson {
-            id: message.id,
-            created_at: json_time(message.created_at.jiff()),
-            body: MessageBodyJson {
-                plain_text: self.plain_text_body(message)?,
-                html: self.body_html(message)?,
-            },
-            creator: cached_user_json(self.secrets, base_url, &self.user(message.creator_id)?),
-            room: IdJson {
-                id: message.room_id,
-            },
-            url: format!(
-                "{base_url}{}",
-                campfire_routes::room_message(message.room_id, message.id)
-            ),
-        })
     }
 
     /// `messages/boosts/_boost.json.jbuilder` (`json.cache! boost`).

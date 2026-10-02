@@ -223,7 +223,13 @@ impl<'a> PollContext<'a> {
             else {
                 return Ok(None);
             };
-            payload["hop"] = json!(e.hop());
+            // Rails emits hop before room/actor for message events. Preserve that wire order.
+            let fields = payload.as_object_mut().expect("event object");
+            let room = fields.shift_remove("room").expect("readable event room");
+            let actor = fields.shift_remove("actor");
+            fields.insert("hop".into(), json!(e.hop()));
+            fields.insert("room".into(), room);
+            if let Some(actor) = actor { fields.insert("actor".into(), actor); }
             payload["message"] = presenter(&message)?;
             payload["pull_request"] = super::agent_payloads::pull_request_for_message(
                 self.conn,

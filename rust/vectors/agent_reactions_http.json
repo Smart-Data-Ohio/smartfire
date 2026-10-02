@@ -1,0 +1,863 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "mcp_react_content_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\":+1:\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\":+1:\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\":+1:\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted :+1:\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">:+1:</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\" :thumbsup: \"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\":gpt:\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\":openai:\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\":openai:\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\":openai:\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"OpenAI\" aria-label=\"OpenAI: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\":openai:\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\"><img class=\"icon icon--brand\" alt=\":openai:\" draggable=\"false\" src=\"/assets/icons/brands/openai-a0bb8578.svg\" /></span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">OpenAI</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\":claude:\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\":claude:\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\":claude:\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\":claude:\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Claude\" aria-label=\"Claude: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\":claude:\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\"><img class=\"icon icon--brand\" alt=\":claude:\" draggable=\"false\" src=\"/assets/icons/brands/claude-ca9485f0.svg\" /></span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Claude</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\":unknown:\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\":unknown:\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\":unknown:\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted :unknown:\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">:unknown:</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_6",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"Free α \\u0026 β\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"Free α & β\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"Free α & β\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted Free α &amp; β\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">Free α &amp; β</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_7",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\" \"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: content\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_8",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"\\u0000\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Reaction content can't be blank\"}],\"structuredContent\":{\"error\":\"Reaction content can't be blank\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_9",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"\\u0000👍\\u0000\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_10",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":true}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"true\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"true\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">true</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_11",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":3}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"3\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"3\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted 3\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">3</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_12",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":1.5}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"1.5\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"1.5\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted 1.5\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">1.5</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_13",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":[\"A\",2]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"[\\\\\\\"A\\\\\\\", 2]\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"[\\\"A\\\", 2]\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted [&quot;A&quot;, 2]\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">[&quot;A&quot;, 2]</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_content_14",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":{\"x\":\"B\"}}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"{\\\\\\\"x\\\\\\\" => \\\\\\\"B\\\\\\\"}\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"{\\\"x\\\" => \\\"B\\\"}\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted {&quot;x&quot; =&gt; &quot;B&quot;}\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">{&quot;x&quot; =&gt; &quot;B&quot;}</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_replay",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\":+1:\"}}}",
+      "setup": {
+        "repeat": 1
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\":+1:\\\",\\\"created\\\":false}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\":+1:\",\"created\":false},\"isError\":false}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_alias_replay",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\":gpt:\"}}}",
+      "setup": {
+        "prior": ":openai:"
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\":openai:\\\",\\\"created\\\":false}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\":openai:\",\"created\":false},\"isError\":false}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_different",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"α\"}}}",
+      "setup": {
+        "prior": "β"
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900002,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"α\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900002,\"message_id\":1900700001,\"content\":\"α\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_1900900001\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted β\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">β</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900001\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n<div id=\"boost_1900900002\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"394959859\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-label=\"Bender Bot boosted α\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">α</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/1900700001/boosts/1900900002\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_required_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: message_id\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_required_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: message_id\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_required_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: content\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_required_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":null}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: content\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_required_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":false}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: content\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_required_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":[]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: content\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_required_6",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":{}}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: content\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_authority_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ]
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks react capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks react capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_authority_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "revoked": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks react capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks react capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_authority_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "grant_room": 201306877
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks react capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks react capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_authority_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "remove_member": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":0,\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":\"no\",\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":true,\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":[],\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: message_id\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":{},\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: message_id\"}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":[1900700001],\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_6",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":\"1900700001garbage\",\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"boosts_message_read-source\"><template>\n<div id=\"boosts_message_read-source\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_read-source\" action=\"/messages/1900700001/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"👍\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"Thumbs up\" aria-label=\"Thumbs up: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_read-source\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"394959859\" data-reaction=\"👍\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">👍</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">Thumbs up</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_read-source\">\n          <span class=\"reaction-chip__reactor\">Bender Bot</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n</template></turbo-stream>"
+      ],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_id_7",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700003,\"content\":\"👍\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700003,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700003,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "grant"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks react capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks react capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_membership",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "membership"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_credential_revoked",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "credential_revoked"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_credential_expired",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "credential_expired"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_agent_suspended",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "agent_suspended"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_owner_deactivated",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "owner_deactivated"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_owner_banned",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "owner_banned"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    }
+  ]
+}

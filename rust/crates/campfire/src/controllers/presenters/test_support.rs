@@ -171,6 +171,9 @@ impl TestApp {
         self
     }
 
+    pub async fn boot_with_fizzy(clock: campfire_kit::SharedClock, fizzy: crate::integrations::fizzy::State) -> Option<TestApp> {
+        Self::boot_seed_with_fizzy("default", clock, crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(), (None, None), Some(fizzy)).await
+    }
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
         Self::boot_with_clock(seed_clock()).await
@@ -345,6 +348,21 @@ impl TestApp {
         github_app: Option<crate::integrations::github::client::AppClient>,
         github_read: Option<crate::integrations::github::client::ReadClient>,
     ) -> Option<TestApp> {
+        Self::boot_seed_with_fizzy(name, clock, network, extra, huddle, (github_app, github_read), None).await
+    }
+
+    async fn boot_seed_with_fizzy(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+        huddle: crate::huddle::Config,
+        (github_app, github_read): (
+            Option<crate::integrations::github::client::AppClient>,
+            Option<crate::integrations::github::client::ReadClient>,
+        ),
+        fizzy: Option<crate::integrations::fizzy::State>,
+    ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -372,7 +390,9 @@ impl TestApp {
             periodic: None,
             huddle: None,
         };
-        let booted = match github_app {
+        let booted = if let Some(fizzy) = fizzy {
+            crate::app::boot_with_integrations(config, clock, crate::app::BootIntegrations { github_read: crate::integrations::github::client::ReadClient::from_env(), github_app: crate::integrations::github::client::AppClient::new(None, None), github_network: crate::integrations::net::Network::system(), subscription_network: network, fizzy }, intervals).await.unwrap()
+        } else { match github_app {
             Some(client) => crate::app::boot_with_all_services(
                 config,
                 clock,
@@ -387,7 +407,7 @@ impl TestApp {
             None => boot_with_services(config, clock, network, intervals)
                 .await
                 .unwrap(),
-        };
+        }};
         Some(TestApp { booted, _dir: dir })
     }
 
