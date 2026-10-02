@@ -360,13 +360,13 @@ pub(crate) fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Ti
 
 pub(super) fn offset_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,4}|[0-9]{1,2})|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
+    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,6}|[0-9]{1,2})|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
 }
 pub(super) fn parsed_offset(text: &str) -> Option<i32> {
     let c = offset_pattern().captures(text)?;
     let token = c["offset"].to_ascii_lowercase();
     if let Some(number) =
-        re(r"[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,4}|[0-9]{1,2})").find(&token)
+        re(r"[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,6}|[0-9]{1,2})").find(&token)
     {
         let number = number.as_str();
         let fields = number[1..].split(':').collect::<Vec<_>>();
@@ -385,6 +385,14 @@ pub(super) fn parsed_offset(text: &str) -> Option<i32> {
             let digits = &number[1..];
             if digits.len() <= 2 {
                 (digits.parse::<i32>().ok()?, 0, 0)
+            } else if digits.len() >= 5 {
+                (
+                    digits[..digits.len() - 4].parse::<i32>().ok()?,
+                    digits[digits.len() - 4..digits.len() - 2]
+                        .parse::<i32>()
+                        .ok()?,
+                    digits[digits.len() - 2..].parse::<i32>().ok()?,
+                )
             } else {
                 (
                     digits[..digits.len() - 2].parse::<i32>().ok()?,
@@ -393,6 +401,11 @@ pub(super) fn parsed_offset(text: &str) -> Option<i32> {
                 )
             }
         };
+        // Ruby date_core's zone_to_diff leaves invalid civil offset fields nil;
+        // TimeZone#parse then interprets the clock in the viewer's zone.
+        if hour > 23 || minute > 59 || second > 59 {
+            return None;
+        }
         return Some(
             (hour * 3600 + minute * 60 + second) * if number.starts_with('-') { -1 } else { 1 },
         );

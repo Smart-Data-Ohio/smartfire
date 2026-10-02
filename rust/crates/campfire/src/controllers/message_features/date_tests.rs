@@ -387,3 +387,77 @@ async fn compact_and_offset_requests_store_rails_times_and_dispatch_only_when_du
         "WS8bm2 date HTTP: {checked} saved timestamps, {checked} scheduled timestamps and {checked} before/due dispatch pairs match Rails"
     );
 }
+
+#[test]
+fn signed_years_and_extended_offsets_match_actual_rails() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/date_years.json"
+    ))
+    .unwrap();
+    let mut mismatches = Vec::new();
+    for row in oracle["cases"].as_array().unwrap() {
+        let zone = campfire_views::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
+        let result = super::parse_time(
+            row["input"].as_str().unwrap(),
+            &zone,
+            SEED_NOW.parse().unwrap(),
+        );
+        let matches = if row["error"].is_string() {
+            result.is_err()
+        } else {
+            result.as_ref().ok().map(|t| t.map(|t| t.as_microsecond()))
+                == Some(row["micros"].as_i64())
+        };
+        if !matches {
+            mismatches.push(format!("{row}: {result:?}"));
+        }
+    }
+    assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    println!(
+        "WS8bm2 signed years: 120/120 Rails signed/expanded-year/offset/fraction/DST cases match"
+    );
+}
+
+#[tokio::test]
+async fn signed_year_and_offset_requests_match_actual_rails_responses() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/date_years.json"
+    ))
+    .unwrap();
+    let app = super::quote_integration_tests::app_rows(oracle["rows"].clone()).await;
+    let mut browser = app.david();
+    let mut checked = 0;
+    for row in oracle["requests"].as_array().unwrap() {
+        let zone = row["zone"].as_str().unwrap().to_owned();
+        app.db()
+            .write(move |tx| {
+                tx.conn()
+                    .execute("UPDATE users SET time_zone=? WHERE id=?", (zone, DAVID))?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        for case in row["responses"].as_array().unwrap() {
+            let response = browser
+                .write(
+                    Req::new(Method::POST, case["path"].as_str().unwrap())
+                        .header("accept", "application/json")
+                        .header("content-type", "application/json")
+                        .body(serde_json::to_vec(&case["input"]).unwrap()),
+                )
+                .await;
+            assert_eq!(
+                response.status.as_u16() as u64,
+                case["status"].as_u64().unwrap(),
+                "{case}: {}",
+                response.text()
+            );
+            assert_eq!(response.text(), case["body"].as_str().unwrap(), "{case}");
+            checked += 1;
+        }
+    }
+    assert_eq!(checked, 240);
+    println!(
+        "WS8bm2 signed-year HTTP: 240/240 actual Rails reminder/scheduled response bodies match"
+    );
+}

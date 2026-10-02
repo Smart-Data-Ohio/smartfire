@@ -78,13 +78,18 @@ pub(super) fn parse(text: &str, zone: &TimeZone, now: Timestamp) -> Result<Optio
     } else {
         text.to_owned()
     };
-    let numeric = re(r"\b(?P<a>[0-9]{1,4})(?P<sep>[-/.])(?P<b>[0-9]{1,2})[-/.](?P<c>[0-9]{1,4})\b");
+    // Date._parse preserves a signed or zero-expanded year. Consume the
+    // preceding separator too, so the word boundary cannot discard its sign.
+    let numeric = re(
+        r"(?:^|[^[:alnum:]])(?P<a>[+-]?[0-9]+)(?P<sep>[-/.])(?P<b>[0-9]{1,2})[-/.](?P<c>[+-]?[0-9]+)\b",
+    );
     let two = re(r"\b(?P<m>[0-9]{1,2})/(?P<d>[0-9]{1,2})\b");
     if let Some(c) = numeric.captures(&date_text) {
         let a = &c["a"];
         let b = &c["b"];
         let z = &c["c"];
-        if z.len() == 4 && a.len() < 4 {
+        if z.trim_start_matches(['+', '-']).len() >= 4 && a.trim_start_matches(['+', '-']).len() < 4
+        {
             p.year = Some(number(z)?);
             p.month = Some(number(b)?);
             p.day = Some(number(a)?);
@@ -102,13 +107,15 @@ pub(super) fn parse(text: &str, zone: &TimeZone, now: Timestamp) -> Result<Optio
         let names = r"jan[a-z]*|feb[a-z]*|mar[a-z]*|apr[a-z]*|may|jun[a-z]*|jul[a-z]*|aug[a-z]*|sep[a-z]*|oct[a-z]*|nov[a-z]*|dec[a-z]*";
         let patterns = [
             re(&format!(
-                r"(?i)\b(?P<d>[0-9]{{1,2}})(?:st|nd|rd|th)?[ -]+(?P<m>{names})(?:[, -]+(?P<y>[0-9]{{2,4}}))?\b"
+                r"(?i)\b(?P<d>[0-9]{{1,2}})(?:st|nd|rd|th)?[ -]+(?P<m>{names})(?:(?:[, ]+|-)(?P<y>[+-]?[0-9]{{2,}}))?\b"
             )),
             re(&format!(
-                r"(?i)\b(?P<m>{names})[ -]+(?P<d>[0-9]{{1,2}})(?:st|nd|rd|th)?\b(?:[, -]+(?P<y>[0-9]{{2,4}}))?"
+                r"(?i)\b(?P<m>{names})[ -]+(?P<d>[0-9]{{1,2}})(?:st|nd|rd|th)?\b(?:(?:[, ]+|-)(?P<y>[+-]?[0-9]{{2,}}))?"
             )),
         ];
-        let month_year = re(&format!(r"(?i)\b(?P<m>{names})\s+(?P<y>[0-9]{{4}})\b"));
+        let month_year = re(&format!(
+            r"(?i)\b(?P<m>{names})\s+(?P<y>[+-]?[0-9]{{4,}})\b"
+        ));
         if let Some(c) = patterns.iter().find_map(|r| r.captures(&date_text)) {
             p.month = month(&c["m"]);
             p.day = Some(number(&c["d"])?);
