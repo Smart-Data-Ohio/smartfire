@@ -77,6 +77,10 @@
       "seconds": 300
     },
     {
+      "name": "calendar push channels",
+      "seconds": 3600
+    },
+    {
       "name": "retention prune",
       "seconds": 123
     }

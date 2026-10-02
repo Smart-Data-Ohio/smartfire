@@ -143,6 +143,10 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         app.db.write(|tx|campfire_db::models::room_delete::reenqueue_stuck(tx,600)).await?;
         Ok(())
     }));
+    periodic.task(Task::new("calendar push channels", Duration::from_secs(HOUR), |app: App| async move {
+        crate::integrations::google::calendar::renew(&app).await?;
+        Ok(())
+    }));
     use crate::integrations::action_claims;
     periodic.task(Task::new("stuck GitHub claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
         action_claims::recover_stuck_claims(&app.db, action_claims::GITHUB, app.db.env().now()).await;

@@ -8,6 +8,7 @@ mod account_security;
 mod channels;
 mod concerns;
 mod config;
+mod errors;
 // Slash launch readiness delegates to the WS13 configuration API.
 mod huddle_readiness;
 mod picker_configuration;

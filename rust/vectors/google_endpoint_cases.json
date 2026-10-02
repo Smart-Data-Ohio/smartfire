@@ -1,0 +1,2521 @@
+{
+  "reference": "d7c7de92",
+  "now": 1772467205,
+  "file": {
+    "id": "1AbcDefGhIjKlMnOpQrSt",
+    "name": "Q3 Planning",
+    "mimeType": "application/vnd.google-apps.document",
+    "modifiedTime": "2026-09-16T10:30:00.000Z",
+    "owners": [
+      {
+        "displayName": "Riel"
+      }
+    ],
+    "webViewLink": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit",
+    "iconLink": "https://drive-thirdparty.googleusercontent.com/16/type/document"
+  },
+  "list": {
+    "files": [
+      {
+        "id": "1AbcDefGhIjKlMnOpQrSt",
+        "name": "Q3 Planning",
+        "mimeType": "application/vnd.google-apps.document",
+        "modifiedTime": "2026-09-16T10:30:00.000Z",
+        "owners": [
+          {
+            "displayName": "Riel"
+          }
+        ],
+        "webViewLink": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+      },
+      {
+        "id": "2BcdEfgHiJkLmNoPqRsTu",
+        "name": "Budget 2026",
+        "mimeType": "application/vnd.google-apps.spreadsheet",
+        "modifiedTime": "2026-09-15T09:00:00.000Z",
+        "owners": [
+          {
+            "displayName": "Jon"
+          }
+        ],
+        "webViewLink": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "spec": {
+        "name": "show_no_account"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 404,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 0
+        }
+      ],
+      "other": null,
+      "requests": []
+    },
+    {
+      "spec": {
+        "name": "show_retired"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 404,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 0
+        }
+      ],
+      "other": null,
+      "requests": []
+    },
+    {
+      "spec": {
+        "name": "show_disconnected"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 404,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 0
+        }
+      ],
+      "other": null,
+      "requests": []
+    },
+    {
+      "spec": {
+        "name": "show_calendar_only"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 404,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 0
+        }
+      ],
+      "other": null,
+      "requests": []
+    },
+    {
+      "spec": {
+        "name": "show_transport"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": "transport",
+      "observations": [
+        {
+          "status": 503,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 1
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "show_503"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": 503,
+      "observations": [
+        {
+          "status": 503,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 1
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "show_403"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": 403,
+      "observations": [
+        {
+          "status": 404,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 1
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "show_404"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0
+      ],
+      "fault": 404,
+      "observations": [
+        {
+          "status": 404,
+          "body": "",
+          "cache_control": "no-cache",
+          "calls": 1
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "show_cache"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0,
+        0,
+        299,
+        300,
+        301
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 2
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 2
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "show_budget"
+      },
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "offsets": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        55
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 429,
+          "body": {
+            "error": "rate_limited"
+          },
+          "cache_control": "no-cache",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "kind": "document",
+            "modified_at": "2026-09-16T10:30:00.000Z",
+            "owner": "Riel",
+            "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        }
+      ],
+      "other": {
+        "status": 200,
+        "body": {
+          "id": "1AbcDefGhIjKlMnOpQrSt",
+          "name": "Q3 Planning",
+          "kind": "document",
+          "modified_at": "2026-09-16T10:30:00.000Z",
+          "owner": "Riel",
+          "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+        },
+        "cache_control": "max-age=0, private, must-revalidate",
+        "calls": 2
+      },
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "index_blank"
+      },
+      "path": "/google/drive/files",
+      "offsets": [
+        0
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "index_transport"
+      },
+      "path": "/google/drive/files",
+      "offsets": [
+        0
+      ],
+      "fault": "transport",
+      "observations": [
+        {
+          "status": 502,
+          "body": {
+            "error": "drive_unavailable"
+          },
+          "cache_control": "no-cache",
+          "calls": 1
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "index_budget"
+      },
+      "path": "/google/drive/files",
+      "offsets": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        55
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 2
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 3
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 4
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 5
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 6
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 7
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 8
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 9
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 10
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 11
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 12
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 13
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 14
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 15
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 16
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 17
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 18
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 19
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 20
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 21
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 22
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 23
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 24
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 25
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 26
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 27
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 28
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 29
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 30
+        },
+        {
+          "status": 429,
+          "body": {
+            "error": "rate_limited"
+          },
+          "cache_control": "no-cache",
+          "calls": 30
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 31
+        }
+      ],
+      "other": {
+        "status": 200,
+        "body": {
+          "files": [
+            {
+              "id": "1AbcDefGhIjKlMnOpQrSt",
+              "name": "Q3 Planning",
+              "kind": "document",
+              "modified_at": "2026-09-16T10:30:00.000Z",
+              "owner": "Riel",
+              "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+            },
+            {
+              "id": "2BcdEfgHiJkLmNoPqRsTu",
+              "name": "Budget 2026",
+              "kind": "spreadsheet",
+              "modified_at": "2026-09-15T09:00:00.000Z",
+              "owner": "Jon",
+              "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+            }
+          ]
+        },
+        "cache_control": "max-age=0, private, must-revalidate",
+        "calls": 32
+      },
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "index_no_cache"
+      },
+      "path": "/google/drive/files",
+      "offsets": [
+        0,
+        0
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        },
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 2
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "index_query"
+      },
+      "path": "/google/drive/files?q=%20%20bob%27s%5Cdraft%20%20",
+      "offsets": [
+        0
+      ],
+      "fault": null,
+      "observations": [
+        {
+          "status": 200,
+          "body": {
+            "files": [
+              {
+                "id": "1AbcDefGhIjKlMnOpQrSt",
+                "name": "Q3 Planning",
+                "kind": "document",
+                "modified_at": "2026-09-16T10:30:00.000Z",
+                "owner": "Riel",
+                "url": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+              },
+              {
+                "id": "2BcdEfgHiJkLmNoPqRsTu",
+                "name": "Budget 2026",
+                "kind": "spreadsheet",
+                "modified_at": "2026-09-15T09:00:00.000Z",
+                "owner": "Jon",
+                "url": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+              }
+            ]
+          },
+          "cache_control": "max-age=0, private, must-revalidate",
+          "calls": 1
+        }
+      ],
+      "other": null,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=name+contains+%27bob%5C%27s%5C%5Cdraft%27+and+trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ]
+    }
+  ]
+}

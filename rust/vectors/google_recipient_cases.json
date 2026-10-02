@@ -1,0 +1,3918 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-03-02T16:00:00Z",
+  "rows": [
+    {
+      "spec": {
+        "name": "index",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 127326141,
+              "name": "David",
+              "email": "david@37signals.com"
+            },
+            {
+              "id": 149087659,
+              "name": "Jason",
+              "email": "jason@37signals.com"
+            },
+            {
+              "id": 712064548,
+              "name": "Kevin",
+              "email": "kevin@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "no_consent",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 127326141,
+              "name": "David",
+              "email": "david@37signals.com"
+            },
+            {
+              "id": 149087659,
+              "name": "Jason",
+              "email": "jason@37signals.com"
+            },
+            {
+              "id": 712064548,
+              "name": "Kevin",
+              "email": "kevin@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "bot_members",
+        "method": "get"
+      },
+      "actor_id": 127326141,
+      "room_id": 486777696,
+      "path": "/rooms/486777696/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 149087659,
+              "name": "Jason",
+              "email": "jason@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "ineligible",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {
+          "149087659": {
+            "status": 1
+          },
+          "127326141": {
+            "email_address": ""
+          },
+          "773523954": {
+            "status": 0,
+            "name": "Zed Outsider",
+            "email_address": "zed@external.test"
+          }
+        },
+        "removed": [],
+        "agent_user": 712064548
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": []
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "invalid_email",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {
+          "149087659": {
+            "status": 1
+          },
+          "127326141": {
+            "email_address": "not-an-email"
+          },
+          "773523954": {
+            "status": 0,
+            "name": "Zed Outsider",
+            "email_address": "zed@external.test"
+          }
+        },
+        "removed": [],
+        "agent_user": 712064548
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": []
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "nil_email",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {
+          "149087659": {
+            "status": 1
+          },
+          "127326141": {
+            "email_address": null
+          },
+          "773523954": {
+            "status": 0,
+            "name": "Zed Outsider",
+            "email_address": "zed@external.test"
+          }
+        },
+        "removed": [],
+        "agent_user": 712064548
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": []
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "domains",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {
+          "127326141": {
+            "name": "Amy Smart",
+            "email_address": "amy@smartdata.net"
+          },
+          "149087659": {
+            "name": "Bob Cnbs",
+            "email_address": "bob@cnbssoftware.com"
+          },
+          "712064548": {
+            "name": "Cal External",
+            "email_address": "cal@contractor.test"
+          }
+        },
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 127326141,
+              "name": "Amy Smart",
+              "email": "amy@smartdata.net"
+            },
+            {
+              "id": 149087659,
+              "name": "Bob Cnbs",
+              "email": "bob@cnbssoftware.com"
+            },
+            {
+              "id": 712064548,
+              "name": "Cal External",
+              "email": "cal@contractor.test"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "missing_key",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 404,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "missing_project",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 404,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "anonymous",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 401,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "nonmember",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/104393281/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 404,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "bot_key",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients?bot_key=394959859-BenderToken1",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 403,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "bot_session",
+        "method": "get"
+      },
+      "actor_id": 394959859,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 404,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "agent_session",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": 773523953
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 403,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "canonical",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          712064548,
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 712064548,
+              "name": "Kevin",
+              "email": "kevin@37signals.com"
+            },
+            {
+              "id": 127326141,
+              "name": "David",
+              "email": "david@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "duplicate",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141,
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 127326141,
+              "name": "David",
+              "email": "david@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "empty",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": []
+      },
+      "before": null,
+      "result": {
+        "status": 200,
+        "body": {
+          "recipients": []
+        },
+        "cache_control": "no-store"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "stale",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [
+          712064548
+        ],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          712064548,
+          127326141
+        ]
+      },
+      "before": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 127326141,
+              "name": "David",
+              "email": "david@37signals.com"
+            },
+            {
+              "id": 149087659,
+              "name": "Jason",
+              "email": "jason@37signals.com"
+            },
+            {
+              "id": 712064548,
+              "name": "Kevin",
+              "email": "kevin@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      },
+      "result": {
+        "status": 422,
+        "body": {
+          "error": "invalid_recipients",
+          "invalid_ids": [
+            712064548
+          ]
+        },
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "invalid_ids",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          773523953,
+          394959859,
+          9900000001
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 422,
+        "body": {
+          "error": "invalid_recipients",
+          "invalid_ids": [
+            773523953,
+            394959859,
+            9900000001
+          ]
+        },
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "agent_selection",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {
+          "127326141": {
+            "status": 1
+          }
+        },
+        "removed": [],
+        "agent_user": 712064548
+      },
+      "params": {
+        "user_ids": [
+          712064548,
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 422,
+        "body": {
+          "error": "invalid_recipients",
+          "invalid_ids": [
+            712064548,
+            127326141
+          ]
+        },
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "scalar",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": 127326141
+      },
+      "before": null,
+      "result": {
+        "status": 422,
+        "body": {
+          "error": "invalid_recipients"
+        },
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "missing",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {},
+      "before": null,
+      "result": {
+        "status": 422,
+        "body": {
+          "error": "invalid_recipients"
+        },
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "emails",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          "stranger@external.test"
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 422,
+        "body": {
+          "error": "invalid_recipients"
+        },
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "oversized",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 422,
+        "body": {
+          "error": "too_many_recipients",
+          "limit": 100
+        },
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "not_configured",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 404,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "anonymous_validate",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 401,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "nonmember_validate",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/104393281/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 404,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "bot_key_validate",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate?bot_key=394959859-BenderToken1",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 403,
+        "body": "",
+        "cache_control": "no-cache"
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "no_csrf",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": null,
+      "result": {
+        "status": 422,
+        "body": {
+          "status": 422,
+          "error": "Unprocessable Content"
+        },
+        "cache_control": null
+      },
+      "after": null
+    },
+    {
+      "spec": {
+        "name": "throttle_index",
+        "method": "get"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": [
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        }
+      ],
+      "result": {
+        "status": 429,
+        "body": {
+          "error": "rate_limited"
+        },
+        "cache_control": "no-cache"
+      },
+      "after": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 149087659,
+              "name": "Jason",
+              "email": "jason@37signals.com"
+            },
+            {
+              "id": 773523953,
+              "name": "JZ",
+              "email": "jz@37signals.com"
+            },
+            {
+              "id": 712064548,
+              "name": "Kevin",
+              "email": "kevin@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      }
+    },
+    {
+      "spec": {
+        "name": "throttle_shared",
+        "method": "post"
+      },
+      "actor_id": 773523953,
+      "room_id": 654632876,
+      "path": "/rooms/654632876/drive_recipients/validate",
+      "setup": {
+        "users": {},
+        "removed": [],
+        "agent_user": null
+      },
+      "params": {
+        "user_ids": [
+          127326141
+        ]
+      },
+      "before": [
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        },
+        {
+          "status": 200,
+          "body": {
+            "recipients": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "email": "david@37signals.com"
+              },
+              {
+                "id": 149087659,
+                "name": "Jason",
+                "email": "jason@37signals.com"
+              },
+              {
+                "id": 712064548,
+                "name": "Kevin",
+                "email": "kevin@37signals.com"
+              }
+            ]
+          },
+          "cache_control": "no-store"
+        }
+      ],
+      "result": {
+        "status": 429,
+        "body": {
+          "error": "rate_limited"
+        },
+        "cache_control": "no-cache"
+      },
+      "after": {
+        "status": 200,
+        "body": {
+          "recipients": [
+            {
+              "id": 149087659,
+              "name": "Jason",
+              "email": "jason@37signals.com"
+            },
+            {
+              "id": 773523953,
+              "name": "JZ",
+              "email": "jz@37signals.com"
+            },
+            {
+              "id": 712064548,
+              "name": "Kevin",
+              "email": "kevin@37signals.com"
+            }
+          ]
+        },
+        "cache_control": "no-store"
+      }
+    }
+  ]
+}

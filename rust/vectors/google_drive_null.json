@@ -1,0 +1,17 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "status": 500,
+      "google_calls": 1,
+      "body_is_production_500": true
+    },
+    {
+      "path": "/google/drive/files",
+      "status": 500,
+      "google_calls": 1,
+      "body_is_production_500": true
+    }
+  ]
+}

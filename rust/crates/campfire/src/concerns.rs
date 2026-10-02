@@ -674,7 +674,7 @@ async fn resume_session(c: &mut Ctx, session: Session, user: Option<User>) -> Re
 
 /// `authenticated_as(session)`: `Current.session = session` (which sets `Current.user` to
 /// `session.user`), `authenticated_by` session, and, with `set_cookie`, a fresh `session_token` cookie.
-async fn authenticated_as(
+pub(crate) async fn authenticated_as(
     c: &mut Ctx,
     session: Session,
     user: Option<User>,

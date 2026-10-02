@@ -194,6 +194,14 @@ pub enum JobError {
     /// endpoint's `Retry-After`, capped at an hour) or the policy's wait. Failed for good once
     /// the attempts are used up.
     Retry { error: anyhow::Error, retry_after: Option<Duration> },
+    /// A Rails `retry_on` handler, with its own durable exception counter. The handler's
+    /// budget and polynomial delay use this counter rather than all executions of the job.
+    RetryGroup {
+        error: anyhow::Error,
+        key: &'static str,
+        attempts: u32,
+        discard_exhausted: bool,
+    },
     /// `discard_on`: the job is dropped (logged), not kept as failed.
     Discard(anyhow::Error),
     /// Failed for good, without a retry: kept as `failed`.
@@ -201,6 +209,15 @@ pub enum JobError {
 }
 
 impl JobError {
+    pub fn retry_group(error: impl Into<anyhow::Error>, key: &'static str, attempts: u32) -> Self {
+        Self::RetryGroup {
+            error: error.into(),
+            key,
+            attempts: attempts.max(1),
+            discard_exhausted: false,
+        }
+    }
+
     pub fn retry(error: impl Into<anyhow::Error>) -> Self {
         JobError::Retry { error: error.into(), retry_after: None }
     }
@@ -219,7 +236,7 @@ impl JobError {
 
     pub fn error(&self) -> &anyhow::Error {
         match self {
-            JobError::Error(error) | JobError::Retry { error, .. } | JobError::Discard(error) | JobError::Fail(error) => error,
+            JobError::Error(error) | JobError::Retry { error, .. } | JobError::RetryGroup { error, .. } | JobError::Discard(error) | JobError::Fail(error) => error,
         }
     }
 }
