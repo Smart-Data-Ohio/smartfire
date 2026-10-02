@@ -23,8 +23,9 @@ which calls the unmodified Selenium 4.35.0 `isDisplayed` atom installed in the
 pinned reference image with `ignoreOpacity=false`. The harness verifies that
 the committed atom is byte-identical to that image's gem before running cases.
 This includes effective opacity through ancestors, unlike Playwright's
-visibility predicate. Selector assertions across every messaging behaviour
-module use the helper; explicit DOM-presence and `visible: :all` security
+visibility predicate. Selector waits/counts across messaging behaviour modules use the helper;
+field, link and remaining raw-property scopes are audited separately in
+[ws8bm-visibility-audit.md](ws8bm-visibility-audit.md). explicit DOM-presence and `visible: :all` security
 assertions retain their original semantics. Geometry probes retain the
 original Ruby tests' JavaScript rectangle filters. Assertion deadlines are
 unchanged, including the two-second visible-reaction count.
@@ -65,8 +66,9 @@ unchanged, including the two-second visible-reaction count.
 The served review mutants remove only const/def token classes, hide only the
 Clapping quick reaction, set Clapping's opacity to zero, set its reaction
 container's opacity to zero, or defer the actual boost POST for 11 seconds
-before forwarding it. The original 30 mutants remain, with seven additional
-review variants. Discrimination runs require
+before forwarding it. The original 30 mutants remain, with seven received review variants and 23 new visibility probes.
+The full scope also reruns the three search/forward checks and the Markdown
+link declaration; their original served mutants remain enabled. Discrimination runs require
 valid startup, an applied mutation, no actual network failures, and an assertion
 failure on **both** applications. The diagnostic `--mutant` without `--negative`
 records escape probes and cannot earn parity credit.

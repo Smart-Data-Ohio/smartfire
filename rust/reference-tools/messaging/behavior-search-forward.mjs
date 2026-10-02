@@ -1,12 +1,12 @@
 // Source: test/system/search_forward_edit_test.rb at d7c7de92.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty} from './behavior-visibility.mjs';
 export async function searchForward({author:page,recipient,base,caseName,fixture,openEdit,send}) {
   if(caseName.startsWith('search tolerates')) {
     const search=page.locator('#global-search-input');
     await search.fill('nonsense zebra tuxedo xyzzy');await search.press('Enter');
     await waitForVisibility(page.getByText('No messages match',{exact:false}));
-    assert.equal(await page.locator('#global-search-input').inputValue(),'nonsense zebra tuxedo xyzzy');
+    await waitForVisibleProperty(page.locator('#global-search-input'),'value','nonsense zebra tuxedo xyzzy');
     assert.equal((await page.goto(base+'/searches?q=NOT')).status(),200);
     await waitForVisibility(page.locator('#message-area'));
     assert.equal((await page.goto(base+'/searches?q=system%20paging')).status(),200);
@@ -20,7 +20,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     assert.equal(await page.locator('#global-search-input').inputValue(),'system paging');
   } else if(caseName==='forwarded Markdown keeps tables and code blocks') {
     const source=page.locator('.message[data-message-id]').filter({has:page.locator('pre code').filter({hasText:'puts :forwarded'})});
-    await waitForVisibility(source);const id=await source.getAttribute('data-message-id');
+    await waitForVisibility(source.locator('pre code').filter({hasText:'puts :forwarded'}),{timeout:10000});const id=await source.getAttribute('data-message-id');
     await source.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
     await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog);
@@ -30,7 +30,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     for(const viewer of [page,recipient]) {
       const forwarded=viewer.locator(`.message[data-message-id]:not([data-message-id="${id}"])`).filter({has:viewer.locator('pre code.language-ruby').filter({hasText:'puts :forwarded'})});
       await waitForVisibility(forwarded.locator('.markdown-body table'));
-      assert.equal(await forwarded.locator('pre code.language-ruby').textContent(),'puts :forwarded\n');
+      await waitForVisibleProperty(forwarded.locator('pre code.language-ruby'),'textContent','puts :forwarded\n');
       await waitForVisibleCount(forwarded,1);
     }
   } else if(caseName==='editing to add a URL renders its card live and the edited marker on load') {

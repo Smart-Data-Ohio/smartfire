@@ -12,17 +12,24 @@ export async function installVisibility(context) {
   await context.addInitScript({content:`window.__ws8bmSeleniumVisible = element => element.isConnected && (${atom})(element, false);`});
 }
 export function setVisibilityTimeout(page,timeout) {defaults.set(page,timeout);}
-async function visibleIndices(locator) {
-  return locator.evaluateAll(elements=>elements.flatMap((element,index)=>window.__ws8bmSeleniumVisible(element)?[index]:[]));
+async function visibleIndices(locator,condition=null) {
+  return locator.evaluateAll((elements,condition)=>elements.flatMap((element,index)=>{
+    if(!window.__ws8bmSeleniumVisible(element)) return [];
+    if(condition) {
+      const actual=condition.kind==='attribute'?element.getAttribute(condition.name):element[condition.name];
+      if(actual!==condition.value) return [];
+    }
+    return [index];
+  }),condition);
 }
 export async function visibleCount(locator) {return (await visibleIndices(locator)).length;}
 export async function isSeleniumVisible(locator) {return (await visibleCount(locator))>0;}
 
-async function waitForMatches(locator,accept,options,description) {
+async function waitForMatches(locator,accept,options,description,condition=null) {
   const timeout=options.timeout??defaults.get(locator.page())??30000;
   const started=Date.now();let count;
   do {
-    const indices=await visibleIndices(locator);count=indices.length;
+    const indices=await visibleIndices(locator,condition);count=indices.length;
     if(accept(count)&&(timeout===0||Date.now()-started<=timeout)) return indices;
     const remaining=timeout-(Date.now()-started);
     if(timeout!==0&&remaining<=0) break;
@@ -36,6 +43,23 @@ export async function waitForVisibleCount(locator,count,options={}) {
 export async function visibleMatch(locator,options={}) {
   const indices=await waitForMatches(locator,count=>count>0,options,'visible');
   return locator.nth(indices[0]);
+}
+// Capybara field/link assertions require the visible node and its value or
+// attribute together, not a property on any hidden match in the document.
+export async function waitForVisibleProperty(locator,name,value,options={}) {
+  await waitForMatches(locator,count=>count>0,{timeout:CAPYBARA_DEFAULT,...options},`${name}=${JSON.stringify(value)}`,{kind:'property',name,value});
+}
+export async function waitForVisibleAttribute(locator,name,value,options={}) {
+  await waitForMatches(locator,count=>count>0,{timeout:CAPYBARA_DEFAULT,...options},`${name}=${JSON.stringify(value)}`,{kind:'attribute',name,value});
+}
+// Explicit Capybara find/find_field/click_link queries are visibility scoped.
+// Share their deadline with the action instead of adding a second full wait.
+export async function actOnVisible(locator,action,options={},args=[]) {
+  const timeout=options.timeout??CAPYBARA_DEFAULT,started=Date.now();
+  const match=await visibleMatch(locator,{timeout});
+  const remaining=timeout-(Date.now()-started);
+  if(remaining<=0) throw new errors.TimeoutError(`Visible ${action} timed out after ${timeout}ms: ${locator}`);
+  return match[action](...args,{...options,timeout:remaining});
 }
 export async function waitForVisibility(locator,options={}) {
   const state=options.state??'visible';

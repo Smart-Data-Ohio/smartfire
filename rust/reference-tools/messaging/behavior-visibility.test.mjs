@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createRequire} from 'node:module';
-import {installVisibility,setVisibilityTimeout,visibleCount,visibleMatch,waitForVisibleCount,waitForVisibility} from './behavior-visibility.mjs';
+import {installVisibility,setVisibilityTimeout,visibleCount,visibleMatch,waitForVisibleCount,waitForVisibility,waitForVisibleProperty,waitForVisibleAttribute,actOnVisible} from './behavior-visibility.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 
@@ -50,5 +50,36 @@ test('visible state waits use the pinned atom after DOM updates and navigation',
     await page.goto('data:text/html,<button style="opacity:0">action</button>');
     await waitForVisibleCount(action,0);
     await assert.rejects(waitForVisibility(action),{name:'TimeoutError'});
+  } finally {await browser.close();}
+});
+
+
+test('property, attribute and explicit lookup checks cannot accept transparent matches',async()=>{
+  const browser=await chromium.launch({headless:true});
+  try {
+    const context=await browser.newContext();await installVisibility(context);
+    const page=await context.newPage();setVisibilityTimeout(page,200);
+    await page.goto('data:text/html,'+encodeURIComponent(`
+      <div style="opacity:0"><textarea class="draft">expected</textarea>
+        <input id="notify" type="checkbox" checked>
+        <a id="link" href="https://example.com/notes">Project notes</a>
+        <pre><code>puts :forwarded</code></pre>
+        <button id="action" onclick="window.clicked=true">action</button>
+      </div>
+      <textarea class="draft">wrong visible value</textarea>
+    `));
+    await assert.rejects(waitForVisibleProperty(page.locator('.draft'),'value','expected',{timeout:100}),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibleProperty(page.locator('#notify'),'checked',true,{timeout:100}),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibleAttribute(page.locator('#link'),'href','https://example.com/notes',{timeout:100}),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibleProperty(page.locator('code'),'textContent','puts :forwarded',{timeout:100}),{name:'TimeoutError'});
+    await assert.rejects(actOnVisible(page.locator('#action'),'click',{timeout:100}),{name:'TimeoutError'});
+    assert.equal(await page.evaluate(()=>window.clicked),undefined);
+    await page.evaluate(()=>{document.querySelector('div').style.opacity='1';});
+    await waitForVisibleProperty(page.locator('.draft'),'value','expected',{timeout:200});
+    await waitForVisibleProperty(page.locator('#notify'),'checked',true,{timeout:200});
+    await waitForVisibleAttribute(page.locator('#link'),'href','https://example.com/notes',{timeout:200});
+    await waitForVisibleProperty(page.locator('code'),'textContent','puts :forwarded',{timeout:200});
+    await actOnVisible(page.locator('#action'),'click',{timeout:200});
+    assert.equal(await page.evaluate(()=>window.clicked),true);
   } finally {await browser.close();}
 });

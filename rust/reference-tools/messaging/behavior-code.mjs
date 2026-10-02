@@ -1,6 +1,6 @@
 // Non-pixel code_highlighting_test.rb flows from pinned d7c7de92.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,actOnVisible} from './behavior-visibility.mjs';
 import {CAPYBARA_DEFAULT} from './behavior-deadlines.mjs';
 export async function codeHighlighting({author:page,recipient,caseName,fixture,base,openEdit,field}) {
   const {samples,literal_code_source,code_source,code_replacement,highlight_wait,code_search_id}=fixture;
@@ -54,7 +54,7 @@ export async function codeHighlighting({author:page,recipient,caseName,fixture,b
     await page.goto(base+'/searches?q=HighlightSearchExample');
     const row=page.locator(`.message[data-message-id="${code_search_id}"]`);
     await highlight(marked(row,'javascript'),'const');await waitForVisibleCount(row.locator('.markdown-code-copy'),1);
-    await page.getByRole('link',{name:'Back to Designers',exact:true}).click();
+    await actOnVisible(page.getByRole('link',{name:'Back to Designers',exact:true}),'click');
     await page.waitForURL(base+'/rooms/654632876',{timeout:CAPYBARA_DEFAULT});
     assert.equal(new URL(page.url()).pathname,'/rooms/654632876');await highlight(marked(row,'javascript'),'const');await waitForVisibleCount(row.locator('.markdown-code-copy'),1);
     await page.goBack();assert.equal(new URL(page.url()).pathname,'/searches');assert.equal(new URL(page.url()).searchParams.get('q'),'HighlightSearchExample');

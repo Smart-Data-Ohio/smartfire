@@ -1,14 +1,19 @@
 // Behaviour equivalents of message_interactions, message_toolbar and
 // message_actions_mobile at d7c7de92. No screenshots or pixel comparisons.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty,actOnVisible} from './behavior-visibility.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT} from './behavior-deadlines.mjs';
 export const originalMessage=page=>page.locator('.message[data-message-id="607264868"]');
+export async function assertMenuOpen(page) {
+  // Both assertions in the pin's system_test_helper.rb:132–135.
+  await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'),{timeout:DELIVERY_WAIT});
+  await waitForVisibility(page.locator('.message[data-message-actions-open]'),{timeout:CAPYBARA_DEFAULT});
+}
 export async function openMenu(page) {
   const row=originalMessage(page);
   await waitForVisibility(row.locator(':scope[aria-haspopup="menu"]'));
-  await row.locator('[data-reply-target="body"]').click({button:'right'});
-  await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'),{timeout:DELIVERY_WAIT});
+  await actOnVisible(row.locator('[data-reply-target="body"]'),'click',{button:'right'});
+  await assertMenuOpen(page);
   // Other viewers may react/copy while edit remains author-only. Geometry
   // waits separately for the author's metadata-dependent Edit action.
   await waitForVisibility(page.getByRole('menuitem',{name:'Copy text',exact:true}));
@@ -40,7 +45,7 @@ export async function mobileActions({author:page,caseName}) {
   if(caseName.startsWith('message action menu is')) {
     await page.setViewportSize({width:390,height:844});await openMenu(page);
     bottomSheet(await menuGeometry(page,{metadata:true}),true);
-    await page.locator('.room-header__name').click();await closedMenu(page);
+    await actOnVisible(page.locator('.room-header__name'),'click');await closedMenu(page);
   } else {
     await openMenu(page);const g=await menuGeometry(page);
     assert.ok(g.menu.width<g.viewport.width-1,'desktop menu is a floating popover');
@@ -68,23 +73,23 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     await waitForVisibleCount(page.locator('#message-actions-menu .message__quick-reaction'),fixture.reaction_count,{timeout:CAPYBARA_DEFAULT});
     await page.keyboard.press('Escape');await closedMenu(page);
     await row.click();await row.dispatchEvent('keydown',{key:'F10',shiftKey:true,bubbles:true,cancelable:true});
-    await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'),{timeout:DELIVERY_WAIT});
+    await assertMenuOpen(page);
     await page.keyboard.press('Escape');await page.waitForFunction(id=>document.activeElement?.id===id,await row.getAttribute('id'));
     await page.setViewportSize({width:390,height:844});await longPress(page,true);await closedMenu(page);
-    await longPress(page);await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'),{timeout:DELIVERY_WAIT});
+    await longPress(page);await assertMenuOpen(page);
     const g=await menuGeometry(page);
     assert.ok(g.menu.left>=0&&g.menu.top>=0&&g.menu.right<=g.viewport.width&&g.menu.bottom<=g.viewport.height);
     page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('menuitem',{name:'Delete message',exact:true}).click();
     await waitForVisibility(page.locator('#message-actions-menu .message__delete-action'));await waitForVisibility(row);
   } else if(caseName.startsWith('a release click')) {
     await page.setViewportSize({width:390,height:844});await longPress(page);
-    await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'),{timeout:DELIVERY_WAIT});
+    await assertMenuOpen(page);
     const hit=await row.evaluate(message=>{
       const r=message.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,target=document.elementFromPoint(x,y);
       if(!target?.closest('#message-actions-menu')) return target?.tagName||'none';
       target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:x,clientY:y,view:window}));return 'menu';
     });
-    assert.equal(hit,'menu');await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'),{timeout:DELIVERY_WAIT});
+    assert.equal(hit,'menu');await assertMenuOpen(page);
     await waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});
   } else if(caseName.startsWith('shows the message action')) {
     for(const viewport of [{width:390,height:844},{width:320,height:740}]) {
@@ -114,7 +119,7 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
       });
       Turbo.renderStreamMessage(`<turbo-stream action="append" target="${message.parentElement.id}"><template>${message.outerHTML}</template></turbo-stream>`);
     });
-    await waitForVisibility(page.locator('html[data-duplicate-delivery-rendered]'),{state:'attached',timeout:DELIVERY_WAIT});
+    await waitForVisibility(page.locator('html[data-duplicate-delivery-rendered]'),{timeout:DELIVERY_WAIT});
     assert.equal(await page.evaluate(()=>window.originalDeliveredMessage.isConnected),true,'redelivery preserves active controls');
     await page.getByRole('menuitem',{name:'Edit message',exact:true}).click();await field(page,"Third time's a charm.");
   } else if(caseName.startsWith('keeps newer typing')) {
@@ -141,7 +146,7 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
   } else if(caseName.startsWith('replies with notify')) {
     await openMenu(page);await page.getByRole('menuitem',{name:'Reply',exact:true}).click();
     await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'}),{timeout:DELIVERY_WAIT});
-    assert.equal(await page.getByLabel('Notify author',{exact:true}).isChecked(),true);
+    await waitForVisibleProperty(page.getByLabel('Notify author',{exact:true}),'checked',true);
     await page.getByLabel('Notify author',{exact:true}).uncheck();await send(page,'A reply without a notification');
     for(const browser of [page,recipient]) await waitForVisibility(browser.locator('.message__reply-preview').filter({hasText:'Replying to JZ'}),{timeout:DELIVERY_WAIT});
     await openMenu(page);page.once('dialog',dialog=>dialog.accept());await page.getByRole('menuitem',{name:'Delete message',exact:true}).click();
@@ -155,13 +160,13 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     assert.ok((await page.evaluate(()=>window.interactionsCopied)).includes(fixture.message_permalink));
     await openMenu(page);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:DELIVERY_WAIT});
-    await dialog.locator('.message-forward-dialog__destination').filter({hasText:'Forward destination'}).click({timeout:DELIVERY_WAIT});
+    await actOnVisible(dialog.locator('.message-forward-dialog__destination').filter({hasText:'Forward destination'}),'click',{timeout:DELIVERY_WAIT});
     await dialog.getByLabel('Add a note (optional)',{exact:true}).fill('Forwarded from the interaction test');
     await dialog.getByRole('button',{name:'Forward',exact:true}).click();
     await waitForVisibility(page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}),{timeout:DELIVERY_WAIT});
   } else if(caseName.startsWith('forwarding twice')) {
     await openMenu(page);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
-    await waitForVisibility(page.locator('dialog[open]'),{timeout:DELIVERY_WAIT});await page.locator('.message-forward-dialog__destination input').first().check({timeout:DELIVERY_WAIT});
+    await waitForVisibility(page.locator('dialog[open]'),{timeout:DELIVERY_WAIT});await actOnVisible(page.locator('.message-forward-dialog__destination input').first(),'check',{timeout:DELIVERY_WAIT});
     const requests=[];page.on('request',request=>{if(request.method()==='POST'&&/\/forwards(?:\.json)?$/.test(new URL(request.url()).pathname)) requests.push(request);});
     const submit=page.locator('[data-message-actions-target="forwardSubmit"]');await submit.click();
     await waitForVisibility(page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}),{timeout:DELIVERY_WAIT});
@@ -180,7 +185,7 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
         return chip&&window.__ws8bmSeleniumVisible(chip)&&chip.querySelector('.reaction-chip__count')?.textContent.trim()===String(count)&&chip.classList.contains('reaction-chip--active')===active;
       },{count,active});
     }
-    async function quick(browser) {await openMenu(browser);await browser.locator('.message__quick-reaction[title="Thumbs up"]').click();}
+    async function quick(browser) {await openMenu(browser);await actOnVisible(browser.locator('.message__quick-reaction[title="Thumbs up"]'),'click');}
     await quick(recipient);await reaction(recipient,1,true);await reaction(page,1,false);
     await quick(page);await reaction(page,2,true);await reaction(recipient,2,true);
     await row.locator('.reaction-chip[data-reaction="👍"]').click();await reaction(page,1,false);await reaction(recipient,1,true);

@@ -1,6 +1,6 @@
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
-import {waitForVisibility,isSeleniumVisible,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,visibleMatch} from './behavior-visibility.mjs';
+import {waitForVisibility,isSeleniumVisible,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,visibleMatch,waitForVisibleProperty,waitForVisibleAttribute} from './behavior-visibility.mjs';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
@@ -12,7 +12,7 @@ import {destinationCases,messageDestinations} from './behavior-message-destinati
 import {composer} from './behavior-composer.mjs';
 import {attachMenu} from './behavior-attach-menu.mjs';
 import {boosts} from './behavior-boosts.mjs';
-import {interactions,mobileActions} from './behavior-actions.mjs';
+import {interactions,mobileActions,assertMenuOpen} from './behavior-actions.mjs';
 import {toolbar} from './behavior-toolbar.mjs';
 import {codeHighlighting} from './behavior-code.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT,REVIEW_GROUPS} from './behavior-deadlines.mjs';
@@ -100,13 +100,13 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
     async function openEdit(page,message,{contextTimeout}={}) {
       await message.click({button:'right'});
-      await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'),REVIEW_GROUPS.has(file)?{timeout:DELIVERY_WAIT}:{});
+      await assertMenuOpen(page);
       await page.getByRole('menuitem',{name:'Edit message',exact:true}).click();
       if(!REVIEW_GROUPS.has(file)) await waitForVisibility(page.locator('#composer').filter({hasText:'Editing Message'}));
       else if(contextTimeout) await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}),{timeout:contextTimeout});
     }
     async function field(page,value,options={}) {
-      await page.waitForFunction(value=>document.querySelector('#composer textarea[name="message[markdown_source]"]')?.value===value,value,options);
+      await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value',value,options);
     }
     if(file==='message_list_a11y') {
       if(destinationCases.includes(caseName)) await messageDestinations({author,recipient,base,caseName,fixture,viewer});
@@ -329,7 +329,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
           await waitForVisibleCount(message.locator('input[type="checkbox"][disabled]'),2);
           await waitForVisibility(message.locator('pre code.language-javascript[data-highlighted="yes"] .code-token').filter({hasText:'const'}));
           await waitForVisibleCount(message.locator('.markdown-code-copy'),1);
-          assert.equal(await message.getByRole('link',{name:'Project notes',exact:true}).getAttribute('href'),'https://example.com/notes');
+          await waitForVisibleAttribute(message.getByRole('link',{name:'Project notes',exact:true}),'href','https://example.com/notes');
           assert.ok((await message.locator('pre code').textContent()).includes('const message = "<script>literal code</script>";'));
         }
         const message=messages(author).filter({has:author.locator('h2').filter({hasText:/^Design review$/})});
