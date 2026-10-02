@@ -124,7 +124,7 @@ pub async fn index(c: &mut Ctx) -> Result {
         .param("q")
         .filter(|p| p.is_present())
         .or_else(|| c.param("query"))
-        .and_then(Param::to_s)
+        .map(crate::controllers::message_features::param_string)
         .unwrap_or_default();
     let icons = c
         .app()

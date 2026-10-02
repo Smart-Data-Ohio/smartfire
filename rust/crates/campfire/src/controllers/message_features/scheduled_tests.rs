@@ -733,3 +733,49 @@ async fn scheduled_composer_controls_match_rails_for_room_and_thread() {
         assert_eq!(actual, case["html"].as_str().unwrap());
     }
 }
+#[tokio::test]
+async fn review_regression_scheduled_send_emits_unread_room_frame() {
+    use crate::channels::tests::support::{Client, bind_listener, identifier};
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    let app = app().await;
+    let scheduled = row(&app, DAVID, ALL_TALK, "Scheduled socket example").await;
+    let listener = bind_listener().await;
+    let address = listener.local_addr().unwrap();
+    let router = app.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut request = format!("ws://{address}/cable")
+        .into_client_request()
+        .unwrap();
+    request
+        .headers_mut()
+        .insert("host", "campfire.test".parse().unwrap());
+    request
+        .headers_mut()
+        .insert("origin", "http://campfire.test".parse().unwrap());
+    request
+        .headers_mut()
+        .insert("cookie", david_cookie().parse().unwrap());
+    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    let mut client = Client { socket };
+    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
+    client
+        .confirm(&identifier(json!({"channel":"UnreadRoomsChannel"})))
+        .await;
+    assert_eq!(
+        send(&mut app.david(), scheduled.id).await.status,
+        StatusCode::OK
+    );
+    let got = tokio::time::timeout(std::time::Duration::from_secs(1), client.next_text()).await;
+    println!("REVIEW_SCHEDULED_UNREAD frame={got:?}");
+    assert!(
+        got.is_ok(),
+        "scheduled sends never reach the subscribed user_*_unreads stream"
+    );
+    let frame: Value = serde_json::from_str(&got.unwrap()).unwrap();
+    assert_eq!(frame["message"], json!({"roomId":ALL_TALK}));
+    assert_eq!(
+        frame["identifier"],
+        identifier(json!({"channel":"UnreadRoomsChannel"}))
+    );
+    server.abort();
+}

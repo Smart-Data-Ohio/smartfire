@@ -181,12 +181,33 @@ impl SavedItem {
         if status == self.status && !remind_at_changed {
             return Ok(());
         }
-        let reminded_at = if remind_at_changed { None } else { self.reminded_at };
-        tx.conn().execute_cached(
-            r#"UPDATE "saved_items" SET "remind_at" = ?, "reminded_at" = ?, "status" = ?, "updated_at" = ? WHERE "saved_items"."id" = ?"#,
-            params![remind_at, reminded_at, status, now, self.id],
-        )?;
-        *self = Self::find(tx.conn(), self.id)?;
+        // Active Record partial updates only write dirty attributes. A dispatch or
+        // reschedule may have committed since this instance was loaded: a status
+        // change must preserve that writer's reminder, and vice versa.
+        match (status != self.status, remind_at_changed) {
+            (true, true) => tx.conn().execute_cached(
+                r#"UPDATE "saved_items" SET "remind_at" = ?, "reminded_at" = NULL, "status" = ?, "updated_at" = ? WHERE "id" = ?"#,
+                params![remind_at, status, now, self.id],
+            )?,
+            (false, true) => tx.conn().execute_cached(
+                r#"UPDATE "saved_items" SET "remind_at" = ?, "reminded_at" = NULL, "updated_at" = ? WHERE "id" = ?"#,
+                params![remind_at, now, self.id],
+            )?,
+            (true, false) => tx.conn().execute_cached(
+                r#"UPDATE "saved_items" SET "status" = ?, "updated_at" = ? WHERE "id" = ?"#,
+                params![status, now, self.id],
+            )?,
+            (false, false) => unreachable!("unchanged save returned above"),
+        };
+        // update! keeps unassigned attributes on the loaded instance. The JSON
+        // controller serializes it without reloading, even if another writer
+        // changed reminder fields in the meantime.
+        self.status = status;
+        self.remind_at = remind_at;
+        if remind_at_changed {
+            self.reminded_at = None;
+        }
+        self.updated_at = now;
         Ok(())
     }
 

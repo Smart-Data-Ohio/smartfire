@@ -1,0 +1,10 @@
+{% if card.usable() %}  <article class="link-embed-card">
+    <div class="link-embed-card__body">
+{% if card.has(card.site) %}        <p class="link-embed-card__site">{{ card.site }}</p>
+{% endif %}{% if card.has(card.title) %}        <p class="link-embed-card__title">
+          {{ card.title_link() }}
+        </p>
+{% endif %}{% if card.has(card.description) %}        <p class="link-embed-card__description">{{ card.description }}</p>
+{% endif %}    </div>
+{% if card.has(card.image) %}      {{ card.image_link(ctx,"link-embed-card") }}{% endif %}  </article>
+{% endif %}

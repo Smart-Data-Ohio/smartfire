@@ -1,0 +1,1225 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "zone": "UTC",
+      "input": "0305143000",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "260305143000",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000.5",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2"
+      },
+      "result": "2026-03-05T14:30:00.500000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000.123456789 -0500",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "123456789/1000000000",
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.123456Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000.5Z",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2",
+        "zone": "Z",
+        "offset": 0
+      },
+      "result": "2026-03-05T14:30:00.500000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000+05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "+05",
+        "offset": 18000
+      },
+      "result": "2026-03-05T09:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000+05:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "sec": 0
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000+05:30:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026064",
+      "parts": {
+        "year": 2026,
+        "yday": 64
+      },
+      "result": "2026-03-01T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "202603051",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "260305 14:30 -0500",
+      "parts": {
+        "zone": "-0500",
+        "hour": 14,
+        "min": 30,
+        "year": 26,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "result": "0026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "0305143000-0500",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "260305143000-0500",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305T1430",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260308T023000",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 8,
+        "hour": 2,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-08T02:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20261101T013000",
+      "parts": {
+        "year": 2026,
+        "mon": 11,
+        "mday": 1,
+        "hour": 1,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-11-01T01:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "0308023000",
+      "parts": {
+        "year": 308,
+        "mon": 2,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "0308-03-01T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "1101013000",
+      "parts": {
+        "year": 1101,
+        "mon": 1,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "1101-01-30T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000 -05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-05",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000 GMT+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000 UTC+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000 PST",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "0305143000",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "260305143000",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000.5",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2"
+      },
+      "result": "2026-03-05T19:30:00.500000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000.123456789 -0500",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "123456789/1000000000",
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.123456Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000.5Z",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2",
+        "zone": "Z",
+        "offset": 0
+      },
+      "result": "2026-03-05T14:30:00.500000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000+05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "+05",
+        "offset": 18000
+      },
+      "result": "2026-03-05T09:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000+05:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "sec": 0
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000+05:30:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026064",
+      "parts": {
+        "year": 2026,
+        "yday": 64
+      },
+      "result": "2026-03-01T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "202603051",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "260305 14:30 -0500",
+      "parts": {
+        "zone": "-0500",
+        "hour": 14,
+        "min": 30,
+        "year": 26,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "result": "0026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "0305143000-0500",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "260305143000-0500",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305T1430",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260308T023000",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 8,
+        "hour": 2,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-08T07:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20261101T013000",
+      "parts": {
+        "year": 2026,
+        "mon": 11,
+        "mday": 1,
+        "hour": 1,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-11-01T05:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "0308023000",
+      "parts": {
+        "year": 308,
+        "mon": 2,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "0308-03-01T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "1101013000",
+      "parts": {
+        "year": 1101,
+        "mon": 1,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "1101-01-30T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000 -05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-05",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000 GMT+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000 UTC+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000 PST",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "0305143000",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "260305143000",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000.5",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2"
+      },
+      "result": "2026-03-05T13:30:00.500000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000.123456789 -0500",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "123456789/1000000000",
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.123456Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000.5Z",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2",
+        "zone": "Z",
+        "offset": 0
+      },
+      "result": "2026-03-05T14:30:00.500000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000+05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "+05",
+        "offset": 18000
+      },
+      "result": "2026-03-05T09:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000+05:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "sec": 0
+      },
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000+05:30:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026064",
+      "parts": {
+        "year": 2026,
+        "yday": 64
+      },
+      "result": "2026-02-28T23:00:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "202603051",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "260305 14:30 -0500",
+      "parts": {
+        "zone": "-0500",
+        "hour": 14,
+        "min": 30,
+        "year": 26,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "result": "0026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "0305143000-0500",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "260305143000-0500",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305T1430",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30
+      },
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-04T23:00:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260308T023000",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 8,
+        "hour": 2,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-08T01:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20261101T013000",
+      "parts": {
+        "year": 2026,
+        "mon": 11,
+        "mday": 1,
+        "hour": 1,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-11-01T00:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "0308023000",
+      "parts": {
+        "year": 308,
+        "mon": 2,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "0308-02-29T23:06:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "1101013000",
+      "parts": {
+        "year": 1101,
+        "mon": 1,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "1101-01-29T23:06:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000 -05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-05",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000 GMT+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000 UTC+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "20260305143000 PST",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "0305143000",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "260305143000",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000.5",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2"
+      },
+      "result": "2026-03-05T01:30:00.500000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000.123456789 -0500",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "123456789/1000000000",
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.123456Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000.5Z",
+      "parts": {
+        "sec": 0,
+        "min": 30,
+        "hour": 14,
+        "mday": 5,
+        "mon": 3,
+        "year": 2026,
+        "sec_fraction": "1/2",
+        "zone": "Z",
+        "offset": 0
+      },
+      "result": "2026-03-05T14:30:00.500000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000+05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "+05",
+        "offset": 18000
+      },
+      "result": "2026-03-05T09:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000+05:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "sec": 0
+      },
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000+05:30:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026064",
+      "parts": {
+        "year": 2026,
+        "yday": 64
+      },
+      "result": "2026-02-28T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "202603051",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "260305 14:30 -0500",
+      "parts": {
+        "zone": "-0500",
+        "hour": 14,
+        "min": 30,
+        "year": 26,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "result": "0026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "0305143000-0500",
+      "parts": {
+        "year": 305,
+        "mon": 14,
+        "mday": 30,
+        "hour": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "260305143000-0500",
+      "parts": {
+        "year": 2603,
+        "mon": 5,
+        "mday": 14,
+        "hour": 30,
+        "min": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305T1430",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30
+      },
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-04T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305 143000 -0500",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-0500",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260308T023000",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 8,
+        "hour": 2,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-07T13:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20261101T013000",
+      "parts": {
+        "year": 2026,
+        "mon": 11,
+        "mday": 1,
+        "hour": 1,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-10-31T12:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "0308023000",
+      "parts": {
+        "year": 308,
+        "mon": 2,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "0308-02-29T11:26:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "1101013000",
+      "parts": {
+        "year": 1101,
+        "mon": 1,
+        "mday": 30,
+        "hour": 0
+      },
+      "result": "1101-01-29T11:26:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000 -05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "zone": "-05",
+        "offset": -18000
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000 GMT+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000 UTC+5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000 PST",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "hour": 14,
+        "min": 30,
+        "sec": 0
+      },
+      "result": "2026-03-05T01:30:00.000000Z"
+    }
+  ]
+}

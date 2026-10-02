@@ -1,0 +1,5043 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "zone": "UTC",
+      "input": "+2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "-2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096082200000000,
+      "result": "-2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "-0001-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193259800000000,
+      "result": "-0001-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "0000-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 0,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62161637400000000,
+      "result": "0000-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "+002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "-002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": -126096082200000000,
+      "result": "-2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "002026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 253376260200000000,
+      "result": "9999-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "-9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -377699621400000000,
+      "result": "-9999-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "+2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "-2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096082200000000,
+      "result": "-2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-3-5 14:30:00.000000999",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "999/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "05 Mar -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193259800000000,
+      "result": "-0001-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "March 5 -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193259800000000,
+      "result": "-0001-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "05-Mar-2026 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "parts": {
+        "wday": 4,
+        "zone": "GMT",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00+053030",
+      "parts": {
+        "zone": "+053030",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19830
+      },
+      "micros": 1772701170000000,
+      "result": "2026-03-05T08:59:30.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00-00:00",
+      "parts": {
+        "zone": "-00:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-08T02:30:00",
+      "parts": {
+        "hour": 2,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 8
+      },
+      "micros": 1772937000000000,
+      "result": "2026-03-08T02:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-11-01T01:30:00",
+      "parts": {
+        "hour": 1,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 11,
+        "mday": 1
+      },
+      "micros": 1793496600000000,
+      "result": "2026-11-01T01:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00,123456789Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000123456,
+      "result": "2026-03-05T14:30:00.123456Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00.123456789+05:30",
+      "parts": {
+        "zone": "+05:30",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200123456,
+      "result": "2026-03-05T09:00:00.123456Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T24:00:00.1",
+      "parts": {
+        "hour": 24,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/10",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772755200100000,
+      "result": "2026-03-06T00:00:00.100000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T23:59:60",
+      "parts": {
+        "hour": 23,
+        "min": 59,
+        "sec": 60,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772755200000000,
+      "result": "2026-03-06T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00+25:00",
+      "parts": {
+        "zone": "+25:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00+05:99",
+      "parts": {
+        "zone": "+05:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00+05:30:99",
+      "parts": {
+        "zone": "+05:30:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00-05",
+      "parts": {
+        "zone": "-05",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00 EST",
+      "parts": {
+        "zone": "EST",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T14:30:00 India Standard Time",
+      "parts": {
+        "zone": "India Standard Time",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200000000,
+      "result": "2026-03-05T09:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "+2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "-2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096064438000000,
+      "result": "-2026-03-05T19:26:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "-0001-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193242038000000,
+      "result": "-0001-03-05T19:26:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "0000-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 0,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62161619638000000,
+      "result": "0000-03-05T19:26:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "+002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "-002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": -126096082200000000,
+      "result": "-2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "002026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 253376278200000000,
+      "result": "9999-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "-9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -377699603638000000,
+      "result": "-9999-03-05T19:26:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "+2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "-2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096064438000000,
+      "result": "-2026-03-05T19:26:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-3-5 14:30:00.000000999",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "999/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "05 Mar -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193242038000000,
+      "result": "-0001-03-05T19:26:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "March 5 -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193242038000000,
+      "result": "-0001-03-05T19:26:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "05-Mar-2026 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "parts": {
+        "wday": 4,
+        "zone": "GMT",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00+053030",
+      "parts": {
+        "zone": "+053030",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19830
+      },
+      "micros": 1772701170000000,
+      "result": "2026-03-05T08:59:30.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00-00:00",
+      "parts": {
+        "zone": "-00:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-08T02:30:00",
+      "parts": {
+        "hour": 2,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 8
+      },
+      "micros": 1772955000000000,
+      "result": "2026-03-08T07:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-11-01T01:30:00",
+      "parts": {
+        "hour": 1,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 11,
+        "mday": 1
+      },
+      "micros": 1793511000000000,
+      "result": "2026-11-01T05:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00,123456789Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000123456,
+      "result": "2026-03-05T14:30:00.123456Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00.123456789+05:30",
+      "parts": {
+        "zone": "+05:30",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200123456,
+      "result": "2026-03-05T09:00:00.123456Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T24:00:00.1",
+      "parts": {
+        "hour": 24,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/10",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772773200100000,
+      "result": "2026-03-06T05:00:00.100000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T23:59:60",
+      "parts": {
+        "hour": 23,
+        "min": 59,
+        "sec": 60,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772773200000000,
+      "result": "2026-03-06T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00+25:00",
+      "parts": {
+        "zone": "+25:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00+05:99",
+      "parts": {
+        "zone": "+05:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00+05:30:99",
+      "parts": {
+        "zone": "+05:30:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00-05",
+      "parts": {
+        "zone": "-05",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00 EST",
+      "parts": {
+        "zone": "EST",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T14:30:00 India Standard Time",
+      "parts": {
+        "zone": "India Standard Time",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200000000,
+      "result": "2026-03-05T09:00:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "+2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "-2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096085408000000,
+      "result": "-2026-03-05T13:36:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "-0001-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193263008000000,
+      "result": "-0001-03-05T13:36:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "0000-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 0,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62161640608000000,
+      "result": "0000-03-05T13:36:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "+002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "-002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": -126096082200000000,
+      "result": "-2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "002026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 253376256600000000,
+      "result": "9999-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "-9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -377699624608000000,
+      "result": "-9999-03-05T13:36:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "+2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "-2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096085408000000,
+      "result": "-2026-03-05T13:36:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-3-5 14:30:00.000000999",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "999/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "05 Mar -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193263008000000,
+      "result": "-0001-03-05T13:36:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "March 5 -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193263008000000,
+      "result": "-0001-03-05T13:36:32.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "05-Mar-2026 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "parts": {
+        "wday": 4,
+        "zone": "GMT",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00+053030",
+      "parts": {
+        "zone": "+053030",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19830
+      },
+      "micros": 1772701170000000,
+      "result": "2026-03-05T08:59:30.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00-00:00",
+      "parts": {
+        "zone": "-00:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-08T02:30:00",
+      "parts": {
+        "hour": 2,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 8
+      },
+      "micros": 1772933400000000,
+      "result": "2026-03-08T01:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-11-01T01:30:00",
+      "parts": {
+        "hour": 1,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 11,
+        "mday": 1
+      },
+      "micros": 1793493000000000,
+      "result": "2026-11-01T00:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00,123456789Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000123456,
+      "result": "2026-03-05T14:30:00.123456Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00.123456789+05:30",
+      "parts": {
+        "zone": "+05:30",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200123456,
+      "result": "2026-03-05T09:00:00.123456Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T24:00:00.1",
+      "parts": {
+        "hour": 24,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/10",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772751600100000,
+      "result": "2026-03-05T23:00:00.100000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T23:59:60",
+      "parts": {
+        "hour": 23,
+        "min": 59,
+        "sec": 60,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772751600000000,
+      "result": "2026-03-05T23:00:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00+25:00",
+      "parts": {
+        "zone": "+25:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00+05:99",
+      "parts": {
+        "zone": "+05:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00+05:30:99",
+      "parts": {
+        "zone": "+05:30:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772717400000000,
+      "result": "2026-03-05T13:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00-05",
+      "parts": {
+        "zone": "-05",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00 EST",
+      "parts": {
+        "zone": "EST",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Europe/Berlin",
+      "input": "2026-03-05T14:30:00 India Standard Time",
+      "parts": {
+        "zone": "India Standard Time",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200000000,
+      "result": "2026-03-05T09:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "+2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "-2026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096127384000000,
+      "result": "-2026-03-05T01:56:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "-0001-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193304984000000,
+      "result": "-0001-03-05T01:56:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "0000-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 0,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62161682584000000,
+      "result": "0000-03-05T01:56:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "+002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "-002026-03-05T14:30:00Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": -126096082200000000,
+      "result": "-2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "002026-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 253376213400000000,
+      "result": "9999-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "-9999-03-05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -9999,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -377699666584000000,
+      "result": "-9999-03-05T01:56:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "+2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "-2026/03/05 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -126096127384000000,
+      "result": "-2026-03-05T01:56:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-3-5 14:30:00.000000999",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "999/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "05 Mar -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193304984000000,
+      "result": "-0001-03-05T01:56:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "March 5 -0001 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": -1,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": -62193304984000000,
+      "result": "-0001-03-05T01:56:56.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "05-Mar-2026 14:30",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "parts": {
+        "wday": 4,
+        "zone": "GMT",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00+053030",
+      "parts": {
+        "zone": "+053030",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19830
+      },
+      "micros": 1772701170000000,
+      "result": "2026-03-05T08:59:30.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00-00:00",
+      "parts": {
+        "zone": "-00:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000000000,
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-08T02:30:00",
+      "parts": {
+        "hour": 2,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 8
+      },
+      "micros": 1772890200000000,
+      "result": "2026-03-07T13:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-11-01T01:30:00",
+      "parts": {
+        "hour": 1,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 11,
+        "mday": 1
+      },
+      "micros": 1793449800000000,
+      "result": "2026-10-31T12:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00,123456789Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "micros": 1772721000123456,
+      "result": "2026-03-05T14:30:00.123456Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00.123456789+05:30",
+      "parts": {
+        "zone": "+05:30",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "sec_fraction": "123456789/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200123456,
+      "result": "2026-03-05T09:00:00.123456Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T24:00:00.1",
+      "parts": {
+        "hour": 24,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/10",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772708400100000,
+      "result": "2026-03-05T11:00:00.100000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T23:59:60",
+      "parts": {
+        "hour": 23,
+        "min": 59,
+        "sec": 60,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "micros": 1772708400000000,
+      "result": "2026-03-05T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00+25:00",
+      "parts": {
+        "zone": "+25:00",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00+05:99",
+      "parts": {
+        "zone": "+05:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00+05:30:99",
+      "parts": {
+        "zone": "+05:30:99",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "micros": 1772674200000000,
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00-05",
+      "parts": {
+        "zone": "-05",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00 EST",
+      "parts": {
+        "zone": "EST",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -18000
+      },
+      "micros": 1772739000000000,
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T14:30:00 India Standard Time",
+      "parts": {
+        "zone": "India Standard Time",
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 19800
+      },
+      "micros": 1772701200000000,
+      "result": "2026-03-05T09:00:00.000000Z"
+    }
+  ],
+  "rows": {
+    "messages": [
+      {
+        "id": 935962058,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "signed-year-http-reference",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "Signed year HTTP reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 486777696,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "action_text_rich_texts": [
+      {
+        "id": 935962058,
+        "body": "<p>Signed year HTTP reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962058,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ]
+  },
+  "requests": [
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":4,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":5,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"9999-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":6,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"9999-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":7,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":8,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":9,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":10,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T08:59:30.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":11,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T08:59:30.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":12,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-08T02:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":13,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-08T02:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-11-01T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":14,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-11-01T01:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":15,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.123Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":16,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T09:00:00.123Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-06T00:00:00.100Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":17,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.100Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-06T00:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":18,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":19,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":20,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":21,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":22,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T19:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":23,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T19:30:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "UTC",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":24,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T09:00:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":25,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":26,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T09:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":27,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"9999-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":28,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"9999-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":29,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":30,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":31,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":32,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T09:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T08:59:30.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":33,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T03:59:30.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":34,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T09:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-08T07:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":35,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-08T03:30:00.000-04:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-11-01T05:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":36,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-11-01T01:30:00.000-04:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":37,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T09:30:00.123-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":38,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T04:00:00.123-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-06T05:00:00.100Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":39,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.100-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-06T05:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":40,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":41,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":42,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":43,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":44,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":45,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "America/New_York",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":46,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T04:00:00.000-05:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":47,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":48,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T15:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":49,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"9999-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":50,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"9999-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":51,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":52,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":53,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":54,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T15:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T08:59:30.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":55,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T09:59:30.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":56,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T15:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-08T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":57,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-08T02:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-11-01T00:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":58,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-11-01T01:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":59,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T15:30:00.123+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":60,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T10:00:00.123+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T23:00:00.100Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":61,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.100+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T23:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":62,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":63,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":64,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":65,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":66,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T20:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":67,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T20:30:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Europe/Berlin",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":68,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T10:00:00.000+01:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":69,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-0001-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "0000-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":70,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T03:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-002026-03-05T14:30:00Z"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "002026-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":71,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"9999-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "9999-03-05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":72,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"9999-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-9999-03-05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "+2026/03/05 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":73,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "-2026/03/05 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-3-5 14:30:00.000000999"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":74,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05 Mar -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"remind_at\":[\"must be in the future\"]}}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "March 5 -0001 14:30"
+            }
+          },
+          "status": 422,
+          "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "05-Mar-2026 14:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":75,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "Thu, 05 Mar 2026 14:30:00 GMT"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":76,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T03:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T08:59:30.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+053030"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":77,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T21:59:30.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-00:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":78,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T03:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-07T13:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-08T02:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":79,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-08T02:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-10-31T12:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-11-01T01:30:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":80,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-11-01T01:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00,123456789Z"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":81,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T03:30:00.123+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.123Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00.123456789+05:30"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":82,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T22:00:00.123+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T11:00:00.100Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T24:00:00.1"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":83,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.100+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T11:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T23:59:60"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":84,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T00:00:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+25:00"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":85,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":86,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T01:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00+05:30:99"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":87,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T14:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00-05"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":88,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T08:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T19:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 EST"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":89,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-06T08:30:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    },
+    {
+      "zone": "Pacific/Apia",
+      "responses": [
+        {
+          "path": "/saved",
+          "input": {
+            "message_id": 935962058,
+            "saved_item": {
+              "remind_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T09:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+        },
+        {
+          "path": "/rooms/486777696/scheduled_messages",
+          "input": {
+            "scheduled_message": {
+              "markdown_source": "Signed year schedule",
+              "send_at": "2026-03-05T14:30:00 India Standard Time"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":90,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Signed year schedule\",\"send_at\":\"2026-03-05T22:00:00.000+13:00\",\"sent_at\":null,\"dropped_at\":null}"
+        }
+      ]
+    }
+  ]
+}
