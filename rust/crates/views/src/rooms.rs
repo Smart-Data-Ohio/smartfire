@@ -8,6 +8,7 @@ pub mod composition;
 pub mod composition_page;
 pub mod navigation;
 pub mod edit_sections;
+pub mod boards;
 
 mod header;
 pub use header::{HeaderIdentity, header_identity};
@@ -66,9 +67,7 @@ pub struct RoomView {
 }
 
 impl RoomView {
-    pub fn is_board(&self) -> bool {
-        self.header.as_ref().is_some_and(|h| h.param_key == "rooms_board")
-    }
+    pub fn is_board(&self) -> bool { self.kind == RoomKind::Board }
     pub fn is_stage(&self) -> bool {
         self.header
             .as_ref()
@@ -119,6 +118,7 @@ impl RoomView {
             RoomKind::Direct => campfire_routes::edit_rooms_direct(self.id),
             RoomKind::Voice => campfire_routes::edit_rooms_voice(self.id),
             RoomKind::Stage => campfire_routes::edit_rooms_stage(self.id),
+            RoomKind::Board => campfire_routes::edit_rooms_board(self.id),
         }
     }
 
@@ -524,6 +524,8 @@ impl FormRoom {
     /// `form_with model: room`'s action for an open or closed room.
     fn action(&self, kind: RoomKind) -> String {
         match (self.id, kind) {
+            (Some(id), RoomKind::Board) => campfire_routes::rooms_board(id),
+            (None, RoomKind::Board) => campfire_routes::rooms_boards(),
             (Some(id), RoomKind::Open) => campfire_routes::rooms_open(id),
             (Some(id), _) => campfire_routes::rooms_closed(id),
             (None, RoomKind::Open) => campfire_routes::rooms_opens(),

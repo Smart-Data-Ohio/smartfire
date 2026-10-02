@@ -59,6 +59,7 @@ pub enum RoomKind {
     Direct,
     Voice,
     Stage,
+    Board,
 }
 
 impl RoomKind {
@@ -70,6 +71,7 @@ impl RoomKind {
             RoomKind::Direct => "rooms_direct",
             RoomKind::Voice => "rooms_voice",
             RoomKind::Stage => "rooms_stage",
+            RoomKind::Board => "rooms_board",
         }
     }
 

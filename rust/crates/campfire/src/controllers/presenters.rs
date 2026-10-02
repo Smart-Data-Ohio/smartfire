@@ -24,6 +24,8 @@ mod room_list;
 pub mod room_native;
 pub mod room_shell;
 pub mod rooms_directory;
+pub mod boards;
+pub mod board_posts;
 pub mod switcher;
 #[cfg(test)]
 pub mod test_support;
@@ -98,7 +100,7 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
         RoomType::Direct => RoomKind::Direct,
         RoomType::Voice => RoomKind::Voice,
         RoomType::Stage => RoomKind::Stage,
-        RoomType::Board => RoomKind::Closed,
+        RoomType::Board => RoomKind::Board,
     }
 }
 

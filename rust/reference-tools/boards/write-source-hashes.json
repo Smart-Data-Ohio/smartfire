@@ -1,0 +1,7 @@
+{
+  "app/models/work_thread_event.rb": "d6b62b3f5bab3141a3284be84b5ad387a127430754b880fb7db0aa0a6b430c19",
+  "app/services/activity_items/recorder.rb": "cc8edf555e5e0b337e0f54e6c333a61865a38516e605dfa7387053802917fdac",
+  "app/models/user/inbox_preferences.rb": "12fc4a801806c55cca7f1bc85c63795437cf09bf573f9c403830ba2165e6fd39",
+  "app/helpers/message_payload_helper.rb": "728121ceb137285ada8b98671077b5917ca513cba00606e1b74897a47a29353e",
+  "app/models/thread_membership.rb": "f27243d9ab35929f2e66885fe8e01673ed8e7500c588f732d0f299b6e42bb39a"
+}

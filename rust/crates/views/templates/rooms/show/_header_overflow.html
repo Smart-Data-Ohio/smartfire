@@ -22,7 +22,7 @@
        aria-label="More actions"
        hidden
        data-header-overflow-target="menu">
-{% if !room.is_board() && !room.is_direct() %}      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+{% if !room.is_direct() && !room.is_board() %}      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
               data-action="header-overflow#forward"
               data-header-overflow-forward-value=".room-header__actions .room-header__action--threads"
               data-thread-panel-target="browserToggle">
