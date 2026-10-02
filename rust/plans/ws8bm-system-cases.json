@@ -39,28 +39,28 @@
       "cases": [
         {
           "name": "language fences highlight common code without changing its text",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "unlabelled code is detected while text unknown languages and inline code stay literal",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "search results highlight code on initial load and after returning to the channel",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "code and copying remain available when the highlighter cannot load",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "editing a code block replaces its language colors and copied source",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "thread code stays readable in both themes and scrolls within a narrow screen",
@@ -168,7 +168,7 @@
         {
           "name": "discusses a pull request from its card",
           "status": "deferred",
-          "evidence": null
+          "evidence": "Uncredited live-worker fixture: pinned Rails first POST/thread header/files pass, then its provider worker replaces Fix login with Could not reach GitHub (Resolution Error). Existing Discuss link is present. Original title/header expectations retained; candidate positive not credited. Header-stripping served mutant rejects, which alone is not positive parity. Diagnostic and exact remaining scope in ws8bm-report.md."
         }
       ]
     },
@@ -338,53 +338,53 @@
       "cases": [
         {
           "name": "opens message actions from context menu and keyboard, and cancels a moving long press",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "a release click landing on the just-opened menu does not activate it",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "shows the message action menu as a bottom sheet on phones",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "edits through the normal composer and restores the saved draft on cancel and success",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "a duplicate delivery does not replace the message while its actions are open",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "keeps newer typing through an asynchronous edit and leaves failures in edit mode",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "replies with notify off and renders a tombstone when the target is deleted",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "copies message text and link and forwards to a server-provided thread destination",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "forwarding twice in a row submits only once",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "groups emoji reactions, updates the live count, and highlights the current user",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         }
       ]
     },
@@ -394,13 +394,13 @@
       "cases": [
         {
           "name": "message action menu is a bottom sheet with touch-sized targets on phones",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_actions_mobile: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "message action menu stays a floating popover on desktop",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_actions_mobile: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         }
       ]
     },
@@ -410,68 +410,68 @@
       "cases": [
         {
           "name": "the toolbar stays hidden until hover or focus and labels every action",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "quick-react creates a boost from the toolbar",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "reply and thread buttons drive the composer and the thread panel",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "the more button opens the shared menu for its message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "keyboard users reach the toolbar from a focused message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "the emoji picker searches and reacts",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "the picker shows category tabs and switches between them",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "the picker loads its emoji data only on first open",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "the picker remembers recent reactions",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "the picker Custom tab reacts with a workspace icon",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "the picker reacts with a brand icon shortcode",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "picker arrows move through options, Enter selects, and Escape returns focus",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         },
         {
           "name": "picker tabs move with arrow keys and switch the grid",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
         }
       ]
     },
