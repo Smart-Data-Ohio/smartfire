@@ -20,6 +20,8 @@ fn record(event: rusqlite::trace::TraceEvent<'_>) {
         });
     }
 }
+const FIXTURE_TOKEN: &str = "fixture-workspace-token";
+
 fn oracle() -> Value {
     serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/older_provider_callbacks.json"
@@ -133,6 +135,11 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
                 step["reads"],
                 step["frames"].as_array().unwrap().len()
             );
+            if kind != "github" && reads > 10 {
+                differences.push(format!(
+                    "{kind}: {reads} reads exceed the card-only budget of 10"
+                ));
+            }
             let key = format!("{} {kind}", group["privacy"]);
             if let Some(previous) = counts.insert(key.clone(), reads)
                 && previous != reads
@@ -168,7 +175,7 @@ async fn durable_github_fetch_jobs_replace_older_public_private_and_unknown_card
             .collect();
         let (http, network) = fake(routes).await;
         let app = TestApp::boot_with_github_reader(ReadClient::with_network(
-            Some("fixture-workspace-token".into()),
+            Some(FIXTURE_TOKEN.into()),
             network,
         ))
         .await
@@ -200,10 +207,11 @@ async fn durable_github_fetch_jobs_replace_older_public_private_and_unknown_card
             4,
             "real owner fetcher sends exactly the pinned four requests"
         );
+        let authorization = format!("Bearer {FIXTURE_TOKEN}");
         for request in http.received() {
             assert_eq!(
                 request.header("Authorization"),
-                Some("Bearer fixture-workspace-token")
+                Some(authorization.as_str())
             );
         }
         check_window(&app, group).await;

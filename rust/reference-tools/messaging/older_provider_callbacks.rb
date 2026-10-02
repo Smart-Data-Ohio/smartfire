@@ -4,13 +4,14 @@ require 'net/http'
 Current.user = user = User.find(127326141)
 room = Room.find(699448326)
 ActiveJob::Base.queue_adapter = :test
-ENV['GITHUB_TOKEN'] = 'fixture-workspace-token'
+FIXTURE_TOKEN = 'fixture-workspace-token'
+ENV['GITHUB_TOKEN'] = FIXTURE_TOKEN
 frames = []
 ActionCable.server.define_singleton_method(:broadcast) { |stream, html, **| frames << { stream: stream, html: html } }
 class OlderProviderHTTP
   def initialize(routes) = (@routes = routes)
   def get(path, headers)
-    raise 'missing fixture credential' unless headers['Authorization'] == 'Bearer fixture-workspace-token'
+    raise 'missing fixture credential' unless headers['Authorization'] == "Bearer #{FIXTURE_TOKEN}"
     body = @routes.fetch(path)
     response = Net::HTTPOK.new('1.1', '200', 'fixture')
     response.instance_variable_set(:@read, true)

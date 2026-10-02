@@ -224,3 +224,6 @@ mod composer_tests;
 
 #[cfg(test)]
 mod older_provider_tests;
+
+#[cfg(test)]
+mod bounded_provider_tests;

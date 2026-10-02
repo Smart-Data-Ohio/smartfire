@@ -966,10 +966,25 @@ pub fn cards(
     indent: usize,
     bodies: &[String],
 ) -> h::Html {
+    cards_for_client_id(&message.client_message_id, prefix, class, indent, bodies)
+}
+
+/// Provider callbacks need only the message key, not the full message presentation.
+pub fn cards_for_client_id(
+    client_message_id: &str,
+    prefix: &str,
+    class: &str,
+    indent: usize,
+    bodies: &[String],
+) -> h::Html {
     h::raw(format!(
         "{}<div id=\"{}\" class=\"{class}\">{}</div>\n",
         " ".repeat(indent),
-        h::escape(&message.dom_id(prefix)),
+        h::escape(&if prefix.is_empty() {
+            format!("message_{client_message_id}")
+        } else {
+            format!("{prefix}_message_{client_message_id}")
+        }),
         bodies.concat()
     ))
 }

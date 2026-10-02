@@ -116,25 +116,30 @@ impl Embed {
     fn broadcast_after_commit(&self, tx: &mut Tx<'_>) -> Result<()> {
         // The callback renders this card container, whose helper also requests stale siblings.
         // Make those requests in the triggering transaction, before the synchronous broadcast.
-        let ids = {
-            let mut query = tx
-                .conn()
-                .prepare("SELECT DISTINCT message_id FROM link_embed_references WHERE link_embed_id=?")?;
-            query
-                .query_map([self.id], |row| row.get::<_, i64>(0))?
-                .collect::<std::result::Result<Vec<_>, _>>()?
-        };
-        let mut messages = Message::for_ids(tx.conn(), &ids)?;
-        messages.sort_by_key(|m| m.id);
-        let visible: Vec<_> = messages.iter().filter(|m| !m.embeds_suppressed).map(|m| m.id).collect();
-        let mut references = Reference::for_messages(tx.conn(), &visible)?;
+        use crate::integrations::message_batches::{self, Reference as Source};
         let mut requested = std::collections::HashSet::new();
-        for message in messages {
-            for reference in references.remove(&message.id).unwrap_or_default() {
-                if reference.embed.linkedin() == self.linkedin() && requested.insert(reference.embed.id) {
-                    request_fetch(tx, &reference.embed)?;
+        let mut after = None;
+        loop {
+            let messages = message_batches::next(tx.conn(), Source::LinkEmbed(self.id), after)?;
+            let visible: Vec<_> = messages
+                .iter()
+                .filter(|m| !m.embeds_suppressed)
+                .map(|m| m.id)
+                .collect();
+            let mut references = Reference::for_messages(tx.conn(), &visible)?;
+            for message in &messages {
+                for reference in references.remove(&message.id).unwrap_or_default() {
+                    if reference.embed.linkedin() == self.linkedin()
+                        && requested.insert(reference.embed.id)
+                    {
+                        request_fetch(tx, &reference.embed)?;
+                    }
                 }
             }
+            if messages.len() < message_batches::SIZE {
+                break;
+            }
+            after = messages.last().map(|m| m.id);
         }
         tx.emit_after_commit(Event::broadcast(&CardUpdate { embed_id: self.id }));
         Ok(())
