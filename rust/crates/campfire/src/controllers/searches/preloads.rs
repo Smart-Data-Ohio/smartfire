@@ -83,8 +83,13 @@ impl Preloads {
         };
         let prs =
             crate::integrations::github::pull_requests::PullRequest::for_messages(p.conn, &linked)?;
-        let discussions =
-            crate::integrations::github::threads::PullRequestThread::for_messages(p.conn, &linked)?;
+        let public_messages: Vec<_> = linked.iter().copied().filter(|id|
+            prs.get(id).is_some_and(|cards| cards.iter().any(|pr| pr.private == Some(false)))
+        ).collect();
+        let mut discussions = HashMap::new();
+        for ids in public_messages.chunks(crate::integrations::message_batches::SIZE) {
+            discussions.extend(crate::integrations::github::threads::PullRequestThread::for_messages(p.conn, ids)?);
+        }
         let account = if linked.is_empty() {
             None
         } else {

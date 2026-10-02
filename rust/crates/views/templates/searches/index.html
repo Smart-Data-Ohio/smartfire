@@ -10,7 +10,7 @@
 {%- block sidebar %}{{ h::sidebar_turbo_frame_tag(Some(h::routes::user_sidebar().as_str()), "") }}{%- endblock %}
 {%- block content %}{{ "\n\n\n" }}<section id="message-area" class="searches__page" aria-labelledby="search-title">
   <div class="searches__bar">
-{% if let Some((id, name)) = index.return_to_room %}    {% filter link_to(h::routes::room(id).as_str(), h::attrs().class("btn searches__back")) %}
+{% if let Some((id, name)) = index.return_to_room %}      {% filter link_to(h::routes::room(id).as_str(), h::attrs().class("btn searches__back")) %}
         {{ h::image_tag(ctx, "arrow-left.svg", h::attrs().size(16).aria("hidden", "true").class("colorize--black")) }}
         <span class="overflow-ellipsis">Back to {{ name }}</span>
 {% endfilter %}{% endif %}
