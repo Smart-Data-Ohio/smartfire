@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 325 ported domain/API/controller cases; 286 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
+Path-glob ledger: 48 files; 611 named cases; 338 ported domain/API/controller cases; 273 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -513,19 +513,19 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/models/calendar/push_channel_test.rb
 
-- **Deferred** — watching is disabled without a callback URL — WS14g continuation.
-- **Deferred** — watching is disabled without a usable account — WS14g continuation.
-- **Deferred** — watch_for opens a channel and stores only the token digest — WS14g continuation.
-- **Deferred** — watch_for retires the previous channel only after the new watch succeeds — WS14g continuation.
-- **Deferred** — a failed re-watch leaves the old channel alive with no gap — WS14g continuation.
-- **Deferred** — token matching is constant-time against the digest — WS14g continuation.
-- **Deferred** — notification claims dedupe by message number — WS14g continuation.
-- **Deferred** — renew_expiring renews soon-expiring channels and leaves fresh ones — WS14g continuation.
-- **Deferred** — renew_expiring drops channels whose account went away — WS14g continuation.
-- **Deferred** — renew_expiring opens a channel for a connected account missing one — WS14g continuation.
-- **Deferred** — renew_expiring opens nothing for a disconnected account missing one — WS14g continuation.
-- **Deferred** — renew_expiring never raises — WS14g continuation.
-- **Deferred** — renew_expiring preloads users instead of querying per channel — WS14g continuation.
+- **Ported** — watching is disabled without a callback URL — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — watching is disabled without a usable account — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — watch_for opens a channel and stores only the token digest — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — watch_for retires the previous channel only after the new watch succeeds — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — a failed re-watch leaves the old channel alive with no gap — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — token matching is constant-time against the digest — `app::google_push_channel_tests::google_push_channel_tokens_and_notification_claims_match_pinned_rails` (six token cases and five SQL claim/replay steps; full state).
+- **Ported** — notification claims dedupe by message number — `app::google_push_channel_tests::google_push_channel_tokens_and_notification_claims_match_pinned_rails` (six token cases and five SQL claim/replay steps; full state).
+- **Ported** — renew_expiring renews soon-expiring channels and leaves fresh ones — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — renew_expiring drops channels whose account went away — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — renew_expiring opens a channel for a connected account missing one — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — renew_expiring opens nothing for a disconnected account missing one — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — renew_expiring never raises — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
+- **Ported** — renew_expiring preloads users instead of querying per channel — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (real SQL probes: 2 and 12 fresh channels; Rust 0 User SELECTs, Rails 1 batch SELECT; injected per-user reads fail).
 
 ## test/models/drive_attachment_test.rb
 

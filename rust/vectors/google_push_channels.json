@@ -1,0 +1,1786 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-09-23T10:30:00Z",
+  "rows": [
+    {
+      "spec": {
+        "name": "no_callback",
+        "callback": false
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [],
+      "calls": [],
+      "error": null,
+      "channels": [
+        null
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "no_account",
+        "account": false
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [],
+      "calls": [],
+      "error": null,
+      "channels": [
+        null
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "first_watch",
+        "response": [
+          200,
+          {
+            "resourceId": "resource-1",
+            "expiration": "1790418600000"
+          }
+        ]
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "resource-1",
+          "expires_at": "2026-09-26T10:30:00.000000Z",
+          "last_message_number": 0,
+          "last_notification_at": null,
+          "last_error": null,
+          "created_at": "2026-09-23T10:30:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": null,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "rewatch",
+        "old": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "rewatch_forbidden",
+        "old": true,
+        "response": [
+          403,
+          {
+            "error": {
+              "errors": [
+                {
+                  "reason": "forbidden"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "Forbidden: Google Calendar request forbidden (403)",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "renew_soon",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 7200
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 2
+    },
+    {
+      "spec": {
+        "name": "renew_fresh",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 172800
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "renew_missing_account",
+        "renew": true,
+        "old": true,
+        "account": false
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        null
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "heal_missing",
+        "renew": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": null,
+          "last_error": null,
+          "created_at": "2026-09-23T10:30:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": null,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 2
+    },
+    {
+      "spec": {
+        "name": "heal_disconnected",
+        "renew": true,
+        "disconnected": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [],
+      "calls": [],
+      "error": null,
+      "channels": [
+        null
+      ],
+      "disconnected": [
+        "revoked"
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "renew_timeout",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 7200,
+        "response": [
+          "timeout",
+          null
+        ]
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "preload_2",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 172800,
+        "users": 2
+      },
+      "user_ids": [
+        127326141,
+        773523960
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 2,
+          "user_id": 773523960,
+          "channel_id": "old-773523960",
+          "token_digest": "6d5ab9f6794254485a700c7f622a4c29658a2acf5fdff3afc10ecc6a1db9834e",
+          "resource_id": "old-resource-773523960",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523960,
+          "resource_id": "old-resource-773523960",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null,
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "preload_12",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 172800,
+        "users": 12
+      },
+      "user_ids": [
+        127326141,
+        773523960,
+        773523961,
+        773523962,
+        773523963,
+        773523964,
+        773523965,
+        773523966,
+        773523967,
+        773523968,
+        773523969,
+        773523970
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 2,
+          "user_id": 773523960,
+          "channel_id": "old-773523960",
+          "token_digest": "6d5ab9f6794254485a700c7f622a4c29658a2acf5fdff3afc10ecc6a1db9834e",
+          "resource_id": "old-resource-773523960",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 3,
+          "user_id": 773523961,
+          "channel_id": "old-773523961",
+          "token_digest": "e8b4549af638ef4659a4a752844b0922a928d369d7204a8f2dddb3d22096afca",
+          "resource_id": "old-resource-773523961",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 4,
+          "user_id": 773523962,
+          "channel_id": "old-773523962",
+          "token_digest": "51b773757358df32cab322d7bdd8b085bed6bdbc1387b8a5d4054be50dee12c0",
+          "resource_id": "old-resource-773523962",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 5,
+          "user_id": 773523963,
+          "channel_id": "old-773523963",
+          "token_digest": "f48d3e7aa3e57443d619ee8ee6bd95c47a08b2c3c2a8ef5758adcac4656b34a9",
+          "resource_id": "old-resource-773523963",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 6,
+          "user_id": 773523964,
+          "channel_id": "old-773523964",
+          "token_digest": "7f48b2a8ac96f80a3e76190f9890dd9fdfb20e80b414428ed10ee8597468548b",
+          "resource_id": "old-resource-773523964",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 7,
+          "user_id": 773523965,
+          "channel_id": "old-773523965",
+          "token_digest": "b4c588ac3b8f1384cd32b164579cca5edd43b4f232a2f8b0090af965a53dd90f",
+          "resource_id": "old-resource-773523965",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 8,
+          "user_id": 773523966,
+          "channel_id": "old-773523966",
+          "token_digest": "9549c9696e58e4b795a579375d3014873e880e169a11b0ed793678d5f92280d8",
+          "resource_id": "old-resource-773523966",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 9,
+          "user_id": 773523967,
+          "channel_id": "old-773523967",
+          "token_digest": "8fdce89d88def069e9eebb1159561cad49dc3d97725b24ccc79cdf9dc2946358",
+          "resource_id": "old-resource-773523967",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 10,
+          "user_id": 773523968,
+          "channel_id": "old-773523968",
+          "token_digest": "c6016474f7ff4f00588eca0f2f0ffba737bbf35e0347334dba3275efb516525b",
+          "resource_id": "old-resource-773523968",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 11,
+          "user_id": 773523969,
+          "channel_id": "old-773523969",
+          "token_digest": "03210c334094db8ff1ade43cc0ae82e3fd86616864e0be86535d4a2e6a8a23e6",
+          "resource_id": "old-resource-773523969",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 12,
+          "user_id": 773523970,
+          "channel_id": "old-773523970",
+          "token_digest": "2cab65acde6bd6da69fa62022d1cd2290f1efda4806647af16788e40fb592527",
+          "resource_id": "old-resource-773523970",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523960,
+          "resource_id": "old-resource-773523960",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523961,
+          "resource_id": "old-resource-773523961",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523962,
+          "resource_id": "old-resource-773523962",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523963,
+          "resource_id": "old-resource-773523963",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523964,
+          "resource_id": "old-resource-773523964",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523965,
+          "resource_id": "old-resource-773523965",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523966,
+          "resource_id": "old-resource-773523966",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523967,
+          "resource_id": "old-resource-773523967",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523968,
+          "resource_id": "old-resource-773523968",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523969,
+          "resource_id": "old-resource-773523969",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523970,
+          "resource_id": "old-resource-773523970",
+          "expires_at": "2026-09-25T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "renew_no_expiry",
+        "renew": true,
+        "old": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 2
+    },
+    {
+      "spec": {
+        "name": "renew_before_boundary",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 86399.999999
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-24T10:29:59.999999Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 2
+    },
+    {
+      "spec": {
+        "name": "renew_at_boundary",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 86400
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-24T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 2
+    },
+    {
+      "spec": {
+        "name": "renew_after_boundary",
+        "renew": true,
+        "old": true,
+        "expiry_offset": 86400.000001
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-24T10:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 2
+    },
+    {
+      "spec": {
+        "name": "stop_not_found",
+        "old": true,
+        "stop_status": 404
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "stop_timeout",
+        "old": true,
+        "stop_status": "timeout"
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "watch_rate_limit",
+        "old": true,
+        "response": [
+          429,
+          {}
+        ]
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        }
+      ],
+      "error": "Google::Client::RateLimited",
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "watch_server_error",
+        "old": true,
+        "response": [
+          503,
+          {}
+        ]
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "Error: Google Calendar request failed (503)",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "watch_no_scope",
+        "old": true,
+        "scopes": "openid email"
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "watch_unreadable",
+        "old": true,
+        "unreadable": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        "The stored token could not be read; reconnect"
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "watch_no_secret",
+        "old": true,
+        "secret": false
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 0
+    },
+    {
+      "spec": {
+        "name": "renew_disconnected",
+        "renew": true,
+        "old": true,
+        "disconnected": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        null
+      ],
+      "disconnected": [
+        "revoked"
+      ],
+      "user_reads": 1
+    },
+    {
+      "spec": {
+        "name": "renew_no_scope",
+        "renew": true,
+        "old": true,
+        "scopes": "openid email"
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        null
+      ],
+      "disconnected": [
+        null
+      ],
+      "user_reads": 2
+    },
+    {
+      "spec": {
+        "name": "renew_unreadable",
+        "renew": true,
+        "old": true,
+        "unreadable": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "calls": [],
+      "error": null,
+      "channels": [
+        null
+      ],
+      "disconnected": [
+        "The stored token could not be read; reconnect"
+      ],
+      "user_reads": 1
+    }
+  ],
+  "tokens": [
+    {
+      "token": "secret-token",
+      "matches": true
+    },
+    {
+      "token": "wrong-token",
+      "matches": false
+    },
+    {
+      "token": "",
+      "matches": false
+    },
+    {
+      "token": null,
+      "matches": false
+    },
+    {
+      "token": " ",
+      "matches": false
+    },
+    {
+      "token": " ",
+      "matches": false
+    }
+  ],
+  "claims": [
+    {
+      "number": "7",
+      "won": true,
+      "last_message_number": 7,
+      "last_notification_at": "2026-09-23T10:30:00.000000Z"
+    },
+    {
+      "number": "7",
+      "won": false,
+      "last_message_number": 7,
+      "last_notification_at": "2026-09-23T10:30:00.000000Z"
+    },
+    {
+      "number": "3",
+      "won": false,
+      "last_message_number": 7,
+      "last_notification_at": "2026-09-23T10:30:00.000000Z"
+    },
+    {
+      "number": "8",
+      "won": true,
+      "last_message_number": 8,
+      "last_notification_at": "2026-09-23T10:30:00.000000Z"
+    },
+    {
+      "number": "bogus",
+      "won": false,
+      "last_message_number": 8,
+      "last_notification_at": "2026-09-23T10:30:00.000000Z"
+    }
+  ]
+}

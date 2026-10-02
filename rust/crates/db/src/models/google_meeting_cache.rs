@@ -58,8 +58,10 @@ pub fn complete(
     }) {
         return Ok(());
     }
-    // Rails' upsert timestamps use the process clock, including the frozen parity clock.
-    tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,NULL,?,?) ON CONFLICT(user_id) DO UPDATE SET busy_intervals=excluded.busy_intervals,ooo_intervals=excluded.ooo_intervals,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at,refresh_pending_at=NULL,updated_at=excluded.updated_at",params![user_id,busy.to_string(),ooo.to_string(),error,fetched_at,tx.now(),tx.now()])?;
+    // Rails' SQL-generated upsert timestamps have millisecond precision.
+    // Honor the injected process clock while preserving explicit fetched_at's microseconds.
+    let written_at = Timestamp::from_microsecond(tx.now().jiff().as_millisecond() * 1000);
+    tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,NULL,?,?) ON CONFLICT(user_id) DO UPDATE SET busy_intervals=excluded.busy_intervals,ooo_intervals=excluded.ooo_intervals,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at,refresh_pending_at=NULL,updated_at=excluded.updated_at",params![user_id,busy.to_string(),ooo.to_string(),error,fetched_at,written_at,written_at])?;
     Ok(())
 }
 pub fn follow_up(tx: &mut Tx<'_>, user_id: i64, now: Timestamp) -> Result<bool> {
@@ -154,6 +156,62 @@ pub fn intervals(items: &Value, zone_name: &str) -> (Value, Value) {
 mod tests {
     use super::*;
     use crate::{NewUser, tests::TestDb};
+    #[test]
+    fn google_cache_upsert_precision_matches_pinned_rails_sql_clock() {
+        let v: Value =
+            serde_json::from_str(include_str!("../../../../vectors/google_cache_clock.json"))
+                .unwrap();
+        for row in v["rows"].as_array().unwrap() {
+            let now = Timestamp::from_jiff(row["now"].as_str().unwrap().parse().unwrap());
+            let db = TestDb::with_clock(crate::TestClock::frozen_at(now), 4);
+            let id = db.write(|tx| {
+                Ok(User::create(
+                    tx,
+                    NewUser {
+                        name: "Clock member".into(),
+                        ..Default::default()
+                    },
+                )?
+                .id)
+            });
+            db.write(move |tx| complete(tx, id, Some(json!([])), Some(json!([])), None, now));
+            let (fetched,created,updated)=db.read(move |c|Ok(c.query_row("SELECT fetched_at,created_at,updated_at FROM calendar_meeting_caches WHERE user_id=?",[id],|r|Ok((r.get::<_,Timestamp>(0)?,r.get::<_,Timestamp>(1)?,r.get::<_,Timestamp>(2)?)))?));
+            for (key, at) in [
+                ("fetched_at", fetched),
+                ("created_at", created),
+                ("updated_at", updated),
+            ] {
+                assert_eq!(
+                    json!(format!("{:.6}", at.jiff())),
+                    row[key],
+                    "{key}: injected clock {}",
+                    row["now"]
+                );
+            }
+            db.write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE calendar_meeting_caches SET updated_at=? WHERE user_id=?",
+                    params![now.ago(jiff::SignedDuration::from_secs(300)), id],
+                )?;
+                complete(tx, id, Some(json!([])), Some(json!([])), None, now)
+            });
+            let updated = db.read(move |c| {
+                Ok(c.query_row(
+                    "SELECT updated_at FROM calendar_meeting_caches WHERE user_id=?",
+                    [id],
+                    |r| r.get::<_, Timestamp>(0),
+                )?)
+            });
+            assert_eq!(
+                json!(format!("{:.6}", updated.jiff())),
+                row["after_repeat"]["updated_at"],
+                "unchanged upsert preserves the Rails timestamp"
+            );
+        }
+        println!(
+            "Pinned Rails cache clock: 3 fractional observations; microsecond fetch time and millisecond upsert timestamps; 0 skipped"
+        );
+    }
     #[test]
     fn google_meeting_cache_creation_validates_user_and_uniqueness() {
         let oracle: Value = serde_json::from_str(include_str!(
