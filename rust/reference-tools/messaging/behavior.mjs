@@ -45,7 +45,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       // data-test-motion="off" input (application.html.erb:2). Our servers use
       // the production reference image. Supply that test-only input before
       // parsing either app; this does not claim the server emits the attribute.
-      const pinnedTestMotion = continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      const pinnedTestMotion = caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
       if(pinnedTestMotion) await context.addInitScript(()=>{
         const apply=()=>document.documentElement?.setAttribute('data-test-motion','off');
         apply();new MutationObserver(apply).observe(document,{childList:true,subtree:true});

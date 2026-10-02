@@ -3,7 +3,7 @@
 kind = ARGV.fetch(0)
 # The production parity seed has many extra provider/state examples. The
 # pinned list regressions use just the three original Designers fixtures.
-if %w[message_list message_destinations history boosts toolbar interactions actions-mobile thread-pr].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-") || kind.start_with?("highlight")
+if %w[workspace-upload message_list message_destinations history boosts toolbar interactions actions-mobile thread-pr].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-") || kind.start_with?("highlight")
   Room.find(654632876).root_messages.where.not(id: [309456473, 908005739, 607264868]).destroy_all
 end
 case kind
@@ -51,6 +51,8 @@ when "work-controller"
   revoked.deactivate
   metadata[:revoked_thread_id]=revoked_thread.id
   File.write(Rails.root.join("storage/db/browser-fixture.json"),JSON.generate(metadata))
+when "workspace-upload"
+  # The original workspace fixture has only the three root messages above.
 when "message_list"
   # No additional rows are needed.
 when "message_destinations"

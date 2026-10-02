@@ -207,10 +207,10 @@ subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"]
 subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
-# The two provider system cases enqueue fetches under ActiveJob::TestHelper
+# Provider and upload system cases enqueue jobs under ActiveJob::TestHelper
 # (test_helper.rb:13). Production workers would turn their loading/title checks
 # into races. Use the real Rust test app without its runner, not mocked routes.
-paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card"}
+paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable"}
 needs_paused_jobs=not args.slice and any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
 test_host=None
 if needs_paused_jobs:
@@ -314,6 +314,8 @@ for file in files:
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "work-controller", case], cwd=ROOT, env=env, check=True)
             elif file == "mobile_layout":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "mobile-layout"], cwd=ROOT, env=env, check=True)
+            elif file == "workspace_markdown" and case == "Markdown replies and file attachments remain usable":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "workspace-upload"], cwd=ROOT, env=env, check=True)
             elif file == "message_list_a11y":
                 fixture_kind = "board-touch" if case.startswith("text fields") else "history" if case.startswith("paginated history") else "message_list"
                 if any(name in CASES[file][20:28] for name in batch):
