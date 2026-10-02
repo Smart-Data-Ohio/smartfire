@@ -1,0 +1,94 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "name": "boolean_retry",
+      "responses": [
+        {
+          "name": "boolean_retry",
+          "path": "/rooms/486777696/threads/9/messages.json",
+          "input": {
+            "message": {
+              "client_message_id": true,
+              "markdown_source": "retry me"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":935962058,\"client_message_id\":\"t\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"retry me\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>retry me</p></div>\",\"markdown_source\":\"retry me\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":9,\"name\":\"Review\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=935962058&thread=9\"}",
+          "content_type": "application/json; charset=utf-8",
+          "cache_control": "no-store",
+          "location": null
+        },
+        {
+          "name": "boolean_retry",
+          "path": "/rooms/486777696/threads/9/messages.json",
+          "input": {
+            "message": {
+              "client_message_id": true,
+              "markdown_source": "retry me"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":935962058,\"client_message_id\":\"t\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"retry me\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>retry me</p></div>\",\"markdown_source\":\"retry me\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":9,\"name\":\"Review\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=935962058&thread=9\"}",
+          "content_type": "application/json; charset=utf-8",
+          "cache_control": "no-store",
+          "location": null
+        }
+      ],
+      "clients": [
+        "t"
+      ],
+      "count": 1
+    },
+    {
+      "name": "missing_file",
+      "responses": [
+        {
+          "name": "missing_file",
+          "path": "/rooms/486777696/threads/9/messages.json",
+          "input": {
+            "message": {
+              "client_message_id": "review-missing-file",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887"
+            }
+          },
+          "status": 500,
+          "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+          "content_type": "application/json; charset=UTF-8",
+          "cache_control": null,
+          "location": null
+        }
+      ],
+      "state": [
+        0,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "signed_initial",
+      "responses": [
+        {
+          "name": "signed_initial",
+          "path": "/rooms/486777696/threads.json",
+          "input": {
+            "thread": {
+              "name": "Signed initial"
+            },
+            "message": {
+              "client_message_id": "review-initial",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6ImJsb2JfaWQifX0=--a0455e433db5e221e639c005cae8178fee0270ad"
+            }
+          },
+          "status": 201,
+          "body": "{\"thread\":{\"id\":9,\"name\":\"Signed initial\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"parent_message\":null}",
+          "content_type": "application/json; charset=utf-8",
+          "cache_control": "max-age=0, private, must-revalidate",
+          "location": null
+        }
+      ],
+      "blob_id": 13,
+      "count": 1
+    }
+  ]
+}

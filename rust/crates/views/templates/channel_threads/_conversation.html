@@ -13,7 +13,6 @@
   {{ self.area_open() }}
     {{ self.pending_template() }}
 
-
     {{ self.list_open() }}
       {% for message in messages %}{{ crate::messages::cached_message_item(ctx, message) }}{% endfor %}
 </div>

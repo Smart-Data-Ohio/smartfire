@@ -96,6 +96,10 @@ async fn non_author_non_admin_cannot_edit_or_delete() {
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut jason = app.sign_in(JASON).await;
     assert_eq!(jason.get(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
+    let before=app.db().read(move|conn|Message::find(conn,message.id)).await.unwrap();
+    assert_eq!(jason.write(Req::new(Method::PATCH,&path).form(&[("message[markdown_source]","Other member edit")])).await.status,StatusCode::FORBIDDEN);
+    let id=before.id;
+    assert_eq!(app.db().read(move|conn|Message::find(conn,id)).await.unwrap(),before);
     assert_eq!(
         jason
             .write(Req::new(Method::DELETE, &path).header("accept", "text/vnd.turbo-stream.html"))
@@ -588,4 +592,13 @@ async fn root_create_rolls_back_when_the_atomic_job_insert_is_rejected() {
             .unwrap()
             .is_none()
     );
+}
+
+#[tokio::test]
+async fn administrator_can_delete_another_authors_ordinary_root_message() {
+    let app=boot().await;
+    let message=create(&app,JASON,false).await;
+    let id=message.id;
+    assert_eq!(app.david().write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"))).await.status,StatusCode::OK);
+    assert!(app.db().read(move|conn|Message::find_by_id(conn,id)).await.unwrap().is_none());
 }

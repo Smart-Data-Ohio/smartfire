@@ -1,0 +1,34 @@
+{
+  "reference": "d7c7de92",
+  "closed_ids": [
+    9,
+    10,
+    11,
+    12
+  ],
+  "rows": [
+    {
+      "name": "closed",
+      "method": "get",
+      "path": "/rooms/486777696/threads.json?state=closed",
+      "params": {},
+      "status": 200,
+      "body": "{\"threads\":[{\"id\":9,\"name\":\"Recent closed\",\"status\":\"closed\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T15:00:00.000Z\",\"closed_at\":\"2026-03-02T15:00:00.000Z\",\"locked_at\":null,\"auto_archive_after_minutes\":60,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":0,\"member_count\":0,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},{\"id\":10,\"name\":\"Locked\",\"status\":\"locked\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T14:00:00.000Z\",\"closed_at\":\"2026-03-02T14:00:00.000Z\",\"locked_at\":\"2026-03-02T14:00:00.000Z\",\"auto_archive_after_minutes\":60,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":0,\"member_count\":0,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/10\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=10\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},{\"id\":11,\"name\":\"Stale\",\"status\":\"closed\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T13:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":60,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":0,\"member_count\":0,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/11\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=11\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},{\"id\":12,\"name\":\"Old closed\",\"status\":\"closed\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T12:00:00.000Z\",\"closed_at\":\"2026-03-02T12:00:00.000Z\",\"locked_at\":null,\"auto_archive_after_minutes\":60,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":0,\"member_count\":0,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/12\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=12\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}]}"
+    },
+    {
+      "name": "direct_denied",
+      "status": 403
+    },
+    {
+      "name": "unlock",
+      "status": 200,
+      "active": true,
+      "last_activity_at": "2026-03-02T16:00:00.000Z"
+    },
+    {
+      "name": "sweep",
+      "status": 201,
+      "closed_at": "2026-03-02T16:00:00.000Z"
+    }
+  ]
+}

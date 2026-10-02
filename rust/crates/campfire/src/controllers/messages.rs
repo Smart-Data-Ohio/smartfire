@@ -4,11 +4,17 @@
 //! delivering webhooks and the broadcasts.
 
 pub mod boosts;
+#[cfg(test)]
+pub(crate) mod boosts_tests;
+#[cfg(test)]
+mod upload_tests;
+#[cfg(test)]
+mod review_tests;
 pub mod pins;
 pub mod by_bots;
 pub mod rendered;
 pub(crate) mod payload;
-mod freshness;
+pub(crate) mod freshness;
 #[cfg(test)]
 mod root_tests;
 #[cfg(test)]
@@ -16,7 +22,21 @@ mod paging_tests;
 #[cfg(test)]
 mod collection_tests;
 #[cfg(test)]
+mod cache_reaction_review_tests;
+#[cfg(test)]
+mod rendered_dependency_tests;
+#[cfg(test)]
+mod csrf_tests;
+#[cfg(test)]
+mod declaration_tests;
+#[cfg(test)]
 mod room_list_tests;
+#[cfg(test)]
+mod github_integration_tests;
+#[cfg(test)]
+pub(crate) mod provider_tests;
+#[cfg(test)]
+pub(crate) mod drive_tests;
 #[cfg(test)]
 pub(crate) mod state_tests;
 
@@ -82,16 +102,18 @@ async fn create_action(c: &mut Ctx) -> Result {
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support dig")));
     }
     // Rails checks retries before validating or staging the new payload.
-    let client_id = c.params.get("message").and_then(|message| message.get("client_message_id")).filter(|value| value.is_present()).and_then(string_column);
+    let raw_client_id = c.params.get("message").and_then(|message| message.get("client_message_id"));
+    let client_id = raw_client_id.and_then(string_column);
+    let lookup_id = raw_client_id.filter(|value| value.is_present()).and(client_id.clone());
     let (room_id, creator_id) = (room.id, require_current_user(c)?.id);
-    let duplicate = match client_id {
+    let duplicate = match lookup_id {
         Some(id) => c.app().db.read(move |conn| Message::find_duplicate(conn, room_id, creator_id, &id)).await.map_err(db_error)?,
         None => None,
     };
     let message = if let Some(duplicate) = duplicate {
         duplicate
     } else {
-        let attributes = root_create_params(c, &room).await?;
+        let attributes = human_message_params_with_client_id(c, Some(&room), client_id).await?;
         let message = create_message(c, &room, attributes).await?;
         broadcast_create(c, &room, &message).await?;
         release_webhooks(c, &message).await;
@@ -286,22 +308,23 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
     })
 }
 
-/// Additional parameters shared by the root create and human edit endpoints.
-async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
-    human_message_params(c, Some(room)).await
-}
-
 /// Threads let the model validate their reply target; roots first scope it to root_messages.
 pub(crate) async fn human_message_params(c: &Ctx, root_room: Option<&Room>) -> Result<MessageParams> {
+    let client_id = c.params.get("message").and_then(|message| message.get("client_message_id")).and_then(string_column);
+    human_message_params_with_client_id(c, root_room, client_id).await
+}
+
+/// Create callers cast once before the retry lookup and pass that same column value here.
+/// Raw `blank?` still controls lookup: false persists as "f" but never deduplicates.
+pub(crate) async fn human_message_params_with_client_id(c: &Ctx, root_room: Option<&Room>, client_id: Option<String>) -> Result<MessageParams> {
     let message = c.params.require("message")?;
     if message.as_hash().is_none() {
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support permit")));
     }
     let mut attributes = message_params(c)?;
     let permitted = message.permit(&permit_keys(&["markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author"]));
-    let text = |key: &str| permitted.get(key).and_then(string_column);
-    attributes.markdown_source = text("markdown_source");
-    attributes.client_message_id = text("client_message_id");
+    attributes.markdown_source = permitted.get("markdown_source").and_then(string_column);
+    attributes.client_message_id = client_id;
     if attributes.markdown_source.is_some() {
         attributes.body = None;
     }
@@ -473,28 +496,30 @@ pub(crate) fn paging_anchor(conn: &campfire_db::Connection, timeline: Timeline, 
 
 /// `@room.messages.create_with_attachment!(attributes)`: the message (with its uploaded blob, in
 /// one transaction), then `process_attachment`. The upload's file is copied into storage and the
-/// body canonicalized before the transaction, so the writer only inserts rows.
+/// body canonicalized before the transaction. Root media processing follows the commit;
+/// thread media processing stays inside `post_message!`'s transaction, as in Rails.
 /// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
 /// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
-    match create_message_with_agent_policy(c, room, attributes, false).await? {
-        campfire_db::models::agent_posting::PostingOutcome::Created(message) => Ok(message),
-        _ => unreachable!("human posting does not run agent policy"),
-    }
+    created_message(create_message_outcome(c, room, None, attributes, false).await?)
 }
 
 pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<campfire_db::ChannelThread>, attributes: MessageParams) -> Result<Message> {
-    match create_message_in_context(c, room, thread, attributes, false).await? {
+    created_message(create_message_outcome(c, room, thread, attributes, false).await?)
+}
+
+fn created_message(outcome: campfire_db::models::agent_posting::PostingOutcome) -> Result<Message> {
+    match outcome {
         campfire_db::models::agent_posting::PostingOutcome::Created(message) => Ok(message),
         _ => unreachable!("human posting does not run agent policy"),
     }
 }
 
 pub(crate) async fn create_message_with_agent_policy(c: &Ctx, room: &Room, attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
-    create_message_in_context(c, room, None, attributes, agent_policy).await
+    create_message_outcome(c, room, None, attributes, agent_policy).await
 }
 
-async fn create_message_in_context(c: &Ctx, room: &Room, thread: Option<campfire_db::ChannelThread>, mut attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
+async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db::ChannelThread>, mut attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
     use campfire_db::models::agent_posting::{PostingOutcome, PostingCheck};
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
@@ -507,6 +532,7 @@ async fn create_message_in_context(c: &Ctx, room: &Room, thread: Option<campfire
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
     };
+    let storage = c.app().storage.clone();
     let (message, blob) = c
         .app()
         .db
@@ -532,8 +558,12 @@ async fn create_message_in_context(c: &Ctx, room: &Room, thread: Option<campfire
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     ..Default::default()
                 };
-            let message = if let Some(mut thread) = thread { thread.post_message(tx, creator_id, attributes)? }
-                else {
+            let message = if let Some(mut thread) = thread {
+                    let message = thread.post_message(tx, creator_id, attributes)?;
+                    if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
+                    crate::messaging::process_message_attachment(tx, storage, &message)?;
+                    return Ok((PostingOutcome::Created(message), None));
+                } else {
                     let message = Message::create(tx, attributes)?;
                     deliver_webhooks_to_bots(tx, &room, &message)?;
                     message
@@ -564,7 +594,7 @@ pub(crate) fn save_staged(tx: &mut campfire_db::Tx<'_>, staged: Staged) -> campf
 }
 
 /// Resolve a staged upload or an existing direct-upload blob inside the writer transaction.
-fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
+pub(crate) fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
     match assignment {
         Assignment::Create(staged) => save_staged(tx, staged).map(Some),
         Assignment::Existing(blob) => attachments::save_existing(tx, blob).map(Some),
@@ -610,12 +640,7 @@ pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
 /// `blob.analyze`: its `after_update` touches the attached records. The file is analyzed off the
 /// writer.
 async fn analyze_attachment(app: &App, blob: Blob) -> Result<Blob> {
-    active_storage::analyze(app, blob.id).await.map_err(Error::internal)?.ok_or(Error::NotFound)
-}
-
-/// Keep the existing forwarding seam; record touching belongs to the shared owner.
-pub(crate) fn touch_attachment_records(tx: &mut campfire_db::Tx<'_>, blob_id: i64) -> campfire_db::Result<()> {
-    active_storage::touch_attachment_records(tx, blob_id)
+    active_storage::analyze_explicit(app, blob.id).await.map_err(Error::internal)?.ok_or(Error::NotFound)
 }
 
 /// `@message.update!(message_params)`. A new attachment replaces the old one (whose blob is purged
@@ -801,6 +826,11 @@ pub(crate) async fn present<T: Send + 'static>(
 
 /// `render action: :room_not_found` (inside the layout).
 async fn render_room_not_found(c: &mut Ctx) -> Result {
+    // Explicit `render action: :room_not_found` looks up the request's format; Rails has
+    // only the HTML template. A Turbo Stream/JSON rescue therefore raises MissingTemplate.
+    if c.format()?.is_some_and(|requested| *requested != format::HTML) {
+        return Err(Error::internal(anyhow::anyhow!("Missing messages/room_not_found template for request format")));
+    }
     c.respond_to(&[&format::HTML])?;
     page::content_in_application_layout(c, StatusCode::OK, |_| views::RoomNotFound.render()).await
 }
@@ -809,8 +839,7 @@ async fn render_room_not_found(c: &mut Ctx) -> Result {
 mod tests;
 
 #[cfg(test)]
+mod http_tests;
+#[cfg(test)]
 #[path = "messages/ws17_activity_tests.rs"]
 mod ws17_activity_tests;
-
-#[cfg(test)]
-mod http_tests;
