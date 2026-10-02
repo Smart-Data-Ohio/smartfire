@@ -924,10 +924,6 @@ async fn search_supplies_the_room_icon_only_on_shared_fragment_misses() {
 
 #[tokio::test]
 async fn full_message_preloads_keep_queries_constant() {
-    use std::sync::{
-        Arc,
-        atomic::{AtomicUsize, Ordering},
-    };
     let app = app().await;
     let mut messages = vec![];
     for _ in 0..16 {
@@ -953,28 +949,19 @@ async fn full_message_preloads_keep_queries_constant() {
         messages.push(m);
     }
     let state = app.booted.app.clone();
+    let queries = app.db().capture_read_queries();
     let counts = app
         .db()
         .read(move |conn| {
             let count = |rows: &[Message]| {
-                conn.flush_prepared_statement_cache();
-                let counter = Arc::new(AtomicUsize::new(0));
-                let observed = counter.clone();
-                conn.authorizer(Some(move |ctx: rusqlite::hooks::AuthContext<'_>| {
-                    if matches!(ctx.action, rusqlite::hooks::AuthAction::Select) {
-                        observed.fetch_add(1, Ordering::SeqCst);
-                    }
-                    rusqlite::hooks::Authorization::Allow
-                }));
-                let p = crate::controllers::presenters::Presenter::new(conn, &state, None);
-                let rendered = super::search_messages(&p, rows);
-                conn.authorizer(
-                    None::<fn(rusqlite::hooks::AuthContext<'_>) -> rusqlite::hooks::Authorization>,
-                );
-                assert_eq!(rendered.unwrap().len(), rows.len());
-                counter.load(Ordering::SeqCst)
+                queries.lock().unwrap().clear();
+                let mut p = crate::controllers::presenters::Presenter::new(conn, &state, Some("campfire.test".into()));
+                p.cache_base_url = Some("http://campfire.test".into());
+                let rendered = super::search_messages(&p, rows)?;
+                assert_eq!(rendered.len(), rows.len());
+                Ok::<_, campfire_db::Error>(queries.lock().unwrap().len())
             };
-            Ok((count(&messages[..4]), count(&messages)))
+            Ok((count(&messages[..4])?, count(&messages)?))
         })
         .await
         .unwrap();
@@ -1059,6 +1046,19 @@ async fn preloaded_complete_messages_match_rails_and_lazy_presenter() {
                 &state,
                 Some("campfire.test".into()),
             );
+            // Compare singleton and page keys in viewer zones, including both DST
+            // transitions; the key must not include another result's dependencies.
+            for zone in ["UTC", "Pacific/Honolulu", "America/New_York"] {
+                for now in ["2026-03-08T06:59:00Z", "2026-03-08T07:01:00Z", "2026-11-01T05:59:00Z", "2026-11-01T06:01:00Z"] {
+                    let mut lazy = crate::controllers::presenters::Presenter::new(conn, &state, Some("campfire.test".into()));
+                    lazy.render_zone = campfire_views::time::Zone::lookup(zone).unwrap();
+                    lazy.now = now.parse().unwrap();
+                    let batch = lazy.preload_search(&messages)?;
+                    for message in &messages {
+                        assert_eq!(lazy.message_fragment_cache_key(message,"http://campfire.test")?,batch.message_fragment_cache_key(message,"http://campfire.test")?,"{} {zone} {now}",message.id);
+                    }
+                }
+            }
             let items = super::search_messages(&p, &messages)?;
             for ((m, item), expected) in messages
                 .iter()

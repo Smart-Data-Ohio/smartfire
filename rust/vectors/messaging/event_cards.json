@@ -1,0 +1,229 @@
+{
+  "reference": "d7c7de92",
+  "rows": {
+    "rooms": [
+      {
+        "id": 699448333,
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Venue <&>",
+        "pins_changed_at": null,
+        "type": "Rooms::Voice",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "events": [
+      {
+        "id": 439674038,
+        "cancelled_at": null,
+        "created_at": "2026-03-02 16:00:00",
+        "description": null,
+        "ends_at": null,
+        "meet_link": null,
+        "meet_link_requested": 0,
+        "organizer_id": 127326141,
+        "recurrence_rule": null,
+        "recurrence_until": null,
+        "reminded_at": null,
+        "room_id": 699448326,
+        "series_id": null,
+        "starts_at": "2026-03-03 17:00:00",
+        "time_zone": "UTC",
+        "title": "Planning <&> \"quoted\"",
+        "updated_at": "2026-03-02 16:00:00",
+        "venue_room_id": null
+      },
+      {
+        "id": 439674039,
+        "cancelled_at": null,
+        "created_at": "2026-03-02 16:00:00",
+        "description": null,
+        "ends_at": "2026-03-03 18:00:00",
+        "meet_link": "https://meet.google.com/abc-defg-hij?x=1&y=2",
+        "meet_link_requested": 0,
+        "organizer_id": 127326141,
+        "recurrence_rule": null,
+        "recurrence_until": null,
+        "reminded_at": null,
+        "room_id": 699448326,
+        "series_id": null,
+        "starts_at": "2026-03-03 17:00:00",
+        "time_zone": "America/New_York",
+        "title": "Planning <&> \"quoted\"",
+        "updated_at": "2026-03-02 16:00:00",
+        "venue_room_id": 699448333
+      },
+      {
+        "id": 439674040,
+        "cancelled_at": "2026-03-02 16:00:00",
+        "created_at": "2026-03-02 16:00:00",
+        "description": null,
+        "ends_at": null,
+        "meet_link": "javascript:alert(1)",
+        "meet_link_requested": 0,
+        "organizer_id": 127326141,
+        "recurrence_rule": null,
+        "recurrence_until": null,
+        "reminded_at": null,
+        "room_id": 699448326,
+        "series_id": 439674040,
+        "starts_at": "2026-03-03 17:00:00",
+        "time_zone": "Hawaii",
+        "title": "Planning <&> \"quoted\"",
+        "updated_at": "2026-03-02 16:00:00",
+        "venue_room_id": null
+      }
+    ],
+    "messages": [
+      {
+        "id": 935962058,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "event-card-simple",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "event card reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962060,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "event-card-venue_meet",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "event card reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962062,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "event-card-cancelled_series",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "event card reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "action_text_rich_texts": [
+      {
+        "id": 935962058,
+        "body": "<p>event card reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962058,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962060,
+        "body": "<p>event card reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962060,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962062,
+        "body": "<p>event card reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962062,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "event_references": [
+      {
+        "id": 2,
+        "created_at": "2026-03-02 16:00:00",
+        "event_id": 439674038,
+        "message_id": 935962058,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 4,
+        "created_at": "2026-03-02 16:00:00",
+        "event_id": 439674039,
+        "message_id": 935962060,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 6,
+        "created_at": "2026-03-02 16:00:00",
+        "event_id": 439674040,
+        "message_id": 935962062,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "label": "simple",
+      "message_id": 935962058,
+      "html": "  <div id=\"event_cards_message_event-card-simple\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"439674038\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/699448326/events/439674038\">Planning &lt;&amp;&gt; &quot;quoted&quot;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-03T17:00:00Z\" data-local-time-target=\"datetime\">March 3, 2026 at 5:00 PM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962058_event_439674038\" src=\"/rooms/699448326/events/439674038/attendance?message_id=935962058\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
+    },
+    {
+      "label": "venue_meet",
+      "message_id": 935962060,
+      "html": "  <div id=\"event_cards_message_event-card-venue_meet\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"439674039\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/699448326/events/439674039\">Planning &lt;&amp;&gt; &quot;quoted&quot;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-03T17:00:00Z\" data-local-time-target=\"datetime\">March 3, 2026 at 12:00 PM</time>\n      &ndash; <time datetime=\"2026-03-03T18:00:00Z\" data-local-time-target=\"datetime\">March 3, 2026 at 1:00 PM</time>\n  </p>\n\n    <p class=\"event-card__venue\">Where: Venue &lt;&amp;&gt;</p>\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij?x=1&amp;y=2\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962060_event_439674039\" src=\"/rooms/699448326/events/439674039/attendance?message_id=935962060\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
+    },
+    {
+      "label": "cancelled_series",
+      "message_id": 935962062,
+      "html": "  <div id=\"event_cards_message_event-card-cancelled_series\" class=\"event-cards\">\n      <article class=\"event-card event-card--cancelled\" data-event-card=\"439674040\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/699448326/events/439674040\">Planning &lt;&amp;&gt; &quot;quoted&quot;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-03T17:00:00Z\" data-local-time-target=\"datetime\">March 3, 2026 at 7:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962062_event_439674040\" src=\"/rooms/699448326/events/439674040/attendance?message_id=935962062\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
+    }
+  ]
+}

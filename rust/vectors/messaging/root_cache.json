@@ -1,0 +1,249 @@
+{
+  "reference": "d7c7de92",
+  "rows": {
+    "messages": [
+      {
+        "id": 935962058,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "cache-source",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "cached quote source",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962059,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "cache-root",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "/rooms/699448326/@935962058",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "action_text_rich_texts": [
+      {
+        "id": 935962058,
+        "body": "<p>cached quote source</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962058,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962059,
+        "body": "<p>/rooms/699448326/@935962058</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962059,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "message_references": [
+      {
+        "id": 2,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962059,
+        "referenced_message_id": 935962058,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "polls": [
+      {
+        "id": 3,
+        "anonymous": 0,
+        "closed_at": null,
+        "closes_at": null,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962059,
+        "multiple": 0,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "poll_options": [
+      {
+        "id": 6,
+        "created_at": "2026-03-02 16:00:00",
+        "label": "A",
+        "poll_id": 3,
+        "position": 0,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 7,
+        "created_at": "2026-03-02 16:00:00",
+        "label": "B",
+        "poll_id": 3,
+        "position": 1,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "message_pins": [
+      {
+        "id": 3,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962059,
+        "pinner_id": 127326141,
+        "room_id": 699448326,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "github_pull_requests": [
+      {
+        "id": 2,
+        "author_avatar_url": null,
+        "author_login": null,
+        "base_branch": null,
+        "changed_files": null,
+        "changed_files_fetched_at": null,
+        "check_status": null,
+        "created_at": "2026-03-02 16:00:00",
+        "fetch_error": null,
+        "fetch_requested_at": "2026-03-02 16:00:00",
+        "fetched_at": null,
+        "github_updated_at": null,
+        "head_branch": null,
+        "head_sha": null,
+        "html_url": null,
+        "number": 42,
+        "owner": "cache-owner",
+        "payload": null,
+        "private": 1,
+        "repo": "cache-repo",
+        "review_decision": null,
+        "state": null,
+        "title": null,
+        "updated_at": "2026-03-02 13:00:00"
+      }
+    ],
+    "github_pull_request_references": [
+      {
+        "id": 2,
+        "created_at": "2026-03-02 16:00:00",
+        "github_pull_request_id": 2,
+        "message_id": 935962059,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "fizzy_cards": [
+      {
+        "id": 2,
+        "account_id": "cache-account",
+        "created_at": "2026-03-02 16:00:00",
+        "number": 17,
+        "updated_at": "2026-03-02 14:00:00"
+      }
+    ],
+    "fizzy_card_references": [
+      {
+        "id": 2,
+        "created_at": "2026-03-02 16:00:00",
+        "fizzy_card_id": 2,
+        "message_id": 935962059,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ]
+  },
+  "message_id": 935962059,
+  "source_id": 935962058,
+  "poll_id": 3,
+  "pin_id": 3,
+  "cases": [
+    {
+      "label": "initial",
+      "expanded": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//0/0/16/2/3/2026/1/61/false/UTC/dbec5ac17bfd779244a20142554a17b5ba1f2a4667da8b1f244de9991f6e34dc/3",
+      "expanded_zones": {
+        "UTC": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//0/0/16/2/3/2026/1/61/false/UTC/dbec5ac17bfd779244a20142554a17b5ba1f2a4667da8b1f244de9991f6e34dc/3",
+        "Hawaii": "messages/935962059-20260302160000000000/0/0/4/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST/false/false//0/0/6/2/3/2026/1/61/false/HST/dbec5ac17bfd779244a20142554a17b5ba1f2a4667da8b1f244de9991f6e34dc/3"
+      },
+      "github": "<div id=\"github_pr_cards_message_cache-root\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935962059_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=935962059\"></turbo-frame>\n</div>\n",
+      "fizzy": "<div id=\"fizzy_cards_message_cache-root\" class=\"fizzy-cards\">\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_935962059_fizzy_card_2\" src=\"/rooms/699448326/fizzy/cards/2/card?message_id=935962059\"></turbo-frame>\n</div>\n"
+    },
+    {
+      "label": "source_edit",
+      "expanded": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/dbec5ac17bfd779244a20142554a17b5ba1f2a4667da8b1f244de9991f6e34dc/3",
+      "expanded_zones": {
+        "UTC": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/dbec5ac17bfd779244a20142554a17b5ba1f2a4667da8b1f244de9991f6e34dc/3",
+        "Hawaii": "messages/935962059-20260302160000000000/0/0/4/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST/false/false//1/0/6/2/3/2026/1/61/false/HST/dbec5ac17bfd779244a20142554a17b5ba1f2a4667da8b1f244de9991f6e34dc/3"
+      },
+      "github": "<div id=\"github_pr_cards_message_cache-root\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935962059_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=935962059\"></turbo-frame>\n</div>\n",
+      "fizzy": "<div id=\"fizzy_cards_message_cache-root\" class=\"fizzy-cards\">\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_935962059_fizzy_card_2\" src=\"/rooms/699448326/fizzy/cards/2/card?message_id=935962059\"></turbo-frame>\n</div>\n"
+    },
+    {
+      "label": "source_author_rename",
+      "expanded": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/119a3fb2e8828c444d4fdcb14c0acee61269a908255a37a0d3519ca0ae904cd3/3",
+      "expanded_zones": {
+        "UTC": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/119a3fb2e8828c444d4fdcb14c0acee61269a908255a37a0d3519ca0ae904cd3/3",
+        "Hawaii": "messages/935962059-20260302160000000000/0/0/4/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST/false/false//1/0/6/2/3/2026/1/61/false/HST/119a3fb2e8828c444d4fdcb14c0acee61269a908255a37a0d3519ca0ae904cd3/3"
+      },
+      "github": "<div id=\"github_pr_cards_message_cache-root\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935962059_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=935962059\"></turbo-frame>\n</div>\n",
+      "fizzy": "<div id=\"fizzy_cards_message_cache-root\" class=\"fizzy-cards\">\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_935962059_fizzy_card_2\" src=\"/rooms/699448326/fizzy/cards/2/card?message_id=935962059\"></turbo-frame>\n</div>\n"
+    },
+    {
+      "label": "source_room_rename",
+      "expanded": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3",
+      "expanded_zones": {
+        "UTC": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3",
+        "Hawaii": "messages/935962059-20260302160000000000/0/0/4/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST/false/false//1/0/6/2/3/2026/1/61/false/HST/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3"
+      },
+      "github": "<div id=\"github_pr_cards_message_cache-root\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935962059_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=935962059\"></turbo-frame>\n</div>\n",
+      "fizzy": "<div id=\"fizzy_cards_message_cache-root\" class=\"fizzy-cards\">\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_935962059_fizzy_card_2\" src=\"/rooms/699448326/fizzy/cards/2/card?message_id=935962059\"></turbo-frame>\n</div>\n"
+    },
+    {
+      "label": "poll_only",
+      "expanded": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//2/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3",
+      "expanded_zones": {
+        "UTC": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC//0/0/16/2/3/2026/1/61/false/UTC//2/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3",
+        "Hawaii": "messages/935962059-20260302160000000000/0/0/4/2/3/2026/1/61/false/HST//0/0/6/2/3/2026/1/61/false/HST//2/0/6/2/3/2026/1/61/false/HST/false/false//1/0/6/2/3/2026/1/61/false/HST/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3"
+      },
+      "github": "<div id=\"github_pr_cards_message_cache-root\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935962059_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=935962059\"></turbo-frame>\n</div>\n",
+      "fizzy": "<div id=\"fizzy_cards_message_cache-root\" class=\"fizzy-cards\">\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_935962059_fizzy_card_2\" src=\"/rooms/699448326/fizzy/cards/2/card?message_id=935962059\"></turbo-frame>\n</div>\n"
+    },
+    {
+      "label": "unpin",
+      "expanded": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC////2/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3",
+      "expanded_zones": {
+        "UTC": "messages/935962059-20260302160000000000/0/0/14/2/3/2026/1/61/false/UTC////2/0/16/2/3/2026/1/61/false/UTC/false/false//1/0/16/2/3/2026/1/61/false/UTC/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3",
+        "Hawaii": "messages/935962059-20260302160000000000/0/0/4/2/3/2026/1/61/false/HST////2/0/6/2/3/2026/1/61/false/HST/false/false//1/0/6/2/3/2026/1/61/false/HST/e6e3f64f894e248a2c312580de6f139f99dab07f44bd89df7e9652559689ead3/3"
+      },
+      "github": "<div id=\"github_pr_cards_message_cache-root\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935962059_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=935962059\"></turbo-frame>\n</div>\n",
+      "fizzy": "<div id=\"fizzy_cards_message_cache-root\" class=\"fizzy-cards\">\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_935962059_fizzy_card_2\" src=\"/rooms/699448326/fizzy/cards/2/card?message_id=935962059\"></turbo-frame>\n</div>\n"
+    }
+  ],
+  "nil_names_inspect": "[[\"David\", nil], [\"Joe\", \"Some room\"]]",
+  "nil_names_digest": "bf4e0f5ad490464f149a6981e5cdd330a503e28a1da084573d0f82176d0df3c3"
+}

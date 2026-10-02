@@ -9,7 +9,7 @@ thread_local! { static SLASH: Cell<bool> = const { Cell::new(false) }; }
 thread_local! { static ORIGIN: RefCell<Option<String>> = const { RefCell::new(None) }; }
 
 /// The writer closure carries the request's renderer origin. A guard restores the previous
-/// origin on errors and panics; jobs have Rails' request-free `example.org` origin.
+/// origin on errors and panics; jobs use Rails' configured default URL origin.
 pub(crate) struct OriginGuard(Option<String>);
 impl Drop for OriginGuard {
     fn drop(&mut self) {
@@ -80,7 +80,7 @@ pub(crate) fn deliver(
     }
     let origin = ORIGIN
         .with(|value| value.borrow().clone())
-        .unwrap_or_else(|| "http://example.org".into());
+        .unwrap_or_else(|| page::default_renderer_base_url(app).into());
     let html = app.db.read_blocking(|conn| {
         let account = campfire_db::Account::first(conn)?;
         let presenter = Presenter::new(conn, app, None);

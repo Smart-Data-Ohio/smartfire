@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Run behavioral assertions against an already-running, isolated app in the pinned browser.
+set -euo pipefail
+source "$(dirname "$0")/../capture/sandbox/run.sh"
+case "${1:-}" in scheduled|slash|search-files|picker-readiness|files-readiness|polls|pins|pins-dst) suite=$1; shift ;; *) die "usage: behavior scheduled|slash|search-files|picker-readiness|files-readiness|polls|pins|pins-dst --target URL --name NAME --labels .seed/default/labels.json" ;; esac
+fixture_pid=""
+cleanup_behavior() {
+  if [[ -n "$fixture_pid" ]]; then kill "$fixture_pid" 2>/dev/null || true; wait "$fixture_pid" 2>/dev/null || true; fi
+  parity_cleanup
+}
+trap cleanup_behavior EXIT
+fixture_storage=""; instant=2026-03-02T16:00:00Z; args=()
+while (( $# )); do
+  case "$1" in
+    --fixture-storage) fixture_storage=$2; shift 2 ;;
+    --instant) instant=$2; args+=("$1" "$2"); shift 2 ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+set -- "${args[@]}"
+scratch=${PARITY_SCRATCH:-$ROOT/../.scratch/behavior}
+mkdir -p "$scratch"
+net_dir=$(mktemp -d "$scratch/net.XXXXXX")
+NET_DIRS+=("$net_dir")
+if [[ -n "$fixture_storage" ]]; then
+  # Use the owner's short cache path when fixture sockets are requested.
+  # Linux Unix socket names cannot exceed 108 bytes.
+  (( ${#net_dir} + 14 < 108 )) || die "set PARITY_SCRATCH to a short owned cache path for fixture sockets"
+  node "$ROOT/parity/behavior/fixture-server.mjs" "$net_dir/fixtures.sock" "$fixture_storage" "$instant" &
+  fixture_pid=$!
+  wait_for_socket "$net_dir/fixtures.sock"
+fi
+image=$(docker_image)
+name=${PARITY_NAMESPACE:-campfire}-behavior-$$
+CAPTURE_CONTAINERS+=("$name" "$name-forward")
+# Short, identical container socket paths also work for deeply nested worktrees.
+# Docker cannot create a nested tmpfs mountpoint through the read-only checkout.
+# A fresh clone has no ignored node_modules directory; create only the mountpoint.
+mkdir -p "$REFERENCE_ROOT/rust/parity/node_modules"
+docker run -d --rm --init --name "$name-forward" --network host -u "$(id -u):$(id -g)" \
+  -v "$REFERENCE_ROOT:/work:ro" -v "$net_dir:/bridge" --tmpfs /work/rust/parity/node_modules \
+  -w /work/rust/parity "$image" node capture/forward.ts /bridge/upstream.sock >/dev/null
+wait_for_socket "$net_dir/upstream.sock"
+docker run --rm --init --name "$name" --network none --ipc host -u "$(id -u):$(id -g)" \
+  -e HOME=/bridge -e TMPDIR=/bridge -e PARITY_UPSTREAM_SOCKET=/bridge/upstream.sock \
+  -v "$REFERENCE_ROOT:/work:ro" -v "$net_dir:/bridge" --tmpfs /work/rust/parity/node_modules \
+  -w /work/rust/parity "$image" node "behavior/$suite.mjs" "$@"

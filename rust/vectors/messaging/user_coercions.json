@@ -1,0 +1,600 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "key": "query",
+      "input": {
+        "query": null
+      },
+      "path": "/autocompletable/users.json?query",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": false
+      },
+      "path": "/autocompletable/users.json?query=false",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": true
+      },
+      "path": "/autocompletable/users.json?query=true",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": 17
+      },
+      "path": "/autocompletable/users.json?query=17",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": 1.5
+      },
+      "path": "/autocompletable/users.json?query=1.5",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": []
+      },
+      "path": "/autocompletable/users.json?",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": [
+          "David"
+        ]
+      },
+      "path": "/autocompletable/users.json?query%5B%5D=David",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": [
+          "David",
+          "Jason"
+        ]
+      },
+      "path": "/autocompletable/users.json?query%5B%5D=David&query%5B%5D=Jason",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": {}
+      },
+      "path": "/autocompletable/users.json?",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": {
+          "name": "David"
+        }
+      },
+      "path": "/autocompletable/users.json?query%5Bname%5D=David",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": [
+          "David",
+          {
+            "name": "Jason"
+          }
+        ]
+      },
+      "path": "/autocompletable/users.json?query%5B%5D=David&query%5B%5D%5Bname%5D=Jason",
+      "status": 200,
+      "names": [],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "query",
+      "input": {
+        "query": "  "
+      },
+      "path": "/autocompletable/users.json?query=++",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": null,
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page&query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": false,
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page=false&query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": true,
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page=true&query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": 17,
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page=17&query=David",
+      "status": 200,
+      "names": [],
+      "links": "<http://campfire.test/autocompletable/users.json?page=18&query=David>; rel=\"next\"",
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": 1.5,
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page=1.5&query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": [],
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": [
+          "David"
+        ],
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page%5B%5D=David&query=David",
+      "status": 500,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": [
+          "David",
+          "Jason"
+        ],
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page%5B%5D=David&page%5B%5D=Jason&query=David",
+      "status": 500,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": {},
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": {
+          "name": "David"
+        },
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page%5Bname%5D=David&query=David",
+      "status": 500,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": [
+          "David",
+          {
+            "name": "Jason"
+          }
+        ],
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page%5B%5D=David&page%5B%5D%5Bname%5D=Jason&query=David",
+      "status": 500,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": "David",
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page=David&query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "page",
+      "input": {
+        "page": "  ",
+        "query": "David"
+      },
+      "path": "/autocompletable/users.json?page=++&query=David",
+      "status": 200,
+      "names": [
+        "David"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": null
+      },
+      "path": "/autocompletable/users.json?room_id",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": false
+      },
+      "path": "/autocompletable/users.json?room_id=false",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": true
+      },
+      "path": "/autocompletable/users.json?room_id=true",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": 17
+      },
+      "path": "/autocompletable/users.json?room_id=17",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": 1.5
+      },
+      "path": "/autocompletable/users.json?room_id=1.5",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": []
+      },
+      "path": "/autocompletable/users.json?",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": [
+          "David"
+        ]
+      },
+      "path": "/autocompletable/users.json?room_id%5B%5D=David",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": [
+          "David",
+          "Jason"
+        ]
+      },
+      "path": "/autocompletable/users.json?room_id%5B%5D=David&room_id%5B%5D=Jason",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": {}
+      },
+      "path": "/autocompletable/users.json?",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": {
+          "name": "David"
+        }
+      },
+      "path": "/autocompletable/users.json?room_id%5Bname%5D=David",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": [
+          "David",
+          {
+            "name": "Jason"
+          }
+        ]
+      },
+      "path": "/autocompletable/users.json?room_id%5B%5D=David&room_id%5B%5D%5Bname%5D=Jason",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": "David"
+      },
+      "path": "/autocompletable/users.json?room_id=David",
+      "status": 404,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":404,\"error\":\"Not Found\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": "  "
+      },
+      "path": "/autocompletable/users.json?room_id=++",
+      "status": 200,
+      "names": [
+        "Bender Bot",
+        "David",
+        "Deploy Bot",
+        "Jason",
+        "JZ",
+        "Kevin",
+        "Lonely Lou",
+        "New member"
+      ],
+      "links": null,
+      "error_body": null
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": [
+          "486777696"
+        ]
+      },
+      "path": "/autocompletable/users.json?room_id%5B%5D=486777696",
+      "status": 500,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "key": "room_id",
+      "input": {
+        "room_id": [
+          "486777696",
+          "699448326"
+        ]
+      },
+      "path": "/autocompletable/users.json?room_id%5B%5D=486777696&room_id%5B%5D=699448326",
+      "status": 500,
+      "names": null,
+      "links": null,
+      "error_body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    }
+  ]
+}

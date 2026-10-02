@@ -1,10 +1,13 @@
 //! Record dependencies of Rails' uncached rooms/show message tree. Keep the collection
 //! helper separate: its aggregates alone cannot safely cache an initial room render.
 use super::{Presenter, Result, cache_key_with_version};
-use campfire_db::{Message, Timestamp, models::message_rendering::RenderingRecords};
+use campfire_db::{Message, models::message_rendering::RenderingRecords};
 use campfire_richtext::markdown::{self, Icon, IconCatalog, IconResolver};
 use campfire_views::fragment_cache::keys::{self, Key};
-use std::{cell::RefCell, collections::BTreeSet};
+use std::{
+    cell::RefCell,
+    collections::{BTreeSet, HashMap},
+};
 
 /// Observe the same icon lookups as Markdown presentation, including missing names
 /// which may resolve after an upload. Brands keep precedence over workspace icons.
@@ -25,11 +28,19 @@ impl IconResolver for RenderedIcons<'_> {
 impl Presenter<'_> {
     pub(crate) fn message_room_icon_cache_key(&self, message: &Message) -> Result<String> {
         use campfire_views::helpers::{AvatarIcon, IconSource};
-        let name: Option<String> = self.conn.query_row(
-            "SELECT icon_name FROM rooms WHERE id=?",
-            [message.room_id],
-            |r| r.get(0),
-        )?;
+        let name: Option<String> = if let Some(data) = &self.search_preloads {
+            data.records
+                .room_icons
+                .get(&message.room_id)
+                .cloned()
+                .flatten()
+        } else {
+            self.conn.query_row(
+                "SELECT icon_name FROM rooms WHERE id=?",
+                [message.room_id],
+                |r| r.get(0),
+            )?
+        };
         let value = match name
             .as_deref()
             .and_then(|name| self.resolve_avatar_icon(name))
@@ -51,6 +62,16 @@ impl Presenter<'_> {
     }
 
     pub fn message_rendered_cache_key(&self, message: &Message) -> Result<String> {
+        if let Some(data) = &self.search_preloads {
+            let records = data.records.scoped(message);
+            return self.rendered_cache_key(
+                message,
+                &records,
+                &data.users,
+                &data.icons,
+                &data.cache,
+            );
+        }
         let records = RenderingRecords::load(self.conn, std::slice::from_ref(message))?;
         let mentions = records
             .bodies
@@ -59,25 +80,48 @@ impl Presenter<'_> {
             .flat_map(|body| crate::controllers::searches::preloads::mention_ids(body, 0))
             .collect::<Vec<_>>();
         let users = records.users(self.conn, std::slice::from_ref(message), &mentions)?;
-        let mut versions = BTreeSet::new();
-        let mut user_ids = BTreeSet::new();
+        let catalog = crate::rich_text::icons(self.conn).map_err(campfire_db::Error::Other)?;
+        let facts = super::message_cache_preloads::CacheFacts::load_rendered(
+            self,
+            std::slice::from_ref(message),
+            &records,
+        )?;
+        self.rendered_cache_key(message, &records, &users, &catalog, &facts)
+    }
+
+    fn rendered_cache_key(
+        &self,
+        message: &Message,
+        records: &RenderingRecords,
+        page_users: &HashMap<i64, campfire_db::models::message_rendering::RenderingUser>,
+        catalog: &IconCatalog,
+        facts: &super::message_cache_preloads::CacheFacts,
+    ) -> Result<String> {
+        let user_ids =
+            std::iter::once(message)
+                .chain(records.sources.values())
+                .map(|m| m.creator_id)
+                .chain(records.boosts.values().flatten().map(|b| b.booster_id))
+                .chain(records.votes.values().flatten().map(|(v, _)| v.user_id))
+                .chain(
+                    records.bodies.values().flatten().flat_map(|body| {
+                        crate::controllers::searches::preloads::mention_ids(body, 0)
+                    }),
+                )
+                .collect::<BTreeSet<_>>();
+        let users = page_users
+            .iter()
+            .filter(|(id, _)| user_ids.contains(id))
+            .map(|(id, u)| (*id, u))
+            .collect::<HashMap<_, _>>();
+        let mut versions = facts.versions.get(&message.id).cloned().unwrap_or_default();
         for user in users.values().map(|u| &u.user) {
-            user_ids.insert(user.id);
             versions.insert(cache_key_with_version(
                 "users",
                 user.id,
                 user.updated_at.jiff(),
             ));
-        }
-        for (vote, _) in records.votes.values().flatten() {
-            if let Some(user) = campfire_db::User::find_by_id(self.conn, vote.user_id)? {
-                user_ids.insert(user.id);
-                versions.insert(cache_key_with_version(
-                    "users",
-                    user.id,
-                    user.updated_at.jiff(),
-                ));
-            }
+            versions.extend(facts.avatars.get(&user.id).into_iter().flatten().cloned());
         }
         let room_ids = std::iter::once(message.room_id)
             .chain(
@@ -129,9 +173,8 @@ impl Presenter<'_> {
                 &self.render_zone,
             ));
         }
-        let catalog = crate::rich_text::icons(self.conn).map_err(campfire_db::Error::Other)?;
         let icons = RenderedIcons {
-            catalog: &catalog,
+            catalog,
             custom_names: RefCell::default(),
         };
         for source in std::iter::once(message).chain(records.sources.values()) {
@@ -162,105 +205,8 @@ impl Presenter<'_> {
             }
         }
         for name in icons.custom_names.into_inner() {
-            let (id, stamp): (i64, Timestamp) = self.conn.query_row(
-                "SELECT id,updated_at FROM workspace_icons WHERE name=?",
-                [name],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )?;
-            versions.insert(cache_key_with_version("workspace_icons", id, stamp.jiff()));
-        }
-        // Record versions are independent, not timestamp maxima. Attachments/blobs and
-        // Drive rows have no updated_at: Rails' key is just their model name and id;
-        // their touch chain supplies the changing owner version (see the review ledger).
-        let ids = records.body_ids(std::slice::from_ref(message));
-        let id_list = ids.iter().map(i64::to_string).collect::<Vec<_>>().join(",");
-        let user_list = user_ids
-            .iter()
-            .map(i64::to_string)
-            .collect::<Vec<_>>()
-            .join(",");
-        let attachments = format!(
-            "(record_type='Message' AND name='attachment' AND record_id IN ({id_list})) OR (record_type='User' AND name='avatar' AND record_id IN ({user_list})) OR (record_type='ActionText::RichText' AND name='embeds' AND record_id IN (SELECT id FROM action_text_rich_texts WHERE record_type='Message' AND record_id IN ({id_list}) AND name='body'))"
-        );
-        // app/views/messages/_thread_indicator.html.erb:9 renders only the parent's
-        // count, already in the original helper key (pull_requests_helper.rb:42).
-        // Replies render their own thread_id URLs, not thread names/activity stamps.
-        let queries = [
-            ("active_storage/attachments", format!("SELECT id,NULL FROM active_storage_attachments WHERE {attachments}")),
-            ("active_storage/blobs", format!("SELECT id,NULL FROM active_storage_blobs WHERE id IN (SELECT blob_id FROM active_storage_attachments WHERE {attachments})")),
-            ("messages", format!("SELECT id,updated_at FROM messages WHERE id IN ({id_list})")),
-            ("action_text/rich_texts", format!("SELECT id,updated_at FROM action_text_rich_texts WHERE record_type='Message' AND record_id IN ({id_list}) AND name='body'")),
-            ("boosts", "SELECT id,updated_at FROM boosts WHERE message_id=?1".into()),
-            ("message_pins", "SELECT id,updated_at FROM message_pins WHERE message_id=?1".into()),
-            ("agent_steps", "SELECT id,updated_at FROM agent_steps WHERE message_id=?1".into()),
-            ("drive_attachments", "SELECT id,NULL FROM drive_attachments WHERE message_id=?1".into()),
-            ("polls", "SELECT id,updated_at FROM polls WHERE message_id=?1".into()),
-            ("poll_options", "SELECT id,updated_at FROM poll_options WHERE poll_id IN (SELECT id FROM polls WHERE message_id=?1)".into()),
-            ("poll_votes", "SELECT id,updated_at FROM poll_votes WHERE poll_id IN (SELECT id FROM polls WHERE message_id=?1)".into()),
-            ("message_references", "SELECT id,updated_at FROM message_references WHERE message_id=?1".into()),
-            ("github/pull_request_threads", "SELECT id,updated_at FROM github_pull_request_threads WHERE room_id IN (SELECT room_id FROM messages WHERE id=?1) AND github_pull_request_id IN (SELECT github_pull_request_id FROM github_pull_request_references WHERE message_id=?1)".into()),
-        ];
-        for (stem, query) in queries {
-            let mut statement = self.conn.prepare(&query)?;
-            let parameters = (statement.parameter_count() > 0).then_some(message.id);
-            let rows = statement.query_map(rusqlite::params_from_iter(parameters), |r| {
-                Ok((r.get::<_, i64>(0)?, r.get::<_, Option<Timestamp>>(1)?))
-            })?;
-            for row in rows {
-                let (id, stamp) = row?;
-                versions.insert(stamp.map_or_else(
-                    || format!("{stem}/{id}"),
-                    |t| cache_key_with_version(stem, id, t.jiff()),
-                ));
-            }
-        }
-        // These rows don't touch messages. Keep every reference/card version, including
-        // reference URL/position changes, alongside Rails' original helper aggregates.
-        for (reference, card, foreign_key, namespace) in [
-            (
-                "github_pull_request_references",
-                "github_pull_requests",
-                "github_pull_request_id",
-                "github/",
-            ),
-            (
-                "fizzy_card_references",
-                "fizzy_cards",
-                "fizzy_card_id",
-                "fizzy/",
-            ),
-            (
-                "twitter_post_references",
-                "twitter_posts",
-                "twitter_post_id",
-                "twitter/",
-            ),
-            ("event_references", "events", "event_id", ""),
-            ("link_embed_references", "link_embeds", "link_embed_id", ""),
-        ] {
-            for (table, query) in [
-                (
-                    reference,
-                    format!("SELECT id,updated_at FROM {reference} WHERE message_id=?"),
-                ),
-                (
-                    card,
-                    format!(
-                        "SELECT c.id,c.updated_at FROM {reference} r JOIN {card} c ON c.id=r.{foreign_key} WHERE r.message_id=?"
-                    ),
-                ),
-            ] {
-                let stem = if namespace.is_empty() {
-                    table.to_owned()
-                } else {
-                    table.replacen('_', "/", 1)
-                };
-                for row in self.conn.prepare(&query)?.query_map([message.id], |r| {
-                    Ok((r.get::<_, i64>(0)?, r.get::<_, Timestamp>(1)?))
-                })? {
-                    let (id, stamp) = row?;
-                    versions.insert(cache_key_with_version(&stem, id, stamp.jiff()));
-                }
+            if let Some((id, stamp)) = facts.icons.get(&name) {
+                versions.insert(cache_key_with_version("workspace_icons", *id, stamp.jiff()));
             }
         }
         let mut key = versions.into_iter().map(Key::Text).collect::<Vec<_>>();

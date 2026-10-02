@@ -1,4 +1,4 @@
-//! app/controllers/rooms/slash_commands_controller.rb. Agent execution remains WS11's seam.
+//! app/controllers/rooms/slash_commands_controller.rb. Registered agent execution uses the WS11 domain dispatcher.
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::{message_features as features, presenters::page::db_error};
@@ -6,7 +6,7 @@ use campfire_db::{
     ChannelThread, Room,
     slash_commands::{self, Context},
 };
-use campfire_kit::{Ctx, Error, Param, Result, StatusCode};
+use campfire_kit::{Ctx, Error, Result, StatusCode};
 
 pub(crate) async fn thread_id(c: &Ctx, room: &Room) -> Result<Option<i64>> {
     let Some(raw) = c.param("thread_id").filter(|p| p.is_present()) else {
@@ -33,6 +33,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = features::room(c).await?;
     features::active_human(c)?;
+    c.start_action();
     let thread_id = thread_id(c, &room).await?;
     let context = Context {
         user_id: require_current_user(c)?.id,
@@ -40,7 +41,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         thread_id,
         huddles_configured: c.app().config.huddles_configured,
     };
-    let text = c.param("text").and_then(Param::to_s).unwrap_or_default();
+    let text = c.param("text").map(features::param_string).unwrap_or_default();
     let origin = c.url_for("");
     let result = c
         .app()

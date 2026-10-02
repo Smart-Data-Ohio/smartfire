@@ -30,6 +30,7 @@ pub mod rooms;
 pub mod huddle;
 pub mod huddle_stage;
 pub mod messages;
+pub mod message_providers;
 pub mod channel_threads;
 pub mod github;
 pub mod slack;

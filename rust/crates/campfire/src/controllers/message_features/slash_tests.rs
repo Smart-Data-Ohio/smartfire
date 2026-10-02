@@ -133,6 +133,30 @@ async fn bots_are_forbidden() {
         StatusCode::FORBIDDEN
     );
 }
+
+#[tokio::test]
+async fn agent_commands_invoke_through_the_room_and_persist_the_rails_event() {
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/agent_command.json"
+    )).unwrap();
+    let app = app().await.without_job_runner().await;
+    app.db().write(|tx| {
+        let agent_id = tx.conn().query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| r.get(0))?;
+        campfire_db::AgentSlashCommand::create(tx, campfire_db::NewAgentSlashCommand {
+            agent_id, room_id: ALL_TALK, name: "deploy".into(), ..Default::default()
+        })?;
+        Ok(())
+    }).await.unwrap();
+    let response = slash(&mut app.david(), ALL_TALK, "/deploy staging").await;
+    assert_eq!(response.status.as_u16(), oracle["status"].as_u64().unwrap() as u16);
+    assert_eq!(response.text(), oracle["body"].as_str().unwrap());
+    let event = app.db().read(|conn| {
+        Ok(conn.query_row("SELECT agent_id,room_id,actor_id,event_type,outcome,metadata FROM agent_events WHERE event_type='slash_command' ORDER BY id DESC LIMIT 1", [], |r| {
+            Ok(serde_json::json!({"agent_id":r.get::<_,i64>(0)?,"room_id":r.get::<_,i64>(1)?,"actor_id":r.get::<_,i64>(2)?,"event_type":r.get::<_,String>(3)?,"outcome":r.get::<_,String>(4)?,"metadata":serde_json::from_str::<serde_json::Value>(&r.get::<_,String>(5)?).unwrap()}))
+        })?)
+    }).await.unwrap();
+    assert_eq!(event, oracle["event"]);
+}
 #[tokio::test]
 async fn slash_writes_require_csrf_and_scope_threads() {
     let app = app().await;

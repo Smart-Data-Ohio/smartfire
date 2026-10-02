@@ -2,6 +2,7 @@
 //! `Messages::AttachmentPresentation` and the boost partials.
 
 pub mod json;
+// WS8b-r composer seam: published reusable facts and partial.
 pub mod parts;
 pub mod presentation;
 pub mod reactions;
@@ -140,6 +141,11 @@ pub struct MessageDetails {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct MessageComponents {
+    /// Expanded Rails composite facts, built from preloads in the request's zone.
+    pub cache_key: Option<String>,
+    pub provider_github: Option<Vec<crate::message_providers::GithubEntry>>,
+    pub provider_embeds: Option<Vec<crate::message_providers::EmbedEntry>>,
+    pub provider_events: Option<Vec<crate::events::CardView>>,
     pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub github_cards_html: Option<String>,
@@ -644,6 +650,13 @@ fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str, stamp: &
 /// stays unchanged; presenters return its existing Fragment variant on both misses and hits.
 pub fn collection_fragment_key(presentation_key: &str, base_url: &str) -> String {
     format!("views/messages/_message:{}/{presentation_key}/{base_url}", include_str!("messages/rails-template-digest.txt").trim_end())
+}
+
+fn composite_fragment_key(key: &str, base_url: &str) -> String {
+    format!("views/messages/_message:{}/{key}/{base_url}", message_digest())
+}
+pub fn cached_composite_fragment(key: &str, base_url: &str) -> Option<fragment_cache::Fragment> {
+    fragment_cache::read(&composite_fragment_key(key, base_url))
 }
 
 /// Retained record-version API for existing view consumers. Rails' HTML partial
