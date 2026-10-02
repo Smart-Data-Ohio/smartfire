@@ -140,7 +140,7 @@ are V1–V6. All other selector/count waits below already use the atom.
 | the toolbar stays hidden until hover or focus and labels every action | Zero visible toolbars 11; visible toolbar 15; visible named buttons 16–20. More's raw `aria-haspopup` is read on the exact button just checked visible, not an independently unguarded element; visibility wait plus immediate property equality preserves this scope. |
 | quick-react creates a boost from the toolbar | V22 visible hover-body lookup helper:220; visible toolbar helper:221; visible delivered count and active chip 28–29; extra peer count uses same 10-second budget. |
 | reply and thread buttons drive the composer and the thread panel | V22 visible hover-body lookup helper:220; visible toolbar helper:221; visible reply label 35 and thread-create pane 40. |
-| the more button opens the shared menu for its message | Menu helper; V9 at 48; expanded button attribute 49 explicitly `visible: false`, retained raw read; closed row 52. |
+| the more button opens the shared menu for its message | Menu helper; V9 at 48; expanded button attribute 49 explicitly `visible: false`, now a CSS attribute selector with an attached-only two-second wait; closed row 52. |
 | keyboard users reach the toolbar from a focused message | Active element aria-label is original immediate JavaScript 60–61, not a visible-selector assertion; delivered count 64 visible. Additional active chip/peer count visible. |
 | the emoji picker searches and reacts | Visible panel/tab/options 71–73/78; active element label JavaScript 74–75; zero visible panel 81; visible count 82; database boost 83. |
 | the picker shows category tabs and switches between them | Visible panel 89; 11 visible tabs 91; recent-tab attribute 92 is read on one of those same 11 atom-visible tabs; visible selected People/Waving hand 95–96; zero visible Grinning face 97; V20 Flags lookup 99; selected Flags/Chequered flag 100–101 visible. |
@@ -165,3 +165,49 @@ search's additional final `inputValue` observation has no original Rails
 counterpart and is kept as an extra query-preservation fact; V15 covers the
 original visibility-scoped field assertion at line 26. IDs/deduplication,
 HTTP status and URL observations are non-visible metadata checks.
+
+
+## Explicit hidden-scope sweep after eb062e20
+
+Read every `visible: false`, `visible: :all` and `:all` query in the pinned
+files represented by the ported messaging checks, plus their shared helpers.
+The rows below distinguish DOM assertions from a preceding, independently
+visible Rails `find` or action. No DOM-only assertion calls the Selenium atom
+or a role/text query that silently drops hidden matches.
+
+| Pinned Rails assertion | Port scope and outcome |
+| --- | --- |
+| message_list_a11y:307 (`visible: false`) | Raw row `aria-expanded` read; includes hidden nodes, unchanged. |
+| message_list_a11y:313 (`visible: false`, wait 10) | **Changed:** CSS selector for live-log attributes, attached-only wait 10; returns before unrelated visible-message setup. Accepts a hidden log with visible children and a log with all messages hidden. |
+| message_list_a11y:506 (`visible: false`) | Raw CSS viewport-meta attribute read; unchanged. |
+| message_toolbar:49 (`visible: false`) | **Changed:** CSS More-button `aria-expanded=true` selector, attached-only default wait 2; accepts a toolbar hidden after the menu opens. The visible open-owner assertion at :48 remains separate. |
+| message_toolbar:219 (`visible: false` find) | **Changed:** attached-only toolbar lookup at default wait 2 before hover. The body hover and subsequent visible toolbar assertion at :220–221 remain separate. |
+| message_interactions:83,136,198 (`visible: false`) | Hidden composer contexts use attached-only CSS selectors; unchanged, including the deferred release-click case. |
+| code_highlighting:41,80 (`visible: :all`) | Raw CSS counts for forbidden `img`/`script` nodes; inspect hidden nodes as well, unchanged. |
+| workspace_markdown:138 (`visible: :all`) | Raw CSS count for forbidden `script`, `img[onerror]`, `javascript:` links; unchanged. |
+| workspace_markdown:159 (`visible: :all` find) | `setInputFiles` on the raw CSS file-input locator; no visible lookup, unchanged. The attachment declaration stays deferred. |
+| workspace_markdown:169 (`visible: false`) | Attached-only hidden composer context; unchanged, in the deferred attachment declaration. |
+| workspace_markdown:265 (`visible: :all`) | Theme/mobile-navigation declaration remains deferred; no ported assertion or parity credit. |
+| workspace_markdown:301 (`visible: :all`) | Compact-composer helper in that deferred declaration; no ported assertion or parity credit. |
+| threads:93 (`visible: false`) | Attached-only hidden thread indicator, unchanged. |
+| threads:450 (`visible: false`, wait 10) | Anchored-unread declaration remains deferred; existing thread setup also uses attached-only cable-source CSS selectors. No anchored-case parity credit. |
+| threads:583 (`visible: false`, wait 10) | **Changed:** attached-only `aria-haspopup` attribute selector at wait 10; preserves the independent visible message find at :581. |
+| system_test_helper:73–74 (`visible: false`, wait 0) | Shared browser startup uses an attached-only cable-source selector; no visibility filter. This is readiness, not credit for the helper's all-source count contract. |
+
+The three `hiddenScopeProbes` are acceptance proofs, excluded from
+`mutationNames`/`mutationVariants` and therefore from negative runs. Existing
+negative probes still reject actual missing or wrong attributes. Default
+Capybara wait is 2 seconds and retry interval 0.01 seconds in the pinned image.
+
+### URL-card sequencing
+
+`search_forward_edit_test.rb:74–78` fills, clicks Send and immediately requires
+Loading post on the author's page, with `BROADCAST_WAIT=15`. The port previously
+called generic `send`, which waited for body text first, then required that
+transient state on both author and peer sequentially. It now calls `submit`
+(fill/click only) and checks the author immediately. The visible edit-context
+label at :73 is checked directly with its original ten-second wait, and the
+card after reload at :83 uses ten seconds. The loading assertion itself is
+unchanged; no threshold is widened. Astra's 63–74 ms loading observations are
+retained as evidence of the old port timing risk, not proof that the original
+Ruby test flakes.
