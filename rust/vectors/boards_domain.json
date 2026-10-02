@@ -1,0 +1,231 @@
+{
+  "reference": "d7c7de92",
+  "queries": [
+    {
+      "status": "open",
+      "owner": "anyone",
+      "tag": "",
+      "page": 1,
+      "ids": [
+        6,
+        5,
+        4
+      ]
+    },
+    {
+      "status": "done",
+      "owner": "anyone",
+      "tag": "",
+      "page": 1,
+      "ids": [
+        7
+      ]
+    },
+    {
+      "status": "all",
+      "owner": "me",
+      "tag": "",
+      "page": 1,
+      "ids": [
+        7,
+        5,
+        4
+      ]
+    },
+    {
+      "status": "all",
+      "owner": "agents",
+      "tag": "",
+      "page": 1,
+      "ids": [
+        6
+      ]
+    },
+    {
+      "status": "all",
+      "owner": "394959859",
+      "tag": " Rust ",
+      "page": 1,
+      "ids": [
+        6
+      ]
+    },
+    {
+      "status": "all",
+      "owner": "unknown",
+      "tag": "release",
+      "page": 1,
+      "ids": [
+        7,
+        6,
+        5,
+        4
+      ]
+    },
+    {
+      "status": "all",
+      "owner": "anyone",
+      "tag": "missing",
+      "page": 1,
+      "ids": []
+    },
+    {
+      "status": "all",
+      "owner": "0",
+      "tag": "",
+      "page": 1,
+      "ids": []
+    },
+    {
+      "status": "all",
+      "owner": "9999999999999999999999999999",
+      "tag": "",
+      "page": 1,
+      "ids": []
+    }
+  ],
+  "tag_counts": {
+    "release": 4,
+    "rust": 4
+  },
+  "steps": [
+    {
+      "name": "create",
+      "thread_id": 9,
+      "callbacks": [
+        {
+          "action": "prepend",
+          "target": "board_posts",
+          "column": false
+        },
+        {
+          "action": "prepend",
+          "target": "board_column_planned",
+          "column": true
+        }
+      ],
+      "tags": []
+    },
+    {
+      "name": "name_twice",
+      "thread_id": 9,
+      "callbacks": [
+        {
+          "action": "replace",
+          "target": "board_row_channel_thread_9",
+          "column": false
+        },
+        {
+          "action": "replace",
+          "target": "board_column_row_channel_thread_9",
+          "column": true
+        }
+      ],
+      "tags": []
+    },
+    {
+      "name": "tags",
+      "thread_id": 9,
+      "callbacks": [
+        {
+          "action": "replace",
+          "target": "board_row_channel_thread_9",
+          "column": false
+        },
+        {
+          "action": "replace",
+          "target": "board_column_row_channel_thread_9",
+          "column": true
+        },
+        {
+          "action": "replace",
+          "target": "board_row_channel_thread_9",
+          "column": false
+        },
+        {
+          "action": "replace",
+          "target": "board_column_row_channel_thread_9",
+          "column": true
+        }
+      ],
+      "tags": [
+        "api",
+        "bug"
+      ]
+    },
+    {
+      "name": "replace_tags",
+      "thread_id": 9,
+      "callbacks": [
+        {
+          "action": "replace",
+          "target": "board_row_channel_thread_9",
+          "column": false
+        },
+        {
+          "action": "replace",
+          "target": "board_column_row_channel_thread_9",
+          "column": true
+        },
+        {
+          "action": "replace",
+          "target": "board_row_channel_thread_9",
+          "column": false
+        },
+        {
+          "action": "replace",
+          "target": "board_column_row_channel_thread_9",
+          "column": true
+        }
+      ],
+      "tags": [
+        "api",
+        "docs"
+      ]
+    },
+    {
+      "name": "same_tags",
+      "thread_id": 9,
+      "callbacks": [],
+      "tags": [
+        "api",
+        "docs"
+      ]
+    },
+    {
+      "name": "last_change_not_row",
+      "thread_id": 9,
+      "callbacks": [],
+      "tags": [
+        "api",
+        "docs"
+      ]
+    },
+    {
+      "name": "rollback",
+      "thread_id": 9,
+      "callbacks": [],
+      "tags": [
+        "api",
+        "docs"
+      ]
+    },
+    {
+      "name": "destroy",
+      "thread_id": 9,
+      "callbacks": [
+        {
+          "action": "remove",
+          "target": "board_row_channel_thread_9",
+          "column": false
+        },
+        {
+          "action": "remove",
+          "target": "board_column_row_channel_thread_9",
+          "column": false
+        }
+      ],
+      "tags": []
+    }
+  ]
+}

@@ -2,6 +2,8 @@
 
 mod access;
 pub mod message_recorder;
+mod recorder;
+pub use recorder::ActivitySource;
 pub use access::ActivityQuery;
 
 use rusqlite::{Connection, Row, params};

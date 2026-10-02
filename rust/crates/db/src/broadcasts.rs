@@ -88,6 +88,8 @@ impl Streamable {
 /// the sink loads the records it needs and renders it (`ApplicationController.render`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Partial {
+    /// `rooms/boards/_row`, in the list or its status column. Contains no viewer/session data.
+    BoardRow { thread_id: i64, column: bool },
     /// `messages/_message` with `message:` (an append of a new message).
     Message { message_id: i64 },
     /// The message's own partial, rendered for `broadcast_replace_to conversation, :messages,

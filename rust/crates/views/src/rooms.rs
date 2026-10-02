@@ -2,6 +2,7 @@
 //! the `MessagesHelper` tags the room screen uses.
 
 pub mod panels;
+pub mod boards;
 
 mod header;
 pub use header::{HeaderIdentity, header_identity};
@@ -60,6 +61,7 @@ pub struct RoomView {
 }
 
 impl RoomView {
+    pub fn is_board(&self) -> bool { self.kind == RoomKind::Board }
     pub fn is_stage(&self) -> bool {
         self.header
             .as_ref()
@@ -102,6 +104,7 @@ impl RoomView {
             RoomKind::Open => campfire_routes::edit_rooms_open(self.id),
             RoomKind::Closed => campfire_routes::edit_rooms_closed(self.id),
             RoomKind::Direct => campfire_routes::edit_rooms_direct(self.id),
+            RoomKind::Board => campfire_routes::edit_rooms_board(self.id),
         }
     }
 
@@ -505,6 +508,8 @@ impl FormRoom {
     /// `form_with model: room`'s action for an open or closed room.
     fn action(&self, kind: RoomKind) -> String {
         match (self.id, kind) {
+            (Some(id), RoomKind::Board) => campfire_routes::rooms_board(id),
+            (None, RoomKind::Board) => campfire_routes::rooms_boards(),
             (Some(id), RoomKind::Open) => campfire_routes::rooms_open(id),
             (Some(id), _) => campfire_routes::rooms_closed(id),
             (None, RoomKind::Open) => campfire_routes::rooms_opens(),
