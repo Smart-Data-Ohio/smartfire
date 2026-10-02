@@ -26,3 +26,10 @@ array/string/DOM dependencies and delegates `isShown` to the pinned atom above
 with opacity respected. The routines preserve Selenium's whitespace, text
 transform, table-cell and composed shadow-DOM behavior.
 Source: https://github.com/SeleniumHQ/selenium/blob/selenium-4.35.0/javascript/atoms/dom.js
+
+Full upstream `dom.js` SHA256: `dbeeefd11f2aec70579270e90ea2c08d763f428969b96cdb42a3fefee7dec4ac`.
+Vendored visible-text routines SHA256: `2d97be501cc74d8e84cc8c154922859810c991129d5bfbdceaa2a8364a200d64`.
+A pinned-image Capybara/Selenium remote-driver probe confirms that visibility-hidden
+and opacity-zero descendant text do not match, and that preformatted line breaks
+and trailing preformatted spaces agree with these routines. This probe uses host
+Chromium/ChromeDriver 153; it is a helper semantic check, not Rails system-file execution.

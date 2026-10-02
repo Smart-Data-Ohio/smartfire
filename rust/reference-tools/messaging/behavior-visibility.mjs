@@ -84,7 +84,12 @@ export async function actOnVisible(locator,action,options={},args=[]) {
 export async function waitForVisibility(locator,options={}) {
   const state=options.state??'visible';
   // These are explicit DOM-presence checks, not visibility assertions.
-  if(state==='attached'||state==='detached') return locator.waitFor(options);
+  if(state==='attached'||state==='detached') {
+    if(options.timeout!==0) return locator.waitFor(options);
+    const present=await locator.count()>0;
+    if(state==='attached'?present:!present) return;
+    throw new errors.TimeoutError(`DOM ${state} snapshot failed: ${locator}`);
+  }
   if(state!=='visible'&&state!=='hidden') throw new Error(`Unsupported visibility state: ${state}`);
   await waitForMatches(locator,count=>state==='visible'?count>0:count===0,options,state);
 }

@@ -45,9 +45,8 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
     await page.waitForTimeout(1600);await actOnVisible(editor,'press',{},['Enter']);await field(page,':openai: ');
   } else if(caseName==='mention queries are URL-encoded') {
     const requests=[];page.on('request',request=>{if(request.url().includes('/autocompletable/users')) requests.push(request.url());});
-    const requested=waitForCondition(()=>requests.length>0);
     await actOnVisible(editor,'fill',{},['@kev+in']);
-    await requested;
+    await waitForCondition(()=>requests.length>0);
     assert.ok(requests.some(url=>url.includes('query=kev%2Bin')),`encoded query expected in ${JSON.stringify(requests)}`);
   } else if(caseName==='composer autocomplete exposes combobox semantics over a polite listbox') {
     await waitForVisibility(editor,{timeout:CAPYBARA_DEFAULT});

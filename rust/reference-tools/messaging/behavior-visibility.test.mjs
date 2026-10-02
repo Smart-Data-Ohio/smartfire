@@ -182,6 +182,8 @@ test('wait zero is one snapshot, not an unbounded assertion',async()=>{
     const pending=waitForVisibility(page.locator('button'),{timeout:0});pending.catch(()=>{});
     await assert.rejects(Promise.race([pending,new Promise((_,reject)=>setTimeout(()=>reject(new Error('zero wait did not return a snapshot')),250))]),{name:'TimeoutError'});
     await waitForVisibleCount(page.locator('button'),0,{timeout:0});
-    await waitForVisibility(page.locator('button'),{state:'attached',timeout:100});
+    await waitForVisibility(page.locator('button'),{state:'attached',timeout:0});
+    await assert.rejects(waitForVisibility(page.locator('button'),{state:'detached',timeout:0}),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibility(page.locator('missing'),{state:'attached',timeout:0}),{name:'TimeoutError'});
   } finally {await browser.close();}
 });
