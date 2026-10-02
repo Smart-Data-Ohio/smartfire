@@ -53,6 +53,16 @@ pub struct Env {
     pub message_reference_syncs: Vec<MessageReferenceSync>,
     /// App-owned account disconnects run inside User::deactivate, before its status save.
     pub user_deactivation_hooks: Vec<UserDeactivationHook>,
+    /// Deterministic input providers for cross-runtime fixture comparisons. Production
+    /// builds expose no provider; UUIDs remain random and insert_all uses SQLite's clock.
+    #[cfg(feature = "test-support")]
+    pub fixture_inputs: Option<Arc<FixtureInputs>>,
+}
+
+#[cfg(feature = "test-support")]
+pub struct FixtureInputs {
+    pub message_uuid: Arc<dyn Fn() -> String + Send + Sync>,
+    pub sqlite_now: Timestamp,
 }
 
 pub type UserDeactivationHook = fn(&mut Tx<'_>, &crate::User) -> Result<()>;
@@ -69,6 +79,8 @@ impl Default for Env {
             default_url_origin: "http://example.com".into(),
             message_reference_syncs: Vec::new(),
             user_deactivation_hooks: Vec::new(),
+            #[cfg(feature = "test-support")]
+            fixture_inputs: None,
         }
     }
 }
@@ -76,6 +88,28 @@ impl Default for Env {
 impl Env {
     pub fn now(&self) -> Timestamp {
         self.clock.now()
+    }
+
+    pub(crate) fn message_uuid(&self) -> String {
+        #[cfg(feature = "test-support")]
+        if let Some(inputs) = &self.fixture_inputs {
+            return (inputs.message_uuid)();
+        }
+        crate::sql::uuid()
+    }
+
+    pub(crate) fn sqlite_now_sql(&self) -> std::borrow::Cow<'static, str> {
+        #[cfg(feature = "test-support")]
+        if let Some(inputs) = &self.fixture_inputs {
+            let now = inputs.sqlite_now;
+            return format!(
+                "'{}.{:03}'",
+                now.jiff().strftime("%Y-%m-%d %H:%M:%S"),
+                now.subsec_microsecond() / 1000
+            )
+            .into();
+        }
+        crate::time::SQLITE_NOW.into()
     }
 }
 
@@ -238,7 +272,11 @@ impl<'c> Tx<'c> {
     /// Used for identical, session-independent broadcast descriptions, never jobs.
     pub fn broadcast_after_commit_once<B: crate::Broadcast>(&mut self, broadcast: &B) {
         let event = Event::broadcast(broadcast);
-        if !self.after_commit.iter().any(|pending| matches!(pending, AfterCommit::Event(existing) if existing == &event)) {
+        if !self
+            .after_commit
+            .iter()
+            .any(|pending| matches!(pending, AfterCommit::Event(existing) if existing == &event))
+        {
             self.emit_after_commit(event);
         }
     }

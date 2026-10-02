@@ -156,6 +156,10 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         action_claims::recover_stuck_claims(&app.db, action_claims::FIZZY, app.db.env().now()).await;
         Ok(())
     }));
+    periodic.task(Task::new("slack imports", Duration::from_secs(30), |app: App| async move {
+        app.db.write(campfire_db::models::slack_import::SlackImport::sweep_stalled).await?;
+        Ok(())
+    }));
     periodic.task(Task::new("retention prune", intervals.retention, |app: App| async move {
         app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
         Ok(())

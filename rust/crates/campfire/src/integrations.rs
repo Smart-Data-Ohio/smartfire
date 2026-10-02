@@ -15,6 +15,8 @@
 
 pub mod google;
 pub mod fizzy;
+#[allow(dead_code)] // Staged until WS16's runner and HTTP controllers are ported.
+pub mod slack;
 pub mod twitter;
 pub mod image_proxy;
 mod jobs;
