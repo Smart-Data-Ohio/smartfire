@@ -37,6 +37,12 @@ pub async fn create(c: &mut Ctx) -> Result {
     )
     .map_err(Error::internal)?;
     let non_time = matches!(raw_expires_at, Some(Param::Number(_) | Param::Bool(true)));
+    let raw_expiry = match raw_expires_at {
+        Some(Param::Number(n)) if n.is_i64() => n.as_i64().map(rusqlite::types::Value::Integer),
+        Some(Param::Number(n)) => n.as_f64().map(rusqlite::types::Value::Real),
+        Some(Param::Bool(true)) => Some(rusqlite::types::Value::Integer(1)),
+        _ => None,
+    };
     let actor = concerns::require_current_user(c)?.id;
     let context = super::audit_context(c)?;
     let form_name = name.clone();
@@ -46,7 +52,14 @@ pub async fn create(c: &mut Ctx) -> Result {
             .app()
             .db
             .write(move |tx| {
-                let (credential, secret) = AgentCredential::create_with_secret(tx, agent.id, &name, actor, expires_at)?;
+                let (credential, secret) = if let Some(raw) = raw_expiry {
+                    AgentCredential::create_with_raw_expiry_secret(tx, agent.id, &name, actor, raw)?
+                } else {
+                    let (credential, secret) = AgentCredential::create_with_secret(tx, agent.id, &name, actor, expires_at)?;
+                    (campfire_db::models::agent_credential::IssuedCredential {
+                        id: credential.id, name: credential.name, token_last_four: credential.token_last_four,
+                    }, secret)
+                };
                 let audit = NewAuditLog {
                     action: "agent.credential.create".into(),
                     target: Some(target(credential.id, &credential.name, &bot_name)),

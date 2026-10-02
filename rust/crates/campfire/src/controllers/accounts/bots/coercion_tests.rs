@@ -40,8 +40,8 @@ async fn expiry_cases(oracle: Value, expected_count: usize) {
     let mut checked = 0;
     for (index, case) in oracle["expiry"].as_array().unwrap().iter().enumerate() {
         let attributes = &case["attributes"];
-        // FLAGGED WS11 raw expiry writer: the owner accepts only Option<Timestamp>.
-        // The pinned numeric/true save and render boundaries stay inventoried in the vector.
+        // Successful numeric/true saves have their own strict raw-writer,
+        // model-read and list differential below; do not compare them as timestamps.
         if attributes
             .get("expires_at")
             .is_some_and(|v| v.is_number() || v == &json!(true))
@@ -416,4 +416,100 @@ async fn pr196_r3_boundary_expiry_http_save_and_read() {
         8,
     )
     .await;
+}
+
+#[tokio::test]
+async fn ws11ui_next_numeric_expiry_saves_match_rails_raw_writer() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/agent-numeric-expiry.json"
+    ))
+    .unwrap();
+    let t = TestApp::boot_frozen()
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
+    let mut browser = t.david();
+    browser.grant_sudo().await;
+    let mut failures = Vec::new();
+    for (index, case) in oracle["cases"].as_array().unwrap().iter().enumerate() {
+        let zone = case["zone"].as_str().unwrap().to_owned();
+        t.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE users SET time_zone=? WHERE id=?",
+                    rusqlite::params![zone, DAVID],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let before: i64 = t
+            .db()
+            .read(|conn| {
+                Ok(conn.query_row(
+                    "SELECT count(*) FROM audit_logs WHERE action='agent.credential.create'",
+                    [],
+                    |r| r.get(0),
+                )?)
+            })
+            .await
+            .unwrap();
+        let name = format!("Raw expiry {index}");
+        let response = browser
+            .write(
+                Req::new(Method::POST, &format!("/account/bots/{BENDER}/credentials"))
+                    .header("accept", "text/html")
+                    .header("content-type", "application/json")
+                    .body(
+                        json!({"agent_credential":{"name":name,"expires_at":case["input"]}})
+                            .to_string(),
+                    ),
+            )
+            .await;
+        let actual = t.db().read(move |conn| {
+            let (id,raw,storage): (i64,rusqlite::types::Value,String) = conn.query_row("SELECT id,expires_at,typeof(expires_at) FROM agent_credentials WHERE name=?",[name],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?;
+            let stored = match raw {
+                rusqlite::types::Value::Integer(v) => json!(v),
+                rusqlite::types::Value::Real(v) => json!(v),
+                rusqlite::types::Value::Null => Value::Null,
+                other => json!(format!("{other:?}")),
+            };
+            let read = campfire_db::AgentCredential::find(conn,id).map(|record| record.and_then(|c| {
+                c.raw_expires_at.map(|value| match value {
+                    rusqlite::types::Value::Integer(v) => json!(v),
+                    rusqlite::types::Value::Real(v) => json!(v),
+                    other => json!(format!("{other:?}")),
+                }).or_else(|| c.expires_at.map(|t|json!(t.to_db())))
+            }));
+            let audits: i64 = conn.query_row("SELECT count(*) FROM audit_logs WHERE action='agent.credential.create'", [], |r|r.get(0))?;
+            Ok(json!({"stored":stored,"storage_type":storage,"read_back":read.map_err(|e|e.to_string()),"audits":audits-before}))
+        }).await.unwrap();
+        let expected = json!({"stored":case["stored"],"storage_type":case["storage_type"],"read_back":{"Ok":case["read_back"]},"audits":case["audits"]});
+        if actual != expected || response.status.as_u16() as u64 != case["status"].as_u64().unwrap()
+        {
+            failures.push(format!(
+                "{} {}: HTTP {}; {actual}; Rails {expected}",
+                case["zone"], case["input"], response.status
+            ));
+        }
+        // Pinned Rails reads the raw number, then its list raises on iso8601.
+        // Match the production 500 without reproducing that exception.
+        let list = browser
+            .get(&format!("/account/bots/{BENDER}/credentials"))
+            .await;
+        if list.status.as_u16() as u64 != case["list_status"].as_u64().unwrap() {
+            failures.push(format!("numeric list status {}", list.status));
+        }
+        if let Some(body) = case["list_body"].as_str() {
+            if list.text() != body {
+                failures.push("numeric list error body differs".into());
+            }
+        }
+    }
+    println!(
+        "Raw credential expiry differential: 10 saves and model reads; {} mismatches",
+        failures.len()
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
