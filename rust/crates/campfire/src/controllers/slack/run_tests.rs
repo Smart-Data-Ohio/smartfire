@@ -237,7 +237,7 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
                     };obj.insert(col.to_string(),value);
                 }Ok(Value::Object(obj))
             })?.collect::<rusqlite::Result<Vec<_>>>()?;
-            let audit=conn.prepare("SELECT action,actor_id,target_type,target_id,details FROM audit_logs ORDER BY id")?.query_map([],|r|Ok(json!({"action":r.get::<_,String>(0)?,"actor_id":r.get::<_,Option<i64>>(1)?,"target_type":r.get::<_,Option<String>>(2)?,"target_id":r.get::<_,Option<i64>>(3)?,"details":serde_json::from_str::<Value>(&r.get::<_,String>(4)?).unwrap()})))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            let audit=conn.prepare("SELECT action,actor_id,target_type,target_id,target_label,details FROM audit_logs ORDER BY id")?.query_map([],|r|Ok(json!({"action":r.get::<_,String>(0)?,"actor_id":r.get::<_,Option<i64>>(1)?,"target_type":r.get::<_,Option<String>>(2)?,"target_id":r.get::<_,Option<i64>>(3)?,"target_label":r.get::<_,Option<String>>(4)?,"details":serde_json::from_str::<Value>(&r.get::<_,String>(5)?).unwrap()})))?.collect::<rusqlite::Result<Vec<_>>>()?;
             let jobs=conn.prepare("SELECT job_class,arguments,queue_name FROM background_jobs ORDER BY id")?.query_map([],|r| {let args:Value=serde_json::from_str(&r.get::<_,String>(1)?).unwrap();Ok(json!({"class":r.get::<_,String>(0)?,"arguments":[args["import_id"].clone()],"queue":r.get::<_,String>(2)?}))})?.collect::<rusqlite::Result<Vec<_>>>()?;
             Ok((rows,audit,jobs))
         }).await.unwrap();

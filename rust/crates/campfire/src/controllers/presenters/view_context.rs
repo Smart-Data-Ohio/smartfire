@@ -98,9 +98,13 @@ impl Layout {
         } else {
             None
         };
+        let mut summary = account_summary(account.as_ref(), has_logo);
+        summary.logo_url = super::accounts::fresh_account_logo_path_in_zone(
+            account.as_ref(), None, &time_zone,
+        );
         Ok(Self {
             current_user,
-            account: account_summary(account.as_ref(), has_logo),
+            account: summary,
             custom_styles: account.and_then(|account| account.custom_styles),
             platform: super::accounts::platform(c),
             last_room_visited_id,

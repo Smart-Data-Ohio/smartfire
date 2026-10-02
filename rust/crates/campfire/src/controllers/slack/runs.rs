@@ -59,7 +59,7 @@ async fn log(c: &Ctx, user: &User, id: i64, action: &str, changes: Option<Value>
                     target: Some(Target {
                         record_type: "SlackImport".into(),
                         id,
-                        label: None,
+                        label: Some(format!("SlackImport #{id}")),
                     }),
                     changes,
                     ..Default::default()

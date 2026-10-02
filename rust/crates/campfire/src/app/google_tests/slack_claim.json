@@ -1,0 +1,12 @@
+{
+  "members": [
+    {"id":"UCLAIM","tz":"America/New_York","profile":{"real_name":"Jane Slack","display_name":"jane","email":"Jane@smartdata.net","title":"Engineer"}},
+    {"id":"UPEER","profile":{"real_name":"Kevin","email":"kevin@37signals.com"}}
+  ],
+  "initial_conversation": {"id":"CCLAIM","name":"claim-history","is_private":true,"is_channel":true},
+  "initial_history": [{"user":"UCLAIM","text":"Before Google sign-in","ts":"1700000000.000001","reply_count":1}],
+  "initial_replies": [{"user":"UCLAIM","text":"Before Google sign-in","ts":"1700000000.000001"},{"user":"UCLAIM","text":"Imported reply","ts":"1700000001.000001","thread_ts":"1700000000.000001"}],
+  "conversation": {"id":"DCLAIM","is_im":true,"is_private":true,"user":"UPEER"},
+  "history": [{"user":"UCLAIM","text":"After opting in","ts":"1700000002.000001","reply_count":1}],
+  "replies": [{"user":"UCLAIM","text":"After opting in","ts":"1700000002.000001"},{"user":"UPEER","text":"Welcome","ts":"1700000003.000001","thread_ts":"1700000002.000001"}]
+}
