@@ -64,8 +64,8 @@
         },
         {
           "name": "thread code stays readable in both themes and scrolls within a narrow screen",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         }
       ]
     },
@@ -117,33 +117,33 @@
         },
         {
           "name": "tracks work, assigns an owner, completes and reopens it without losing the conversation",
-          "status": "blocked_ws12",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "shows work-thread guidance in the new-thread form and on the work page",
-          "status": "blocked_ws12",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "keeps the new-thread guidance usable on a phone",
-          "status": "blocked_ws12",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "shows work assignment activity to the owner and opens the exact thread",
-          "status": "blocked_ws12",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "keeps the thread drawer usable on a phone and preserves the channel",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "marks a joined thread read only while the conversation is visible",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "rejects an external thread deep link before fetching it",
@@ -157,18 +157,18 @@
         },
         {
           "name": "opens a shared thread message link around an older post",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "keeps an anchored older thread unread when a new reply arrives",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "discusses a pull request from its card",
-          "status": "deferred",
-          "evidence": "",
+          "status": "passed",
+          "evidence": "Fresh source clone at 496c721a8: .scratch/ws8bm-next/fresh-pr-paused.log; actual paired controls, original Selenium visibility/visible text and deadlines, real requests and persisted rows PASS using the pinned nonperforming job adapter; see report for fixture provenance and test-only host. No pixel credit.",
           "diagnostic": "Uncredited live-worker fixture: pinned Rails first POST/thread header/files pass, then its provider worker replaces Fix login with Could not reach GitHub (Resolution Error). Existing Discuss link is present. Original title/header expectations retained; candidate positive not credited. Header-stripping served mutant rejects, which alone is not positive parity. Diagnostic and exact remaining scope in ws8bm-report.md."
         }
       ]
@@ -194,10 +194,9 @@
         },
         {
           "name": "Markdown replies and file attachments remain usable",
-          "status": "deferred",
-          "evidence": null,
+          "status": "passed",
+          "evidence": "Fresh source clone at 8d4302d96: .scratch/ws8bm-next/fresh-attachment-pinned.log; actual paired controls, original Selenium visibility/visible text and deadlines, real requests and persisted rows PASS using the pinned nonperforming job adapter; see report for fixture provenance and test-only host. No pixel credit.",
           "previous_evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels",
-          "remaining_reason": "Initial full fresh-clone paired run timed out waiting for the delivered reply attachment. A later unchanged diagnostic passed on both apps, but the initial application and root cause remain unknown. This is not credited as repaired by retry; retain diagnostics and investigate before behaviour sign-off.",
           "diagnostic": "Still deferred: Rust missed the attachment reply preview in the unchanged 70d325c5 diagnostic baseline at thirty seconds and in the corrected fresh run at the original Rails ten-second wait. An isolated baseline accepted both new served probes; both are rejected after the asserted-element correction. These mutation proofs do not establish positive upload parity."
         },
         {
@@ -218,7 +217,8 @@
         {
           "name": "workspace follows the system theme and mobile navigation remains reachable",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Own mapped sequence remains unimplemented: compact composer geometry/empty field, JZ online presence (5 s), theme background change, profile-bar containment, drawer focus trapping/current room, Escape focus return, and coarse-pointer Enter/newline/send with saved source (workspace_markdown_test.rb:242-290). These are behavior assertions, not pixel work."
         }
       ]
     },
@@ -300,12 +300,14 @@
         {
           "name": "From Google Drive starts the legacy picker flow",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs the pinned server-side WebMock Drive list response and actual Google connection fixture, then visible Q3 Planning through the real picker route (composer_attach_menu_test.rb:37-47). Current harness does not yet provide that server-side transport; no owner block."
         },
         {
           "name": "From Google Drive starts the enhanced share flow when sharing is configured",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs the original GOOGLE_PICKER_API_KEY/project-number environment and DriveShareMocks SDK/dialog scenario (composer_attach_menu_test.rb:50-69). The account/Drive controllers are merged, but this own harness boundary is not ported."
         },
         {
           "name": "+ opens the file picker directly without Drive",
@@ -347,7 +349,8 @@
           "name": "a release click landing on the just-opened menu does not activate it",
           "status": "deferred",
           "evidence": "",
-          "diagnostic": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md. Fresh clone 3296f5779 passes this case on both apps with the corrected Selenium atom. The earlier two reference failures remain recorded; status deliberately remains deferred without new declaration credit. The c5c5d2253 fresh run passed and rejected its served mutant, but the received reliability deferral remains; no new credit. Current 8b0c5e62 fresh run again fails on Rails before Rust (DIV versus menu); original assertion/700 ms hold retained. Still deferred.; e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit; successful attempt is uncredited: earlier reference failures still prevent reliability sign-off"
+          "diagnostic": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md. Fresh clone 3296f5779 passes this case on both apps with the corrected Selenium atom. The earlier two reference failures remain recorded; status deliberately remains deferred without new declaration credit. The c5c5d2253 fresh run passed and rejected its served mutant, but the received reliability deferral remains; no new credit. Current 8b0c5e62 fresh run again fails on Rails before Rust (DIV versus menu); original assertion/700 ms hold retained. Still deferred.; e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit; successful attempt is uncredited: earlier reference failures still prevent reliability sign-off",
+          "remaining_reason": "Pinned message_interactions_test.rb:68-91 assumes the fixed 700 ms press point hits the newly opened menu. Metadata can change its height before this instantaneous hit test; it is not made deterministic by the original. Keep the original hit requirement and hold; record current paired attempts rather than waiting for metadata or changing the press point."
         },
         {
           "name": "shows the message action menu as a bottom sheet on phones",
@@ -609,9 +612,8 @@
         },
         {
           "name": "text fields stay at 16px on touch devices without changing the desktop look",
-          "status": "blocked_ws12",
-          "evidence": null,
-          "blocked_reason": "Pinned flow requires the authorized, flagged WS12 board/work page or activity inbox; WS12 has not started. No partial pass credited."
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "profile message and ban buttons have accessible names",
@@ -637,17 +639,20 @@
         {
           "name": "attach Drive files from the picker, send textless, and remove through edit",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs server-side Drive list/file WebMock fixtures, the two actual picker selections, chip geometry/removal, textless persisted file-ID set, and edit-frame replacement before final empty attachment rows (drive_attachments_test.rb:10-76). Current harness lacks those external transports; no owner block."
         },
         {
           "name": "edit a room message in the composer and remove one of two attachments",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs two Drive metadata/list responses followed by real root composer edit, removal, one remaining visible link and exact persisted FILE_ID, plus hidden context DOM assertion (drive_attachments_test.rb:79-113). Own server-side mock transport remains unported."
         },
         {
           "name": "attach a Drive file from the thread composer",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs pinned Drive list/file transport, real joined-thread fixture and the original 10 s settled drawer transform/picker/link assertions, followed by thread-message attachment IDs (drive_attachments_test.rb:116-140,151-164). Own harness work; merged WS12/#201/automations are not prerequisites."
         }
       ]
     },
@@ -711,47 +716,56 @@
         {
           "name": "motion is off by default in the test environment",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Asserts server-emitted data-test-motion=off and all three 0ms tokens (motion_test.rb:19-23). Both live harnesses boot production, where the Rails layout intentionally omits that attribute. Supplying the test-only input for other cases cannot earn credit for this server-emission declaration; a real test-environment host contract is still needed."
         },
         {
           "name": "mobile drawer animates in, lands in place, and returns focus with motion on",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Own transition sequence remains unported: original 30 s token override, attached transitionrun listeners, initial/mid-travel transform, live transform animation, Web Animations finish and restored focus with original 5 s polling (motion_test.rb:26-70). No screenshots are needed; do not merely assert landed geometry."
         },
         {
           "name": "member selection mode moves no rows and resizes nothing",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Own HQ multi-select sequence remains unported: original optional Show members 5 s, minimum-two 10 s, avatar-left/content-height equality across control-click/two selections/clear, and visible Message (2) (motion_test.rb:73-100). No owner block."
         },
         {
           "name": "people directory bar shifts no rows when toggling",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Own directory selection sequence remains unported: minimum-two rows, exact row-top array before/after visible multi-select bar and after clearing all checked boxes (motion_test.rb:103-116). No owner block."
         },
         {
           "name": "people directory bar stays stuck while scrolling",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs the original 12 Sticky User rows and 1400x400 viewport, actual scrolling >100 px, original 5 s wait for scrollTop=100, and sticky bar-bottom <= main-bottom+1 (motion_test.rb:119-146). Those fixture and sequence assertions remain own unported work."
         },
         {
           "name": "room menu measures at full scale when clamping to the viewport edge",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Own motion-on contextmenu sequence remains unported: original synthetic far-right pointer, visible menu, 5 s transform-none polling, full-scale right <= innerWidth-8+1 and hidden-all Escape assertion (motion_test.rb:149-174). No owner block."
         },
         {
           "name": "mobile drawer keeps the room list scroll position across close and reopen",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs 15 real Scroll rooms, focus/blur and actual >=400 px overflow, exact scrollTop=400, current room outside view, exact closed/open offset retention and visible focus after reopening (motion_test.rb:177-238). Own fixture and sequence remain unported; preserve the original 5 s polling."
         },
         {
           "name": "mobile drawer reveals a current room far down the list on first open",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs 15 Scroll rooms plus Zz far room, hidden-all current-link lookup, zero initial offset/out-of-view precondition and first-open current-link focus/5 s reveal (motion_test.rb:241-257). Own fixtures and sequence remain unported."
         },
         {
           "name": "mobile drawer reopens on the current room when it is already in view",
           "status": "deferred",
-          "evidence": null
+          "evidence": null,
+          "remaining_reason": "Needs 15 Scroll rooms, original focused current link, 5 s settled-scroll/current-in-view predicate, exact closed/reopened scroll offset and focused current link (motion_test.rb:260-292). Own fixture and sequence remain unported."
         }
       ]
     },
@@ -761,29 +775,28 @@
       "cases": [
         {
           "name": "the profile page fits phone widths without scrolling sideways",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "headers outside the workspace shell stay opaque over scrolled content",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "headers outside the workspace shell never cover the page or its scrollbar",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "pages outside the workspace shell show no drawer toggle that opens nothing",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         },
         {
           "name": "every drawer destination has one toggle that opens the drawer on itself",
-          "status": "blocked_ws12",
-          "evidence": null,
-          "blocked_reason": "Pinned flow requires the authorized, flagged WS12 board/work page or activity inbox; WS12 has not started. No partial pass credited."
+          "status": "passed",
+          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
         }
       ]
     }
