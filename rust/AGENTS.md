@@ -82,7 +82,7 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
 - Work from `rust/`. Rust comes from mise if it isn't on the PATH:
   `mise exec rust@1.98.1 -- cargo ...` (the version in `Dockerfile`).
 - `cargo test --workspace --exclude html5ever` runs everything. The app's integration tests need
-  the `default` and `first_run` seeds (`parity/bin/seed build default first_run`, which runs the
+  the `default`, `first_run` and `agents_ui` seeds (`parity/bin/seed build default first_run agents_ui`, which runs the
   reference). Missing seeds fail whenever `CI` is set; locally they skip with a message, so say
   which seeds were built when reporting results. CI archives `parity/reference.sha`, caches
   the reference image and seeds by their exact inputs, and validates even restored seeds with

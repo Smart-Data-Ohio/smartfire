@@ -205,6 +205,13 @@ impl Message {
             Self::from_row,
         )
     }
+    /// Batched association preload, preserving the same rows as `find_by_id`.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!(r#"SELECT * FROM "messages" WHERE id IN ({})"#, sql::placeholders(ids.len())),
+            rusqlite::params_from_iter(ids), Self::from_row)
+    }
 
     /// `Message.last`
     pub fn last(conn: &Connection) -> Result<Option<Self>> {

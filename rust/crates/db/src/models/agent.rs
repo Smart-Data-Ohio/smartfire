@@ -214,6 +214,13 @@ impl Agent {
             Self::from_row,
         )
     }
+    /// `users.preload(:agent)`: one read for the bot members of a room.
+    pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
+        if user_ids.is_empty() { return Ok(Vec::new()); }
+        crate::sql::query_all(conn,
+            &format!("SELECT * FROM agents WHERE user_id IN ({})", crate::sql::placeholders(user_ids.len())),
+            rusqlite::params_from_iter(user_ids), Self::from_row)
+    }
     pub fn validate(conn: &Connection, a: &NewAgent, exclude: Option<i64>) -> Result<Errors> {
         let mut errors = Errors::default();
         if !exists(conn, "SELECT 1 FROM users WHERE id=?", [a.user_id])? {

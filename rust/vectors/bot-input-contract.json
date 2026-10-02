@@ -1,0 +1,1126 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "caps": [
+    {
+      "field": "daily_message_cap",
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": " 12 ",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "+12",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "012",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12.0",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12.5",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12e1",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12x",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "x12",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "abc",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "0",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "-1",
+      "permitted": true,
+      "value": -1,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "1_000",
+      "permitted": true,
+      "value": 1000,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "0x10",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "9223372036854775807",
+      "permitted": true,
+      "value": 9223372036854775807,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "9223372036854775808",
+      "permitted": true,
+      "value": 9223372036854775808,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": 12,
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": 12.0,
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": 12.5,
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": true,
+      "permitted": true,
+      "value": 1,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": false,
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": [
+        "12"
+      ],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": {
+        "value": "12"
+      },
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": " 12 ",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "+12",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "012",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12.0",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12.5",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12e1",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12x",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "x12",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "abc",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "0",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "-1",
+      "permitted": true,
+      "value": -1,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "1_000",
+      "permitted": true,
+      "value": 1000,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "0x10",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "9223372036854775807",
+      "permitted": true,
+      "value": 9223372036854775807,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "9223372036854775808",
+      "permitted": true,
+      "value": 9223372036854775808,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": 12,
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": 12.0,
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": 12.5,
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": true,
+      "permitted": true,
+      "value": 1,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": false,
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": [
+        "12"
+      ],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": {
+        "value": "12"
+      },
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": " 12 ",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "+12",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "012",
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12.0",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12.5",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12e1",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12x",
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "x12",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "abc",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "0",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "-1",
+      "permitted": true,
+      "value": -1,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "1_000",
+      "permitted": true,
+      "value": 1000,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "0x10",
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "9223372036854775807",
+      "permitted": true,
+      "value": 9223372036854775807,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "9223372036854775808",
+      "permitted": true,
+      "value": 9223372036854775808,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": 12,
+      "permitted": true,
+      "value": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": 12.0,
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": 12.5,
+      "permitted": true,
+      "value": 12,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": true,
+      "permitted": true,
+      "value": 1,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": false,
+      "permitted": true,
+      "value": 0,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": [
+        "12"
+      ],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": {
+        "value": "12"
+      },
+      "permitted": false,
+      "value": null,
+      "errors": []
+    }
+  ],
+  "icons": [
+    {
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": ":",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": "::",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": ":openai:",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": " ::: OpenAI ::: ",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": "OPENAI",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": "openai",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": ":robot:",
+      "permitted": true,
+      "value": "robot",
+      "errors": []
+    },
+    {
+      "input": "notanicon",
+      "permitted": true,
+      "value": "notanicon",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": ":notanicon:",
+      "permitted": true,
+      "value": "notanicon",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": " open ai ",
+      "permitted": true,
+      "value": "open ai",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": "😀",
+      "permitted": true,
+      "value": "😀",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": " :openai: ",
+      "permitted": true,
+      "value": " :openai: ",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": 12,
+      "permitted": true,
+      "value": "12",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": true,
+      "permitted": true,
+      "value": "t",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": false,
+      "permitted": true,
+      "value": "f",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": [
+        "openai"
+      ],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": {
+        "name": "openai"
+      },
+      "permitted": false,
+      "value": null,
+      "errors": []
+    }
+  ],
+  "expiry": [
+    {
+      "zone": "UTC",
+      "input": null,
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": "",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": " ",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": "invalid",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": "2030-06-15T10:20",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T10:20:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2030-06-15T10:20:30",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T10:20:30.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2030-06-15T10:20:30Z",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T10:20:30.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2030-06-15T10:20:30+05:30",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T04:50:30.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2030-06-15",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20300615",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "06/15/2030",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": "15 Jun 2030 10:20:30",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T10:20:30.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2030-06-15 10:20:30.123456",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T10:20:30.123456Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-08T02:30:00",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2026-03-08T02:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-11-01T01:30:00",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2026-11-01T01:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": 12,
+      "permitted": true,
+      "value_class": "Integer",
+      "value": 12
+    },
+    {
+      "zone": "UTC",
+      "input": true,
+      "permitted": true,
+      "value_class": "TrueClass",
+      "value": true
+    },
+    {
+      "zone": "UTC",
+      "input": false,
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": [],
+      "permitted": false,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": [
+        "2030-06-15"
+      ],
+      "permitted": false,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "UTC",
+      "input": {
+        "year": 2030
+      },
+      "permitted": false,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": null,
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": " ",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "invalid",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2030-06-15T10:20",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T14:20:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2030-06-15T10:20:30",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T14:20:30.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2030-06-15T10:20:30Z",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T10:20:30.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2030-06-15T10:20:30+05:30",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T04:50:30.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2030-06-15",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T04:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20300615",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T04:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "06/15/2030",
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "15 Jun 2030 10:20:30",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T14:20:30.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2030-06-15 10:20:30.123456",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2030-06-15T14:20:30.123456Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-08T02:30:00",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2026-03-08T07:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-11-01T01:30:00",
+      "permitted": true,
+      "value_class": "ActiveSupport::TimeWithZone",
+      "value": "2026-11-01T05:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": 12,
+      "permitted": true,
+      "value_class": "Integer",
+      "value": 12
+    },
+    {
+      "zone": "America/New_York",
+      "input": true,
+      "permitted": true,
+      "value_class": "TrueClass",
+      "value": true
+    },
+    {
+      "zone": "America/New_York",
+      "input": false,
+      "permitted": true,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": [],
+      "permitted": false,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": [
+        "2030-06-15"
+      ],
+      "permitted": false,
+      "value_class": "NilClass",
+      "value": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": {
+        "year": 2030
+      },
+      "permitted": false,
+      "value_class": "NilClass",
+      "value": null
+    }
+  ]
+}
