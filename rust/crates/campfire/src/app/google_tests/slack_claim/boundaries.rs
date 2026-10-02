@@ -171,9 +171,10 @@ async fn boundary(name: &'static str) {
         )
         .unwrap()
     };
-    let reply = browser
-        .write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)]))
-        .await;
+    let reply = with_fixed_render_secrets(
+        browser.write(Req::new(Method::POST, "/two_factor_setup").form(&[("code", &code)])),
+    )
+    .await;
     let statements = a
         .db()
         .write(|tx| {
@@ -236,7 +237,7 @@ async fn boundary(name: &'static str) {
         .await
         .unwrap();
     assert_eq!(
-        response(&browser.get("/two_factor_setup").await),
+        response(&with_fixed_render_secrets(browser.get("/two_factor_setup")).await),
         expected["after"],
         "{name}: next setup response"
     );
