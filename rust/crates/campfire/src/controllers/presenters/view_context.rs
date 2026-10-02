@@ -43,6 +43,12 @@ pub struct Layout {
     pub chrome: Chrome,
 }
 
+/// These templates never call `link_back_to_last_room_visited`. Leave its input
+/// unloaded, as Rails does; templates that use it retain the normal room lookup.
+#[derive(Clone)]
+struct UnusedRoomBackLink;
+pub(crate) fn omit_unused_room_back_link(c: &mut Ctx) { c.set_current(UnusedRoomBackLink); }
+
 impl Layout {
     /// `Current.account`, `Current.user`, `last_room_visited` and the platform. With no account
     /// yet (first run) the account summary is blank: the pages that reference the account raise
@@ -53,6 +59,7 @@ impl Layout {
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
         let now = c.now();
+        let loaded = c.current::<super::layout_preferences::LoadedPreferences>().filter(|loaded| Some(loaded.user_id) == user_id).cloned();
         let (account, has_logo, mut preferences, mut chrome) = app
             .db
             .read(move |conn| {
@@ -65,14 +72,17 @@ impl Layout {
                     None => false,
                 };
                 let preferences = match user_id {
-                    Some(user_id) => user_preferences(conn, user_id, now)?,
+                    Some(user_id) => match loaded {
+                        Some(loaded) => loaded.load(conn)?,
+                        None => user_preferences(conn, user_id, now)?,
+                    },
                     None => UserPreferences::default(),
                 };
                 Ok((account, has_logo, preferences, chrome(conn, user_id)?))
             })
             .await
             .map_err(Error::internal)?;
-        let last_room_visited_id = if user.is_some() {
+        let last_room_visited_id = if user.is_some() && c.current::<UnusedRoomBackLink>().is_none() {
             concerns::last_room_visited(c).await?.map(|room| room.id)
         } else {
             None
@@ -253,25 +263,7 @@ pub(crate) fn user_preferences(
     user_id: i64,
     now: jiff::Timestamp,
 ) -> campfire_db::Result<UserPreferences> {
-    let mut preferences = conn.query_row(
-        "SELECT theme, text_size, time_zone, time_zone_explicit, tour_completed_at IS NOT NULL, voice_mode, push_to_talk_key \
-         FROM users WHERE id = ?",
-        [user_id],
-        |row| {
-            Ok(UserPreferences {
-                theme: row.get(0)?,
-                text_size: row.get(1)?,
-                time_zone: row.get(2)?,
-                time_zone_explicit: row.get(3)?,
-                tour_completed: row.get(4)?,
-                voice_mode: row.get(5)?,
-                push_to_talk_key: row.get(6)?,
-                ..UserPreferences::default()
-            })
-        },
-    )?;
-    super::layout_preferences::fill(conn, user_id, now, &mut preferences)?;
-    Ok(preferences)
+    super::layout_preferences::for_user(conn, user_id, now)
 }
 
 /// Icons.client_icon_names and the viewer's ten ordered recent searches. WS14g's Picker,

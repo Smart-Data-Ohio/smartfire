@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run byte-exact media tests with the Rails image's libvips/ffmpeg builds.
 
-All other tests run natively. The application logo case and storage vectors keep
-all their byte assertions; only their media runtime matches CI and the oracle.
+All other tests run natively. The application logo, video corpora and storage
+vectors keep every byte assertion; only their media runtime matches the oracle.
 """
 from pathlib import Path
 import os
@@ -12,7 +12,14 @@ import sys
 root = Path(__file__).resolve().parents[3]
 binary = Path(sys.argv[1]).resolve()
 arguments = sys.argv[2:]
-logo = 'controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers'
+pinned_application_tests = (
+    'controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers',
+    'controllers::agent_review_r3_tests::pr192_r3_fresh_video_retains_preview_and_variant_files',
+    'controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_redirect',
+    'controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_proxy',
+    'controllers::agent_review_r5_tests::pr192_r5_video_missing_variant_redirect',
+    'controllers::agent_review_r5_tests::pr192_r5_video_missing_variant_proxy',
+)
 
 
 def pinned_args(test_arguments):
@@ -45,9 +52,14 @@ if (Path.cwd() == root / 'rust/crates/campfire'
         and binary.name.startswith('campfire-') and '--list' not in arguments):
     selected = subprocess.run([str(binary), *arguments, '--list'],
                               check=True, capture_output=True, text=True).stdout
-    if logo + ': test' in selected.splitlines():
-        native = subprocess.run([str(binary), *arguments, '--skip', logo])
+    media = [test for test in pinned_application_tests
+             if test + ': test' in selected.splitlines()]
+    if media:
+        native_arguments = [str(binary), *arguments]
+        for test in media:
+            native_arguments.extend(['--skip', test])
+        native = subprocess.run(native_arguments)
         # Sequential: never add another worker to the native eight-thread run.
-        media = subprocess.run(pinned_args([logo, '--exact', '--test-threads=8']))
-        sys.exit(native.returncode or media.returncode)
+        pinned = subprocess.run(pinned_args([*media, '--exact', '--test-threads=8']))
+        sys.exit(native.returncode or pinned.returncode)
 os.execv(str(binary), [str(binary), *arguments])

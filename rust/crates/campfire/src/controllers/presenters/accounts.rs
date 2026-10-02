@@ -248,21 +248,64 @@ pub fn account_users(conn: &Connection, can_administer: bool) -> campfire_db::Re
     query_users(conn, &sql, [])
 }
 
-/// A bot row for `accounts/bots/_bot`: its key and `bot.rooms.without_directs.ordered`.
-pub fn bot(conn: &Connection, secrets: &Secrets, bot: &User) -> campfire_db::Result<Bot> {
+/// Bot rows share preloaded agents and owners; their ordered room lists stay per bot.
+pub fn bots(conn: &Connection, secrets: &Secrets, bots: &[User]) -> campfire_db::Result<Vec<Bot>> {
+    let agents: std::collections::HashMap<_, _> =
+        campfire_db::Agent::for_users(conn, &bots.iter().map(|bot| bot.id).collect::<Vec<_>>())?
+            .into_iter()
+            .map(|agent| (agent.user_id, agent))
+            .collect();
+    let mut owner_ids: Vec<_> = agents.values().filter_map(|agent| agent.owner_id).collect();
+    owner_ids.sort_unstable();
+    owner_ids.dedup();
+    let owners: std::collections::HashMap<_, _> = if owner_ids.is_empty() {
+        Default::default()
+    } else {
+        User::where_ids(conn, &owner_ids)?
+            .into_iter()
+            .map(|owner| (owner.id, owner.name))
+            .collect()
+    };
+    bots.iter()
+        .map(|bot| {
+            let agent = agents.get(&bot.id);
+            let owner_name = agent
+                .and_then(|agent| agent.owner_id)
+                .and_then(|id| owners.get(&id))
+                .cloned();
+            bot_with_associations(conn, secrets, bot, agent, owner_name)
+        })
+        .collect()
+}
+
+fn bot_with_associations(
+    conn: &Connection,
+    secrets: &Secrets,
+    bot: &User,
+    agent: Option<&campfire_db::Agent>,
+    owner_name: Option<String>,
+) -> campfire_db::Result<Bot> {
     let mut rooms = Room::for_user_without_directs(conn, bot.id)?;
     sort_by_lower_name(&mut rooms, |room| room.name.as_deref().unwrap_or(""));
-    let agent = campfire_db::Agent::for_user(conn, bot.id)?;
-    let owner_name = agent.as_ref().and_then(|agent| agent.owner_id)
-        .map(|id| User::find_by_id(conn, id)).transpose()?.flatten().map(|user| user.name);
-    let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
     let icon = if attachments::attached_blob(conn, "User", bot.id, "avatar")?.is_none() {
-        icon_name.as_deref().and_then(|name| super::resolve_avatar_icon(conn, name))
-    } else { None };
+        bot.icon_name
+            .as_deref()
+            .and_then(|name| super::resolve_avatar_icon(conn, name))
+    } else {
+        None
+    };
     Ok(Bot {
         user: user_summary(secrets, bot),
-        kind: agent.map(|agent| agent.kind.name().into()), owner_name, icon,
-        rooms: rooms.into_iter().map(|room| BotRoom { id: room.id, name: room.name.unwrap_or_default() }).collect(),
+        kind: agent.map(|agent| agent.kind.name().into()),
+        owner_name,
+        icon,
+        rooms: rooms
+            .into_iter()
+            .map(|room| BotRoom {
+                id: room.id,
+                name: room.name.unwrap_or_default(),
+            })
+            .collect(),
     })
 }
 
