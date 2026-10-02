@@ -26,6 +26,8 @@ RUST = ROOT / "rust"
 SCRATCH = ROOT / ".scratch"
 PIN = "d7c7de9264c63015be398001d7a1094e7695a6db"
 CASES = {
+    "mobile_layout": ['the profile page fits phone widths without scrolling sideways', 'headers outside the workspace shell stay opaque over scrolled content', 'headers outside the workspace shell never cover the page or its scrollbar', 'pages outside the workspace shell show no drawer toggle that opens nothing', 'every drawer destination has one toggle that opens the drawer on itself'],
+    "channel_threads_controller": ['converts a thread to work, assigns an eligible owner, and keeps an audit trail', 'work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable', 'assigned owner can change work status but cannot reassign it', 'only a thread manager can remove work tracking', 'a manager can assign an eligible agent and the agent is notified', 'the owner picker lists eligible agents with profiles and excludes ineligible ones', 'a member who cannot manage the thread cannot assign an agent', 'ordinary thread fields remain separate from work tracking'],
     "sending_messages": ["sending messages between two users", "editing messages", "deleting messages"],
     "workspace_markdown": [
         "Markdown messages reach other users and editing preserves the original source",
@@ -37,6 +39,15 @@ CASES = {
         "sending preserves the submitted source and a newer draft",
     ],
     "threads": [
+        'tracks work, assigns an owner, completes and reopens it without losing the conversation',
+        'shows work-thread guidance in the new-thread form and on the work page',
+        'keeps the new-thread guidance usable on a phone',
+        'shows work assignment activity to the owner and opens the exact thread',
+        'keeps the thread drawer usable on a phone and preserves the channel',
+        'marks a joined thread read only while the conversation is visible',
+        'opens a shared thread message link around an older post',
+        'keeps an anchored older thread unread when a new reply arrives',
+
         "creates a thread from a channel message and keeps the channel draft separate",
         "the thread root counts its replies live and hides the count when none remain",
         "a stray create re-entry does not wipe the half-filled thread name",
@@ -74,6 +85,7 @@ CASES = {
         "profile message and ban buttons have accessible names",
         "flash persists its 5-second minimum under reduced motion",
         "flash dismisses on demand under reduced motion",
+        "text fields stay at 16px on touch devices without changing the desktop look",
     ],
     "search_forward_edit": [
         "search tolerates operators, shows an empty state and pages older results",
@@ -145,6 +157,7 @@ CASES = {
         "picker tabs move with arrow keys and switch the grid",
     ],
     "code_highlighting": [
+        "thread code stays readable in both themes and scrolls within a narrow screen",
         "language fences highlight common code without changing its text",
         "unlabelled code is detected while text unknown languages and inline code stay literal",
         "search results highlight code on initial load and after returning to the channel",
@@ -154,6 +167,7 @@ CASES = {
 }
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("files", nargs="*", choices=CASES)
+parser.add_argument("--slice", choices=["continuation"], help="run this checkpoint's new declarations, without changing existing scopes")
 parser.add_argument("--case", help="run one exact pinned declaration from the selected files")
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
@@ -241,8 +255,12 @@ mutation_variants = json.loads(subprocess.check_output([
     "console.log(JSON.stringify(Object.fromEntries(mutationNames.map(name=>[name,mutationVariants(name)]))))"
 ], cwd=ROOT, env=env, text=True)) if args.negative else {}
 for file in files:
-    source = subprocess.check_output(["git", "show", f"{PIN}:test/system/{file}_test.rb"], cwd=ROOT)
+    source_path = f"test/{'controllers/channel_threads_controller' if file == 'channel_threads_controller' else 'system/'+file}_test.rb"
+    source = subprocess.check_output(["git", "show", f"{PIN}:{source_path}"], cwd=ROOT)
     selected = [case for case in CASES[file] if (not args.case or case == args.case) and case not in args.exclude_case]
+    if args.slice:
+        continuation = {"channel_threads_controller":CASES["channel_threads_controller"],"mobile_layout":CASES["mobile_layout"],"threads":CASES["threads"][:8],"message_list_a11y":["text fields stay at 16px on touch devices without changing the desktop look"],"code_highlighting":["thread code stays readable in both themes and scrolls within a narrow screen"]}
+        selected = [case for case in selected if case in continuation.get(file,[])]
     if args.mutant_set:
         selected = [case for case in selected if case in diagnostic_variants]
     if args.negative:
@@ -279,9 +297,11 @@ for file in files:
             work = Path(directory)
             fixture = work / "fixture"
             shutil.copytree(RUST / "parity/.seed/default", fixture)
-            if file == "message_list_a11y":
-                fixture_kind = "history" if case.startswith("paginated history") else "message_list"
-                if any(name in CASES[file][20:] for name in batch):
+            if file == "channel_threads_controller":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "work-controller", case], cwd=ROOT, env=env, check=True)
+            elif file == "message_list_a11y":
+                fixture_kind = "board-touch" if case.startswith("text fields") else "history" if case.startswith("paginated history") else "message_list"
+                if any(name in CASES[file][20:28] for name in batch):
                     fixture_kind = "message_destinations"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
@@ -307,6 +327,9 @@ for file in files:
                 fixture_kind = {"message_interactions": "interactions", "message_actions_mobile": "actions-mobile", "message_toolbar": "toolbar"}[file]
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            elif file == "threads" and (case.startswith("opens a shared") or case.startswith("keeps an anchored")):
+                fixture_kind = "thread-anchor" if case.startswith("opens a shared") else "thread-anchor-race"
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             elif file == "threads" and case == "discusses a pull request from its card":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "thread-pr"], cwd=ROOT, env=env, check=True)
@@ -317,7 +340,7 @@ for file in files:
                 (fixture / "db/code-highlighting-reference.rb").write_bytes(source)
                 (fixture / "db/application-system-reference.rb").write_bytes(subprocess.check_output(
                     ["git", "show", f"{PIN}:test/application_system_test_case.rb"], cwd=ROOT))
-                fixture_kind = "highlight-search" if case.startswith("search results") else "highlight"
+                fixture_kind = "highlight-thread" if case.startswith("thread code stays") else "highlight-search" if case.startswith("search results") else "highlight"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             shutil.copytree(fixture / "db", work / "db")
@@ -377,13 +400,26 @@ for file in files:
                     databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
                     for database in databases:
                         with sqlite3.connect(database) as conn:
-                            if file == "threads" and case == "discusses a pull request from its card":
+                            if file == "mobile_layout" or case.startswith("text fields"):
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    for table in ["messages","channel_threads"]:
+                                        query=f"SELECT * FROM {table} ORDER BY id"
+                                        assert conn.execute(query).fetchall()==seed.execute(query).fetchall()
+                            elif file == "channel_threads_controller":
+                                from behavior_work_rows import assert_work_rows
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    assert_work_rows(conn, seed, case, metadata)
+                            elif file == "threads" and case in ['tracks work, assigns an owner, completes and reopens it without losing the conversation', 'shows work-thread guidance in the new-thread form and on the work page', 'keeps the new-thread guidance usable on a phone', 'shows work assignment activity to the owner and opens the exact thread', 'keeps the thread drawer usable on a phone and preserves the channel', 'marks a joined thread read only while the conversation is visible', 'opens a shared thread message link around an older post', 'keeps an anchored older thread unread when a new reply arrives']:
+                                from behavior_thread_rows import assert_thread_rows
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    assert_thread_rows(conn, seed, case, metadata)
+                            elif file == "threads" and case == "discusses a pull request from its card":
                                 mapping = conn.execute("SELECT channel_thread_id FROM github_pull_request_threads WHERE github_pull_request_id=? AND room_id=654632876", (metadata["pr_id"],)).fetchall()
                                 assert len(mapping) == 1, "reopening a PR discussion never creates a second mapping"
                                 assert conn.execute("SELECT parent_message_id,creator_id,room_id FROM channel_threads WHERE id=?", (mapping[0][0],)).fetchone() == (metadata["pr_message_id"], 773523953, 654632876)
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE id=?", (metadata["pr_message_id"],)).fetchone() == ("review https://github.com/rails/rails/pull/12",)
                             elif file == "code_highlighting":
-                                if case.startswith("search results"):
+                                if case.startswith(("search results", "thread code stays")):
                                     with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                         expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
                                     assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
@@ -567,7 +603,7 @@ for file in files:
                             process.kill()
                             process.wait()
                     subprocess.run([reference, "down", "--port", str(ports[0])], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
-    print(f"WS8bm behaviour source: test/system/{file}_test.rb SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
+    print(f"WS8bm behaviour source: {source_path} SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
 if args.negative:
     print(f"WS8bm discrimination check: {passed} served mutants rejected on Rails and Rust across {len(passed_named)} named checks; {len(failed_cases)} invalid or escaped", flush=True)
 elif args.mutant or args.mutant_set:
