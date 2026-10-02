@@ -225,41 +225,32 @@ impl ProfileShow<'_> {
             .unwrap(),
         )
     }
+    pub(super) fn google_sign_in_panel(&self) -> h::Html {
+        h::raw(google::SignIn { data: google::SignInData {
+            configured: self.sections.google.sign_in_configured,
+            email: self.sections.google.identity_email.clone(),
+        }}.render().expect("Google sign-in profile"))
+    }
     pub(super) fn github_connection(&self) -> h::Html {
         h::raw(crate::github::connections::profile(&self.github))
     }
 }
 impl GoogleCalendar {
-    fn connect(&self, label: &str, drive: impl std::borrow::Borrow<bool>) -> h::Html {
-        let form = h::button_to_form(
-            "/google/connect",
-            h::attrs().method("post").class("btn"),
-            h::attrs().data("turbo", false),
-            label,
-        );
-        if *drive.borrow() {
-            let field = h::legacy_tag(
-                "input",
-                h::attrs().type_("hidden").name("features[]").value("drive"),
-            );
-            h::raw(format!(
-                "{}{field}</form>",
-                form.0.strip_suffix("</form>").unwrap()
-            ))
-        } else {
-            form
+    fn calendar_data(&self) -> google::CalendarData {
+        let panel = &self.sections.google;
+        google::CalendarData {
+            configured: panel.calendar_configured,
+            account: panel.account_exists.then(|| google::Account {
+                email: panel.email.clone(), connected: panel.connected,
+                calendar: panel.calendar, drive: panel.drive,
+            }),
         }
     }
+    fn connect(&self, label: &str, drive: bool) -> h::Html {
+        google::Calendar { data: self.calendar_data() }.connect(label, drive)
+    }
     fn disconnect(&self) -> h::Html {
-        h::button_to_form(
-            "/google/connection",
-            h::attrs().method("delete").class("btn btn--negative"),
-            h::attrs().data(
-                "turbo_confirm",
-                "Disconnect Google Calendar? Your published event entries will be removed.",
-            ),
-            "Disconnect",
-        )
+        google::Calendar { data: self.calendar_data() }.disconnect()
     }
 }
 

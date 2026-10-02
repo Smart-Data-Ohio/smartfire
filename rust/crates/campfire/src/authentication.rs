@@ -502,3 +502,62 @@ pub fn setup_secret(tx: &mut Tx<'_>, encryption: &ArEncryption, session_id: i64)
     };
     setup.secret(encryption)
 }
+
+/// Google identity resolution, audits and the first-factor decision share the caller's write lock.
+/// Tokens have already been verified outside the transaction; no request or rendering enters here.
+pub fn begin_google_session(
+    tx: &mut Tx<'_>, claims: &serde_json::Map<String,serde_json::Value>,
+    attributes: campfire_db::NewSession<'_>, remember_token: Option<&str>, notify: bool,
+    context: &Context,
+) -> Result<(User,Option<Session>)> {
+    use campfire_db::models::google_identity::{self,ResolutionKind};
+            let resolution = google_identity::GoogleIdentity::resolve(tx, claims)?;
+            let user = resolution.user;
+            let action = match resolution.kind {
+                ResolutionKind::Provisioned => Some(("user.create", json!({"method":"google"}))),
+                ResolutionKind::Linked => {
+                    Some(("google.sign_in.link", json!({"email":claims.get("email")})))
+                }
+                ResolutionKind::Existing => None,
+            };
+            if let Some((action, changes)) = action {
+                AuditLog::record(
+                    tx,
+                    NewAuditLog {
+                        action: action.into(),
+                        actor: Some(Actor::from(&user)),
+                        target: Some(Target::from(&user)),
+                        changes: Some(changes),
+                        ..Default::default()
+                    },
+                    context,
+                )?;
+            }
+            let enabled = user.two_factor_enabled(tx.conn())?;
+            let remembered = enabled
+                && campfire_db::TwoFactorRememberedDevice::find_valid(
+                    tx,
+                    remember_token,
+                    Some(user.id),
+                )?
+                .is_some();
+            let session = if enabled && !remembered {
+                None
+            } else {
+                let session = crate::authentication::start_session(
+                    tx,
+                    user.id,
+                    campfire_db::NewSession { two_factor_verified: remembered, ..attributes },
+                    notify,
+                )?;
+                crate::authentication::record_sign_in(
+                    tx,
+                    &user,
+                    "google",
+                    remembered.then_some("remembered_device"),
+                    context,
+                )?;
+                Some(session)
+            };
+            Ok((user, session))
+}

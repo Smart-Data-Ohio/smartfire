@@ -1,0 +1,29 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "tasks": [
+    {
+      "name": "saved item reminders",
+      "seconds": 17
+    },
+    {
+      "name": "scheduled messages",
+      "seconds": 17
+    },
+    {
+      "name": "poll closing",
+      "seconds": 17
+    },
+    {
+      "name": "stuck rooms",
+      "seconds": 300
+    },
+    {
+      "name": "calendar push channels",
+      "seconds": 3600
+    },
+    {
+      "name": "retention prune",
+      "seconds": 123
+    }
+  ]
+}

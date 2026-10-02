@@ -210,7 +210,7 @@ async fn perform<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, job: 
         Some(kind) => match serde_json::from_str(&job.arguments) {
             Err(error) => Err(JobError::discard(anyhow!("{} arguments aren't JSON: {error}", job.class))),
             Ok(arguments) => {
-                let execute = AssertUnwindSafe((kind.perform)(shared.context.clone(), arguments, job.version, execution)).catch_unwind();
+                let execute = AssertUnwindSafe((kind.perform)(shared.context.clone(), crate::retry::arguments(arguments), job.version, execution)).catch_unwind();
                 let finished = match policy.timeout {
                     Some(timeout) => tokio::time::timeout(timeout, execute).await,
                     None => Ok(execute.await),
@@ -245,12 +245,31 @@ pub(crate) fn decide(policy: &RetryPolicy, executions: u32, result: &JobResult, 
         Ok(Outcome::Again(wait)) => return Decision::Reschedule { wait: *wait, error: None, reset_attempts: true },
         Err(JobError::Discard(_)) => return Decision::Delete,
         Err(JobError::Fail(error)) => return Decision::Fail(describe(error)),
+        Err(JobError::RetryGroup {
+            error,
+            attempts,
+            discard_exhausted,
+            ..
+        }) => {
+            return match policy
+                .attempts(*attempts)
+                .retry_delay(executions, None, random)
+            {
+                Some(wait) => Decision::Reschedule {
+                    wait,
+                    error: Some(describe(error)),
+                    reset_attempts: false,
+                },
+                None if *discard_exhausted => Decision::Delete,
+                None => Decision::Fail(describe(error)),
+            };
+        }
         Err(error) => error,
     };
     let (retryable, retry_after) = match error {
         JobError::Retry { retry_after, .. } => (true, *retry_after),
         JobError::Error(error) => ((policy.retry_on)(error), None),
-        JobError::Discard(_) | JobError::Fail(_) => unreachable!(),
+        JobError::Discard(_) | JobError::Fail(_) | JobError::RetryGroup { .. } => unreachable!(),
     };
     let message = describe(error.error());
     match retryable.then(|| policy.retry_delay(executions, retry_after, random)).flatten() {
@@ -259,8 +278,8 @@ pub(crate) fn decide(policy: &RetryPolicy, executions: u32, result: &JobResult, 
     }
 }
 
-async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, policy: &RetryPolicy, result: JobResult, elapsed: Duration) {
-    let decision = decide(policy, job.attempts, &result, rand::random::<f64>());
+async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, policy: &RetryPolicy, result: JobResult, elapsed: Duration) {
+    let (decision, arguments) = decision_with_metadata(policy, job, &result, rand::random::<f64>());
     let (class, id, executions) = (job.class.as_str(), job.id, job.attempts);
     let elapsed_ms = elapsed.as_millis() as u64;
     match (&result, &decision) {
@@ -269,6 +288,12 @@ async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, pol
         (Err(JobError::Discard(error)), _) => tracing::warn!(job = class, id, error = describe(error), "discarded"),
         (Err(_), Decision::Reschedule { wait, error, .. }) => tracing::warn!(job = class, id, executions, retry_in = ?wait, error, "failed, retrying"),
         (Err(_), Decision::Fail(error)) => tracing::error!(job = class, id, executions, error, "failed"),
+        (Err(JobError::RetryGroup { error, .. }), Decision::Delete) => tracing::error!(
+            job = class,
+            id,
+            error = describe(error),
+            "retry handler exhausted"
+        ),
         (Err(_), Decision::Delete) => {}
     }
 
@@ -277,11 +302,14 @@ async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, pol
     let deadline = Instant::now() + shared.config.lease;
     let mut backoff = COMPLETION_BACKOFF;
     let written = loop {
-        let (runner, decision) = (shared.id.clone(), decision.clone());
+        let (runner, decision, arguments) = (shared.id.clone(), decision.clone(), arguments.clone());
         let written = shared
             .db
             .write(move |tx| {
                 let now = tx.now();
+                if let Some(arguments) = arguments {
+                    tx.conn().execute("UPDATE background_jobs SET arguments=? WHERE id=? AND status='running' AND claimed_by=?", rusqlite::params![arguments,id,runner])?;
+                }
                 match decision {
                     Decision::Delete => store::delete(tx.conn(), id, &runner),
                     Decision::Reschedule { wait, error, reset_attempts } => {
@@ -301,12 +329,39 @@ async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, pol
         }
     };
     match written {
-        Ok(true) => {}
+        Ok(true) => {
+            if let (Err(JobError::RetryGroup {error,discard_exhausted:true,..}),Decision::Delete)=(&result,&decision)
+                && let Some(callback)=shared.registry.get(class).and_then(|kind|kind.exhausted.as_ref())
+            {
+                callback(shared.context.clone(),crate::retry::arguments(serde_json::from_str(&job.arguments).unwrap_or_default()),job.version,error);
+            }
+        }
         // Its lease expired and it was recovered: the other claim's outcome stands.
         Ok(false) => tracing::warn!(job = class, id, "the job's claim was lost while it ran; its outcome wasn't recorded"),
         Err(error) => tracing::error!(job = class, id, %error, "recording the job's outcome failed; it's retried when its lease expires"),
     }
     // The queue claims again when this task ends, so a retry that's already due runs then.
+}
+
+pub(crate) fn decision_with_metadata(
+    policy: &RetryPolicy,
+    job: &Claimed,
+    result: &JobResult,
+    random: f64,
+) -> (Decision, Option<String>) {
+    let mut state =
+        crate::retry::State::from_value(serde_json::from_str(&job.arguments).unwrap_or_default());
+    match result {
+        Err(JobError::RetryGroup { key, .. }) => {
+            let count = state.increment(key);
+            (decide(policy, count, result, random), Some(state.encode()))
+        }
+        Ok(Outcome::Again(_)) if !state.counts.is_empty() => (
+            decide(policy, job.attempts, result, random),
+            Some(state.arguments.to_string()),
+        ),
+        _ => (decide(policy, job.attempts, result, random), None),
+    }
 }
 
 /// Extends the leases of the jobs being performed, until the runner has stopped.
@@ -357,8 +412,10 @@ async fn recover<C: Send + Sync + 'static>(shared: &Shared<C>) -> campfire_db::R
     let mut due = Vec::new();
     for orphan in orphans {
         let attempts = shared.registry.get(&orphan.class).map_or(1, |kind| kind.policy.attempts);
-        let retry = orphan.attempts < attempts;
-        let error = format!("the process performing it stopped (execution {} of {attempts})", orphan.attempts);
+        let state = crate::retry::State::from_value(serde_json::from_str(&orphan.arguments).unwrap_or_default());
+        let interrupted = state.interrupted_executions(orphan.attempts);
+        let retry = interrupted < attempts;
+        let error = format!("the process performing it stopped (execution {interrupted} of {attempts})");
         let (id, message) = (orphan.id, error.clone());
         if shared.db.write(move |tx| store::recover(tx.conn(), id, retry, &message, tx.now())).await? {
             if retry {

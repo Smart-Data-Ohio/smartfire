@@ -1,0 +1,433 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "now": 1790769600,
+  "authorize": [
+    "https://accounts.google.com/o/oauth2/v2/auth?client_id=test-client-id&redirect_uri=http%3A%2F%2Ftest.host%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events&access_type=offline&prompt=consent&state=signed-state",
+    "https://accounts.google.com/o/oauth2/v2/auth?client_id=test-client-id&redirect_uri=http%3A%2F%2Ftest.host%2Fgoogle%2Fcallback&response_type=code&scope=openid+email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.file&access_type=offline&prompt=consent&state=signed-state"
+  ],
+  "refresh": {
+    "access_token": "refreshed-access-token",
+    "expires_in": 3600,
+    "token_type": "Bearer"
+  },
+  "invalid_grant": {
+    "error": "invalid_grant",
+    "error_description": "Token has been expired or revoked."
+  },
+  "drive_file": {
+    "id": "1AbcDefGhIjKlMnOpQrSt",
+    "name": "Q3 Planning",
+    "mimeType": "application/vnd.google-apps.document",
+    "modifiedTime": "2026-09-16T10:30:00.000Z",
+    "owners": [
+      {
+        "displayName": "Riel"
+      }
+    ],
+    "webViewLink": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit",
+    "iconLink": "https://drive-thirdparty.googleusercontent.com/16/type/document"
+  },
+  "drive_list": {
+    "files": [
+      {
+        "id": "1AbcDefGhIjKlMnOpQrSt",
+        "name": "Q3 Planning",
+        "mimeType": "application/vnd.google-apps.document",
+        "modifiedTime": "2026-09-16T10:30:00.000Z",
+        "owners": [
+          {
+            "displayName": "Riel"
+          }
+        ],
+        "webViewLink": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+      },
+      {
+        "id": "2BcdEfgHiJkLmNoPqRsTu",
+        "name": "Budget 2026",
+        "mimeType": "application/vnd.google-apps.spreadsheet",
+        "modifiedTime": "2026-09-15T09:00:00.000Z",
+        "owners": [
+          {
+            "displayName": "Jon"
+          }
+        ],
+        "webViewLink": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "insert",
+      "responses": [
+        [
+          200,
+          "{\"id\":\"abc123\"}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": "{\"summary\":\"Party\"}",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": {
+        "id": "abc123"
+      },
+      "error": null
+    },
+    {
+      "name": "expired",
+      "responses": [
+        [
+          200,
+          "{\"access_token\":\"refreshed-access-token\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+        ],
+        [
+          200,
+          "{\"id\":\"abc123\"}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/token",
+          "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&refresh_token=refresh-token&grant_type=refresh_token",
+          "content_type": "application/x-www-form-urlencoded",
+          "access_token": null
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": "{\"summary\":\"Party\"}",
+          "content_type": "application/json",
+          "access_token": "refreshed-access-token"
+        }
+      ],
+      "result": {
+        "id": "abc123"
+      },
+      "error": null
+    },
+    {
+      "name": "401",
+      "responses": [
+        [
+          401,
+          ""
+        ],
+        [
+          200,
+          "{\"access_token\":\"refreshed-access-token\",\"expires_in\":3600,\"token_type\":\"Bearer\"}"
+        ],
+        [
+          200,
+          "{}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": "{}",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/token",
+          "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&refresh_token=refresh-token&grant_type=refresh_token",
+          "content_type": "application/x-www-form-urlencoded",
+          "access_token": null
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": "{}",
+          "content_type": "application/json",
+          "access_token": "refreshed-access-token"
+        }
+      ],
+      "result": {},
+      "error": null
+    },
+    {
+      "name": "invalid_grant",
+      "responses": [
+        [
+          400,
+          "{\"error\":\"invalid_grant\",\"error_description\":\"Token has been expired or revoked.\"}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/token",
+          "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&refresh_token=refresh-token&grant_type=refresh_token",
+          "content_type": "application/x-www-form-urlencoded",
+          "access_token": null
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::Unauthorized",
+        "message": "Google rejected the refresh token"
+      }
+    },
+    {
+      "name": "drive_file",
+      "responses": [
+        [
+          200,
+          "{\"id\":\"1AbcDefGhIjKlMnOpQrSt\",\"name\":\"Q3 Planning\",\"mimeType\":\"application/vnd.google-apps.document\",\"modifiedTime\":\"2026-09-16T10:30:00.000Z\",\"owners\":[{\"displayName\":\"Riel\"}],\"webViewLink\":\"https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit\",\"iconLink\":\"https://drive-thirdparty.googleusercontent.com/16/type/document\"}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": {
+        "id": "1AbcDefGhIjKlMnOpQrSt",
+        "name": "Q3 Planning",
+        "mimeType": "application/vnd.google-apps.document",
+        "modifiedTime": "2026-09-16T10:30:00.000Z",
+        "owners": [
+          {
+            "displayName": "Riel"
+          }
+        ],
+        "webViewLink": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit",
+        "iconLink": "https://drive-thirdparty.googleusercontent.com/16/type/document"
+      },
+      "error": null
+    },
+    {
+      "name": "drive_search",
+      "responses": [
+        [
+          200,
+          "{\"files\":[{\"id\":\"1AbcDefGhIjKlMnOpQrSt\",\"name\":\"Q3 Planning\",\"mimeType\":\"application/vnd.google-apps.document\",\"modifiedTime\":\"2026-09-16T10:30:00.000Z\",\"owners\":[{\"displayName\":\"Riel\"}],\"webViewLink\":\"https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit\"},{\"id\":\"2BcdEfgHiJkLmNoPqRsTu\",\"name\":\"Budget 2026\",\"mimeType\":\"application/vnd.google-apps.spreadsheet\",\"modifiedTime\":\"2026-09-15T09:00:00.000Z\",\"owners\":[{\"displayName\":\"Jon\"}],\"webViewLink\":\"https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit\"}]}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files?q=name+contains+%27bob%5C%27s%5C%5Cdraft%27+and+trashed%3Dfalse&pageSize=10&fields=files%28id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%29&orderBy=modifiedTime+desc&spaces=drive",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": {
+        "files": [
+          {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "mimeType": "application/vnd.google-apps.document",
+            "modifiedTime": "2026-09-16T10:30:00.000Z",
+            "owners": [
+              {
+                "displayName": "Riel"
+              }
+            ],
+            "webViewLink": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          {
+            "id": "2BcdEfgHiJkLmNoPqRsTu",
+            "name": "Budget 2026",
+            "mimeType": "application/vnd.google-apps.spreadsheet",
+            "modifiedTime": "2026-09-15T09:00:00.000Z",
+            "owners": [
+              {
+                "displayName": "Jon"
+              }
+            ],
+            "webViewLink": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+          }
+        ]
+      },
+      "error": null
+    },
+    {
+      "name": "drive_forbidden",
+      "responses": [
+        [
+          403,
+          "{}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Cowners%28displayName%29%2CwebViewLink%2CiconLink&supportsAllDrives=true",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::NotFound",
+        "message": "Google drive entry not found"
+      }
+    },
+    {
+      "name": "calendar_quota",
+      "responses": [
+        [
+          403,
+          "{\"error\":{\"code\":403,\"errors\":[{\"reason\":\"rateLimitExceeded\"}]}}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": "{}",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::RateLimited",
+        "message": "Google Calendar request rate limited (rateLimitExceeded)"
+      }
+    },
+    {
+      "name": "calendar_forbidden",
+      "responses": [
+        [
+          403,
+          "{\"error\":{\"code\":403,\"errors\":[{\"reason\":\"forbidden\"}]}}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": "{}",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::Forbidden",
+        "message": "Google Calendar request forbidden (403)"
+      }
+    },
+    {
+      "name": "malformed",
+      "responses": [
+        [
+          200,
+          "{oops"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events",
+          "body": "{}",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::Unavailable",
+        "message": "Google Calendar request failed (JSON::ParserError)"
+      }
+    },
+    {
+      "name": "pages",
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"id\":\"one\"}],\"nextPageToken\":\"token-2\"}"
+        ],
+        [
+          200,
+          "{\"items\":[{\"id\":\"two\"}]}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-09-30T13%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-09-30T13%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken&pageToken=token-2",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": {
+        "items": [
+          {
+            "id": "one"
+          },
+          {
+            "id": "two"
+          }
+        ]
+      },
+      "error": null
+    }
+  ],
+  "email_tokens": [
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJ0ZXN0LWNsaWVudC1pZCIsImV4cCI6MTc5MDc3MzIwMCwiZW1haWwiOiJkYXZpZEBnbWFpbC50ZXN0Iiwic3ViIjoiZ29vZ2xlLXN1Yi0xMjMifQ.dGVzdC1zaWduYXR1cmU",
+      "email": "david@gmail.test",
+      "error": null
+    },
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiYXVkIjoidGVzdC1jbGllbnQtaWQiLCJleHAiOjE3OTA3NzMyMDAsImVtYWlsIjoiZGF2aWRAZ21haWwudGVzdCIsInN1YiI6Imdvb2dsZS1zdWItMTIzIn0.dGVzdC1zaWduYXR1cmU",
+      "email": "david@gmail.test",
+      "error": null
+    },
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJldmlsIiwiYXVkIjoidGVzdC1jbGllbnQtaWQiLCJleHAiOjE3OTA3NzMyMDAsImVtYWlsIjoiZGF2aWRAZ21haWwudGVzdCIsInN1YiI6Imdvb2dsZS1zdWItMTIzIn0.dGVzdC1zaWduYXR1cmU",
+      "email": null,
+      "error": "Google rejected the connection"
+    },
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJvdGhlciIsImV4cCI6MTc5MDc3MzIwMCwiZW1haWwiOiJkYXZpZEBnbWFpbC50ZXN0Iiwic3ViIjoiZ29vZ2xlLXN1Yi0xMjMifQ.dGVzdC1zaWduYXR1cmU",
+      "email": null,
+      "error": "Google rejected the connection"
+    },
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJ0ZXN0LWNsaWVudC1pZCIsImV4cCI6MTc5MDc2OTYwMCwiZW1haWwiOiJkYXZpZEBnbWFpbC50ZXN0Iiwic3ViIjoiZ29vZ2xlLXN1Yi0xMjMifQ.dGVzdC1zaWduYXR1cmU",
+      "email": null,
+      "error": "Google rejected the connection"
+    },
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJ0ZXN0LWNsaWVudC1pZCIsImV4cCI6MTc5MDc3MzIwMCwiZW1haWwiOm51bGwsInN1YiI6Imdvb2dsZS1zdWItMTIzIn0.dGVzdC1zaWduYXR1cmU",
+      "email": null,
+      "error": "Google rejected the connection"
+    },
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJ0ZXN0LWNsaWVudC1pZCIsImV4cCI6MTc5MDc3MzIwMCwiZW1haWwiOiIgIiwic3ViIjoiZ29vZ2xlLXN1Yi0xMjMifQ.dGVzdC1zaWduYXR1cmU",
+      "email": null,
+      "error": "Google rejected the connection"
+    },
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJ0ZXN0LWNsaWVudC1pZCIsImV4cCI6IjE3OTA3NzMyMDBzdWZmaXgiLCJlbWFpbCI6ImRhdmlkQGdtYWlsLnRlc3QiLCJzdWIiOiJnb29nbGUtc3ViLTEyMyJ9.dGVzdC1zaWduYXR1cmU",
+      "email": "david@gmail.test",
+      "error": null
+    }
+  ]
+}

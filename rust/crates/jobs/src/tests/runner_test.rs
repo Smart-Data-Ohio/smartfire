@@ -813,3 +813,64 @@ fn decisions_follow_retry_on_and_discard_on() {
         Decision::Reschedule { wait: Duration::from_secs(5), error: None, reset_attempts: true }
     );
 }
+
+#[tokio::test]
+async fn google_recovery_preserves_completed_exception_group_budgets() {
+    let (registry,mut performed)=echo_registry();let h=harness(&registry,&config());let id=h.enqueue(Echo{n:123}).await;
+    h.db.write(move |tx| {
+        let args=serde_json::json!({"_campfire_retry_metadata_v1":{"arguments":{"n":123},"counts":{"[Google::Client::Unavailable]":7,"[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]":4}}}).to_string();
+        tx.conn().execute("UPDATE background_jobs SET status='running',attempts=12,claimed_by='dead-process',lease_expires_at=?,arguments=? WHERE id=?",rusqlite::params![tx.now(),args,id])?;Ok(())
+    }).await.unwrap();
+    let runner=start(h.db.clone(),h.queue.clone(),registry,(),config());
+    h.wait_for("orphan recovery outcome",|jobs|jobs.is_empty() || jobs.iter().any(|job|job.status==FAILED)).await;
+    assert!(h.job(id).is_none(),"Recovery spent the completed exception handlers' attempts again: {:?}",h.job(id));
+    assert_eq!(next(&mut performed).await,(123,13));runner.shutdown(Duration::from_secs(5)).await;
+}
+
+#[tokio::test]
+async fn exhaustion_blocks_follow_committed_owned_outcomes_and_skip_ordinary_discards() {
+    let (started, mut starts)=mpsc::unbounded_channel();
+    let release=Arc::new(tokio::sync::Notify::new());
+    let reported=Arc::new(Mutex::new(Vec::new()));
+    let db_slot=Arc::new(std::sync::OnceLock::<Database>::new());
+    let mut registry=Registry::new();
+    let gate=release.clone();
+    registry.register(move |(),job:Echo,_:Execution| {
+        let (started,gate)=(started.clone(),gate.clone());
+        async move {
+            started.send(job.n).unwrap();
+            gate.notified().await;
+            if job.n==3 {return Err(JobError::discard(anyhow::anyhow!("ordinary discard")));}
+            let mut error=JobError::retry_group(anyhow::anyhow!("fixture unavailable"),"fixture",1);
+            if let JobError::RetryGroup {discard_exhausted,..}=&mut error {*discard_exhausted=true;}
+            Err(error)
+        }
+    });
+    let observed=reported.clone();let slot=db_slot.clone();
+    registry.on_exhausted::<Echo,_>(move |(),job,_| {
+        let count=slot.get().unwrap().read_blocking(|c|Ok(c.query_row("SELECT count(*) FROM background_jobs WHERE json_extract(arguments,'$.n')=?",[job.n],|r|r.get::<_,i64>(0))?)).unwrap();
+        observed.lock().unwrap().push((job.n,count));
+    });
+    let h=harness(&registry,&config());
+    db_slot.set(h.db.clone()).ok().unwrap();
+    let one=h.enqueue(Echo{n:1}).await;let two=h.enqueue(Echo{n:2}).await;let three=h.enqueue(Echo{n:3}).await;
+    let rejected=Arc::new(tokio::sync::Notify::new());let signal=rejected.clone();
+    h.db.write(move |tx| {
+        tx.conn().create_scalar_function("exhaustion_attempt",0,rusqlite::functions::FunctionFlags::SQLITE_UTF8,move |_| {signal.notify_one();Ok(0)})?;
+        tx.conn().execute_batch(&format!("CREATE TRIGGER reject_terminal BEFORE DELETE ON background_jobs WHEN OLD.id={one} BEGIN SELECT exhaustion_attempt();SELECT RAISE(ABORT,'terminal rollback');END;"))?;
+        Ok(())
+    }).await.unwrap();
+    let runner=start(h.db.clone(),h.queue.clone(),registry,(),config());
+    for _ in 0..3 {tokio::time::timeout(Duration::from_secs(5),starts.recv()).await.unwrap().unwrap();}
+    h.db.write(move |tx| {tx.conn().execute("UPDATE background_jobs SET claimed_by='other-runner' WHERE id=?",[two])?;Ok(())}).await.unwrap();
+    release.notify_waiters();
+    tokio::time::timeout(Duration::from_secs(5),rejected.notified()).await.unwrap();
+    assert!(reported.lock().unwrap().is_empty(),"a rolled-back deletion must not report");
+    assert!(h.job(one).is_some());
+    h.db.write(|tx| {tx.conn().execute_batch("DROP TRIGGER reject_terminal")?;Ok(())}).await.unwrap();
+    h.wait_for("fenced terminal outcomes",|rows| rows.len()==1 && rows[0].id==two).await;
+    runner.shutdown(Duration::from_secs(5)).await;
+    assert_eq!(*reported.lock().unwrap(),[(1,0)],"exactly one report after COMMIT; lost claim and ordinary discard report nothing");
+    assert_eq!(h.job(two).unwrap().claimed_by.as_deref(),Some("other-runner"));
+    assert!(h.job(three).is_none());
+}

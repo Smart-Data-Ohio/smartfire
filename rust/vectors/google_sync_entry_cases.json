@@ -1,0 +1,2477 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-03-02T16:00:00Z",
+  "rows": [
+    {
+      "spec": {
+        "name": "going"
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "venue"
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": 699448333
+      },
+      "venue": {
+        "id": 699448333,
+        "name": "Lounge"
+      },
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825\n\nJoin: http://campfire.test/rooms/699448333",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "location": "Lounge",
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "no_end"
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": null,
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "maybe",
+        "steps": [
+          {},
+          {
+            "response": "maybe"
+          }
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                }
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "decline",
+        "steps": [
+          {},
+          {
+            "response": "declined",
+            "answers": [
+              [
+                200,
+                {}
+              ]
+            ]
+          }
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "time_change",
+        "steps": [
+          {},
+          {
+            "time_change": true
+          }
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:30:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                }
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "cancel",
+        "steps": [
+          {},
+          {
+            "cancel": true,
+            "answers": [
+              [
+                200,
+                {}
+              ]
+            ]
+          }
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "leave",
+        "steps": [
+          {},
+          {
+            "leave": true,
+            "answers": [
+              [
+                200,
+                {}
+              ]
+            ]
+          }
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "missing_account",
+        "account": false
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "disconnected",
+        "disconnected": true,
+        "existing": true
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [],
+          "error": null,
+          "entry": null,
+          "disconnected": "revoked",
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "invalid_grant",
+        "expired": true,
+        "answers": [
+          [
+            400,
+            {
+              "error": "invalid_grant"
+            }
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/token",
+              "body": {
+                "client_id": "test-client-id",
+                "client_secret": "FAKE-calendar-client-secret",
+                "refresh_token": "refresh-token",
+                "grant_type": "refresh_token"
+              },
+              "access_token": null
+            }
+          ],
+          "error": null,
+          "entry": null,
+          "disconnected": "Google rejected the connection",
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "two_runs",
+        "steps": [
+          {},
+          {}
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                }
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "conflict_twice",
+        "steps": [
+          {
+            "answers": [
+              [
+                409,
+                {}
+              ],
+              [
+                200,
+                {}
+              ]
+            ]
+          },
+          {}
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            },
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "status": "confirmed"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                }
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "insert_conflict",
+        "answers": [
+          [
+            409,
+            {}
+          ],
+          [
+            200,
+            {}
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            },
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "status": "confirmed"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "update_missing",
+        "existing": true,
+        "synced": true,
+        "answers": [
+          [
+            404,
+            {}
+          ],
+          [
+            200,
+            {}
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                }
+              },
+              "access_token": "access-token"
+            },
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "delete_404",
+        "existing": true,
+        "response": "declined",
+        "answers": [
+          [
+            404,
+            {}
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "insert_500",
+        "answers": [
+          [
+            500,
+            {}
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Error: Google Calendar request failed (500)"
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_job",
+        "job": true,
+        "answers": [
+          [
+            "timeout",
+            null
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Net::OpenTimeout)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_reconciler",
+        "answers": [
+          [
+            "timeout",
+            null
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": "Google::Client::Unavailable",
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Net::OpenTimeout)"
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_read",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "Net::ReadTimeout"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Net::ReadTimeout)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_write",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "Net::WriteTimeout"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Net::WriteTimeout)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_socket",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "SocketError"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (SocketError)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_tls",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "OpenSSL::SSL::SSLError"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (OpenSSL::SSL::SSLError)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_refused",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "Errno::ECONNREFUSED"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Errno::ECONNREFUSED)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_reset",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "Errno::ECONNRESET"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Errno::ECONNRESET)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_closed",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "EOFError"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (EOFError)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport_malformed",
+        "job": true,
+        "answers": [
+          [
+            "transport",
+            "Net::HTTPBadResponse"
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Net::HTTPBadResponse)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "quota_429",
+        "job": true,
+        "answers": [
+          [
+            429,
+            {}
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "RateLimited: Google Calendar request rate limited (429)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "quota_403",
+        "job": true,
+        "answers": [
+          [
+            403,
+            {
+              "error": {
+                "errors": [
+                  {
+                    "reason": "rateLimitExceeded"
+                  }
+                ]
+              }
+            }
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "RateLimited: Google Calendar request rate limited (rateLimitExceeded)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "permission_403",
+        "job": true,
+        "answers": [
+          [
+            403,
+            {
+              "error": {
+                "errors": [
+                  {
+                    "reason": "forbidden"
+                  }
+                ]
+              }
+            }
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Forbidden: Google Calendar request forbidden (403)"
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "delete_transport",
+        "job": true,
+        "existing": true,
+        "response": "declined",
+        "answers": [
+          [
+            "timeout",
+            null
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Unavailable: Google Calendar request failed (Net::OpenTimeout)"
+          },
+          "disconnected": null,
+          "jobs": [
+            {
+              "class": "Calendar::SyncEntryJob",
+              "args": [
+                390339825,
+                127326141
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "resurrect",
+        "steps": [
+          {},
+          {
+            "response": "declined",
+            "answers": [
+              [
+                200,
+                {}
+              ]
+            ]
+          },
+          {
+            "response": "going",
+            "answers": [
+              [
+                409,
+                {}
+              ],
+              [
+                200,
+                {}
+              ]
+            ]
+          }
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        },
+        {
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "campfire0000000n8gef20000000f5mnnk"
+              },
+              "access_token": "access-token"
+            },
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": {
+                "summary": "Launch party planning",
+                "description": "Finalize the launch checklist.\n\nFrom Smartfire: http://campfire.test/rooms/654632876/events/390339825",
+                "start": {
+                  "dateTime": "2026-03-04T11:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "end": {
+                  "dateTime": "2026-03-04T12:00:00-05:00",
+                  "timeZone": "America/New_York"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "status": "confirmed"
+              },
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": "2026-03-02 16:00:00 UTC",
+            "last_error": null
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "delete_410",
+        "existing": true,
+        "response": "declined",
+        "answers": [
+          [
+            410,
+            {}
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "missing_scope",
+        "scope": "openid email"
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "lost_scope",
+        "existing": true,
+        "scope": "openid email"
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "unreadable",
+        "existing": true,
+        "unreadable": true
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [],
+          "error": null,
+          "entry": null,
+          "disconnected": "The stored token could not be read; reconnect",
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "delete_500",
+        "existing": true,
+        "response": "declined",
+        "answers": [
+          [
+            500,
+            {}
+          ]
+        ]
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/campfire0000000n8gef20000000f5mnnk",
+              "body": null,
+              "access_token": "access-token"
+            }
+          ],
+          "error": null,
+          "entry": {
+            "event_id": 390339825,
+            "user_id": 127326141,
+            "google_event_id": "campfire0000000n8gef20000000f5mnnk",
+            "synced_at": null,
+            "last_error": "Error: Google Calendar request failed (500)"
+          },
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "missing_event",
+        "event_id": 0
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "missing_user",
+        "user_id": 0
+      },
+      "event": {
+        "id": 390339825,
+        "room_id": 654632876,
+        "title": "Launch party planning",
+        "description": "Finalize the launch checklist.",
+        "starts_at": "2026-03-04 16:00:00 UTC",
+        "ends_at": "2026-03-04 17:00:00 UTC",
+        "time_zone": "America/New_York",
+        "venue_room_id": null
+      },
+      "venue": null,
+      "observations": [
+        {
+          "calls": [],
+          "error": null,
+          "entry": null,
+          "disconnected": null,
+          "jobs": []
+        }
+      ]
+    }
+  ]
+}

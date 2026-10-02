@@ -48,7 +48,7 @@ async fn check_case(name: &str) {
         .read(move |conn| presenters::profile_sections::load(conn, DAVID, now))
         .await
         .unwrap();
-    sections.google.calendar_configured = app.booted.app.config.profile_google_calendar_configured;
+    sections.google.calendar_configured = app.booted.app.google.api().config.configured();
     assert_eq!(
         sections.status.manual_ooo,
         case["manual_ooo"].as_bool().unwrap(),

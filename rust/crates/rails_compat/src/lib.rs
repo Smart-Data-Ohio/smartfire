@@ -42,11 +42,12 @@ pub use json::encode as json_encode;
 /// Everything derived from `secret_key_base`, built once at boot and shared.
 pub struct Secrets {
     pub key_generator: KeyGenerator,
+    pub(crate) ar_encryption_key: std::sync::OnceLock<[u8; 32]>,
 }
 
 impl Secrets {
     pub fn new(secret_key_base: &str) -> Self {
-        Self { key_generator: KeyGenerator::new(secret_key_base) }
+        Self { key_generator: KeyGenerator::new(secret_key_base), ar_encryption_key: std::sync::OnceLock::new() }
     }
 }
 
