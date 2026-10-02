@@ -1,7 +1,6 @@
 //! `Accounts::BotsController` (reference/app/controllers/accounts/bots_controller.rb).
 
 pub mod credentials;
-mod date_parse;
 pub mod github_connections;
 pub mod grants;
 pub(crate) mod input_casts;
