@@ -7,6 +7,7 @@ use rusqlite::params;
 pub enum ActivitySource {
     Message(i64),
     WorkThreadEvent(i64),
+    BoardSlaNudge(i64),
 }
 
 impl ActivityItem {
@@ -60,6 +61,13 @@ impl ActivityItem {
                     Some(event.channel_thread_id),
                     allowed,
                 )
+            }
+            ActivitySource::BoardSlaNudge(id) => {
+                let Some(nudge) = crate::BoardSlaNudge::find_by_id(tx.conn(), id)? else {
+                    return Ok(None);
+                };
+                let allowed = skip_source_check || nudge.activity_recipient_ids().contains(&user_id);
+                ("BoardSlaNudge", id, None, allowed)
             }
         };
         if !allowed {
