@@ -10,6 +10,7 @@ use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format, permit_keys};
 
 const BUSY: &str = "That message is sending right now; try again in a moment.";
 async fn prepare(c: &mut Ctx) -> Result<()> {
+    c.rescue_not_found();
     before_actions(c, Before::default()).await?;
     features::active_human(c)?;
     c.no_store();

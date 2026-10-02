@@ -1,7 +1,4 @@
 //! Page-scoped reads for Message.with_rendering_details. No HTML or viewer state.
-pub mod providers;
-pub mod event_cards;
-pub mod twitter;
 
 use crate::models::poll::{Poll, PollOption, PollVote};
 use crate::{Boost, Message, Result, Room, Timestamp, User};
@@ -56,20 +53,16 @@ pub struct AgentStep {
     pub input_summary: Option<String>,
     pub output_summary: Option<String>,
 }
+#[derive(Clone)]
 pub struct RenderingUser {
     pub user: User,
     pub uploaded_avatar: bool,
     pub icon_name: Option<String>,
 }
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct RenderingRecords {
-    pub providers: providers::Providers,
-    pub twitter_posts: HashMap<i64,Vec<twitter::Post>>,
-    pub event_cards: HashMap<i64,Vec<event_cards::EventCard>>,
     pub cache: HashMap<i64, CacheDetails>,
     pub pr_thread_stamps: HashMap<i64, Timestamp>,
-    pub private_prs: HashMap<i64, Vec<i64>>,
-    pub fizzy_cards: HashMap<i64, Vec<i64>>,
     pub sources: HashMap<i64, Message>,
     pub quotes: HashMap<i64, Vec<(i64, i64)>>,
     pub rooms: HashMap<i64, Room>,
@@ -86,7 +79,7 @@ pub struct RenderingRecords {
     pub options: HashMap<i64, Vec<PollOption>>,
     pub votes: HashMap<i64, Vec<(PollVote, Option<String>)>>,
 }
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct CacheDetails {
     pub cards: Vec<Timestamp>,
     pub embeds: Vec<(i64, Option<Timestamp>)>,
@@ -116,9 +109,6 @@ impl RenderingRecords {
             return Ok(data);
         }
         let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
-        data.providers = providers::Providers::load(conn, &ids)?;
-        data.event_cards=event_cards::load(conn,&ids)?;
-        data.twitter_posts=twitter::load(conn,&ids)?;
         // WS8bm2 root cache seam. These association reads are bounded by the page,
         // and cache invalidation must include public and private provider rows alike.
         for (message, stamp) in rows(conn, "WITH page AS (SELECT id FROM messages WHERE id IN ($ids))
@@ -141,25 +131,10 @@ impl RenderingRecords {
                 .embeds
                 .push((reference, stamp));
         }
-        for (message, card, public) in rows(
-            conn,
-            "SELECT r.message_id,c.id,c.private=0 FROM github_pull_request_references r JOIN github_pull_requests c ON c.id=r.github_pull_request_id WHERE r.message_id IN ($ids) ORDER BY c.owner,c.repo,c.number",
-            &ids,
-            |r| Ok((r.get(0)?, r.get(1)?, r.get::<_, Option<bool>>(2)?)),
-        )? {
+        for message in rows(conn,
+            "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ($ids)",
+            &ids, |r| r.get(0))? {
             data.cache.entry(message).or_default().has_pull_requests = true;
-            // Public PR content is supplied by WS15; private/unknown rows carry no facts.
-            if public != Some(true) {
-                data.private_prs.entry(message).or_default().push(card);
-            }
-        }
-        for (message, card) in rows(
-            conn,
-            "SELECT r.message_id,c.id FROM fizzy_card_references r JOIN fizzy_cards c ON c.id=r.fizzy_card_id WHERE r.message_id IN ($ids) ORDER BY c.account_id,c.number",
-            &ids,
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )? {
-            data.fizzy_cards.entry(message).or_default().push(card);
         }
         for (message, reference, source) in rows(
             conn,
@@ -306,6 +281,27 @@ impl RenderingRecords {
         }
         Ok(data)
     }
+    /// The associations belonging to one root, without reloading the page. Cache keys
+    /// must not depend on unrelated search results (or their quoted sources).
+    pub fn scoped(&self, message: &Message) -> Self {
+        let mut data = self.clone();
+        data.quotes.retain(|id, _| *id == message.id);
+        let sources: HashSet<_> = message.reply_to_message_id.into_iter()
+            .chain(data.quotes.values().flatten().map(|(_, id)| *id)).collect();
+        data.sources.retain(|id, _| sources.contains(id));
+        let bodies: HashSet<_> = data.body_ids(std::slice::from_ref(message)).into_iter().collect();
+        data.bodies.retain(|id, _| bodies.contains(id));
+        let rooms: HashSet<_> = std::iter::once(message.room_id)
+            .chain(data.sources.values().map(|m| m.room_id)).collect();
+        data.rooms.retain(|id, _| rooms.contains(id));
+        data.direct_members.retain(|id, _| rooms.contains(id));
+        data.boosts.retain(|id, _| *id == message.id);
+        data.polls.retain(|id, _| *id == message.id);
+        let polls: HashSet<_> = data.polls.values().map(|p| p.id).collect();
+        data.options.retain(|id, _| polls.contains(id));
+        data.votes.retain(|id, _| polls.contains(id));
+        data
+    }
     pub fn users(
         &self,
         conn: &Connection,
@@ -317,6 +313,7 @@ impl RenderingRecords {
             .chain(self.sources.values())
             .map(|m| m.creator_id)
             .chain(self.boosts.values().flatten().map(|b| b.booster_id))
+            .chain(self.votes.values().flatten().map(|(vote, _)| vote.user_id))
             .chain(mentions.iter().copied())
             .collect::<HashSet<_>>()
             .into_iter()

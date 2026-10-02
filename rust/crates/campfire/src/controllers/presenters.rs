@@ -12,6 +12,7 @@ pub mod github;
 mod layout_preferences;
 pub mod link_embeds;
 mod message_cache;
+pub(crate) mod message_cache_preloads;
 mod message_dependencies;
 pub mod page;
 pub mod pagination;

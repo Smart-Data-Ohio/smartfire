@@ -7,6 +7,8 @@ mod coercion_tests;
 mod scheduled_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod review_tests;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, cast_integer, require_current_user};
@@ -15,6 +17,7 @@ use campfire_db::{Message, Role, Room, Timestamp};
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, halt};
 
 pub(crate) async fn room(c: &mut Ctx) -> Result<Room> {
+    c.rescue_not_found();
     let (_, room) = concerns::set_room(c).await?;
     if room.deleted_at.is_some() {
         return Err(Error::NotFound);
@@ -30,7 +33,8 @@ pub(crate) fn active_human(c: &Ctx) -> Result<()> {
     Ok(())
 }
 
-pub(crate) async fn reachable_message(c: &Ctx) -> Result<Message> {
+pub(crate) async fn reachable_message(c: &mut Ctx) -> Result<Message> {
+    c.rescue_not_found();
     let user_id = require_current_user(c)?.id;
     let id = c
         .param("message_id")

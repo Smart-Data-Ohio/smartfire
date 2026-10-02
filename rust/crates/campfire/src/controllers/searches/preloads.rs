@@ -19,6 +19,7 @@ pub(crate) struct Preloads {
     pub github: HashMap<i64, GithubRendering>,
     pub event_views: HashMap<i64, Vec<campfire_views::events::CardView>>,
     pub records: RenderingRecords,
+    pub cache: crate::controllers::presenters::message_cache_preloads::CacheFacts,
     pub users: HashMap<i64, RenderingUser>,
     pub attachments: HashMap<i64, campfire_storage::Blob>,
     pub icons: IconCatalog,
@@ -85,8 +86,9 @@ impl Preloads {
                 github.insert(*id, GithubRendering { html, stamp, refreshes });
             }
         }
+        let cache = crate::controllers::presenters::message_cache_preloads::CacheFacts::load(p, messages, &records)?;
         Ok(Self {
-            github, event_views, fizzy_cards, link_references,
+            cache, github, event_views, fizzy_cards, link_references,
             records,
             users,
             attachments,

@@ -22,6 +22,9 @@ use crate::response::{self, Body, CacheControl, ExpiresIn, Response, SendBody, S
 use crate::session::{Flash, Session};
 use crate::{Error, Result};
 
+#[derive(Clone)]
+struct RescueNotFound;
+
 pub struct Ctx {
     pub request: Request,
     /// `params`: body params, then query params, then path params, merged like Rails.
@@ -493,6 +496,12 @@ impl Ctx {
         response
     }
 
+    /// Controller-level `rescue_from ActiveRecord::RecordNotFound { head :not_found }`.
+    /// Routing errors and controllers without this rescue retain PublicExceptions rendering.
+    pub fn rescue_not_found(&mut self) {
+        self.extensions.insert(RescueNotFound);
+    }
+
     /// `head status, location: url`
     pub fn head_with_location(&mut self, status: StatusCode, location: &str) -> Result<Response> {
         let location = self.compute_location(location)?;
@@ -703,6 +712,9 @@ impl Ctx {
         let mut response = match result {
             Ok(response) => response,
             Err(Error::Halt(response)) => *response,
+            Err(Error::NotFound) if self.extensions.get::<RescueNotFound>().is_some() => {
+                self.head(StatusCode::NOT_FOUND)
+            }
             Err(error) => return self.error_response(error),
         };
 

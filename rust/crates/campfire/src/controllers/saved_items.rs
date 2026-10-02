@@ -7,6 +7,7 @@ use campfire_db::{Message, Room, SavedItem, SavedItemChanges, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 
 async fn prepare(c: &mut Ctx) -> Result<()> {
+    c.rescue_not_found();
     before_actions(c, Before::default()).await?;
     c.no_store();
     c.set_header("Pragma", "no-cache");

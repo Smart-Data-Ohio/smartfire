@@ -22,7 +22,6 @@ async fn render(c: &mut Ctx) -> Result {
         .param_str("id")
         .and_then(cast_integer)
         .ok_or(Error::NotFound)?;
-    c.respond_to(&[&format::HTML])?;
     let app = c.app().clone();
     let card = c
         .app()
@@ -52,6 +51,8 @@ async fn render(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(page::db_error)?;
+    // Rails resolves the reference before choosing the response template's format.
+    c.respond_to(&[&format::HTML])?;
     page::bare(c, StatusCode::OK, &format::HTML, |ctx| {
         campfire_views::message_links::Frame {
             ctx,

@@ -74,7 +74,9 @@ async fn composite_keys_and_private_provider_frames_match_actual_rails_transitio
                 for zone in ["UTC", "Hawaii"] {
                     let mut p = Presenter::new(conn, &state, None);
                     p.render_zone = campfire_views::time::Zone::lookup(zone).unwrap();
-                    let p = p.preload_search(std::slice::from_ref(&message))?;
+                    let batch = p.preload_search(&[message.clone(), Message::find(conn, id("source_id"))?, Message::find(conn, 935962047)?])?;
+                    assert_eq!(p.message_fragment_cache_key(&message,"https://campfire.test")?,batch.message_fragment_cache_key(&message,"https://campfire.test")?,"singleton and mixed provider/quote cache facts differ: {zone}");
+                    let p = batch;
                     assert_eq!(
                         p.message_collection_cache_key(&message)?,
                         oracle()["cases"][i]["expanded_zones"][zone]
