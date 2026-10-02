@@ -1,4 +1,4 @@
-# PR #189 default-visible assertion audit
+# PR #189 element-visibility assertion audit
 
 Pinned originals: Rails d7c7de9264c63015be398001d7a1094e7695a6db.
 All line numbers below refer to `test/system/<file>_test.rb` at that pin;
@@ -56,6 +56,62 @@ write response. V16–V23 check the explicit Capybara element lookups, since
 Playwright actionability also omits opacity.
 Each lookup and its subsequent action share the original timeout budget.
 
+## Follow-up audit: visibility on the asserted node
+
+The follow-up sweep covers every ported `behavior*.mjs` assertion, including
+supplementary Markdown, threads, composer, boost and search checks. Direct
+selector assertions test their selected node with the pinned atom. A visible
+child or ancestor cannot stand in for that node. Default-visible message text
+uses the original `.message__body` wrapper; its existing exact presentation
+text/count oracle is retained in the same observation. Two-second defaults,
+ten-second explicit delivery/conversation waits and the twenty-second keyword
+highlight wait come from the pinned originals. The URL-card broadcast wait
+remains fifteen seconds. No timeout was widened.
+
+| ID | Assertion corrected | Pinned Rails line and visibility requirement | Served probe |
+| --- | --- | --- | --- |
+| E1 | Markdown code source: check `pre code` itself before reading bytes | workspace_markdown:334; the separate visible keyword assertion at 340 does not prove the code element visible | hidden-code-visible-token |
+| E2 | Initial Design review heading on author and peer: check `h2` itself | workspace_markdown:55,326 (called at 57/59); a visible message row does not prove its heading visible | transparent-initial-heading |
+| E3 | Shared message-text count: select visible `.message__body`, retain presentation text/count oracle | helper:114–115; a descendant with overridden visibility cannot substitute for the selected wrapper | hidden-body-visible-presentation |
+| E4 | Thread delivery and initial-message checks: select `.thread-panel__thread-content .message__body` | threads:577 (calls at 19/37/59/114); a visible row does not prove its body visible | transparent-thread-body |
+| E5 | Safety check delivery: check its `.message__body` | workspace_markdown:134 → helper:115; visible code is a separate assertion at 137 | hidden-safety-body-visible-code |
+| E6 | Markdown reply source: check its `.message__body` | workspace_markdown:145 → helper:115; a visible message row does not prove its body visible | hidden-reply-body-visible-presentation |
+| E7 | Delivered attachment reply: check `.message__reply-preview` itself | workspace_markdown:165, wait 10; the containing row and download link are separate nodes | transparent-attachment-reply-preview |
+| E8 | Combobox semantics: visibly locate the editor before reading its attributes | composer:74–99; `find_field` is visible by default; the popup does not prove its editor visible | transparent-combobox-lookup |
+| E9 | Restored thread draft: visible field and value together | composer:271, default-visible `assert_field` | transparent-restored-thread-draft |
+| E10 | Cleared thread draft after send: visible field and value together | composer:283, default-visible `assert_field`; earlier restored-field visibility cannot guard this later state | transparent-cleared-thread-draft |
+| E11 | Boost draft after message replacement: visible field and value together | boosting_messages:56 → private helper:92, default-visible `has_field?` | transparent-boost-draft-after-edit |
+| E12 | Boost draft after another user's boost: visible field and value together | boosting_messages:81 → private helper:92, default-visible `has_field?` | transparent-boost-draft-after-delivery |
+| E13 | Thread creation: check conversation itself, then its title, each at original wait 10 | threads:572–573; a child may override the hidden conversation's visibility | hidden-conversation-visible-children |
+| E14 | Submitted Markdown delivery: check body text, retaining exact rendered text | workspace_markdown:232 → helper:115; the visible `strong` child alone is insufficient | hidden-submitted-body-visible-strong |
+| E15 | Older search text: check the actual text element | search_forward_edit:35, visible `assert_text`, wait 10; message-row visibility does not show a transparent paragraph | transparent-older-search-text |
+| E16 | Initial URL-edit text: check the actual text element | search_forward_edit:69, visible `assert_text`, wait 10; message-row visibility does not show a transparent paragraph | transparent-initial-url-text |
+| E17 | Draft-thread creation: check conversation itself before its title | composer:255, visible conversation assertion, wait 10 | hidden-initial-composer-conversation |
+
+E1/E2 are Astra's exact probes. E3/E5/E6/E14 distinguish an invisible message
+body from a descendant whose visibility is explicitly restored. E4 hides only
+the thread body while its row remains visible. E13/E17 hide the conversation
+but restore its children's visibility; E17 applies only to the first creation,
+so a later conversation visibility assertion cannot reject it for a different
+state. E10 hides only the cleared-field state after a second message exists.
+All seventeen probes escaped the unchanged 70d325c5 assertion/helper modules
+on Rails and Rust before these corrections. The failing attachment attempt
+and initial overly broad submitted-source probe are retained in the report,
+with their valid isolated/corrected baseline evidence.
+
+Unchanged scopes were checked against their original selector: the thirty's
+keyword assertions select the `.code-token` itself (code_highlighting:91/98/
+129/141), and the custom/brand picker assertions select the image itself
+(message_toolbar:149/163). Neither is a proxy for an original parent assertion.
+Direct row counts/selectors in message-list, standalone-message and unread
+checks also retain their original row scope. Raw ids, browser focus/geometry,
+clipboard, event-routing metadata, saved-row facts and additional diagnostic
+observations are not default-visible selector assertions. Explicit hidden
+contexts, More-button `visible: false`, and security `visible: :all` checks
+remain unchanged. `assert_no_text` visibility/text filtering is distinct from
+this selected-element sweep; the pre-pagination alpha is absent from the
+initial fixture, and its original row absence check is retained.
+
 ## Every assertion in the thirty reviewed declarations
 
 Shared setup: real page status/path and one composer DOM node are setup
@@ -63,8 +119,8 @@ invariants, not borrowed Capybara assertions; Stimulus/cable connection checks
 are explicitly DOM/JavaScript readiness. Shared menu-open assertions map to
 helper:133–134 (visible menu, then visible owning row). Menu dismissal maps to
 default-visible `assert_no_selector`; the retained detached wait is stronger
-than that negative assertion. Shared `text` checks count only atom-visible
-message bodies and retain the original delivery budget. Shared field checks
+than that negative assertion. Shared `text` checks now count the original atom-visible `.message__body`
+wrappers (E3), together with the retained presentation text and delivery budget. Shared field checks
 are V1–V6. All other selector/count waits below already use the atom.
 
 | Exact reviewed declaration | Complete assertion inventory and pinned original lines |
@@ -103,8 +159,8 @@ are V1–V6. All other selector/count waits below already use the atom.
 The supplementary forwarded case also retains visible table (line 59), dialog,
 status and forwarding destination checks, and checks saved forward rows. The
 supplementary Markdown content checks retain visible text, table, checkboxes,
-const token and copy count (lines 325–341); the code-byte read follows that
-visible token guard. V14 now checks the link and href together. The paging
+const token and copy count (lines 325–341); E1 guards the code element
+itself before the byte read, and E2 guards the initial heading itself. V14 now checks the link and href together. The paging
 search's additional final `inputValue` observation has no original Rails
 counterpart and is kept as an extra query-preservation fact; V15 covers the
 original visibility-scoped field assertion at line 26. IDs/deduplication,
