@@ -33,9 +33,8 @@ impl LoadedPreferences {
                 text_size: row.get("text_size")?,
                 time_zone: row.get("time_zone")?,
                 time_zone_explicit: row.get("time_zone_explicit")?,
-                tour_completed: row
-                    .get::<_, Option<Timestamp>>("tour_completed_at")?
-                    .is_some(),
+                // Preserve the former `tour_completed_at IS NOT NULL` projection.
+                tour_completed: !matches!(row.get_ref("tour_completed_at")?, rusqlite::types::ValueRef::Null),
                 voice_mode: row.get("voice_mode")?,
                 push_to_talk_key: row.get("push_to_talk_key")?,
                 notification_sounds: NotificationSounds {
