@@ -3,32 +3,83 @@ use campfire_db::{CalendarEvent, Connection, Message, Result, Room, User};
 use campfire_views::events::CardView;
 
 pub fn for_message(conn: &Connection, message: &Message) -> Result<Vec<CardView>> {
-    let mut statement=conn.prepare("SELECT e.* FROM events e JOIN event_references r ON r.event_id=e.id WHERE r.message_id=? AND e.room_id=? ORDER BY e.starts_at,e.id")?;
-    let ids = statement
-        .query_map(rusqlite::params![message.id, message.room_id], |row| {
-            row.get::<_, i64>("id")
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    ids.into_iter()
-        .map(|id| {
-            let e = CalendarEvent::find(conn, id)?;
-            Ok(CardView {
-                id: e.id,
-                room_id: e.room_id,
-                title: e.title.clone(),
-                organizer_name: User::find(conn, e.organizer_id)?.name,
-                starts_at: e.starts_at.jiff(),
-                ends_at: e.ends_at.map(|t| t.jiff()),
-                time_zone: e.time_zone.clone(),
-                series: e.series(),
-                cancelled: e.cancelled(),
-                venue_name: e
-                    .venue_room_id
-                    .map(|id| Room::find(conn, id))
-                    .transpose()?
-                    .and_then(|r| r.name),
-                meet_link: e.meet_link.as_deref().and_then(rails_compat::safe_https),
-            })
+    Ok(for_messages(conn, std::slice::from_ref(message))?
+        .remove(&message.id)
+        .unwrap_or_default())
+}
+/// Preload persisted facts for the entire message/quote page, without viewer state.
+pub(crate) fn for_messages(
+    conn: &Connection,
+    messages: &[Message],
+) -> Result<std::collections::HashMap<i64, Vec<CardView>>> {
+    use std::collections::{HashMap, HashSet};
+    let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+    let mut events = CalendarEvent::for_message_ids(conn, &ids)?;
+    let rooms: HashMap<_, _> = messages.iter().map(|m| (m.id, m.room_id)).collect();
+    for (message, events) in &mut events {
+        events.retain(|event| Some(&event.room_id) == rooms.get(message));
+    }
+    let organizers: Vec<_> = events
+        .values()
+        .flatten()
+        .map(|event| event.organizer_id)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    let users: HashMap<_, _> = if organizers.is_empty() {
+        HashMap::new()
+    } else {
+        User::where_ids(conn, &organizers)?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect()
+    };
+    let venue_ids: Vec<_> = events
+        .values()
+        .flatten()
+        .filter_map(|event| event.venue_room_id)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    let venues: HashMap<_, _> = Room::for_ids(conn, &venue_ids)?
+        .into_iter()
+        .map(|room| (room.id, room))
+        .collect();
+    events
+        .into_iter()
+        .map(|(message, events)| {
+            let cards = events
+                .into_iter()
+                .map(|e| {
+                    Ok(CardView {
+                        id: e.id,
+                        room_id: e.room_id,
+                        title: e.title.clone(),
+                        organizer_name: users
+                            .get(&e.organizer_id)
+                            .ok_or(campfire_db::Error::RecordNotFound("User"))?
+                            .name
+                            .clone(),
+                        starts_at: e.starts_at.jiff(),
+                        ends_at: e.ends_at.map(|t| t.jiff()),
+                        time_zone: e.time_zone.clone(),
+                        series: e.series(),
+                        cancelled: e.cancelled(),
+                        venue_name: e
+                            .venue_room_id
+                            .map(|id| {
+                                venues
+                                    .get(&id)
+                                    .map(|room| room.name.clone())
+                                    .ok_or(campfire_db::Error::RecordNotFound("Room"))
+                            })
+                            .transpose()?
+                            .flatten(),
+                        meet_link: e.meet_link.as_deref().and_then(rails_compat::safe_https),
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok((message, cards))
         })
         .collect()
 }
