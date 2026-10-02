@@ -178,6 +178,7 @@ pub struct Platform {
 }
 
 pub mod room_files;
+pub mod work_threads;
 pub mod message_links;
 #[cfg(test)]
 mod card_html_audit;

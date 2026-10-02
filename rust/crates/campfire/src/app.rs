@@ -41,6 +41,7 @@ pub struct AppState {
     pub mail: crate::mail::State,
     pub agent_message_payload: crate::controllers::presenters::agent_payload::State,
     pub agent_repositories: crate::integrations::agent_repositories::State,
+    pub work_link_drive_titles: crate::controllers::work_threads::links::DriveTitles,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
@@ -213,6 +214,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         mail,
         agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
         agent_repositories,
+        work_link_drive_titles: Default::default(),
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,

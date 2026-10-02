@@ -1,0 +1,712 @@
+{
+  "reference": "d7c7de92",
+  "setup": [
+    "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,created_at,updated_at,last_activity_at) VALUES(900083001,486777696,127326141,'Linked work','planned','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00'),(900083002,486777696,127326141,'Other work','planned','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO events(id,room_id,organizer_id,title,starts_at,time_zone,created_at,updated_at) VALUES(900083003,486777696,127326141,'Same room','2026-03-03 16:00:00','UTC','2026-03-02 16:00:00','2026-03-02 16:00:00'),(900083004,654632876,127326141,'Other room','2026-03-03 16:00:00','UTC','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO github_pull_requests(id,owner,repo,number,created_at,updated_at) VALUES(900083005,'rails','rails',90999999,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+  ],
+  "rows": [
+    {
+      "name": "pr",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005
+      },
+      "duplicate": null,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "title": null,
+      "url": null,
+      "stored": true,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "pr-missing",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "github_pull_request": [
+          "must be set for a pull request link"
+        ]
+      },
+      "full_messages": [
+        "Github pull request must be set for a pull request link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "pr-event",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005,
+        "event_id": 900083003
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "event": [
+          "must be blank for a pull request link"
+        ]
+      },
+      "full_messages": [
+        "Event must be blank for a pull request link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "pr-url",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005,
+        "url": "url"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "url": [
+          "must be blank for a pull request link"
+        ]
+      },
+      "full_messages": [
+        "Url must be blank for a pull request link"
+      ],
+      "title": null,
+      "url": "url",
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "pr-title",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005,
+        "title": "title"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "title": [
+          "must be blank for a pull request link"
+        ]
+      },
+      "full_messages": [
+        "Title must be blank for a pull request link"
+      ],
+      "title": "title",
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "event",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event",
+        "event_id": 900083003
+      },
+      "duplicate": null,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "title": null,
+      "url": null,
+      "stored": true,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "event-missing",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "event": [
+          "must be set for an event link"
+        ]
+      },
+      "full_messages": [
+        "Event must be set for an event link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "event-pr",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event",
+        "event_id": 900083003,
+        "github_pull_request_id": 900083005
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "github_pull_request": [
+          "must be blank for an event link"
+        ]
+      },
+      "full_messages": [
+        "Github pull request must be blank for an event link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "event-url",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event",
+        "event_id": 900083003,
+        "url": "url"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "url": [
+          "must be blank for an event link"
+        ]
+      },
+      "full_messages": [
+        "Url must be blank for an event link"
+      ],
+      "title": null,
+      "url": "url",
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "event-title",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event",
+        "event_id": 900083003,
+        "title": "title"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "title": [
+          "must be blank for an event link"
+        ]
+      },
+      "full_messages": [
+        "Title must be blank for an event link"
+      ],
+      "title": "title",
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "event-other-room",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event",
+        "event_id": 900083004
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "event": [
+          "must belong to the thread's room"
+        ]
+      },
+      "full_messages": [
+        "Event must belong to the thread's room"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "drive",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij",
+        "title": "Plan"
+      },
+      "duplicate": null,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "title": "Plan",
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": true,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "drive-missing",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "url": [
+          "must be set for a Drive file link"
+        ]
+      },
+      "full_messages": [
+        "Url must be set for a Drive file link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "drive-pr",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij",
+        "github_pull_request_id": 900083005
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "github_pull_request": [
+          "must be blank for a Drive file link"
+        ]
+      },
+      "full_messages": [
+        "Github pull request must be blank for a Drive file link"
+      ],
+      "title": null,
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "drive-event",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij",
+        "event_id": 900083003
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "event": [
+          "must be blank for a Drive file link"
+        ]
+      },
+      "full_messages": [
+        "Event must be blank for a Drive file link"
+      ],
+      "title": null,
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "drive-long",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij",
+        "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "duplicate": null,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé...",
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": true,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "drive-plain-model-url",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "not a recognised Drive URL"
+      },
+      "duplicate": null,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "title": null,
+      "url": "not a recognised Drive URL",
+      "stored": true,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "kind-missing",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "kind": [
+          "can't be blank"
+        ]
+      },
+      "full_messages": [
+        "Kind can't be blank"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "kind-empty",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": ""
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "kind": [
+          "can't be blank"
+        ]
+      },
+      "full_messages": [
+        "Kind can't be blank"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "missing-thread",
+      "input": {
+        "channel_thread_id": 0,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "channel_thread": [
+          "must exist"
+        ]
+      },
+      "full_messages": [
+        "Channel thread must exist"
+      ],
+      "title": null,
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": null
+    },
+    {
+      "name": "missing-creator",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 0,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "duplicate": null,
+      "valid": false,
+      "errors": {
+        "created_by": [
+          "must exist"
+        ]
+      },
+      "full_messages": [
+        "Created by must exist"
+      ],
+      "title": null,
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "pr-duplicate",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005
+      },
+      "duplicate": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005
+      },
+      "valid": false,
+      "errors": {
+        "github_pull_request_id": [
+          "has already been taken"
+        ]
+      },
+      "full_messages": [
+        "Github pull request has already been taken"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "event-duplicate",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event",
+        "event_id": 900083003
+      },
+      "duplicate": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event",
+        "event_id": 900083003
+      },
+      "valid": false,
+      "errors": {
+        "event_id": [
+          "has already been taken"
+        ]
+      },
+      "full_messages": [
+        "Event has already been taken"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "drive-duplicate",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "duplicate": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "valid": false,
+      "errors": {
+        "url": [
+          "has already been taken"
+        ]
+      },
+      "full_messages": [
+        "Url has already been taken"
+      ],
+      "title": null,
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "other-thread",
+      "input": {
+        "channel_thread_id": 900083002,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "duplicate": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "title": null,
+      "url": "https://drive.google.com/file/d/abcdefghij",
+      "stored": true,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "nil-event-duplicate",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "event"
+      },
+      "duplicate": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "valid": false,
+      "errors": {
+        "event_id": [
+          "has already been taken"
+        ],
+        "event": [
+          "must be set for an event link"
+        ]
+      },
+      "full_messages": [
+        "Event has already been taken",
+        "Event must be set for an event link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "nil-pr-duplicate",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request"
+      },
+      "duplicate": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file",
+        "url": "https://drive.google.com/file/d/abcdefghij"
+      },
+      "valid": false,
+      "errors": {
+        "github_pull_request_id": [
+          "has already been taken"
+        ],
+        "github_pull_request": [
+          "must be set for a pull request link"
+        ]
+      },
+      "full_messages": [
+        "Github pull request has already been taken",
+        "Github pull request must be set for a pull request link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "nil-url-duplicate",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "drive_file"
+      },
+      "duplicate": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005
+      },
+      "valid": false,
+      "errors": {
+        "url": [
+          "has already been taken",
+          "must be set for a Drive file link"
+        ]
+      },
+      "full_messages": [
+        "Url has already been taken",
+        "Url must be set for a Drive file link"
+      ],
+      "title": null,
+      "url": null,
+      "stored": false,
+      "activity_delta": 0,
+      "thread_touched": false
+    },
+    {
+      "name": "pr-blank-columns",
+      "input": {
+        "channel_thread_id": 900083001,
+        "created_by_id": 127326141,
+        "kind": "pull_request",
+        "github_pull_request_id": 900083005,
+        "url": " ",
+        "title": " "
+      },
+      "duplicate": null,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "title": " ",
+      "url": " ",
+      "stored": true,
+      "activity_delta": 0,
+      "thread_touched": false
+    }
+  ]
+}

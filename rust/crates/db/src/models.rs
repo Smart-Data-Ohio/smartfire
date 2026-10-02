@@ -37,6 +37,8 @@ pub mod boost;
 pub mod bot_webhook_fanout;
 pub mod channel_thread;
 pub mod work_thread_event;
+pub mod work_thread_link;
+pub use work_thread_link::{NewWorkThreadLink, WorkThreadLink};
 pub mod calendar_event;
 pub mod calendar_dispatch;
 pub mod direct_room;

@@ -148,6 +148,17 @@ for path in files:
             status,owner,evidence="ported","WS12","board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
         if relative=="test/models/work_handoff_test.rb":
             status,owner,evidence="ported","WS12","agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
+        if relative == "test/controllers/work_threads_controller_test.rb":
+            status,owner,evidence="ported","WS12","human_work_tests.rs: complete Rails state/empty/agent-badge/link-box responses; work_read_test.rs: active human access, membership removal, hidden room exclusion and unbounded updated_at/id order."
+        if relative == "test/controllers/threads/work/handoffs_controller_test.rb":
+            status,owner,evidence="ported","WS12","human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
+        if relative == "test/controllers/threads/work/links_controller_test.rb":
+            if title in {"linking a drive file caches the name when credentials resolve it", "linking a drive file stores the url alone when resolution fails"}:
+                status,owner,evidence="deferred","WS14g client + WS12 installer","The public DriveTitle seam passes linker identity and extracts/escapes cached titles; success/error fixture adapters are tested. Real configured Google credentials and transport remain unproven until WS14g merges."
+            else:
+                status,owner,evidence="ported","WS12","human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+        if relative == "test/models/work_thread_link_test.rb":
+            status,owner,evidence="ported","WS12","work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")

@@ -100,7 +100,7 @@ pub fn post(
         error: None,
     })
 }
-fn history(p: &Presenter<'_>, id: i64) -> Result<Vec<History>> {
+pub fn history(p: &Presenter<'_>, id: i64) -> Result<Vec<History>> {
     history_records(p, campfire_db::WorkThreadEvent::for_thread(p.conn, id)?)
 }
 pub fn history_records(
@@ -162,22 +162,12 @@ pub fn history_records(
         })
         .collect()
 }
-fn links(p: &Presenter<'_>, thread: &ChannelThread) -> Result<Links> {
-    let mut stmt=p.conn.prepare("SELECT id,kind,github_pull_request_id,event_id,url,title FROM work_thread_links WHERE channel_thread_id=? ORDER BY id")?;
-    let rows = stmt
-        .query_map([thread.id], |r| {
-            Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, String>(1)?,
-                r.get::<_, Option<i64>>(2)?,
-                r.get::<_, Option<i64>>(3)?,
-                r.get::<_, Option<String>>(4)?,
-                r.get::<_, Option<String>>(5)?,
-            ))
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
+pub fn links(p: &Presenter<'_>, thread: &ChannelThread) -> Result<Links> {
+    let rows = campfire_db::WorkThreadLink::for_thread(p.conn, thread.id)?;
     let mut items = Vec::new();
-    for (id, kind, pr, event, url, title) in rows {
+    for record in rows {
+        let (id, kind, pr, event, url, title) = (record.id, record.kind, record.github_pull_request_id,
+            record.event_id, record.url, record.title);
         let mut link = Link {
             id,
             kind: kind.clone(),

@@ -164,6 +164,18 @@ impl WorkHandoff {
         }
         Ok(None)
     }
+    pub fn receivers_for(conn: &Connection, thread: &ChannelThread) -> Result<Vec<(String, i64)>> {
+        let ids = query_all(conn, "SELECT agents.id FROM agents WHERE user_id IN (SELECT user_id FROM memberships WHERE room_id=?)", [thread.room_id], |row| row.get::<_, i64>(0))?;
+        let mut receivers = Vec::new();
+        for id in ids {
+            let agent = Agent::find(conn, id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
+            if Self::receiver_error(conn, thread, Some(&agent))?.is_none() {
+                receivers.push((User::find(conn, agent.user_id)?.name, id));
+            }
+        }
+        receivers.sort_by_key(|(name, _)| rails_compat::unicode::downcase(name));
+        Ok(receivers)
+    }
     pub fn payload(&self, conn: &Connection) -> Result<Value> {
         let sender = User::find_by_id(conn, self.sender_id)?;
         Ok(

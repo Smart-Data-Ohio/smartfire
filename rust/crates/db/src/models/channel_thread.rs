@@ -31,6 +31,7 @@ mod agent_work;
 mod board;
 mod tag_assignment;
 mod work;
+mod work_listing;
 pub use agent_work::{AgentWorkChanges, tag_names_from_value};
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, board_page_number};
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};

@@ -57,6 +57,8 @@ pub mod messages;
 pub mod presenters;
 #[cfg(test)]
 mod activity_domain_tests;
+#[cfg(test)]
+mod human_work_tests;
 pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
@@ -77,6 +79,7 @@ pub mod internal_huddle;
 #[cfg(test)]
 mod internal_huddle_tests;
 pub mod workspace_icons;
+pub mod work_threads;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -348,6 +351,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "channel_threads#join" => arc(channel_threads::join),
         "channel_threads#leave" => arc(channel_threads::leave),
         "channel_threads#read" => arc(channel_threads::read),
+        "work_threads#index" => arc(work_threads::index),
+        "threads/work/handoffs#new" => arc(work_threads::new_handoff),
+        "threads/work/handoffs#create" => arc(work_threads::create_handoff),
+        "threads/work/links#index" => arc(work_threads::links_index),
+        "threads/work/links#create" => arc(work_threads::create_link),
+        "threads/work/links#destroy" => arc(work_threads::destroy_link),
         "message_forwards#create" => arc(message_forwards::create),
         "message_forwards#destinations" => arc(message_forwards::destinations),
         "message_forward_sources#forward_source" => arc(message_forwards::forward_source),

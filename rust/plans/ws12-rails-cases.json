@@ -1430,281 +1430,281 @@
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 16,
       "test": "a manager opens the handoff form",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 26,
       "test": "the current owner opens the handoff form",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 35,
       "test": "a plain member is forbidden",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 45,
       "test": "a non-member gets 404",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 55,
       "test": "an untracked thread is 422",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 65,
       "test": "a person hands off with a context package",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 94,
       "test": "a manager hands off a thread owned by someone else",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 104,
       "test": "handoff answers json with the work payload and package",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 118,
       "test": "handoff rejects an agent outside the room",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 130,
       "test": "handoff rejects a receiver missing manage_threads",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 140,
       "test": "handoff rejects the current owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 150,
       "test": "handoff rejects an over-capped package",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
       "line": 163,
       "test": "the handoff summary renders escaped in work history",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 14,
       "test": "index renders the panel link box for a room member",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 23,
       "test": "a non-manager member can open the link box",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 32,
       "test": "index is 404 for non-members and unknown threads",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 43,
       "test": "index is 422 for a thread without work tracking",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 52,
       "test": "linking a pull request resolves through for_reference and enqueues a card fetch",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 66,
       "test": "linking a pull request is 422 without a PR url",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 75,
       "test": "linking an event in the same room",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 85,
       "test": "linking a cancelled event in the same room still works",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 97,
       "test": "linking an event from another room is 404",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 105,
       "test": "linking an event without a choice is 422",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 113,
       "test": "linking a drive file without credentials stores the url alone",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 124,
       "test": "linking a drive file caches the name when credentials resolve it",
       "status": "deferred",
-      "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "owner": "WS14g client + WS12 installer",
+      "evidence": "The public DriveTitle seam passes linker identity and extracts/escapes cached titles; success/error fixture adapters are tested. Real configured Google credentials and transport remain unproven until WS14g merges."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 136,
       "test": "linking a drive file stores the url alone when resolution fails",
       "status": "deferred",
-      "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "owner": "WS14g client + WS12 installer",
+      "evidence": "The public DriveTitle seam passes linker identity and extracts/escapes cached titles; success/error fixture adapters are tested. Real configured Google credentials and transport remain unproven until WS14g merges."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 148,
       "test": "linking a drive file is 422 for an unrecognised url",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 157,
       "test": "linking with an unknown kind is 422",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 164,
       "test": "linking a duplicate is 422",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 174,
       "test": "a non-manager member can add and remove links",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 188,
       "test": "removing a link of each kind refreshes every box",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 207,
       "test": "removing an unknown link is 404",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 213,
       "test": "adding and removing is 404 for non-members",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 226,
       "test": "adding and removing is 422 without work tracking",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 238,
       "test": "html requests redirect back to the thread",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
     },
     {
       "file": "test/controllers/users/sidebars_boards_test.rb",
@@ -1870,41 +1870,41 @@
       "file": "test/controllers/work_threads_controller_test.rb",
       "line": 25,
       "test": "global work list filters by state and current room access",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete Rails state/empty/agent-badge/link-box responses; work_read_test.rs: active human access, membership removal, hidden room exclusion and unbounded updated_at/id order."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
       "line": 42,
       "test": "work page explains what work threads are and how to start one",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete Rails state/empty/agent-badge/link-box responses; work_read_test.rs: active human access, membership removal, hidden room exclusion and unbounded updated_at/id order."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
       "line": 64,
       "test": "owned-by-agents filter lists agent-owned work with the agent badge",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete Rails state/empty/agent-badge/link-box responses; work_read_test.rs: active human access, membership removal, hidden room exclusion and unbounded updated_at/id order."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
       "line": 90,
       "test": "work list rows hide the empty link box but show linked items",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete Rails state/empty/agent-badge/link-box responses; work_read_test.rs: active human access, membership removal, hidden room exclusion and unbounded updated_at/id order."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
       "line": 106,
       "test": "global work access requires an active human room member",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "human_work_tests.rs: complete Rails state/empty/agent-badge/link-box responses; work_read_test.rs: active human access, membership removal, hidden room exclusion and unbounded updated_at/id order."
     },
     {
       "file": "test/helpers/activity_items_helper_test.rb",
@@ -3366,89 +3366,89 @@
       "file": "test/models/work_thread_link_test.rb",
       "line": 11,
       "test": "pull request links require only the pull request",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 22,
       "test": "pull request links reject other columns",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 46,
       "test": "event links require only the event",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 55,
       "test": "event links reject other columns",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 74,
       "test": "event links must belong to the thread's room",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 81,
       "test": "drive file links require the url and keep an optional cached title",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 93,
       "test": "drive file links reject other columns",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 114,
       "test": "long drive titles truncate to the column limit",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 123,
       "test": "links are unique per thread",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 138,
       "test": "the same objects link to other threads",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
       "line": 157,
       "test": "destroying the thread destroys its links",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
