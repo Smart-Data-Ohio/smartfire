@@ -1,0 +1,353 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "cases": [
+    {
+      "name": "busy",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [
+        [
+          "2026-09-23T10:00:00Z",
+          "2026-09-23T11:00:00Z"
+        ]
+      ],
+      "ooo": []
+    },
+    {
+      "name": "cancelled",
+      "items": [
+        {
+          "status": "cancelled",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": []
+    },
+    {
+      "name": "focusTime",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          },
+          "eventType": "focusTime"
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": []
+    },
+    {
+      "name": "transparent",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          },
+          "transparency": "transparent"
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": []
+    },
+    {
+      "name": "ooo",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          },
+          "eventType": "outOfOffice"
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": [
+        [
+          "2026-09-23T10:00:00Z",
+          "2026-09-23T11:00:00Z"
+        ]
+      ]
+    },
+    {
+      "name": "self-declined",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          },
+          "attendees": [
+            {
+              "self": true,
+              "responseStatus": "declined"
+            }
+          ]
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": []
+    },
+    {
+      "name": "other-declined",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          },
+          "attendees": [
+            {
+              "responseStatus": "declined"
+            }
+          ]
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [
+        [
+          "2026-09-23T10:00:00Z",
+          "2026-09-23T11:00:00Z"
+        ]
+      ],
+      "ooo": []
+    },
+    {
+      "name": "truthy-self",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          },
+          "attendees": [
+            {
+              "self": 0,
+              "responseStatus": "declined"
+            }
+          ]
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": []
+    },
+    {
+      "name": "tentative",
+      "items": [
+        {
+          "status": "tentative",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [
+        [
+          "2026-09-23T10:00:00Z",
+          "2026-09-23T11:00:00Z"
+        ]
+      ],
+      "ooo": []
+    },
+    {
+      "name": "all-day",
+      "items": [
+        {
+          "start": {
+            "date": "2026-09-23"
+          },
+          "end": {
+            "date": "2026-09-24"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": []
+    },
+    {
+      "name": "all-day-ooo",
+      "items": [
+        {
+          "eventType": "outOfOffice",
+          "start": {
+            "date": "2026-03-07"
+          },
+          "end": {
+            "date": "2026-03-10"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": [
+        [
+          "2026-03-07T00:00:00-05:00",
+          "2026-03-10T00:00:00-04:00"
+        ]
+      ]
+    },
+    {
+      "name": "all-day-ooo-utc",
+      "items": [
+        {
+          "eventType": "outOfOffice",
+          "start": {
+            "date": "2026-03-07"
+          },
+          "end": {
+            "date": "2026-03-10"
+          }
+        }
+      ],
+      "zone": "UTC",
+      "busy": [],
+      "ooo": [
+        [
+          "2026-03-07T00:00:00Z",
+          "2026-03-10T00:00:00Z"
+        ]
+      ]
+    },
+    {
+      "name": "malformed",
+      "items": [
+        null,
+        "event",
+        {},
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "oops"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          }
+        },
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          }
+        },
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [],
+      "ooo": []
+    },
+    {
+      "name": "sort",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T13:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T13:30:00Z"
+          }
+        },
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T10:00:00Z"
+          },
+          "end": {
+            "dateTime": "2026-09-23T11:00:00Z"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [
+        [
+          "2026-09-23T10:00:00Z",
+          "2026-09-23T11:00:00Z"
+        ],
+        [
+          "2026-09-23T13:00:00Z",
+          "2026-09-23T13:30:00Z"
+        ]
+      ],
+      "ooo": []
+    },
+    {
+      "name": "offset",
+      "items": [
+        {
+          "status": "confirmed",
+          "start": {
+            "dateTime": "2026-09-23T06:00:00-04:00"
+          },
+          "end": {
+            "dateTime": "2026-09-23T07:00:00-04:00"
+          }
+        }
+      ],
+      "zone": "America/New_York",
+      "busy": [
+        [
+          "2026-09-23T10:00:00Z",
+          "2026-09-23T11:00:00Z"
+        ]
+      ],
+      "ooo": []
+    }
+  ]
+}

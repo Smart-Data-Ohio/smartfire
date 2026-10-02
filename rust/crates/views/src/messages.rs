@@ -971,6 +971,11 @@ pub fn event_cards(ctx: &ViewContext, message: &MessageView) -> h::Html {
     ))
 }
 
+/// The metadata-free, viewer-independent Drive chips, also used by the message composition.
+#[derive(Template)]
+#[template(path = "messages/_drive_attachments.html")]
+pub struct DriveAttachments<'a> { pub message: &'a MessageView }
+
 pub fn drive_attachment(url: &str) -> h::Html {
     h::link_to(
         url,

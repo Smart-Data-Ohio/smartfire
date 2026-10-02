@@ -1,0 +1,131 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "email_pattern": "\\A[a-zA-Z0-9.!\\#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\\z",
+  "email_options": 0,
+  "emails": [
+    {
+      "input": "a@example.test",
+      "eligible": true
+    },
+    {
+      "input": "a@localhost",
+      "eligible": true
+    },
+    {
+      "input": "a+b@external.test",
+      "eligible": true
+    },
+    {
+      "input": "a..b@external.test",
+      "eligible": true
+    },
+    {
+      "input": " a@example.test",
+      "eligible": false
+    },
+    {
+      "input": "a@invalid_underscore.test",
+      "eligible": false
+    },
+    {
+      "input": "a@x",
+      "eligible": true
+    },
+    {
+      "input": "😀@example.test",
+      "eligible": false
+    },
+    {
+      "input": "a@-bad.test",
+      "eligible": false
+    },
+    {
+      "input": "a@example.test\n",
+      "eligible": false
+    },
+    {
+      "input": "\"a\"@example.test",
+      "eligible": false
+    },
+    {
+      "input": "a@sub.example.test",
+      "eligible": true
+    }
+  ],
+  "selections": [
+    {
+      "input": null,
+      "ids": null
+    },
+    {
+      "input": "1",
+      "ids": null
+    },
+    {
+      "input": [
+        1,
+        " 2 ",
+        "01",
+        1
+      ],
+      "ids": [
+        1,
+        2
+      ]
+    },
+    {
+      "input": [],
+      "ids": []
+    },
+    {
+      "input": [
+        "mail@example.test"
+      ],
+      "ids": null
+    },
+    {
+      "input": [
+        null
+      ],
+      "ids": null
+    },
+    {
+      "input": [
+        true
+      ],
+      "ids": null
+    },
+    {
+      "input": [
+        [
+          1
+        ]
+      ],
+      "ids": null
+    },
+    {
+      "input": [
+        {}
+      ],
+      "ids": null
+    },
+    {
+      "input": [
+        "-1"
+      ],
+      "ids": null
+    },
+    {
+      "input": [
+        "1e2"
+      ],
+      "ids": null
+    },
+    {
+      "input": [
+        "1_2"
+      ],
+      "ids": null
+    }
+  ]
+}

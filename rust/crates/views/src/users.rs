@@ -7,6 +7,7 @@ use crate::accounts::HelpContact;
 use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
+pub mod google;
 pub mod sidebar;
 pub mod sidebar_composition;
 pub use sidebar::*;
