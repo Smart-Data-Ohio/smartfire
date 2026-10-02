@@ -114,8 +114,8 @@ impl BoardSlaNudge {
             errors.add("status_entered_at", "can't be blank");
         }
         let duplicate: bool = conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM board_sla_nudges WHERE channel_thread_id=? AND work_status IS ? AND stage IS ? AND status_entered_at IS ? AND id != ?)",
-            params![input.channel_thread_id, status, stage, input.status_entered_at, existing_id.unwrap_or(0)], |row| row.get(0))?;
+            "SELECT EXISTS(SELECT 1 FROM board_sla_nudges WHERE channel_thread_id=? AND work_status IS ? AND stage IS ? AND status_entered_at IS ? AND (? IS NULL OR id != ?))",
+            params![input.channel_thread_id, status, stage, input.status_entered_at, existing_id, existing_id], |row| row.get(0))?;
         if duplicate {
             errors.add(
                 "status_entered_at",
