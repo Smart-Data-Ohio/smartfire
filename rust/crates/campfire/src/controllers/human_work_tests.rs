@@ -146,6 +146,7 @@ async fn human_drive_title_uses_the_real_google_api_and_linkers_encrypted_accoun
             .without_job_runner()
             .await;
         setup(&app, row).await;
+        app.db().write(|tx| { tx.conn().execute("DELETE FROM google_accounts", [])?; Ok(()) }).await.unwrap();
         let transport = support::Recorded::new(vec![]);
         support::install(&app, transport.clone()).await;
         let expires = Timestamp::from_jiff(app.booted.app.clock.now())
