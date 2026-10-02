@@ -62,9 +62,8 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     Ok(c.head(StatusCode::NO_CONTENT))
 }
 
-/// Message#broadcast_reactions_replace, shared by human toggle/create and delete. WS11's
-/// separate bot controllers retain their own existing broadcast contract through the helpers.
-async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
+/// Message#broadcast_reactions_replace, shared by human, bot and agent reactions.
+pub(crate) async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
     let (app, id, base) = (c.app().clone(), message.id, page::renderer_base_url(c));
     c.app().db.read(move |conn| {
         let message = Message::find(conn, id)?;
@@ -128,19 +127,4 @@ pub(crate) async fn broadcast_create(c: &Ctx, message: &Message, boost: &Boost) 
         })
         .await
         .map_err(db_error)
-}
-
-/// `Message#broadcast_reactions_replace`, rendered without session-bound state.
-pub(crate) async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
-    let (app,message)=(c.app().clone(),message.clone());
-    let base_url=page::renderer_base_url(c);
-    c.app().db.read(move |conn| {
-        let presenter=crate::controllers::presenters::Presenter::new(conn,&app,None);
-        let view=presenter.message(&message)?;
-        let account=campfire_db::Account::first(conn)?;
-        let html=page::render_detached_at(&app,account.as_ref(),&base_url,|ctx|views::ReactionsPartial {ctx,message:&view}.render()).map_err(|error|campfire_db::Error::Other(error.to_string()))?;
-        let room=Room::find(conn,message.room_id)?;
-        app.broadcasts.message_reactions_replace(&room,&message,&html);
-        Ok(())
-    }).await.map_err(db_error)
 }
