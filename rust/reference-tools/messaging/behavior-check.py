@@ -269,7 +269,7 @@ for file in files:
         batches = [selected]  # No server writes; new contexts for each case.
     jobs = [(batch, args.mutant or "default") for batch in filter(None, batches)]
     if args.mutant_set:
-        jobs = [([case], variant) for case in selected for variant in diagnostic_variants[case]]
+        jobs = [([case], variant) for case in selected for variant in (mutation_variants[case] if args.negative else diagnostic_variants[case])]
     if args.negative and not args.mutant and not args.mutant_set:
         # A failed highlight check can still have posted a real message. Each
         # additional mutant therefore gets its own seed/database/server, not

@@ -231,7 +231,7 @@ for(const [name,variants] of visibilityAssertionMutations) {
 }
 export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
-  const variants=['default',...(reviewMutations.get(caseName)?.keys()||[])];
+  const variants=[...(mutations.has(caseName)?['default']:[]),...(reviewMutations.get(caseName)?.keys()||[])];
   return selected?variants.filter(name=>name===selected):variants;
 }
 export async function installMutation(page,caseName,probe,variant='default') {
