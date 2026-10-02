@@ -364,12 +364,9 @@ pub async fn stage_file(app: &App, path: std::path::PathBuf, filename: Filename,
 }
 
 /// Keeps a staged file once the write saving its row commits; a rollback drops it instead,
-/// which deletes the file.
+/// which deletes the file. Ownership is finalized before fallible model callbacks.
 pub fn keep_after_commit(tx: &mut campfire_db::Tx<'_>, staged: Staged) {
-    tx.after_commit(move |_| {
-        staged.keep();
-        Ok(())
-    });
+    tx.on_commit_success(move || { staged.keep(); });
 }
 
 /// Runs libvips, ffmpeg or ffprobe work on the blocking pool, a few jobs at a time: each can take

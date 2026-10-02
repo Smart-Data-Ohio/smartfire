@@ -173,6 +173,7 @@ pub struct Tx<'c> {
     env: &'c Env,
     in_transaction: bool,
     after_commit: Vec<AfterCommit>,
+    commit_finalizers: Vec<Box<dyn FnOnce() + Send>>,
     /// The first error persisting an emitted event (see [`EventSink::persist`]), which rolls the
     /// transaction back.
     persist_error: Option<Error>,
@@ -338,11 +339,23 @@ impl<'c> Tx<'c> {
                 env: self.env,
                 in_transaction: false,
                 after_commit: Vec::new(),
+                commit_finalizers: Vec::new(),
                 persist_error: None,
             };
             if let Err(error) = hook(&mut tx) {
                 tracing::error!(%error, "after_commit hook failed");
             }
+        }
+    }
+
+    /// Finalizes ownership of resources whose rows committed, before fallible model
+    /// callbacks. Captured guards are dropped on rollback, including savepoint rollback.
+    /// This is infallible resource bookkeeping, not an Active Record callback or DB write.
+    pub fn on_commit_success(&mut self, finalize: impl FnOnce() + Send + 'static) {
+        if self.in_transaction {
+            self.commit_finalizers.push(Box::new(finalize));
+        } else {
+            finalize();
         }
     }
 
@@ -374,6 +387,7 @@ impl<'c> Tx<'c> {
     /// fail the enclosing transaction through `persist_error`.
     pub fn savepoint<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let callbacks = self.after_commit.len();
+        let finalizers = self.commit_finalizers.len();
         let record_hooks: Vec<_> = self.after_commit.iter().enumerate().filter_map(|(i, item)| {
             if let AfterCommit::RecordHooks {hooks, ..} = item {Some((i, hooks.len()))} else {None}
         }).collect();
@@ -386,6 +400,7 @@ impl<'c> Tx<'c> {
             }
             Err(error) => {
                 self.after_commit.truncate(callbacks);
+                self.commit_finalizers.truncate(finalizers);
                 for (index, length) in record_hooks {
                     if let AfterCommit::RecordHooks {hooks, ..} = &mut self.after_commit[index] {hooks.truncate(length);}
                 }
@@ -400,7 +415,8 @@ impl<'c> Tx<'c> {
 
 /// Runs `f` in `BEGIN IMMEDIATE`, commits, then runs the after-commit queue. An error from
 /// `f` rolls back and discards the queue. An error from an after-commit hook is returned
-/// after waking any remaining committed jobs, discarding later model callbacks
+/// after finalizing committed resources and waking any remaining committed jobs,
+/// discarding later model callbacks
 /// (Rails raises it from the save that committed; durable enqueueing stays atomic).
 pub fn run_write<T>(
     conn: &Connection,
@@ -413,6 +429,7 @@ pub fn run_write<T>(
         env,
         in_transaction: true,
         after_commit: Vec::new(),
+        commit_finalizers: Vec::new(),
         persist_error: None,
     };
     let value = match f(&mut tx).and_then(|value| match tx.persist_error.take() {
@@ -476,11 +493,16 @@ pub fn run_write<T>(
         return Err(error.into());
     }
 
+    for finalize in std::mem::take(&mut tx.commit_finalizers) {
+        finalize();
+    }
+
     let mut after = Tx {
         conn,
         env,
         in_transaction: false,
         after_commit: Vec::new(),
+        commit_finalizers: Vec::new(),
         persist_error: None,
     };
     let mut callbacks = queue.into_iter();
@@ -906,6 +928,62 @@ impl Drop for Checkout<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn commit_finalizers_precede_fallible_model_callbacks() {
+        let conn = Connection::open_in_memory().unwrap();
+        let env = Env::default();
+        let trace = Arc::new(Mutex::new(Vec::new()));
+        let observations = trace.clone();
+        let result = run_write(&conn, &env, move |tx| {
+            let first = observations.clone();
+            tx.after_commit(move |_| {
+                first.lock().unwrap().push("callback");
+                Err(Error::Other("injected callback failure".into()))
+            });
+            tx.on_commit_success(move || observations.lock().unwrap().push("finalized"));
+            Ok(())
+        });
+        assert!(result.is_err());
+        assert_eq!(*trace.lock().unwrap(), ["finalized", "callback"]);
+    }
+
+    #[test]
+    fn commit_finalizers_follow_savepoint_rollback_boundaries() {
+        let conn = Connection::open_in_memory().unwrap();
+        let env = Env::default();
+        let trace = Arc::new(Mutex::new(Vec::new()));
+        let observations = trace.clone();
+        run_write(&conn, &env, move |tx| {
+            let outer = observations.clone();
+            tx.on_commit_success(move || outer.lock().unwrap().push("outer"));
+            let nested = tx.savepoint(move |tx| -> Result<()> {
+                tx.on_commit_success(move || observations.lock().unwrap().push("rolled-back"));
+                Err(Error::Other("injected savepoint rollback".into()))
+            });
+            assert!(nested.is_err());
+            Ok(())
+        }).unwrap();
+        assert_eq!(*trace.lock().unwrap(), ["outer"]);
+    }
+
+    #[test]
+    fn commit_finalizers_do_not_run_when_commit_itself_fails() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys=ON; CREATE TABLE parent(id INTEGER PRIMARY KEY); CREATE TABLE child(parent_id INTEGER REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED)").unwrap();
+        let env = Env::default();
+        let finalized = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let observed = finalized.clone();
+        let result = run_write(&conn, &env, move |tx| {
+            tx.conn().execute("INSERT INTO child VALUES(1)", [])?;
+            tx.on_commit_success(move || observed.store(true, Ordering::SeqCst));
+            Ok(())
+        });
+        assert!(result.is_err(), "deferred foreign key must reject COMMIT");
+        assert!(!finalized.load(Ordering::SeqCst));
+        assert!(conn.is_autocommit());
+        assert_eq!(conn.query_row("SELECT count(*) FROM child", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
+    }
 
     #[test]
     fn identity_snapshot_generation_covers_rollbacks_and_after_commit() {

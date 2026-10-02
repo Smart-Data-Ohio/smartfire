@@ -203,7 +203,10 @@ impl Storage {
     /// The processed variant's image blob, if `variant_records` already has it.
     pub fn existing_variant(&self, conn: &Connection, blob: &Blob, variation: &Variation) -> Result<Option<Blob>> {
         match blob::find_variant_record(conn, blob.id, &variation.digest())? {
-            Some(record_id) => Blob::attached(conn, "ActiveStorage::VariantRecord", record_id, "image"),
+            Some(record_id) => {
+                let image = Blob::attached(conn, "ActiveStorage::VariantRecord", record_id, "image")?;
+                self.require_existing_file(image)
+            }
             None => Ok(None),
         }
     }
@@ -220,7 +223,16 @@ impl Storage {
 
     /// `blob.preview_image`, if it has been generated.
     pub fn existing_preview_image(&self, conn: &Connection, blob: &Blob) -> Result<Option<Blob>> {
-        Blob::attached(conn, "ActiveStorage::Blob", blob.id, "preview_image")
+        self.require_existing_file(Blob::attached(conn, "ActiveStorage::Blob", blob.id, "preview_image")?)
+    }
+
+    // A variant/preview row is not proof of successful processing when its file was
+    // lost. Fail cleanly rather than returning a dangling blob or adding another record.
+    fn require_existing_file(&self, image: Option<Blob>) -> Result<Option<Blob>> {
+        if image.as_ref().is_some_and(|blob| !self.service.exist(&blob.key)) {
+            return Err(Error::FileNotFound);
+        }
+        Ok(image)
     }
 
     /// The record half of `Preview#process`: attaches the frame as the blob's `preview_image`.

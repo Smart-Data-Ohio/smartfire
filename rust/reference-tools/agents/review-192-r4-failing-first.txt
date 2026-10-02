@@ -1,0 +1,22 @@
+Baseline 03342475c6bc61e44d1ce3cc39d6799aafa2df58; production source unchanged.
+Only new tests, module registration and existing-helper visibility were copied.
+    Finished `test` profile [unoptimized] target(s) in 4m 26s
+thread 'controllers::agent_review_r4_tests::pr192_r4_video_oracle_preserves_attachment_targets_and_exact_row_counts' (929590) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:95:9:
+oracle omits attachment target: {"blob_id":16,"created_at":"2026-03-02 16:00:00 UTC","name":"preview_image","record_type":"ActiveStorage::Blob"}
+test controllers::agent_review_r4_tests::pr192_r4_video_oracle_preserves_attachment_targets_and_exact_row_counts ... FAILED
+thread 'controllers::agent_review_r4_tests::pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and_jobs' (929586) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:18:5:
+committed blob 16 has lost its file
+test controllers::agent_review_r4_tests::pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and_jobs ... FAILED
+thread 'controllers::agent_review_r4_tests::pr192_r4_missing_variant_file_fails_cleanly_without_returning_a_blob' (929589) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:85:5:
+missing media file returned dangling blob: Ok(Blob { id: 17, key: "zcjlsiyn0o3rd05egsv01v4q99tj", filename: Filename("alpha-centuri.webp"), content_type: Some("image/webp"), metadata: Object([("identified", Bool(true))]), service_name: "local", byte_size: 3336, checksum: Some("e8tykSPtDcnTAIo2FuqAJw=="), created_at: "2026-03-02 16:00:00" })
+thread 'controllers::agent_review_r4_tests::pr192_r4_missing_preview_file_fails_cleanly_without_returning_a_blob' (929588) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:85:5:
+missing media file returned dangling blob: Ok(Blob { id: 17, key: "zdhwsj0qvp7o5fsy6ctg7djkvx6x", filename: Filename("alpha-centuri.webp"), content_type: Some("image/webp"), metadata: Object([("identified", Bool(true))]), service_name: "local", byte_size: 3336, checksum: Some("e8tykSPtDcnTAIo2FuqAJw=="), created_at: "2026-03-02 16:00:00" })
+test controllers::agent_review_r4_tests::pr192_r4_missing_variant_file_fails_cleanly_without_returning_a_blob ... FAILED
+test controllers::agent_review_r4_tests::pr192_r4_missing_preview_file_fails_cleanly_without_returning_a_blob ... FAILED
+PR192_R4_ROLLBACK preview_attachment/variant_attachment/push_job rows/files=unchanged
+test controllers::agent_review_r4_tests::pr192_r4_late_media_and_job_failures_roll_back_rows_and_files ... ok
+    controllers::agent_review_r4_tests::pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and_jobs
+    controllers::agent_review_r4_tests::pr192_r4_missing_preview_file_fails_cleanly_without_returning_a_blob
+    controllers::agent_review_r4_tests::pr192_r4_missing_variant_file_fails_cleanly_without_returning_a_blob
+    controllers::agent_review_r4_tests::pr192_r4_video_oracle_preserves_attachment_targets_and_exact_row_counts
+test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 2490 filtered out; finished in 2.87s

@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 const THREAD: i64 = 1900700030;
 
-async fn closed_thread() -> TestApp {
+pub(super) async fn closed_thread() -> TestApp {
     let app = setup().await.without_job_runner().await;
     app.db().write(|tx| {
         tx.conn().execute_batch("UPDATE agents SET owner_id=127326141,daily_message_cap=NULL WHERE id=773018776; INSERT INTO channel_threads(id,name,room_id,creator_id,work_owner_id,work_status,closed_at,last_activity_at,created_at,updated_at) VALUES(1900700030,'Review',486777696,394959859,394959859,'in_progress','2026-03-01 16:00:00','2026-03-01 16:00:00','2026-03-01 16:00:00','2026-03-01 16:00:00'); DELETE FROM background_jobs;")?;
@@ -16,7 +16,7 @@ async fn closed_thread() -> TestApp {
     }).await.unwrap();
     app
 }
-async fn fresh_source(app: &TestApp, seed_id: i64) -> i64 {
+pub(super) async fn fresh_source(app: &TestApp, seed_id: i64) -> i64 {
     let storage = app.booted.app.storage.clone();
     app.db()
         .write(move |tx| {
@@ -35,7 +35,7 @@ async fn fresh_source(app: &TestApp, seed_id: i64) -> i64 {
         .await
         .unwrap()
 }
-fn post(app: &TestApp, source: i64, client_id: &str) -> Req {
+pub(super) fn post(app: &TestApp, source: i64, client_id: &str) -> Req {
     let signed =
         campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, source, None);
     Req::new(Method::POST, "/rooms/486777696/agents/messages")

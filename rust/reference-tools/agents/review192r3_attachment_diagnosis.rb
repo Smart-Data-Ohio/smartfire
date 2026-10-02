@@ -46,7 +46,7 @@ travel_to Time.utc(2026,3,2,16) do
   state = {message:message.attributes,thread:thread.attributes,source_metadata:source.reload.metadata,
     blobs:[source,preview.reload,image.reload].map{|b| {attributes:b.attributes.except('key'),file_exists:b.service.exist?(b.key),file_size:File.size(b.service.send(:path_for,b.key))}},
     variant_count:preview.variant_records.count,
-    attachments:ActiveStorage::Attachment.where(blob_id:[source.id,preview.id,image.id]).order(:id).map{|a|a.attributes.except('id','record_id')},
+    attachments:ActiveStorage::Attachment.where(blob_id:[source.id,preview.id,image.id]).order(:id).map{|a|a.attributes.except('id')},
     jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j| {class:j[:job].name,args:case j[:job].name
       when 'ChannelThread::PushMessageJob' then {thread_id:j[:args][0]['_aj_globalid'].split('/').last.to_i,message_id:j[:args][1]['_aj_globalid'].split('/').last.to_i}
       when 'ActiveStorage::AnalyzeJob' then {blob_id:j[:args][0]['_aj_globalid'].split('/').last.to_i}
