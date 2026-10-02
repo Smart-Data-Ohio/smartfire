@@ -194,10 +194,12 @@
         },
         {
           "name": "Markdown replies and file attachments remain usable",
-          "status": "passed",
-          "evidence": "Fresh source clone at 8d4302d96: .scratch/ws8bm-next/fresh-attachment-pinned.log; actual paired controls, original Selenium visibility/visible text and deadlines, real requests and persisted rows PASS using the pinned nonperforming job adapter; see report for fixture provenance and test-only host. No pixel credit.",
+          "status": "deferred",
+          "evidence": "",
           "previous_evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels",
-          "diagnostic": "Still deferred: Rust missed the attachment reply preview in the unchanged 70d325c5 diagnostic baseline at thirty seconds and in the corrected fresh run at the original Rails ten-second wait. An isolated baseline accepted both new served probes; both are rejected after the asserted-element correction. These mutation proofs do not establish positive upload parity."
+          "diagnostic": "Fresh checkpoint .scratch/ws8bm-next/fresh-checkpoint-upload.log: 0 named cases passed; 1 failed on Rust at 10000 ms after Rails passed. Retained earlier successful .scratch/ws8bm-next/fresh-attachment-pinned.log: 1 passed; 0 failed. No enlarged timeout, weakened preview assertion or pixel credit.",
+          "remaining_reason": "Rust missed the visible attachment reply preview at the original 10 s delivery deadline in the fresh fe4cbd716 checkpoint after Rails passed. Both actual message POSTs returned 200, but the delivered child had no reply-preview/body target. The original three-root-message fixture, test-only motion input and nonperforming job adapter produced an earlier paired pass at 8d4302d96, so they are necessary fixture corrections but do not repair the remaining delivery/render failure. Trace the real response and broadcast, distinguish pending replacement from server partials, and obtain stable paired control/row proof before credit. Not blocked on another owner.",
+          "uncredited_evidence": "Paired controls and three served probes remain implemented, with original visibility and deadlines. Successful 8d4302d96 isolation is diagnostic only; no positive declaration credit at the final merged checkpoint."
         },
         {
           "name": "mention suggestions select a room member without sending the unfinished message",
