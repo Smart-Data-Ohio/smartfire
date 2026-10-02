@@ -14,7 +14,7 @@ browser.host! 'campfire.test'
 headers = {'Cookie'=>"session_token=#{labels.fetch('session_cookies.david')}", 'HTTP_USER_AGENT'=>'Mozilla/5.0 Chrome/140.0.0.0', 'Accept'=>'text/html'}
 browser.post('/sudo', params:{password:'secret123456'}, headers:)
 headers.delete('Cookie')
-result = {reference: 'd7c7de92', expiry: [], github_tokens: []}
+result = {reference: 'd7c7de92', expiry: [], github_tokens: [], errors: {}}
 strings = [nil, '', ' ', 'invalid', '2030-06-15', '20300615', '30-06-15', '15/06/2030', '06/15/2030',
  'June 15, 2030 10:20:30', '15 June 2030 10:20:30', 'Jun 2030', 'June 15', '15 Jun', 'June',
  '10:20:30', '10:20', '4pm', 'Fri', 'junk', '2030-166', '2030-W24-6', '2030W246',
@@ -42,6 +42,9 @@ multiparts = [
   name = "Input #{zone} #{index}"
   audits = AuditLog.where(action:'agent.credential.create').count
   browser.post("/account/bots/#{bot.id}/credentials", params: JSON.generate(agent_credential: {'name'=>name}.merge(attributes)), headers: headers.merge('Content-Type'=>'application/json'))
+  if browser.response.status >= 400
+   result[:errors][browser.response.status.to_s] = {body:browser.response.body,content_type:browser.response.headers['Content-Type']}
+  end
   # Querying through the model would cast a numeric SQLite value back to nil.
   row = connection.select_one("SELECT expires_at FROM agent_credentials WHERE name=#{connection.quote(name)}")
   result[:expiry] << {zone:, attributes:, status: browser.response.status, persisted: !row.nil?, stored: row && row['expires_at'], audits: AuditLog.where(action:'agent.credential.create').count-audits}
@@ -59,6 +62,12 @@ Github::WriteClient.singleton_class.prepend(Module.new do
 end)
 tokens = [nil, '', " \t 
  ", false, true, 12, 12.5, [], ['first','second'], ['line\nquote"','é',true,12], [['nested'],{'x'=>'value'}], {}, {'value'=>'token'}, {'nested'=>{'x'=>'value'}, 'list'=>['one',true]}]
+tokens += [
+ ["line\nquote\"", "\x00\x01\x1f\x7f", '#{value} #@value #$value', "\u0085\u2028"],
+ [{'nested'=>{'x'=>'value'},'list'=>[{'a'=>'b'}]}],
+ {'list'=>[{'a'=>'b'}]},
+ [[{'nested'=>{'x'=>'value'}}]]
+]
 tokens.each do |input|
  browser.get('/agents',headers:)
  TokenCoercionProbe.token = nil

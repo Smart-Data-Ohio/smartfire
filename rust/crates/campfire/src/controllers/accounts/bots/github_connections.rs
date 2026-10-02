@@ -12,7 +12,7 @@ use campfire_db::{
     Agent,
     models::audit_log::{AuditLog, NewAuditLog},
 };
-use campfire_kit::{Ctx, Error, Param, Result};
+use campfire_kit::{Ctx, Error, Result};
 
 pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
@@ -22,7 +22,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let token = c
         .params
         .get("access_token")
-        .and_then(Param::to_s)
+        .map(super::input_casts::token_string)
         .unwrap_or_default();
     let token =
         token.trim_matches(|ch| matches!(ch, '\0' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' '));

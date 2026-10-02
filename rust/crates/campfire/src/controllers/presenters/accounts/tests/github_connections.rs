@@ -426,3 +426,102 @@ async fn github_audit_rejection_preserves_rails_committed_link_and_unlink() {
     assert_eq!(audit_count(&test, "agent.github.connect").await, 0);
     assert_eq!(audit_count(&test, "agent.github.disconnect").await, 0);
 }
+
+#[tokio::test]
+async fn ws11ui_github_token_shapes_match_pinned_ruby_to_s_over_real_transport() {
+    let cases: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../../../vectors/bot-ui-input-boundaries.json"
+    ))
+    .unwrap();
+    let (test, server) = fixture(200, r#"{"login":"fixture-machine"}"#).await;
+    let mut browser = admin(&test).await;
+    let mut errors = Vec::new();
+    for case in cases["github_tokens"].as_array().unwrap() {
+        let before = server.received.lock().unwrap().len();
+        let response = browser
+            .request(
+                Method::POST,
+                &path(&test),
+                &[("accept", "text/html")],
+                Some((
+                    "application/json",
+                    serde_json::json!({"access_token":case["input"]}).to_string(),
+                )),
+            )
+            .await;
+        assert_eq!(
+            response.status.as_u16(),
+            case["status"].as_u64().unwrap() as u16
+        );
+        assert_eq!(
+            response.location(),
+            format!("http://campfire.test{}", edit(&test))
+        );
+        {
+            let requests = server.received.lock().unwrap();
+            if let Some(token) = case["token"].as_str() {
+                let authorization = format!("Bearer {token}");
+                if requests.len() != before + 1
+                    || requests.last().and_then(|r| r.header("authorization"))
+                        != Some(authorization.as_str())
+                {
+                    errors.push(format!(
+                        "{}: missing or wrong token; Rails {token:?}",
+                        case["input"]
+                    ));
+                }
+            } else {
+                assert_eq!(requests.len(), before, "blank input must not call GitHub");
+            }
+        }
+        let account = stored(&test).await;
+        if let Some(token) = case["token"].as_str() {
+            if account.as_ref().map(|a| a.2.as_str()) != Some(token) {
+                errors.push(format!("{}: wrong stored token", case["input"]));
+            }
+        }
+    }
+    let request =
+        crate::controllers::presenters::test_support::Req::new(Method::POST, &path(&test))
+            .multipart(
+                &[],
+                ("access_token", "token.txt", "text/plain", b"file-token"),
+            );
+    let before = server.received.lock().unwrap().len();
+    let response = browser
+        .request(
+            Method::POST,
+            &path(&test),
+            &[("accept", "text/html")],
+            Some((
+                request.headers[0].1.as_str(),
+                String::from_utf8(request.body).unwrap(),
+            )),
+        )
+        .await;
+    assert_eq!(
+        response.status.as_u16(),
+        cases["github_upload"]["status"].as_u64().unwrap() as u16
+    );
+    let requests = server.received.lock().unwrap();
+    if requests.len() != before + 1 {
+        errors.push("upload: no outbound login call".into());
+    } else {
+        let raw = requests
+            .last()
+            .unwrap()
+            .header("authorization")
+            .unwrap()
+            .strip_prefix("Bearer ")
+            .unwrap();
+        assert!(
+            regex::Regex::new(cases["github_upload"]["token_pattern"].as_str().unwrap())
+                .unwrap()
+                .is_match(raw),
+            "{raw}"
+        );
+        assert!(!raw.contains("file-token") && !raw.contains("token.txt"));
+    }
+    println!("GitHub token differential: 18 shapes and 1 uploaded file over real TLS");
+    assert!(errors.is_empty(), "{}", errors.join("\n"));
+}

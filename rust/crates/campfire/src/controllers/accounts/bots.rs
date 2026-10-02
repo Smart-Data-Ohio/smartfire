@@ -1,5 +1,6 @@
 //! `Accounts::BotsController` (reference/app/controllers/accounts/bots_controller.rb).
 
+mod input_casts;
 pub mod credentials;
 pub mod grants;
 pub mod github_connections;
@@ -512,25 +513,6 @@ pub(super) async fn ensure_agent(c: &Ctx, bot: &User) -> Result<Agent> {
         })
         .await
         .map_err(Error::internal)
-}
-pub(super) fn parse_datetime(
-    param: Option<&Param>,
-    zone: &campfire_views::time::Zone,
-) -> Option<campfire_db::Timestamp> {
-    let value = param?.to_s()?;
-    if let Ok(at) = value.parse::<jiff::Timestamp>() {
-        return Some(campfire_db::Timestamp::from_jiff(at));
-    }
-    value
-        .parse::<jiff::civil::DateTime>()
-        // ActiveModel::Type::DateTime falls back to Date._parse. This named-
-        // month form is in the pinned HTTP corpus; the wider grammar and raw
-        // non-time/multiparameter values still need WS11's input seam.
-        .or_else(|_| jiff::civil::DateTime::strptime("%d %b %Y %H:%M:%S", &value))
-        .ok()?
-        .to_zoned(zone.tz().clone())
-        .ok()
-        .map(|t| campfire_db::Timestamp::from_jiff(t.timestamp()))
 }
 pub(super) fn error_sentence(errors: &campfire_db::Errors) -> String {
     campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")

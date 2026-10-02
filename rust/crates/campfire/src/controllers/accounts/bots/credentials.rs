@@ -29,7 +29,13 @@ pub async fn create(c: &mut Ctx) -> Result {
         .permit(&permit_keys(&["name", "expires_at"]));
     let name = params.get("name").and_then(Param::to_s).unwrap_or_default();
     let zone = super::viewer_zone(c).await?;
-    let expires_at = super::parse_datetime(params.get("expires_at"), &zone);
+    let raw_expires_at = params.get("expires_at");
+    let expires_at = super::input_casts::datetime(
+        raw_expires_at,
+        &zone,
+        campfire_db::Timestamp::from_jiff(c.now()),
+    );
+    let non_time = matches!(raw_expires_at, Some(Param::Number(_) | Param::Bool(true)));
     let actor = concerns::require_current_user(c)?.id;
     let context = super::audit_context(c)?;
     let form_name = name.clone();
@@ -62,6 +68,13 @@ pub async fn create(c: &mut Ctx) -> Result {
                 secret: secret.clone()
             })
             .await
+        }
+        Err(campfire_db::Error::RecordInvalid(_)) if non_time => {
+            // Rails retains a numeric/true value after validation fails, then the
+            // datetime_local_field calls strftime on it. The unsaved form raises.
+            Err(Error::internal(anyhow::anyhow!(
+                "non-time expires_at has no strftime"
+            )))
         }
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             render_index(
