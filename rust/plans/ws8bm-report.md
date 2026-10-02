@@ -1,107 +1,156 @@
-# WS8bm message actions and code behaviour — PR-ready partial slice
+# WS8bm PR #189 review corrections — PR-ready partial slice
 
 Worker: GPT-6.1 Sol. Branch: `rust/ws8bm-messages-http`.
-Reference: Rails `d7c7de9264c63015be398001d7a1094e7695a6db`, plus the approved drift in wave4/_common.md. No screenshots or pixel comparisons.
+Reference: Rails `d7c7de9264c63015be398001d7a1094e7695a6db`, plus the approved drift in wave4/_common.md. Behaviour and response parity only; no pixel checks.
 
-**103 passed / 26 remaining / 6 WS12-blocked**, from 135 exact named system declarations. This continuation credits **30 new declarations**, retaining the received 73. The complete fresh source-clone gate passed: **3,704 Rust tests / zero failures / 12 inherited ignores**, plus all thirty paired browser cases and thirty valid specific mutant rejections. No invalid run is counted.
+The three requested review defects are corrected. Current counts are **102 passed / 27 remaining / 6 owner-blocked** out of 135 mapped system declarations, and **146/156 controller declarations**, with all ten remaining controller declarations assigned to WS12. These are scoped mapped Playwright checks, not execution of the original Ruby system files or full system sign-off. This slice adds no declaration credit and returns the release-click declaration to deferred after two fresh reference failures. The three requested review corrections form a coherent review-ready slice; full system sign-off and a green workspace gate remain outstanding.
 
-This continuation credits all thirteen toolbar declarations, both mobile message-action declarations, all ten message-interaction declarations, and five code-highlighting declarations. These are scoped Playwright equivalents against both actual applications with saved-row assertions, not execution of the original Ruby system files. Each newly credited declaration rejects a specific served mutant. No production Rust, dependency, lockfile, asset override, or test timing policy changed.
+**Duplicate-delivery limitation:** the check injects Turbo markup in the browser, using the actual mounted row and render queue. It verifies the browser render guard and object identity. It **does not verify server-originated redelivery**; the original Rails case calls `message.broadcast_create`. This limitation is now recorded beside the declaration in the inventory as well as here. End-to-end server redelivery remains unverified by this mapped check.
 
-Controller attribution remains **146/156; all ten remaining declarations are blocked only on WS12**. The owned controller declaration gate is met. The six WS12 system items stay flagged pending board/work writes (#187) and agent work services. Activity/work/board seams keep their authorized 501 responses. Behaviour sign-off remains partial; this is a coherent PR-ready continuation, not complete system sign-off.
+## Changes and failing-first evidence
 
-## Pushed changes and assertion scope
+- Merge `8abc3119bba23e823eba4e3dfb87271b7f20c0ba` brings in `origin/main` at `3ab3a4db58e094cea0f41b90e63f54d59ce9309e`, including #184. The merge was clean and retains both sides; no stash. Main's literal freshness digest and test-only vector include remain intact. Locked Cargo metadata passed; all fifteen tracked manifests parsed without duplicate dependency keys.
+- Fix `4d88ea4f38df5d2c04f824cbd714ce4b22cdca95` restores highlighted `const` in search and initial edit code, and highlighted `def` in edited Python. Each keyword uses one original 20-second assertion, not sequential readiness waits. Three additional served mutants remove only the relevant keyword token classes while preserving the source and other tokens.
+- The action check requires exactly eight **visible** quick reactions within the original two-second default. The additional mutant hides only Clapping while retaining eight DOM elements.
+- All thirty checks were audited against the four pinned originals; [ws8bm-assertion-timeouts.md](ws8bm-assertion-timeouts.md) records each declaration's deadlines. The original Capybara default is two seconds (verified in the pinned installed gem), reaction delivery is ten seconds, highlighting remains twenty seconds and long press remains 700 ms. Positive and mutant runs use identical assertion budgets. The delayed-write mutant holds the actual boost POST for eleven seconds before forwarding, so its write and Cable delivery cannot occur inside the ten-second budget. Author active-state assertions run before the extra peer check. Ruby immediate focus comparisons remain immediate. Native timing tests, concurrency and rustc throttling are unchanged.
+- All thirty original source-anchored mutants remain. The five additional variants get independent seed/database/server copies, including when a rejected highlight check has already saved a message. Mutation results require valid case startup, an applied mutation, no actual network failure, and rejection on **both** applications. Diagnostic escape probes cannot earn parity credit.
 
-- `0677829e154fccba16307159f052c65c432a3329`: add scoped message actions, toolbar, mobile menu and code behaviour checks, exact storage assertions, source-anchored served mutants, and the optional browser portion of the fresh-clone gate. The uncredited GitHub discussion fixture retains its failed-card diagnostic. The received base remains `4f0472908784e4e0ade5902ce2eb1c9f2111c85d`.
-- `behavior-actions.mjs`: original keyboard/context-menu/long-press controls, cancelled movement and release-click suppression, phone sheets and desktop dismissal, real edits with draft restoration and peer delivery, notify-off reply/deleted-source tombstone, actual forwarding to a server-provided thread, duplicate-submit suppression and two-user reaction counts/toggles. The asynchronous-edit test keeps the original deterministic PATCH gate and 422 response boundary; it does not claim a domain write. Duplicate redelivery runs the real Turbo render queue on the actual mounted row and checks object identity; it does not claim an extra server-published duplicate frame. Clipboard spies keep the original permission-independent boundary and execute the actual copy handlers.
-- `behavior-toolbar.mjs`: all thirteen original declarations, including actual reaction writes and peer counts, keyboard focus, categories, data fetched only on first opening, recent persistence, workspace and brand icons, and option/tab navigation.
-- `behavior-code.mjs`: twelve fenced languages and aliases, unchanged text, literal/untrusted code, search/channel/back navigation, copying through worker failure, and real edits with changed language, copied source and peer delivery. The original 20-second highlight wait is extracted from the pin. No screenshot or computed-color assertion was added.
-- `behavior_action_rows.py`: compare every saved message projection and boost against the Rails-created seed; require exact reaction actor/content, edit source/edited flag, reply notify flag/deleted source, one forward with the real copied richtext snapshot, requested thread/note and unchanged thread count for open controls.
-- `behavior-fixtures.rb`: Rails creates the actual workspace icon, thread destination and code/search rows. Code literals and waits come from test files materialized with `git show` at the pin, because the production reference image intentionally excludes tests. The tool builds its own seeds and inputs; no fixture depends on old scratch contents or a pre-existing target.
-- `behavior.mjs`, `behavior-check.py`, `behavior-mutations.mjs` and `behavior-action-mutations.mjs`: dispatch exact pinned names, use the original actors, isolate browser contexts and writing fixtures, verify persisted rows and reject applied mutants only after the named case starts. A startup, missing mutation, network failure or unexpected adapter error cannot count as mutant rejection. Mutation contexts alone block service workers so navigation cannot bypass the served mutation; positive acceptance uses the application's real worker.
-- `fresh-check.py`: optional `--behavior-files` runs requested paired groups and their mutants inside the same fresh source clone after workspace tests and clippy. The target is removed after all checks. Existing eight test threads, two build jobs, machine-wide rustc slots and timing thresholds remain unchanged.
-- `plans/ws8bm-system-cases.json`: exact source hashes/names, scoped evidence and explicit deferred/owner statuses. Previous deliveries and evidence remain available in the [received report at 4f047290](https://github.com/Smart-Data-Ohio/smartfire/blob/4f0472908784e4e0ade5902ce2eb1c9f2111c85d/rust/plans/ws8bm-report.md); they are not represented as rerun commands in this report.
+Before changing the assertions, ran each new variant over the unchanged received `6427c785` assertion modules against pinned Rails and the merged Rust app. All five escaped on both applications:
+
+```text
+WS8bm review escape: code_highlighting: search results highlight code on initial load and after returning to the channel: missing-const: Rails ACCEPTED
+WS8bm review escape: code_highlighting: search results highlight code on initial load and after returning to the channel: missing-const: Rust ACCEPTED
+WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+WS8bm review escape: code_highlighting: editing a code block replaces its language colors and copied source: missing-const: Rails ACCEPTED
+WS8bm review escape: code_highlighting: editing a code block replaces its language colors and copied source: missing-const: Rust ACCEPTED
+WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+WS8bm review escape: code_highlighting: editing a code block replaces its language colors and copied source: missing-def: Rails ACCEPTED
+WS8bm review escape: code_highlighting: editing a code block replaces its language colors and copied source: missing-def: Rust ACCEPTED
+WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+WS8bm review escape: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: hidden-clapping: Rails ACCEPTED
+WS8bm review escape: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: hidden-clapping: Rust ACCEPTED
+WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+WS8bm review escape: message_toolbar: quick-react creates a boost from the toolbar: delayed-boost-write: Rails ACCEPTED
+WS8bm review escape: message_toolbar: quick-react creates a boost from the toolbar: delayed-boost-write: Rust ACCEPTED
+WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+```
+
+The following diagnostic commands were rerun before changing the assertions (no parity credit):
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py code_highlighting --case 'search results highlight code on initial load and after returning to the channel' --mutant missing-const
+python3 rust/reference-tools/messaging/behavior-check.py code_highlighting --case 'editing a code block replaces its language colors and copied source' --mutant missing-const
+python3 rust/reference-tools/messaging/behavior-check.py code_highlighting --case 'editing a code block replaces its language colors and copied source' --mutant missing-def
+python3 rust/reference-tools/messaging/behavior-check.py message_interactions --case 'opens message actions from context menu and keyboard, and cancels a moving long press' --mutant hidden-clapping
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar --case 'quick-react creates a boost from the toolbar' --mutant delayed-boost-write
+```
+
+The subsequent fresh-clone discrimination run below is the corrected regression evidence.
+
+Earlier slices, command results and attribution are retained in the [received report at 6427c785](https://github.com/Smart-Data-Ohio/smartfire/blob/6427c78560b9d9095e711c9d984b223319f445b8/rust/plans/ws8bm-report.md). Those historical commands and counts are not represented as rerun results here.
 
 ## Stable integration contract
 
 The shell seam in [ws8bm-integration.md](ws8bm-integration.md) is unchanged: `Presenter::messages(&records)`, `messages::Index { ctx, messages }`, and `Presenter::room_message_list(&records, divider.message_id, divider.count)`. The shell passes verified request origin/viewer/assets/signer/CSRF context, selected records and divider facts. The composer receives room kind/name/ID, ordered commands, Drive flow, thread scope, the real scheduled-message child and request-owned PendingTemplate. Mount list/template boundaries verbatim. Real WS15g GitHub rendering and merged WS14e/M2 children remain in use. There is no new cross-owner production touch.
 
-## Failing-first evidence and invalid runs
-
-The initial action mutant run rejected 24 distinct checks and correctly marked one invalid: the shared menu helper waited for an author-only Edit action when David opened his menu. The helper now waits for the universally available Copy text action; geometry still waits for the author's metadata-dependent Edit action. The unchanged named reaction mutant then rejected correctly. The five code mutants also rejected before positive acceptance. Complete fresh results are recorded below rather than adding overlapping run totals.
-
-Earlier acceptance exposed adapter errors, not established application defects: accessible names are Copy link and Add a note (optional); the production image lacks test source; Back to Designers needs the navigation completion that Capybara itself waits for. These were corrected without changing any application expectation. A repeat batch failed Rails Stimulus startup with ERR_NETWORK_CHANGED, then candidate startup with Address already in use (os error 98). Those are invalid runs and are not credited as parity evidence or repaired timing bugs. An earlier picker run completed its named assertions and saved-row checks while logging a failed background connection refresh; it does not establish that every background refresh passed.
-
-The GitHub discussion declaration remains deferred. Its first real POST and thread header/files pass on pinned Rails; after returning to the room, the live provider worker records `Could not reach GitHub (Resolution Error)`. The diagnostic confirms the existing Discuss link is present, but the original Fix login title has been replaced by the provider-error rendering. This live-worker fixture differs from the original Rails system test's unperformed job adapter. The title/header assertions were not weakened, no candidate parity pass was credited, and the applied header-stripping mutant alone does not establish positive parity.
-
-The previously intermittent reply-upload declaration remains deferred. No queue-observation race, inherited test timing failure, ignore, concurrency reduction or threshold widening was changed to obtain a green run. In particular, `the_last_member_out_destroys_the_group` stays with the deflake owner.
 
 ## Current verification
 
-From the worktree root, reran:
+The worktree's initial corrected paired run passed all thirty cases with saved-row checks. The full committed fresh-source clone then ran all requested commands, including every workspace crate despite the application failure, strict clippy with warnings denied, all thirty paired cases, and all thirty-five served mutants on both apps.
 
-```sh
-python3 rust/reference-tools/messaging/fresh-check.py --behavior-files message_toolbar message_actions_mobile message_interactions code_highlighting
-python3 rust/reference-tools/messaging/check-controller-files.py
-```
+Fresh native totals: **3,881 passed / 1 failed / 12 inherited ignores**, from 58 raw summaries. Strict clippy passed. All **35 mutants were rejected on both applications, zero invalid or escaped**. The fresh paired batch returned **29 passed / 1 reference failure**. The fresh wrapper therefore exits nonzero; the overall workspace gate is **not green**.
 
-Raw fresh output (all 58 Rust summaries, exact browser case results and applied-mutant results):
+The native failure is inherited from the merged WS16/main source, unchanged by this worker (the client and its test are identical to origin/main at 3ab3a4db). It was introduced in `906efac51ac6b50762b20bd84407bff5f599b5ed`. The precise failure is:
 
 ```text
-WS8bm fresh checkout: 0677829e154fccba16307159f052c65c432a3329; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-yz61rhi9
-WS8bm fresh concurrency: eight test threads; two build jobs; no timing threshold changes
+---- integrations::slack::client::tests::slack_client_pacing_is_shared_per_tier_and_separate_between_tiers stdout ----
+
+thread 'integrations::slack::client::tests::slack_client_pacing_is_shared_per_tier_and_separate_between_tiers' (30964) panicked at crates/campfire/src/integrations/slack/client/tests.rs:393:5:
+assertion failed: first.elapsed() >= Tier::Two.interval()
+```
+
+No attempt was made to repair this timing case or `the_last_member_out_destroys_the_group`, reduce concurrency, add ignores, or widen thresholds. The pacing failure stays with the timing/WS16 owner.
+
+The fresh reference-only release-click failure was `DIV !== menu` at behavior-actions.mjs:89, before Rust's paired execution of that declaration. The original requires the press point to hit the menu, so its assertion was retained. It is reported as an observed reference failure, not a Rust parity defect or a credited successful run. A single unchanged-budget recheck is recorded below; it does not erase the first failure.
+
+Reran from the worktree root:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar message_actions_mobile message_interactions code_highlighting --keep-going
+python3 rust/reference-tools/messaging/fresh-check.py --behavior-files message_toolbar message_actions_mobile message_interactions code_highlighting
+mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 > /dev/null
+```
+
+The metadata command was followed by `tomllib` parsing every tracked Cargo manifest, so duplicate dependency keys are rejected. Its raw result:
+
+```text
+WS8bm merge metadata: locked Cargo metadata passed; 15 manifests parsed without duplicate dependency keys
+```
+
+Raw initial corrected paired summary:
+
+```text
+WS8bm behaviour check: 30 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+Raw fresh summaries (all 58 native lines, each paired result and both-app mutant results):
+
+```text
+WS8bm fresh checkout: 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-orbvnk35
+WS8bm fresh concurrency: eight test threads; two build jobs; native timing unchanged; audited browser deadlines match Rails
 WS8bm pinned processing: campfire-toolchain; shared machine rustc flock slots
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 4m 35s
-test result: ok. 1859 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1155.16s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7m 37s
+test result: FAILED. 1980 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1595.70s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
-test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.13s
-test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.74s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 41.87s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.82s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
-test result: ok. 1143 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 141.10s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.38s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 1194 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 199.51s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.86s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
 test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.48s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.16s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.14s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.40s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.29s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 39.66s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.69s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.22s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
-test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.85s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.75s
-test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.26s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.11s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.44s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.28s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.79s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 79 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.50s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -113,12 +162,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 35s
+workspace: exit 101; inspect /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-orbvnk35/.scratch/workspace.log
+test integrations::slack::client::tests::slack_client_pacing_is_shared_per_tier_and_separate_between_tiers ... FAILED
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 19s
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 05s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 23s
 WS8bm behaviour: message_toolbar: the toolbar stays hidden until hover or focus and labels every action: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour: message_toolbar: reply and thread buttons drive the composer and the thread panel: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour: message_toolbar: the more button opens the shared menu for its message: Rails PASS; Rust PASS; persisted rows PASS
@@ -137,7 +188,6 @@ WS8bm behaviour: message_actions_mobile: message action menu is a bottom sheet w
 WS8bm behaviour: message_actions_mobile: message action menu stays a floating popover on desktop: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour source: test/system/message_actions_mobile_test.rb SHA256 4d930fbf29081825c2696f1be81ec062b0e6968031b93fef02d47b08818e856d
 WS8bm behaviour: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: Rails PASS; Rust PASS; persisted rows PASS
-WS8bm behaviour: message_interactions: a release click landing on the just-opened menu does not activate it: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour: message_interactions: shows the message action menu as a bottom sheet on phones: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour: message_interactions: a duplicate delivery does not replace the message while its actions are open: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour: message_interactions: keeps newer typing through an asynchronous edit and leaves failures in edit mode: Rails PASS; Rust PASS; persisted rows PASS
@@ -153,88 +203,131 @@ WS8bm behaviour: code_highlighting: search results highlight code on initial loa
 WS8bm behaviour: code_highlighting: code and copying remain available when the highlighter cannot load: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour: code_highlighting: editing a code block replaces its language colors and copied source: Rails PASS; Rust PASS; persisted rows PASS
 WS8bm behaviour source: test/system/code_highlighting_test.rb SHA256 bd8e2522a1fab8e0054b401d199acc3a942f4e4be866b7b1c011de650bed2014
-WS8bm behaviour check: 30 named cases passed on Rails and Rust; 0 failed; no pixel checks
+WS8bm behaviour check: 29 named cases passed on Rails and Rust; 1 failed; no pixel checks
+behavior: exit 1; inspect /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-orbvnk35/.scratch/behavior.log
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.14s
-WS8bm discrimination: message_toolbar: the toolbar stays hidden until hover or focus and labels every action: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_toolbar: reply and thread buttons drive the composer and the thread panel: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: the more button opens the shared menu for its message: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: the picker shows category tabs and switches between them: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: the picker loads its emoji data only on first open: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_toolbar: picker tabs move with arrow keys and switch the grid: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: quick-react creates a boost from the toolbar: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: keyboard users reach the toolbar from a focused message: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: the emoji picker searches and reacts: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: the picker remembers recent reactions: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: the picker Custom tab reacts with a workspace icon: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: the picker reacts with a brand icon shortcode: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_toolbar: picker arrows move through options, Enter selects, and Escape returns focus: served mutant REJECTED (TimeoutError)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.23s
+WS8bm discrimination: message_toolbar: the toolbar stays hidden until hover or focus and labels every action: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_toolbar: the toolbar stays hidden until hover or focus and labels every action: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_toolbar: reply and thread buttons drive the composer and the thread panel: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: reply and thread buttons drive the composer and the thread panel: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the more button opens the shared menu for its message: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the more button opens the shared menu for its message: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker shows category tabs and switches between them: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker shows category tabs and switches between them: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker loads its emoji data only on first open: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_toolbar: the picker loads its emoji data only on first open: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_toolbar: picker tabs move with arrow keys and switch the grid: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: picker tabs move with arrow keys and switch the grid: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: quick-react creates a boost from the toolbar: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: quick-react creates a boost from the toolbar: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: keyboard users reach the toolbar from a focused message: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: keyboard users reach the toolbar from a focused message: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the emoji picker searches and reacts: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the emoji picker searches and reacts: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker remembers recent reactions: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker remembers recent reactions: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker Custom tab reacts with a workspace icon: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker Custom tab reacts with a workspace icon: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker reacts with a brand icon shortcode: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: the picker reacts with a brand icon shortcode: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: picker arrows move through options, Enter selects, and Escape returns focus: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_toolbar: picker arrows move through options, Enter selects, and Escape returns focus: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_toolbar: quick-react creates a boost from the toolbar: delayed-boost-write: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_toolbar: quick-react creates a boost from the toolbar: delayed-boost-write: Rust served mutant REJECTED (TimeoutError)
 WS8bm behaviour source: test/system/message_toolbar_test.rb SHA256 d0e63bfb2c31db13f5786afd5ff28728f7dffead32468143fe3cb513598fdc12
-WS8bm discrimination: message_actions_mobile: message action menu is a bottom sheet with touch-sized targets on phones: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_actions_mobile: message action menu stays a floating popover on desktop: served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_actions_mobile: message action menu is a bottom sheet with touch-sized targets on phones: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_actions_mobile: message action menu is a bottom sheet with touch-sized targets on phones: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_actions_mobile: message action menu stays a floating popover on desktop: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_actions_mobile: message action menu stays a floating popover on desktop: default: Rust served mutant REJECTED (ERR_ASSERTION)
 WS8bm behaviour source: test/system/message_actions_mobile_test.rb SHA256 4d930fbf29081825c2696f1be81ec062b0e6968031b93fef02d47b08818e856d
-WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: a release click landing on the just-opened menu does not activate it: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: shows the message action menu as a bottom sheet on phones: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_interactions: a duplicate delivery does not replace the message while its actions are open: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_interactions: keeps newer typing through an asynchronous edit and leaves failures in edit mode: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: edits through the normal composer and restores the saved draft on cancel and success: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: replies with notify off and renders a tombstone when the target is deleted: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: copies message text and link and forwards to a server-provided thread destination: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_interactions: forwarding twice in a row submits only once: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: message_interactions: groups emoji reactions, updates the live count, and highlights the current user: served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: a release click landing on the just-opened menu does not activate it: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: a release click landing on the just-opened menu does not activate it: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: shows the message action menu as a bottom sheet on phones: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: shows the message action menu as a bottom sheet on phones: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: a duplicate delivery does not replace the message while its actions are open: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: a duplicate delivery does not replace the message while its actions are open: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: keeps newer typing through an asynchronous edit and leaves failures in edit mode: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: keeps newer typing through an asynchronous edit and leaves failures in edit mode: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: edits through the normal composer and restores the saved draft on cancel and success: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: edits through the normal composer and restores the saved draft on cancel and success: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: replies with notify off and renders a tombstone when the target is deleted: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: replies with notify off and renders a tombstone when the target is deleted: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: copies message text and link and forwards to a server-provided thread destination: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: copies message text and link and forwards to a server-provided thread destination: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: forwarding twice in a row submits only once: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: forwarding twice in a row submits only once: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: message_interactions: groups emoji reactions, updates the live count, and highlights the current user: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: groups emoji reactions, updates the live count, and highlights the current user: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: hidden-clapping: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: hidden-clapping: Rust served mutant REJECTED (TimeoutError)
 WS8bm behaviour source: test/system/message_interactions_test.rb SHA256 4c867b252b0697ea694a9a3637b4242195638e261b62ccfe6e90ff21ea20d8db
-WS8bm discrimination: code_highlighting: language fences highlight common code without changing its text: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: code_highlighting: unlabelled code is detected while text unknown languages and inline code stay literal: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: code_highlighting: search results highlight code on initial load and after returning to the channel: served mutant REJECTED (TimeoutError)
-WS8bm discrimination: code_highlighting: code and copying remain available when the highlighter cannot load: served mutant REJECTED (ERR_ASSERTION)
-WS8bm discrimination: code_highlighting: editing a code block replaces its language colors and copied source: served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: language fences highlight common code without changing its text: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: language fences highlight common code without changing its text: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: unlabelled code is detected while text unknown languages and inline code stay literal: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: unlabelled code is detected while text unknown languages and inline code stay literal: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: search results highlight code on initial load and after returning to the channel: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: search results highlight code on initial load and after returning to the channel: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: code and copying remain available when the highlighter cannot load: default: Rails served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: code_highlighting: code and copying remain available when the highlighter cannot load: default: Rust served mutant REJECTED (ERR_ASSERTION)
+WS8bm discrimination: code_highlighting: editing a code block replaces its language colors and copied source: default: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: editing a code block replaces its language colors and copied source: default: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: search results highlight code on initial load and after returning to the channel: missing-const: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: search results highlight code on initial load and after returning to the channel: missing-const: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: editing a code block replaces its language colors and copied source: missing-const: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: editing a code block replaces its language colors and copied source: missing-const: Rust served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: editing a code block replaces its language colors and copied source: missing-def: Rails served mutant REJECTED (TimeoutError)
+WS8bm discrimination: code_highlighting: editing a code block replaces its language colors and copied source: missing-def: Rust served mutant REJECTED (TimeoutError)
 WS8bm behaviour source: test/system/code_highlighting_test.rb SHA256 bd8e2522a1fab8e0054b401d199acc3a942f4e4be866b7b1c011de650bed2014
-WS8bm discrimination check: 30 named checks rejected their served mutants; 0 invalid or escaped
+WS8bm discrimination check: 35 served mutants rejected on Rails and Rust across 30 named checks; 0 invalid or escaped
 WS8bm fresh target removed
-WS8bm fresh-check: committed inputs only; generated default/first_run seeds; workspace tests/doctests/clippy passed; requested browser groups and their mutants passed
+AssertionError: WS8bm fresh-check failures: workspace, behavior; all available checks were run
+WS8bm delayed-write probe: Rails: 10013 ms observed; actual write completed: false
+WS8bm delayed-write probe: Rust: 10007 ms observed; actual write completed: false
 ```
 
-The seeded workspace tests/doctests exclude third-party html5ever; clippy covers all workspace targets with warnings denied. Subsequent attribution/report-only edits do not change these tested source inputs.
+The unchanged-budget recheck ran from that same committed source clone after verifying its revision and the absence of a Cargo target. It rebuilt its own seeds/binary and used CI=1, eight test threads, two build jobs and its own Cargo target:
 
-The controller command runs the original pinned Ruby files; its counts are reference counts, separate from Rust attribution:
-
-```text
-test/controllers/messages_controller_test.rb
-56 runs, 265 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/messages_drive_attachments_test.rb
-19 runs, 83 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/messages/cached_fragment_csrf_test.rb
-4 runs, 58 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/messages/legacy_presentation_cache_test.rb
-2 runs, 13 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/messages/boosts_controller_test.rb
-17 runs, 155 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/channel_threads_controller_test.rb
-24 runs, 206 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/channel_thread_messages_controller_test.rb
-12 runs, 65 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/channel_thread_messages_drive_attachments_test.rb
-13 runs, 57 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/message_forwards_controller_test.rb
-7 runs, 35 assertions, 0 failures, 0 errors, 0 skips
-test/controllers/message_forward_sources_controller_test.rb
-2 runs, 12 assertions, 0 failures, 0 errors, 0 skips
-WS8bm Rails controller reference: 10 files passed; reference counts only
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_interactions --case 'a release click landing on the just-opened menu does not activate it'
 ```
 
-Python compilation, Node syntax checks for the changed modules and `git diff --check` also passed. The pinned system inventory was rechecked against `git show`: all 135 exact names and source hashes match. No new non-test production include exists outside crates because this slice changes only reference tools and plans. The fresh gate removed its own Cargo target. A final scan found zero scratch Cargo targets; `ss` showed no assigned browser listeners and Docker showed no parity-owner containers. Normal worktree build output is not a test input dependency.
+It reproduced the same pinned Rails failure. The case is **deferred**, reducing scoped mapped passes from 103 to 102 and increasing remaining declarations from 26 to 27. Its mutation rejection does not close this unresolved positive-reference failure.
 
 ```text
+WS8bm failed application: http://127.0.0.1:52020 a release click landing on the just-opened menu does not activate it
+WS8bm browser flow FAILED: message_interactions: a release click landing on the just-opened menu does not activate it: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'DIV' !== 'menu'
+
+    at interactions (file:///home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-orbvnk35/rust/reference-tools/messaging/behavior-actions.mjs:89:12)
+    at async acceptance (file:///home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-orbvnk35/rust/reference-tools/messaging/behavior.mjs:133:7)
+    at async file:///home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-orbvnk35/rust/reference-tools/messaging/behavior.mjs:503:9
+WS8bm unchanged-budget reference recheck: exit 1
+WS8bm recheck target removed
+```
+
+All current report commands were executed in this session; historical command lists are linked, not represented as current passes. Node syntax checks for all changed modules, Python compilation, and git diff --check passed. The source hashes and 135 exact pinned declaration names were verified again. This review slice adds no non-test Rust include; its changes are confined to reference tools and plans. The stable presenter/list/composer seam and the WS12 activity/work/board ownership boundary are unchanged.
+
+Final verification and cleanup:
+
+```text
+WS8bm pinned system inventory: 102 passed / 27 remaining / 6 owner-blocked; 135 exact names and source hashes verified
 WS8bm cleanup: zero scratch Cargo targets remain; assigned 52020/52021/52022 listeners and parity-owner containers absent
 ```
 
 ## Exact remaining work
 
-### Remaining WS8bm behaviour (26)
+### Remaining WS8bm behaviour (27)
+
+`test/system/message_interactions_test.rb`
+
+- a release click landing on the just-opened menu does not activate it — repeated pinned Rails failure; keep its original assertion and deadlines; positive behaviour integration remains unresolved
 
 `test/system/code_highlighting_test.rb`
 
