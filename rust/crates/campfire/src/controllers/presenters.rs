@@ -205,6 +205,7 @@ pub struct Presenter<'a> {
     github_refreshes: std::rc::Rc<RefCell<BTreeSet<i64>>>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
+    render_account: RefCell<Option<Option<campfire_db::Account>>>,
     // WS8bm2 shared rendering-details seam for root and search pages.
     pub(crate) search_preloads: Option<super::searches::preloads::Preloads>,
     link_fetches: std::rc::Rc<RefCell<std::collections::BTreeSet<i64>>>,
@@ -235,6 +236,7 @@ impl<'a> Presenter<'a> {
             github_refreshes: Default::default(),
             users: RefCell::default(),
             room_names: RefCell::default(),
+            render_account: RefCell::default(),
             search_preloads: None,
             link_fetches: Default::default(),
             twitter_fetches: Default::default(),
@@ -301,6 +303,7 @@ impl<'a> Presenter<'a> {
             render_zone: self.render_zone.clone(),
             users: RefCell::default(),
             room_names: RefCell::default(),
+            render_account: RefCell::default(),
             search_preloads: Some(data),
             link_fetches: self.link_fetches.clone(),
             twitter_fetches: self.twitter_fetches.clone(),
@@ -661,7 +664,13 @@ impl<'a> Presenter<'a> {
         }
         let html = fragment_cache::try_fetch_value(|| key, || {
             let view = view()?;
-            let account = campfire_db::Account::first(self.conn)?;
+            // Detached rendering needs the same singleton account for every miss
+            // in this page. Keep that read lazy so warm hits need no account query.
+            let account = {
+                let mut account = self.render_account.borrow_mut();
+                if account.is_none() { *account = Some(campfire_db::Account::first(self.conn)?); }
+                account.as_ref().unwrap().clone()
+            };
             page::render_detached_in_zone(self.app, account.as_ref(), base, &self.render_zone, |ctx| {
                 use askama::Template;
                 campfire_views::messages::MessagePartial { ctx, message: &view }.render()
