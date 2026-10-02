@@ -115,6 +115,30 @@ impl WorkThreadEvent {
             json!({"excerpt":excerpt,"actor":snapshot(Some(actor))}),
         )
     }
+    pub fn create_for_handoff(
+        tx: &mut Tx<'_>,
+        before: &ChannelThread,
+        after: &ChannelThread,
+        actor: &User,
+        handoff: &crate::WorkHandoff,
+    ) -> Result<Self> {
+        let from = owner(tx.conn(), before.work_owner_id)?;
+        let to = owner(tx.conn(), after.work_owner_id)?;
+        let metadata = json!({"before":{"status":after.work_status,"owner":snapshot(from.as_ref())},
+            "after":{"status":after.work_status,"owner":snapshot(to.as_ref())},"actor":snapshot(Some(actor)),
+            "handoff_id":handoff.id,"handoff_summary":campfire_richtext::ruby::truncate(&handoff.summary,200,"..."),
+            "handoff_links_count":handoff.links.len(),"handoff_questions_count":handoff.open_questions.len()});
+        Self::insert(
+            tx,
+            after,
+            Some(actor),
+            "work_handoff",
+            after.work_status.as_deref(),
+            from.as_ref(),
+            to.as_ref(),
+            metadata,
+        )
+    }
     #[allow(clippy::too_many_arguments)]
     fn insert(
         tx: &mut Tx<'_>,

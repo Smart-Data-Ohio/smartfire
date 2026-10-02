@@ -5,8 +5,8 @@
 //!
 //! Boards and work tracking keep their state in this model. Human work/result writes,
 //! fresh-owner policy, board creation and agent-assignment ledger integration live in
-//! `channel_thread/work`. WS12's tag auto-assignment, handoffs and agent write services
-//! remain at their marked seams.
+//! `channel_thread/work`. Agent writes and committed tag assignment live in the
+//! adjacent modules; their services reuse the real agent ledger and delivery APIs.
 //! Board listings, post/row broadcasts and their commit callbacks live in `channel_thread/board`.
 
 use std::collections::{HashMap, HashSet};
@@ -27,8 +27,11 @@ use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
 
+mod agent_work;
 mod board;
+mod tag_assignment;
 mod work;
+pub use agent_work::{AgentWorkChanges, tag_names_from_value};
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, board_page_number};
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 
@@ -269,7 +272,7 @@ impl ChannelThread {
     /// set (`stamp_work_status_changed_at`).
     ///
     /// `announce_board_post` broadcasts the rows and marks the board unread after commit.
-    /// WS12: tag auto-assignment remains with the automation domain.
+    /// Added tags register the Rails after-commit auto-assignment callback.
     pub fn create(tx: &mut Tx<'_>, attributes: NewChannelThread) -> Result<Self> {
         let now = tx.now();
         let room = Room::find(tx.conn(), attributes.room_id)?;
@@ -333,7 +336,9 @@ impl ChannelThread {
         )?;
         tx.register_record("channel_threads", id);
         Self::register_board_creation(tx, id, &room);
-        for name in tag_names.unwrap_or_default() {
+        let tag_names = tag_names.unwrap_or_default();
+        Self::register_tag_assignment(tx, id, tag_names.clone(), thread.work_owner_id);
+        for name in tag_names {
             ThreadTag::create(tx, id, &name)?;
         }
         Self::find(tx.conn(), id)
@@ -541,8 +546,7 @@ impl ChannelThread {
         self.save(tx, changed)
     }
 
-    /// The ordinary thread metadata update with Rails' pending tag set. WS12's board
-    /// auto-assignment/row callbacks remain at its existing seam; this caller handles channels.
+    /// The ordinary thread metadata update with Rails' pending tag set and callbacks.
     pub fn update_metadata(
         &mut self,
         tx: &mut Tx<'_>,
@@ -557,34 +561,7 @@ impl ChannelThread {
         if let Some(minutes) = minutes {
             changed.auto_archive_after_minutes = minutes;
         }
-        let names = tags.map(normalize_tag_names);
-        let room = Room::find(tx.conn(), self.room_id)?;
-        if let Err(error) = changed
-            .validate(tx.conn(), &room, names.as_deref())?
-            .into_result()
-        {
-            *self = changed;
-            return Err(error);
-        }
-        // Remove obsolete tags before save's stored-tag validation, then add only missing
-        // names. A metadata no-op or unchanged tag retains its existing row/timestamp.
-        if let Some(names) = &names {
-            for tag in self.tags(tx.conn())? {
-                if !names.contains(&tag.name) {
-                    tag.destroy(tx)?;
-                }
-            }
-        }
-        self.save(tx, changed)?;
-        if let Some(names) = names {
-            let existing = self.tag_names(tx.conn())?;
-            for name in names {
-                if !existing.contains(&name) {
-                    ThreadTag::create(tx, self.id, &name)?;
-                }
-            }
-        }
-        Ok(())
+        self.save_with_tags(tx, changed, tags.map(normalize_tag_names))
     }
 
     // Lifecycle
@@ -744,6 +721,16 @@ impl ChannelThread {
         creator_id: i64,
         attributes: NewMessage,
     ) -> Result<Message> {
+        self.post_message_with_agent_delivery(tx, creator_id, attributes, false)
+    }
+
+    fn post_message_with_agent_delivery(
+        &mut self,
+        tx: &mut Tx<'_>,
+        creator_id: i64,
+        attributes: NewMessage,
+        defer_agent_delivery: bool,
+    ) -> Result<Message> {
         self.reload(tx.conn())?;
         if self.locked_at.is_some() {
             return Err(Error::Other(LOCKED_MESSAGE.into()));
@@ -755,7 +742,7 @@ impl ChannelThread {
         changed.closed_at = None;
         changed.last_activity_at = tx.now();
         self.save(tx, changed)?;
-        Message::create(
+        Message::create_with_agent_delivery(
             tx,
             NewMessage {
                 room_id: self.room_id,
@@ -763,6 +750,7 @@ impl ChannelThread {
                 creator_id,
                 ..attributes
             },
+            defer_agent_delivery,
         )
     }
 

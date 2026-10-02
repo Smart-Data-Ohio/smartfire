@@ -2,6 +2,7 @@
 
 pub mod account;
 pub mod agent;
+pub mod agent_work;
 pub mod agent_access;
 pub mod agent_approval;
 pub mod agent_approvals;
@@ -25,6 +26,10 @@ pub mod auth_audit;
 pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;
+pub mod board_tag_assignment;
+pub use board_tag_assignment::{BoardTagAssignment, NewBoardTagAssignment};
+pub mod work_handoff;
+pub use work_handoff::{HandoffPackage, NewWorkHandoff, WorkHandoff};
 pub mod ban;
 pub mod boost;
 pub mod bot_webhook_fanout;
@@ -85,7 +90,7 @@ pub use activity_item::ActivityItem;
 pub use work_thread_event::WorkThreadEvent;
 pub use ban::Ban;
 pub use boost::Boost;
-pub use channel_thread::{ChannelThread, NewChannelThread, ThreadPush, ThreadPushCandidate, ThreadStatus};
+pub use channel_thread::{AgentWorkChanges, ChannelThread, NewChannelThread, ThreadPush, ThreadPushCandidate, ThreadStatus};
 pub use calendar_event::{CalendarEvent, NewCalendarEvent};
 pub use calendar_event::attendance::EventAttendance;
 pub use first_run::FirstRun;

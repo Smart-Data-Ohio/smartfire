@@ -180,7 +180,11 @@ async fn create_board(c: &mut Ctx, room: Room) -> Result {
         return c.redirect_to(&c.url_for(&format!("/rooms/{room_id}/threads/{}", thread.id)));
     }
     let base = c.url_for("");
-    let payload=messages::present(c,move |p| Ok(json!({"thread":messages::payload::thread(p,&thread,&viewer,&base)?,"parent_message":null}))).await?;
+    let payload=messages::present(c,move |p| {
+        // Rails reloads after the committed tag-assignment callback.
+        let thread = ChannelThread::find(p.conn, thread.id)?;
+        Ok(json!({"thread":messages::payload::thread(p,&thread,&viewer,&base)?,"parent_message":null}))
+    }).await?;
     render_json(c, StatusCode::CREATED, &payload)
 }
 
@@ -574,6 +578,11 @@ pub async fn update(c: &mut Ctx) -> Result {
     let viewer = require_current_user(c)?.clone();
     let base = c.url_for("");
     let payload = messages::present(c, move |p| {
+        let thread = if board {
+            ChannelThread::find(p.conn, thread.id)?
+        } else {
+            thread
+        };
         Ok(json!({"thread": messages::payload::thread_details(p, &thread, &viewer, &base)?}))
     })
     .await?;

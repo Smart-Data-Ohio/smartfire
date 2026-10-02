@@ -402,6 +402,16 @@ impl Message {
     /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
     /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
+        Self::create_with_agent_delivery(tx, attributes, false)
+    }
+
+    /// Board creation records its assignment before invoking the real WS11 opener fanout.
+    /// Both remain in the source transaction so every delivery job commits atomically.
+    pub(crate) fn create_with_agent_delivery(
+        tx: &mut Tx<'_>,
+        attributes: NewMessage,
+        defer_agent_delivery: bool,
+    ) -> Result<Self> {
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate(tx.conn(), &attributes)?.into_result()?;
         let now = tx.now();
@@ -475,7 +485,9 @@ impl Message {
             // room's archive state.
             ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
-        crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
+        if !defer_agent_delivery {
+            crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
+        }
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)

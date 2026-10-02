@@ -2518,89 +2518,89 @@
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 9,
       "test": "assigns to a human member",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 15,
       "test": "normalises the tag",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 21,
       "test": "assigns to an eligible agent member",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 29,
       "test": "rejects a tag outside the thread tag format",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 36,
       "test": "rejects a duplicate tag on the same board",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 44,
       "test": "allows the same tag on another board",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 51,
       "test": "rejects a non-board room",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 58,
       "test": "rejects an assignee outside the board",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 66,
       "test": "rejects a suspended agent assignee",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 76,
       "test": "rejects an agent assignee without post_messages",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
       "line": 86,
       "test": "rejects an agent assignee without read_messages",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2838,81 +2838,81 @@
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 11,
       "test": "a new tag auto-assigns an unowned post to a person",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 24,
       "test": "adding a tag later auto-assigns too",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 36,
       "test": "auto-assign to an agent writes its work_assigned ledger row",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 46,
       "test": "auto-assign never overrides a human assignment",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 57,
       "test": "auto-assign never overrides an agent assignment",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 68,
       "test": "auto-assign skips a rule whose assignee left the board",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 78,
       "test": "auto-assign skips an agent that lost read_messages",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 88,
       "test": "auto-assign skips a suspended agent",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 98,
       "test": "auto-assign ignores channel threads",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
       "line": 107,
       "test": "work_status_changed_at stamps on every status change",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
@@ -3262,105 +3262,105 @@
       "file": "test/models/work_handoff_test.rb",
       "line": 15,
       "test": "normalises link and question collections",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 27,
       "test": "requires a summary within the cap",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 38,
       "test": "caps links and requires http urls",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 55,
       "test": "caps open questions",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 67,
       "test": "receiver_error accepts an eligible agent",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 71,
       "test": "receiver_error rejects non-agents and unknown agents",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 78,
       "test": "receiver_error rejects an agent outside the room",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 85,
       "test": "receiver_error rejects a suspended agent",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 92,
       "test": "receiver_error rejects an agent missing post_messages",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 99,
       "test": "receiver_error rejects an agent missing manage_threads",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 106,
       "test": "receiver_error rejects an agent missing read_messages",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 113,
       "test": "receiver_error rejects the current owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_handoff_test.rb",
       "line": 120,
       "test": "payload carries the context package",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
     },
     {
       "file": "test/models/work_thread_link_test.rb",

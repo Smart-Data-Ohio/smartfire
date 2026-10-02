@@ -142,7 +142,7 @@ impl ChannelThread {
                     !campfire_richtext::ruby::is_blank(campfire_richtext::ruby::strip(message))
                 })
                 .map(|message| {
-                    thread.post_message(
+                    thread.post_message_with_agent_delivery(
                         tx,
                         creator_id,
                         NewMessage {
@@ -150,6 +150,7 @@ impl ChannelThread {
                             board_post_opener: true,
                             ..Default::default()
                         },
+                        true,
                     )
                 })
                 .transpose()?;
@@ -167,6 +168,7 @@ impl ChannelThread {
                 )?;
             }
             if let Some(message) = opener {
+                crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
                 for membership in Membership::for_room(tx.conn(), thread.room_id)? {
                     let user = User::find(tx.conn(), membership.user_id)?;
                     if !user.is_active()

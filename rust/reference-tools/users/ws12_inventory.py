@@ -144,6 +144,12 @@ for path in files:
             status,owner,evidence="ported","WS12","reference-tools/boards/write_browser.mjs: actual signed-session Markdown reply form, rendered message, cleared composer and persisted plain text through the JSON read on both Rails and Rust."
         if relative=="test/system/boards_test.rb" and title=="board pages align to the top under the header":
             status,owner,evidence="ported","WS12","Body-class assertions are covered by full board post/new-page response comparisons and write_browser.mjs. Geometric assertions are excluded from acceptance by the pixel-phase cut in wave4/_common.md and decisions.md; no pixel work is deferred."
+        if relative in {"test/models/board_tag_assignment_test.rb", "test/models/channel_thread_auto_assign_test.rb"}:
+            status,owner,evidence="ported","WS12","board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
+        if relative=="test/models/work_handoff_test.rb":
+            status,owner,evidence="ported","WS12","agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
+        if relative=="test/models/channel_thread_board_test.rb" and title=="board posts accept an eligible agent owner":
+            status,owner,evidence="ported","WS12 using merged WS11 #176","Existing work_mutations_test.rs owner path plus agent_work_test.rs actual Rails service creation, fresh post/read membership policy and ledger snapshots."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")
