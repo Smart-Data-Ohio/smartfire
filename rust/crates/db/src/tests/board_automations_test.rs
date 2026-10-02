@@ -71,8 +71,8 @@ fn board_automation_rule_models_match_rails_errors_and_dirty_updates() {
             );
             if row["valid"] == true && row["existing_id"].is_null() {
                 let mut saved = BoardSlaRule::create(tx, attributes)?;
-                assert_eq!(json!(saved.nudge_after_minutes), row["nudge"]);
-                assert_eq!(json!(saved.escalate_after_minutes), row["escalate"]);
+                assert_eq!(json!(saved.nudge_after_minutes.to_string()), row["nudge"]);
+                assert_eq!(json!(saved.escalate_after_minutes.to_string()), row["escalate"]);
                 if saved.nudge_after_minutes < 43199 {
                     let mut stale = saved.clone();
                     saved.update(tx, Some("90".into()), Some("43200".into()))?;

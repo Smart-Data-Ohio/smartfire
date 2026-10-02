@@ -24,6 +24,12 @@ models = []
   ['done', {work_status: 'done'}], ['unknown', {work_status: 'shipped'}], ['blank-status', {work_status: ''}], ['nil-status', {work_status: nil}],
   ['missing-room', {room_id: 0}], ['channel', {room_id: 654632876}], ['duplicate', {}, true], ['self-id-zero', {}, true],
   *[nil, '', ' ', '0', '-5', '43201', '60.0', '1e2', ' 60 ', '+60', '060', 'xyz'].map { |v| ["nudge-#{v.inspect}", {nudge_after_minutes: v}] },
+  ['nudge-i64-overflow', {nudge_after_minutes: '9223372036854775808'}],
+  ['nudge-large-positive', {nudge_after_minutes: '9' * 400}],
+  ['nudge-large-negative', {nudge_after_minutes: '-' + '9' * 400}],
+  ['escalation-large-positive', {escalate_after_minutes: '9' * 400}],
+  ['integer-underscore-cast', {nudge_after_minutes: '4_2', escalate_after_minutes: '10'}],
+  ['exponent-overflow', {nudge_after_minutes: '1e400'}],
   ['nil-escalation', {escalate_after_minutes: nil}], ['blank-escalation', {escalate_after_minutes: ''}],
   ['equal-escalation', {escalate_after_minutes: '60'}], ['earlier-escalation', {escalate_after_minutes: '30'}], ['max', {nudge_after_minutes: '43199', escalate_after_minutes: '43200'}]
 ].each do |name, overrides, duplicate|
@@ -33,7 +39,8 @@ models = []
     rule = name == 'self-id-zero' ? saved : BoardSlaRule.new(base.merge(overrides))
     valid = rule.valid?
     models << {name:, input: base.merge(overrides), existing_id: name == 'self-id-zero' ? 0 : nil, duplicate: !!duplicate, valid:, errors: rule.errors.to_hash, full_messages: rule.errors.full_messages,
-      nudge: rule.nudge_after_minutes, escalate: rule.escalate_after_minutes}
+      # Decimal strings preserve arbitrary-size cast facts without JSON consumer float loss.
+      nudge: rule.nudge_after_minutes&.to_s, escalate: rule.escalate_after_minutes&.to_s}
     raise ActiveRecord::Rollback
   end
 end
