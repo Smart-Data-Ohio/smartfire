@@ -11,7 +11,7 @@ use tower::ServiceExt;
 const KEY: &str = "ws13-fixture-api-key";
 const SECRET: &str = "ws13-fixture-api-secret";
 const GATEWAY: &str = "ws13-fixture-gateway-secret";
-fn config() -> Config {
+pub(super) fn config() -> Config {
     Config::from_lookup(|name| {
         Some(
             match name {
@@ -25,7 +25,7 @@ fn config() -> Config {
         )
     })
 }
-async fn request(
+pub(super) async fn request(
     app: &TestApp,
     method: Method,
     path: &str,
@@ -58,7 +58,7 @@ async fn request(
         serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
     )
 }
-async fn grant(app: &TestApp) -> HuddleGrant {
+pub(super) async fn grant(app: &TestApp) -> HuddleGrant {
     app.db()
         .write(|tx| {
             let session = Session::start(tx, DAVID, None, None)?;
@@ -78,7 +78,7 @@ async fn grant(app: &TestApp) -> HuddleGrant {
         .await
         .unwrap()
 }
-fn bearer(app: &TestApp, grant: &HuddleGrant, offset: i64) -> String {
+pub(super) fn bearer(app: &TestApp, grant: &HuddleGrant, offset: i64) -> String {
     let token = rails_compat::jwt::livekit::participant_token(
         KEY,
         SECRET,
@@ -316,6 +316,8 @@ async fn huddle_gateway_request_response_vectors_match_pinned_rails() {
         let Some(app) = TestApp::boot_with_huddle_and_clock(cfg, clock).await else {
             return;
         };
+        // Inspect the enqueue from this request before the real cleanup worker consumes it.
+        let app = app.without_job_runner().await;
         let seen = case["seen"] == true;
         let revoked = case["revoked"] == true;
         let removed = case["removed"] == true;

@@ -80,3 +80,10 @@ impl Frame<'_> {
         )
     }
 }
+
+/// Origin placeholder used only by detached fixture renders.
+pub const ORIGIN_SLOT: &str = "http://campfire.test";
+pub fn lazy(id: i64, room_id: i64) -> String {
+    h::turbo_frame_tag(&format!("message_link_card_message_reference_{id}"),Some(&format!("/rooms/{room_id}/message_links/{id}")),None,h::attrs().attr("loading","lazy").class("message-link-frame"),"").0
+}
+impl Card { pub fn html(&self,ctx:&ViewContext) -> String {CardPartial{ctx,card:self}.render().expect("quote renders")} }

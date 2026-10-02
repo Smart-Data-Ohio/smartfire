@@ -1,0 +1,443 @@
+//! `Rooms::VoicesController` / `Rooms::StagesController`. Membership and call
+//! callbacks remain in the existing domain; Stage edits use one immediate transaction.
+use super::{
+    Scope, ensure_can_administer, ensure_permission_to_create_rooms, existing_user_ids,
+    redirect_to_room, room_name_param, set_room, user_ids_param,
+};
+use crate::controllers::presenters::{
+    Presenter,
+    page::{self, db_error},
+    user_view,
+};
+use crate::{
+    app::AppCtx,
+    concerns::{self, Before, before_actions, require_current_user},
+};
+use campfire_db::models::audit_log::{AuditLog, Context, NewAuditLog};
+use campfire_db::{CachedStatements, Membership, Room, RoomType, StageRole, User};
+use campfire_kit::{Ctx, Result, StatusCode};
+use campfire_views::{
+    helpers::IconSource,
+    rooms::{
+        FormRoom,
+        calls::{CallForm, CallRow, StagesEdit, StagesNew, VoicesEdit, VoicesNew},
+    },
+};
+use serde_json::json;
+
+fn stage(c: &Ctx) -> bool {
+    c.current::<crate::controllers::MatchedRoute>()
+        .unwrap()
+        .endpoint
+        .starts_with("rooms/stages#")
+}
+fn kind(c: &Ctx) -> RoomType {
+    if stage(c) {
+        RoomType::Stage
+    } else {
+        RoomType::Voice
+    }
+}
+fn scope(c: &Ctx) -> Scope {
+    if stage(c) {
+        Scope::Stages
+    } else {
+        Scope::Voices
+    }
+}
+fn audit_context(c: &Ctx) -> Result<Context> {
+    Ok(Context {
+        actor: Some(require_current_user(c)?.into()),
+        ip_address: Some(c.request.remote_ip()?.to_string()),
+        user_agent: c.request.user_agent().map(str::to_string),
+    })
+}
+fn icon_param(c: &Ctx) -> Result<Option<Option<String>>> {
+    let attrs = c
+        .params
+        .require("room")?
+        .permit(&campfire_kit::permit_keys(&["icon_name"]));
+    Ok(attrs.get("icon_name").map(|p| {
+        let value = p.to_s().unwrap_or_default();
+        let value = campfire_richtext::ruby::strip(&value).trim_matches(':');
+        let value = campfire_richtext::ruby::strip(value).to_lowercase();
+        (!value.is_empty()).then_some(value)
+    }))
+}
+fn valid_icon(conn: &campfire_db::Connection, app: &crate::app::App, icon: Option<&str>) -> bool {
+    icon.is_none_or(|name| {
+        Presenter::new(conn, app, None)
+            .resolve_avatar_icon(name)
+            .is_some()
+    })
+}
+
+pub async fn show(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let room = set_room(c, scope(c)).await?;
+    concerns::remember_last_room_visited(c, room.id);
+    redirect_to_room(c, room.id)
+}
+pub async fn new(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    ensure_permission_to_create_rooms(c).await?;
+    let form = CallForm {
+        room: FormRoom {
+            id: None,
+            name: Some(
+                if stage(c) {
+                    "New stage channel"
+                } else {
+                    "New voice channel"
+                }
+                .into(),
+            ),
+        ..Default::default()},
+        stage: stage(c),
+        can_administer: true,
+        current_user_id: require_current_user(c)?.id,
+        selected_users: Vec::new(),
+        unselected_users: super::opens::active_users(c).await?,
+        icon_name: None,
+        icon: None,
+        errors: Vec::new(),
+        settings: None,
+    };
+    render(c, form, StatusCode::OK).await
+}
+pub async fn edit(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let room = set_room(c, scope(c)).await?;
+    let form = form(c, room, Vec::new()).await?;
+    render(c, form, StatusCode::OK).await
+}
+pub async fn create(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    ensure_permission_to_create_rooms(c).await?;
+    let name = room_name_param(c)?.flatten();
+    let icon = icon_param(c)?.flatten();
+    let grantees = user_ids_param(c);
+    let creator = require_current_user(c)?.id;
+    let kind = kind(c);
+    let app = c.app().clone();
+    let audit = audit_context(c)?;
+    let result = c
+        .app()
+        .db
+        .write(move |tx| {
+            if !valid_icon(tx.conn(), &app, icon.as_deref()) {
+                return Ok(Err((name, icon)));
+            }
+            let ids = existing_user_ids(tx.conn(), &grantees)?;
+            let mut room = Room::create_for(tx, kind, name.as_deref(), creator, &ids)?;
+            if icon.is_some() {
+                tx.conn().execute_cached(
+                    "UPDATE rooms SET icon_name=? WHERE id=?",
+                    rusqlite::params![icon, room.id],
+                )?;
+                room.reload(tx.conn())?;
+            }
+            AuditLog::record(
+                tx,
+                NewAuditLog {
+                    action: "room.create".into(),
+                    target: Some((&room).into()),
+                    changes: Some(json!({"name":room.name})),
+                    ..Default::default()
+                },
+                &audit,
+            )?;
+            Ok(Ok(room))
+        })
+        .await
+        .map_err(db_error)?;
+    let room = match result {
+        Ok(room) => room,
+        Err((name, icon_name)) => {
+            let app = c.app().clone();
+            let for_icon = icon_name.clone();
+            let icon = c
+                .app()
+                .db
+                .read(move |conn| {
+                    Ok(for_icon
+                        .as_deref()
+                        .and_then(|n| Presenter::new(conn, &app, None).resolve_avatar_icon(n)))
+                })
+                .await
+                .map_err(db_error)?;
+            let form = CallForm {
+                room: FormRoom { id: None, name, ..Default::default()},
+                stage: stage(c),
+                can_administer: true,
+                current_user_id: creator,
+                selected_users: Vec::new(),
+                unselected_users: super::opens::active_users(c).await?,
+                icon_name,
+                icon,
+                errors: vec!["Icon name is not a known icon".into()],
+                settings: None,
+            };
+            return render(c, form, StatusCode::UNPROCESSABLE_ENTITY).await;
+        }
+    };
+    broadcast(c, &room, false).await?;
+    redirect_to_room(c, room.id)
+}
+
+pub async fn update(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let room = set_room(c, scope(c)).await?;
+    ensure_can_administer(c, &room)?;
+    let name = room_name_param(c)?;
+    let icon = icon_param(c)?;
+    let ids = user_ids_param(c);
+    // Rails maps a present blank id to zero for its host guard, while its
+    // single-NULL `where.not(id:)` selects no revokees. A missing list is empty.
+    let values = c.param("user_ids").and_then(campfire_kit::Param::as_array);
+    let has_remaining_ids = values.is_some_and(|v| !v.is_empty()) || !ids.is_empty();
+    let blank_only = values.is_some_and(|v| v.len() == 1 && v[0].as_str() == Some(""));
+    let app = c.app().clone();
+    let audit = audit_context(c)?;
+    let result=c.app().db.write(move |tx| {
+        let mut room=Room::find(tx.conn(),room.id)?;
+        // Re-read the hosts under the same immediate transaction as the revision.
+        if room.stage() && has_remaining_ids {
+            let hosts:Vec<_>=Membership::for_room(tx.conn(),room.id)?.into_iter().filter(|m|m.stage_role==Some(StageRole::Host)).collect();
+            if !hosts.iter().any(|m|ids.contains(&m.user_id)) && let Some(removed)=hosts.iter().find(|m|!ids.contains(&m.user_id)) {
+                let user=User::find(tx.conn(),removed.user_id)?;
+                return Ok(Err((room,vec![format!("Promote another host before removing {}",user.name)])));
+            }
+        }
+        let preview_icon=icon.as_ref().unwrap_or(&room.icon_name);
+        if preview_icon != &room.icon_name && !valid_icon(tx.conn(),&app,preview_icon.as_deref()) {
+            if let Some(name)=name {room.name=name;}
+            room.icon_name=preview_icon.clone();
+            return Ok(Err((room,vec!["Icon name is not a known icon".into()])));
+        }
+        room.update(tx,name.as_ref().map(|n|n.as_deref()),None)?;
+        if let Some(icon)=icon && icon != room.icon_name {tx.conn().execute_cached("UPDATE rooms SET icon_name=?,updated_at=? WHERE id=?",rusqlite::params![icon,tx.now(),room.id])?;room.reload(tx.conn())?;}
+        let before=room.user_ids(tx.conn())?;
+        let granted=existing_user_ids(tx.conn(),&ids)?;
+        let revoked:Vec<_>=before.iter().filter(|id|!blank_only && !ids.contains(id)).copied().collect();
+        room.revise(tx,&granted,&revoked)?;
+        if room.stage() {tx.conn().execute_cached("UPDATE memberships SET stage_role='listener' WHERE room_id=? AND stage_role IS NULL",[room.id])?;}
+        let after=room.user_ids(tx.conn())?;
+        let added:Vec<_>=after.iter().filter(|id|!before.contains(id)).copied().collect();
+        let removed:Vec<_>=before.iter().filter(|id|!after.contains(id)).copied().collect();
+        if !added.is_empty() || !removed.is_empty() {
+            let names=|ids:&[i64]| -> campfire_db::Result<Vec<String>> {Ok(User::where_ids(tx.conn(),ids)?.into_iter().map(|u|u.name).collect())};
+            AuditLog::record(tx,NewAuditLog{action:"room.membership.change".into(),target:Some((&room).into()),changes:Some(json!({"granted":names(&added)?,"revoked":names(&removed)?})),..Default::default()},&audit)?;
+        }
+        Ok(Ok(room))
+    }).await.map_err(db_error)?;
+    match result {
+        Ok(room) => {
+            broadcast(c, &room, true).await?;
+            redirect_to_room(c, room.id)
+        }
+        Err((room, errors)) => {
+            let form = form(c, room, errors).await?;
+            render(c, form, StatusCode::UNPROCESSABLE_ENTITY).await
+        }
+    }
+}
+async fn form(c: &Ctx, room: Room, errors: Vec<String>) -> Result<CallForm> {
+    let app = c.app().clone();
+    let current = require_current_user(c)?.clone();
+    c.app()
+        .db
+        .read(move |conn| {
+            let selected = room.user_ids(conn)?;
+            let (a, b): (Vec<_>, Vec<_>) = User::active_ordered(conn)?
+                .into_iter()
+                .partition(|u| selected.contains(&u.id));
+            let views =
+                |users: Vec<User>| users.iter().map(|u| user_view(&app.secrets, u)).collect();
+            Ok(CallForm {
+                room: FormRoom {
+                    id: Some(room.id),
+                    name: room.name.clone(),
+                ..Default::default()},
+                stage: room.stage(),
+                can_administer: current.can_administer(Some(room.creator_id), false),
+                current_user_id: current.id,
+                selected_users: views(a),
+                unselected_users: views(b),
+                icon: room
+                    .icon_name
+                    .as_deref()
+                    .and_then(|n| Presenter::new(conn, &app, None).resolve_avatar_icon(n)),
+                icon_name: room.icon_name.clone(),
+                settings: Some(super::call_navigation::edit_sections(
+                    &app, conn, &room, &current,
+                )?),
+                errors,
+            })
+        })
+        .await
+        .map_err(db_error)
+}
+async fn render(c: &mut Ctx, form: CallForm, status: StatusCode) -> Result {
+    match (form.stage, form.room.id.is_some()) {
+        (false, false) => page::framed_page!(c, status, |ctx| VoicesNew { ctx, form: &form }).await,
+        (false, true) => page::framed_page!(c, status, |ctx| VoicesEdit { ctx, form: &form }).await,
+        (true, false) => page::framed_page!(c, status, |ctx| StagesNew { ctx, form: &form }).await,
+        (true, true) => page::framed_page!(c, status, |ctx| StagesEdit { ctx, form: &form }).await,
+    }
+}
+pub(crate) fn row(
+    app: &crate::app::App,
+    conn: &campfire_db::Connection,
+    room: &Room,
+) -> campfire_db::Result<CallRow> {
+    let participants = if app.config.huddle.configured() {
+        campfire_db::models::huddle_grant::HuddleGrant::participants_for(
+            conn,
+            room.id,
+            app.db.env().now(),
+        )?
+        .iter()
+        .map(|u| campfire_views::huddle::Participant {
+            id: u.id,
+            name: u.name.clone(),
+            avatar_path: crate::controllers::presenters::avatar_path(&app.secrets, u),
+        })
+        .collect()
+    } else {
+        Vec::new()
+    };
+    let live = campfire_db::models::stream::Stream::live_for_room(conn, room.id)?;
+    let live_name = live
+        .as_ref()
+        .map(|s| User::find(conn, s.user_id).map(|u| u.name))
+        .transpose()?
+        .unwrap_or_default();
+    Ok(row_with_call_facts(app, conn, room, participants, live.is_some(), live_name))
+}
+
+pub(crate) fn row_with_call_facts(
+    app: &crate::app::App,
+    conn: &campfire_db::Connection,
+    room: &Room,
+    participants: Vec<campfire_views::huddle::Participant>,
+    live: bool,
+    live_name: String,
+) -> CallRow {
+    CallRow {
+        id: room.id,
+        name: room.name.clone().unwrap_or_default(),
+        stage: room.stage(),
+        icon: room
+            .icon_name
+            .as_deref()
+            .and_then(|n| Presenter::new(conn, app, None).resolve_avatar_icon(n)),
+        participants,
+        live,
+        live_name,
+        unread: false,
+        muted: false,
+        membership: false,
+        favorited: false,
+        favorite_position: None,
+        category_id: None,
+        can_delete: false,
+    }
+}
+async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
+    let app = c.app().clone();
+    let room = room.clone();
+    let base = page::renderer_base_url(c);
+    c.app()
+        .db
+        .read(move |conn| {
+            let row = row(&app, conn, &room)?;
+            let html = page::render_detached_at(&app, None, &base, |ctx| row.render(ctx));
+            let header = page::render_detached_at(&app, None, &base, |ctx| row.header(ctx));
+            for member in room.users(conn)? {
+                let stream = crate::channels::broadcasts::Stream::user_rooms(member.id);
+                if update {
+                    app.broadcasts.replace(&stream, &row.dom_id("list"), &html);
+                } else {
+                    app.broadcasts.prepend(
+                        &stream,
+                        if room.stage() {
+                            "stage_rooms"
+                        } else {
+                            "voice_rooms"
+                        },
+                        &html,
+                    );
+                }
+            }
+            if update {
+                for member in room.users(conn)? {
+                    app.broadcasts.replace(
+                        &crate::channels::broadcasts::Stream::user_rooms(member.id),
+                        &row.dom_id("header"),
+                        &header,
+                    );
+                }
+            }
+            Ok(())
+        })
+        .await
+        .map_err(db_error)
+}
+
+/// Generic `/rooms/:id` deletion of a voice/stage channel delegates to WS8a's
+/// existing room-deletion seam so call grants and streams end synchronously.
+pub async fn destroy(c: &mut Ctx, room: Room) -> Result {
+    let audit = audit_context(c)?;
+    let config = campfire_db::models::room_delete::HuddleConfig {
+        api_secret: c.app().config.huddle.api_secret.clone(),
+        admin_configured: c.app().config.huddle.admin_configured(),
+    };
+    let deleted = room.clone();
+    c.app()
+        .db
+        .write(move |tx| campfire_db::models::room_delete::begin_destroy(tx, &deleted, &config))
+        .await
+        .map_err(db_error)?;
+    // RoomsController#destroy audits after its marking transaction commits.
+    // An unavailable audit sink must not resurrect a deleted call room.
+    let deleted = room.clone();
+    c.app()
+        .db
+        .write(move |tx| {
+            AuditLog::record(
+                tx,
+                NewAuditLog {
+                    action: "room.destroy".into(),
+                    target: Some((&deleted).into()),
+                    target_label: deleted.name.clone(),
+                    changes: Some(json!({"name":deleted.name})),
+                    ..Default::default()
+                },
+                &audit,
+            )?;
+            Ok(())
+        })
+        .await
+        .map_err(db_error)?;
+    c.app().broadcasts.room_remove(&room);
+    let json_response = *c
+        .respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])?
+        == campfire_kit::format::JSON;
+    if json_response {
+        c.json(StatusCode::OK, &json!({"deleted":true,"room_id":room.id}))
+    } else {
+        let root = c.url_for(&campfire_routes::root());
+        let notice = room
+            .name
+            .filter(|n| !campfire_richtext::ruby::is_blank(n))
+            .map(|n| format!("Deleted #{n}"));
+        c.redirect_to_with(
+            &root,
+            campfire_kit::Redirect {
+                notice,
+                ..Default::default()
+            },
+        )
+    }
+}

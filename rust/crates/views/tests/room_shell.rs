@@ -8,6 +8,7 @@ fn fixtures() -> Vec<serde_json::Value> {
 }
 fn view(row: &serde_json::Value) -> rooms::ShowView {
     rooms::ShowView {
+        navigation: None,
         room: rooms::RoomView {
             id: row["room_id"].as_i64().unwrap(),
             kind: if row["kind"] == "direct" {

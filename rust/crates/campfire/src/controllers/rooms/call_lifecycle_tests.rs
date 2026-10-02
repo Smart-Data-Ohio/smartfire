@@ -214,7 +214,7 @@ async fn stage_stream_start_requires_role_host_unmuted_and_seen_grant() {
     );
 }
 
-fn insert(
+pub(super) fn insert(
     tx: &campfire_db::Tx<'_>,
     table: &str,
     row: &serde_json::Value,

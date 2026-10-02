@@ -160,6 +160,9 @@ pub struct TestApp {
 }
 
 impl TestApp {
+    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_with_huddle_services(clock, crate::integrations::net::Network::system(), settings, huddle).await
+    }
     /// Stop and join job workers before arranging assertions about committed enqueues.
     /// HTTP routes and the durable queue sink stay active. Tests of job execution should
     /// keep the default runner instead.

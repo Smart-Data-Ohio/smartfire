@@ -92,7 +92,8 @@ impl Layout {
             preferences,
             ..current_user(&secrets, user)
         });
-        chrome.google_picker = app.config.google_picker.clone();
+        chrome.google_picker = user.as_ref().and(app.config.google_picker.clone());
+        chrome.huddle_configured = app.config.huddle.configured();
         chrome.global_search_query = if c.request.path().starts_with("/searches") {
             crate::controllers::searches::display_query(c)
         } else {
@@ -404,4 +405,9 @@ fn apply_settings_preferences(
         }
     }
     preferences.notification_sounds = sounds;
+}
+
+#[cfg(test)]
+pub(crate) fn user_preferences_at(conn: &campfire_db::Connection, user_id: i64, now: campfire_db::Timestamp) -> campfire_db::Result<UserPreferences> {
+    user_preferences(conn,user_id,now.jiff())
 }
