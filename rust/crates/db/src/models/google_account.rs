@@ -55,6 +55,22 @@ impl GoogleAccount {
             )
             .optional()?)
     }
+    /// Calendar::PushChannel.includes(user: :google_account), in bounded find_each batches.
+    pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
+        let mut accounts = Vec::new();
+        for ids in user_ids.chunks(1000) {
+            accounts.extend(crate::sql::query_all(
+                conn,
+                &format!(
+                    "SELECT * FROM google_accounts WHERE user_id IN ({})",
+                    crate::sql::placeholders(ids.len())
+                ),
+                rusqlite::params_from_iter(ids),
+                Self::from_row,
+            )?);
+        }
+        Ok(accounts)
+    }
     pub fn connected(&self) -> bool {
         self.disconnected_reason
             .as_deref()

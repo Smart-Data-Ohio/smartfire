@@ -596,6 +596,10 @@ mod google_drive_tests;
 
 #[cfg(test)]
 mod google_calendar_job_tests;
+#[cfg(test)]
+mod google_meeting_refresh_tests;
+#[cfg(test)]
+mod google_push_channel_tests;
 
 #[cfg(test)]
 mod google_test_support;
