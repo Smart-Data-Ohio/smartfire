@@ -28,7 +28,7 @@ custom_styles/restricted/crowd fixture tools do not add states to this inventory
 | first_run | Empty schema; real first-run form |
 | live_rooms | default plus participant, speaker and live stream; synthetic gateway env from reference_env.* labels on both targets |
 | imports | default plus workspace/personal Slack previews and failed run, with recorded conversation/sample payloads |
-| agents_ui (optional) | default plus an owner-managed agent, active/expired/revoked credentials, enforced and revoked grants, pending/denied/overdue approvals, failed webhook ledger delivery, live status and two work-thread steps. Labels use the `ui` or `agent_ui` suffix. Build explicitly for agent page captures; it preserves default's no-grant legacy behavior. |
+| agents_ui | default plus an owner-managed agent, active/expired/revoked credentials, enforced and revoked grants, pending/denied/overdue approvals, failed webhook ledger delivery, live status and two work-thread steps. Labels use the `ui` or `agent_ui` suffix. Required by the navigation/inbox request tests and agent page captures; it preserves default's no-grant legacy behavior. |
 
 The retained media corpus covers rich text/code/tables/mentions, old SGIDs, sounds/unfurls,
 Twitter cards, image/video/files, boosts, bot/deactivated authors, edits and a busy timeline.
@@ -77,10 +77,10 @@ Native/host-browser modes are conveniences, not acceptance runs.
 
 ## Rust CI seeds
 
-The Rust test workflow builds `default` and `first_run` from the full Rails SHA in
+The Rust test workflow builds `default`, `first_run` and `agents_ui` from the full Rails SHA in
 `parity/reference.sha` (currently `d7c7de92`). `parity/bin/ci-seed prepare` archives that commit
 into ignored `parity/.ci/reference`; it never builds Rails from the changing Rust branch.
-`ci-seed image` builds or loads the canonical reference image, `ci-seed build` creates both
+`ci-seed image` builds or loads the canonical reference image, `ci-seed build` creates all three
 seeds, and `ci-seed validate` runs the Rails validator at the frozen seed clock every time.
 The same four commands can be run locally from any directory.
 
@@ -93,5 +93,5 @@ Only pushes to main save caches; PRs read them and use no application secrets.
 
 Every app seed loader fails if its seed is missing and `CI` is set, even to an empty value.
 Locally it may return early with a clear skip message. `first_run` is required by the account
-creation test as well as `default` by the other request and cable tests. The CI setup summary
+creation test, `agents_ui` by the navigation/inbox tests, and `default` by the other request and cable tests. The CI setup summary
 prints elapsed time and both cache-hit flags for cold/warm comparisons.
