@@ -3,7 +3,7 @@
 kind = ARGV.fetch(0)
 # The production parity seed has many extra provider/state examples. The
 # pinned list regressions use just the three original Designers fixtures.
-if %w[message_list message_destinations history boosts].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-")
+if %w[message_list message_destinations history boosts toolbar interactions actions-mobile thread-pr].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-") || kind.start_with?("highlight")
   Room.find(654632876).root_messages.where.not(id: [309456473, 908005739, 607264868]).destroy_all
 end
 case kind
@@ -55,6 +55,51 @@ when "attach-menu"
   User.find(712064548).google_account&.destroy!
 when "boosts"
   Message.find(607264868).boosts.create!(booster: User.find(127326141), content: "Older note")
+when "toolbar", "interactions", "actions-mobile"
+  require Rails.root.join("app/helpers/emoji_helper")
+  metadata = { reaction_count: EmojiHelper::REACTIONS.length,
+    message_permalink: Rails.application.routes.url_helpers.room_at_message_path(654632876, Message.find(607264868)) }
+  if kind == "toolbar"
+    WorkspaceIcon.find_by(name: "acme")&.destroy!
+    icon = WorkspaceIcon.new(name: "acme", title: "Acme Corp", creator: User.find(127326141))
+    icon.image.attach(io: File.open(Rails.root.join("test/fixtures/files/workspace_icons/clean.svg")), filename: "clean.svg")
+    icon.save!
+  elsif kind == "interactions"
+    destination = ChannelThread.create!(room: Room.find(654632876), creator: User.find(773523953), name: "Forward destination")
+    metadata[:forward_thread_id] = destination.id
+  end
+  File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(metadata))
+when /^highlight/
+  # Extract original literals from the reference test itself; no candidate
+  # render or hand-authored vector supplies the expected source.
+  source = File.read(Rails.root.join("storage/db/code-highlighting-reference.rb"))
+  samples = eval(source.match(/SAMPLES = (\{.*?\})\.freeze/m)[1])
+  literal = source.split("source = <<~'MARKDOWN'\n")[1].split("    MARKDOWN")[0].lines.map { |line| line.delete_prefix("      ") }.join
+  code_source = eval(source.match(/test "code and copying.*?source = ("(?:[^"\\]|\\.)*")/m)[1])
+  replacement = eval(source.match(/replacement = ("(?:[^"\\]|\\.)*")/m)[1])
+  wait = File.read(Rails.root.join("storage/db/application-system-reference.rb")).match(/HIGHLIGHT_WAIT = (\d+)/)[1].to_i
+  metadata = { samples: samples.to_a, literal_code_source: literal, code_source:, code_replacement: replacement, highlight_wait: wait }
+  if kind == "highlight-search"
+    body = "HighlightSearchExample\n\n```javascript\nconst value = true;\n```"
+    message = Room.find(654632876).messages.create!(creator: User.find(773523953), markdown_source: body, client_message_id: "highlight-search-example")
+    metadata[:code_search_id] = message.id
+  end
+  File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(metadata))
+when "thread-pr"
+  message = Room.find(654632876).messages.create!(creator: User.find(773523953),
+    markdown_source: "review https://github.com/rails/rails/pull/12", client_message_id: "system-discuss-flow")
+  pull_request = message.github_pull_requests.first!
+  # The original current public card and files are persisted by Rails. No
+  # browser response substitution or fake provider markup is involved.
+  pull_request.update!(private: false, title: "Fix login", author_login: "alice", state: "open",
+    base_branch: "main", head_branch: "shiny", review_decision: "approved", check_status: "passing",
+    html_url: "https://github.com/rails/rails/pull/12", github_updated_at: 1.hour.ago,
+    fetched_at: Time.current, fetch_error: nil,
+    changed_files: { "files" => [{ "filename" => "app/models/user.rb", "additions" => 10, "deletions" => 2, "status" => "modified" }], "total_count" => 1 }.to_json,
+    changed_files_fetched_at: Time.current)
+  pull_request.update_column(:fetch_requested_at, nil)
+  raise "Unexpected existing discussion" if Github::PullRequestThread.exists?(github_pull_request_id: pull_request.id, room_id: message.room_id)
+  File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(pr_id: pull_request.id, pr_message_id: message.id))
 when /^unread-/
   room = Room.find(654632876)
   if kind == "unread-many"

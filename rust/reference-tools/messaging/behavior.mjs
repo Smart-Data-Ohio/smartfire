@@ -11,13 +11,16 @@ import {destinationCases,messageDestinations} from './behavior-message-destinati
 import {composer} from './behavior-composer.mjs';
 import {attachMenu} from './behavior-attach-menu.mjs';
 import {boosts} from './behavior-boosts.mjs';
+import {interactions,mobileActions} from './behavior-actions.mjs';
+import {toolbar} from './behavior-toolbar.mjs';
+import {codeHighlighting} from './behavior-code.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages'].includes(file));
+assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
@@ -63,7 +66,7 @@ async function acceptance(base,caseName,probe={}) {
       return page;
     }
     const profileActors=file==='message_list_a11y'&&caseName==='profile message and ban buttons have accessible names';
-    const author=await viewer('JZ'),recipient=await viewer(profileActors?'David':'Kevin');
+    const author=await viewer('JZ'),recipient=await viewer(profileActors||file==='message_interactions'?'David':'Kevin');
     // Startup errors are never accepted as proof of assertion discrimination.
     probe.ready=true;
     if(negative) {
@@ -116,6 +119,34 @@ async function acceptance(base,caseName,probe={}) {
     }
     if(file==='boosting_messages') {
       await boosts({author,recipient,caseName,viewer,openEdit,send,text});
+      return;
+    }
+    if(file==='message_interactions') {
+      await interactions({author,recipient,caseName,fixture,openEdit,send,text,field});
+      return;
+    }
+    if(file==='message_actions_mobile') {
+      await mobileActions({author,caseName});
+      return;
+    }
+    if(file==='message_toolbar') {
+      await toolbar({author,recipient,caseName});
+      return;
+    }
+    if(file==='code_highlighting') {
+      await codeHighlighting({author,recipient,caseName,fixture,base,openEdit,field});
+      return;
+    }
+    if(file==='threads'&&caseName==='discusses a pull request from its card') {
+      const card=()=>author.locator('.github-pr-card').filter({has:author.locator('.github-pr-card__title').filter({hasText:'Fix login'})});
+      await card().getByRole('button',{name:'Discuss',exact:true}).click();
+      await author.locator('.github-pr-thread-header .github-pr-card__title').filter({hasText:'Fix login'}).waitFor();
+      await author.locator('.github-pr-files__heading').filter({hasText:'Files changed'}).waitFor();
+      await author.locator('.github-pr-files__path').filter({hasText:'app/models/user.rb'}).waitFor();
+      const threadPath=new URL(author.url()).pathname;assert.match(threadPath,/^\/rooms\/654632876\/threads\/\d+$/);
+      await author.goto(base+'/rooms/654632876');await card().getByRole('link',{name:'Discuss',exact:true}).click();
+      await author.locator('.github-pr-thread-header .github-pr-card__title').filter({hasText:'Fix login'}).waitFor();
+      assert.equal(new URL(author.url()).pathname,threadPath,'the second discussion opens the existing thread');
       return;
     }
     if (file==='threads') {
@@ -430,6 +461,12 @@ async function acceptance(base,caseName,probe={}) {
     }
   } catch(error) {
     console.error('WS8bm failed application:',base,caseName);
+    if(caseName==='discusses a pull request from its card') {
+      for(const context of contexts) for(const page of context.pages()) {
+        console.error('WS8bm discussion diagnostic:',JSON.stringify({url:page.url(),threadResponses,
+          cards:await page.locator('.github-pr-card').evaluateAll(cards=>cards.map(card=>card.outerHTML))}));
+      }
+    }
     throw error;
   } finally {for(const context of contexts) await context.close();}
 }

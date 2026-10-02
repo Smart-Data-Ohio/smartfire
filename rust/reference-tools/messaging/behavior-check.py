@@ -18,6 +18,7 @@ import tempfile
 import time
 import textwrap
 import urllib.request
+from behavior_action_rows import assert_action_rows
 
 ROOT = Path(__file__).resolve().parents[3]
 RUST = ROOT / "rust"
@@ -41,6 +42,7 @@ CASES = {
         "browses active and closed threads and can join or leave a closed one",
         "rejects an external thread deep link before fetching it",
         "renders untrusted thread metadata as text",
+        "discusses a pull request from its card",
     ],
     "message_list_a11y": [
         "the message list is a single tab stop with a roving tabindex",
@@ -109,6 +111,44 @@ CASES = {
     "boosting_messages": [
         "boosting a message", "deleting a boost", "message update preserves the input state",
         "boost by another user preserves the input state",
+    ],
+    "message_interactions": [
+        "opens message actions from context menu and keyboard, and cancels a moving long press",
+        "a release click landing on the just-opened menu does not activate it",
+        "shows the message action menu as a bottom sheet on phones",
+        "edits through the normal composer and restores the saved draft on cancel and success",
+        "a duplicate delivery does not replace the message while its actions are open",
+        "keeps newer typing through an asynchronous edit and leaves failures in edit mode",
+        "replies with notify off and renders a tombstone when the target is deleted",
+        "copies message text and link and forwards to a server-provided thread destination",
+        "forwarding twice in a row submits only once",
+        "groups emoji reactions, updates the live count, and highlights the current user",
+    ],
+    "message_actions_mobile": [
+        "message action menu is a bottom sheet with touch-sized targets on phones",
+        "message action menu stays a floating popover on desktop",
+    ],
+    "message_toolbar": [
+        "the toolbar stays hidden until hover or focus and labels every action",
+        "quick-react creates a boost from the toolbar",
+        "reply and thread buttons drive the composer and the thread panel",
+        "the more button opens the shared menu for its message",
+        "keyboard users reach the toolbar from a focused message",
+        "the emoji picker searches and reacts",
+        "the picker shows category tabs and switches between them",
+        "the picker loads its emoji data only on first open",
+        "the picker remembers recent reactions",
+        "the picker Custom tab reacts with a workspace icon",
+        "the picker reacts with a brand icon shortcode",
+        "picker arrows move through options, Enter selects, and Escape returns focus",
+        "picker tabs move with arrow keys and switch the grid",
+    ],
+    "code_highlighting": [
+        "language fences highlight common code without changing its text",
+        "unlabelled code is detected while text unknown languages and inline code stay literal",
+        "search results highlight code on initial load and after returning to the channel",
+        "code and copying remain available when the highlighter cannot load",
+        "editing a code block replaces its language colors and copied source",
     ],
 }
 parser = argparse.ArgumentParser(description=__doc__)
@@ -183,6 +223,12 @@ for file in files:
     # batch verifies saved message rows are unchanged. All writing/history
     # cases retain separate fixture/database/server copies.
     readonly = CASES["message_list_a11y"][:17] if file == "message_list_a11y" else []
+    if file == "message_toolbar":
+        readonly = [CASES[file][index] for index in [0, 2, 3, 6, 7, 12]]
+    elif file == "message_actions_mobile":
+        readonly = CASES[file]
+    elif file == "message_interactions":
+        readonly = [CASES[file][index] for index in [0, 1, 2, 4, 5]]
     navigation = CASES["message_list_a11y"][20:26] if file == "message_list_a11y" else []
     batches = [[case for case in selected if case in readonly]] if readonly else []
     if navigation:
@@ -222,6 +268,23 @@ for file in files:
             elif file == "boosting_messages":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "boosts"], cwd=ROOT, env=env, check=True)
+            elif file in ["message_interactions", "message_actions_mobile", "message_toolbar"]:
+                fixture_kind = {"message_interactions": "interactions", "message_actions_mobile": "actions-mobile", "message_toolbar": "toolbar"}[file]
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            elif file == "threads" and case == "discusses a pull request from its card":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "thread-pr"], cwd=ROOT, env=env, check=True)
+            elif file == "code_highlighting":
+                # The production image intentionally excludes test sources.
+                # Materialize them from the pin in this fresh fixture, never
+                # from a previous local reference copy or scratch directory.
+                (fixture / "db/code-highlighting-reference.rb").write_bytes(source)
+                (fixture / "db/application-system-reference.rb").write_bytes(subprocess.check_output(
+                    ["git", "show", f"{PIN}:test/application_system_test_case.rb"], cwd=ROOT))
+                fixture_kind = "highlight-search" if case.startswith("search results") else "highlight"
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
@@ -264,7 +327,28 @@ for file in files:
                     databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
                     for database in databases:
                         with sqlite3.connect(database) as conn:
-                            if case == "sending messages between two users":
+                            if file == "threads" and case == "discusses a pull request from its card":
+                                mapping = conn.execute("SELECT channel_thread_id FROM github_pull_request_threads WHERE github_pull_request_id=? AND room_id=654632876", (metadata["pr_id"],)).fetchall()
+                                assert len(mapping) == 1, "reopening a PR discussion never creates a second mapping"
+                                assert conn.execute("SELECT parent_message_id,creator_id,room_id FROM channel_threads WHERE id=?", (mapping[0][0],)).fetchone() == (metadata["pr_message_id"], 773523953, 654632876)
+                                assert conn.execute("SELECT markdown_source FROM messages WHERE id=?", (metadata["pr_message_id"],)).fetchone() == ("review https://github.com/rails/rails/pull/12",)
+                            elif file == "code_highlighting":
+                                if case.startswith("search results"):
+                                    with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                        expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
+                                    assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
+                                else:
+                                    body = ("\n\n".join(f"```{language}\n{code}\n```" for language, code in metadata["samples"]) if case.startswith("language fences") else
+                                            metadata["literal_code_source"] if case.startswith("unlabelled") else
+                                            metadata["code_replacement"].replace("\n", "\r\n") if case.startswith("editing") else metadata["code_source"])
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=? AND creator_id=773523953 AND room_id=654632876 AND thread_id IS NULL", (body,)).fetchone()[0] == 1, "exact saved code source"
+                                    with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                        count = seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
+                                    assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0] == count + 1
+                            elif file in ["message_interactions", "message_actions_mobile", "message_toolbar"]:
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    assert_action_rows(conn, seed, file, case, metadata)
+                            elif case == "sending messages between two users":
                                 for body in ["Is this thing on?", "👍👍"]:
                                     assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (body,)).fetchone()[0] == 1
                             elif case == "editing messages":

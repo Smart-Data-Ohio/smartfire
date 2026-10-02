@@ -1,11 +1,13 @@
 // Deliberately broken served implementations, never replacement oracle values.
 // Each named check must reach its case assertions and reject its specific mutant.
 import assert from 'node:assert/strict';
+import {actionMutations} from './behavior-action-mutations.mjs';
 const list='controllers/message_list_controller-';
 const actions='controllers/message_actions_controller-';
 const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
+  ...actionMutations,
   ['the message list is a single tab stop with a roving tabindex',[list,'index === messages.length - 1 ? 0 : -1','index >= 0 ? 0 : -1']],
   ['arrow keys move between messages',[list,'next.focus()','message.focus()']],
   ...[
@@ -93,7 +95,8 @@ export async function installMutation(page,caseName,probe) {
     const tombstone=asset==='reply-tombstone-response'&&url.pathname.startsWith('/rooms/')&&url.pathname.includes('/messages/')&&request.method()==='DELETE';
     const boost=asset==='boost-create-response'&&/\/messages\/\d+\/boosts$/.test(url.pathname)&&request.method()==='POST';
     const boostDelete=asset==='boost-delete-response'&&/\/messages\/\d+\/boosts\/\d+$/.test(url.pathname)&&(request.method()==='DELETE'||request.postData()?.includes('_method=delete'));
-    if(!refresh&&!mention&&!search&&!forward&&!profile&&!tombstone&&!boost&&!boostDelete&&!url.pathname.includes('/assets/'+asset)) return route.continue();
+    const githubThread=asset==='github-thread-response'&&/^\/rooms\/654632876\/threads\/\d+$/.test(url.pathname)&&request.method()==='GET';
+    if(!refresh&&!mention&&!search&&!forward&&!profile&&!tombstone&&!boost&&!boostDelete&&!githubThread&&!url.pathname.includes('/assets/'+asset)) return route.continue();
     // Reject the request before forwarding it: a deliberately failed write
     // cannot secretly reach the real app and then pass through its Cable frame.
     if(forward||tombstone) {probe.applied++;return route.fulfill({status:422,contentType:'application/json',body:'{"error":"injected failed write"}'});}
@@ -103,6 +106,7 @@ export async function installMutation(page,caseName,probe) {
     else if(mention) {assert.ok(body.includes('Kevin'));body=body.replaceAll('Kevin','Wrong member');}
     else if(search) {assert.ok(body.includes('system paging alpha'));body=body.replaceAll('system paging alpha','wrong older result');}
     else if(profile) {assert.ok(body.includes('aria-label="Message Kevin"'));body=body.replace('aria-label="Message Kevin"','aria-label="Wrong recipient"');}
+    else if(githubThread) {assert.ok(body.includes('github-pr-thread-header'));body=body.replaceAll('github-pr-thread-header','missing-pr-header');}
     else {assert.ok(body.includes(needle),`mutant source needle missing: ${asset}`);body=body.replace(needle,replacement);}
     probe.applied++;
     await route.fulfill({response,status:refresh?200:response.status(),headers,body});
