@@ -25,7 +25,7 @@ ENV['VAPID_PUBLIC_KEY']='';Rails.configuration.x.vapid.public_key=nil
 ENV['GOOGLE_CLIENT_ID']='test-client-id';ENV['GOOGLE_CLIENT_SECRET']='FAKE-google-client-secret'
 ENV['GOOGLE_SIGN_IN_DOMAINS']='smartdata.net'
 WORK=ENV.fetch('PARITY_WORK')
-INPUT=JSON.parse(File.read(File.join(WORK,'crates/campfire/src/integrations/slack/fixtures/google_claim.json')))
+INPUT=JSON.parse(File.read(File.join(WORK,'crates/campfire/src/app/google_tests/slack_claim.json')))
 KEY=OpenSSL::PKey.read(File.binread(File.join(WORK,'crates/campfire/src/integrations/google/signing.der')))
 JWKS=JSON.parse(File.read(File.join(WORK,'crates/campfire/src/integrations/google/test-jwks.json')))
 GRANT=['fixture','claim','grant'].join('-')

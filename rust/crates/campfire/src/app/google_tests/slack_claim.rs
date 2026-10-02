@@ -13,7 +13,7 @@ use campfire_kit::{Crypto, RailsCrypto};
 use http_body_util::BodyExt;
 use std::net::SocketAddr;
 
-const INPUT: &str = include_str!("../../integrations/slack/fixtures/google_claim.json");
+const INPUT: &str = include_str!("slack_claim.json");
 const ORACLE: &str = include_str!("../../../../../vectors/slack/google_claim_http.json");
 const NOW: &str = "2026-03-02T16:00:00Z";
 fn grant() -> String {
