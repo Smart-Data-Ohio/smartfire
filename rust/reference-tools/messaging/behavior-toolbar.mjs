@@ -48,7 +48,7 @@ export async function toolbar({author:page,recipient,caseName}) {
     await actOnVisible(search,'fill',{},['fire']);await waitForVisibility(option('Fire'),{timeout:DELIVERY_WAIT});await actOnVisible(option('Fire'),'click',{});await waitForVisibility(panel,{state:'hidden'});await reacted('🔥');
   } else if(caseName.startsWith('the picker shows category')) {
     await picker();await waitForVisibleCount(panel.getByRole('tab'),11);
-    await waitForVisibility(page.locator('#emoji-picker-tab-recent[aria-selected="true"]'),{state:'hidden'});
+    await waitForVisibility(page.locator('#emoji-picker-tab-recent:not([aria-selected="true"])'));
     await actOnVisible(page.locator('#emoji-picker-tab-people'),'click',{});await tab('people');await waitForVisibility(option('Waving hand'));
     await waitForVisibleCount(option('Grinning face'),0);await actOnVisible(page.locator('#emoji-picker-tab-flags'),'click');await tab('flags');await waitForVisibility(option('Chequered flag'),{timeout:DELIVERY_WAIT});
   } else if(caseName.startsWith('the picker loads')) {

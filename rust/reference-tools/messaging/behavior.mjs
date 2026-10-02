@@ -143,13 +143,15 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
     if(file==='threads'&&caseName==='discusses a pull request from its card') {
       const card=()=>author.locator('.github-pr-card').filter({has:filterVisibleText(author.locator('.github-pr-card__title'),'Fix login')});
+      await waitForVisibility(card(),{timeout:DELIVERY_WAIT});
       await actOnVisible(card().getByRole('button',{name:'Discuss',exact:true}),'click',{});
-      await waitForVisibility(filterVisibleText(author.locator('.github-pr-thread-header .github-pr-card__title'),'Fix login'));
+      await waitForVisibility(filterVisibleText(author.locator('.github-pr-thread-header .github-pr-card__title'),'Fix login'),{timeout:DELIVERY_WAIT});
       await waitForVisibility(filterVisibleText(author.locator('.github-pr-files__heading'),'Files changed'));
       await waitForVisibility(filterVisibleText(author.locator('.github-pr-files__path'),'app/models/user.rb'));
       const threadPath=new URL(author.url()).pathname;assert.match(threadPath,/^\/rooms\/654632876\/threads\/\d+$/);
-      await author.goto(base+'/rooms/654632876');await actOnVisible(card().getByRole('link',{name:'Discuss',exact:true}),'click',{});
-      await waitForVisibility(filterVisibleText(author.locator('.github-pr-thread-header .github-pr-card__title'),'Fix login'));
+      await author.goto(base+'/rooms/654632876');await waitForVisibility(card(),{timeout:DELIVERY_WAIT});
+      await actOnVisible(card().getByRole('link',{name:'Discuss',exact:true}),'click',{});
+      await waitForVisibility(filterVisibleText(author.locator('.github-pr-thread-header .github-pr-card__title'),'Fix login'),{timeout:DELIVERY_WAIT});
       assert.equal(new URL(author.url()).pathname,threadPath,'the second discussion opens the existing thread');
       return;
     }
