@@ -1,0 +1,1078 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "rest_boards",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "[{\"id\":\"board\",\"name\":\"Engineering α & β < >\",\"extra\":{\"first\":1,\"second\":2}}]",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_boards",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":\\\"board\\\",\\\"name\\\":\\\"Engineering α & β < >\\\",\\\"extra\\\":{\\\"first\\\":1,\\\"second\\\":2}}]\"}],\"structuredContent\":[{\"id\":\"board\",\"name\":\"Engineering α & β < >\",\"extra\":{\"first\":1,\"second\":2}}],\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_board",
+      "method": "get",
+      "path": "/agents/fizzy/boards/board",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"board\":{\"id\":\"board\",\"name\":\"Engineering α & β < >\"},\"columns\":[{\"id\":\"col\",\"name\":\"Working\"}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards/board.json"
+        },
+        {
+          "method": "GET",
+          "path": "/897362094/boards/board/columns.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_board",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_board\",\"arguments\":{\"board_id\":\"board\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"board\\\":{\\\"id\\\":\\\"board\\\",\\\"name\\\":\\\"Engineering α & β < >\\\"},\\\"columns\\\":[{\\\"id\\\":\\\"col\\\",\\\"name\\\":\\\"Working\\\"}]}\"}],\"structuredContent\":{\"board\":{\"id\":\"board\",\"name\":\"Engineering α & β < >\"},\"columns\":[{\"id\":\"col\",\"name\":\"Working\"}]},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards/board.json"
+        },
+        {
+          "method": "GET",
+          "path": "/897362094/boards/board/columns.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_search",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q=+hi+~+%26+%E4%B8%AD%E6%96%87",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"number\":579,\"title\":\"α & β < >\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=+hi+~+%26+%E4%B8%AD%E6%96%87"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_search",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":\" hi ~ \\u0026 中文\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"number\\\":579,\\\"title\\\":\\\"α & β < >\\\"}\"}],\"structuredContent\":{\"number\":579,\"title\":\"α & β < >\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=+hi+~+%26+%E4%B8%AD%E6%96%87"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_card",
+      "method": "get",
+      "path": "/agents/fizzy/cards/897362094/00579",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"number\":579,\"title\":\"α & β < >\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/cards/579.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_card",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_card\",\"arguments\":{\"account_id\":\"897362094\",\"number\":\"00579\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"number\\\":579,\\\"title\\\":\\\"α & β < >\\\"}\"}],\"structuredContent\":{\"number\":579,\"title\":\"α & β < >\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/cards/579.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_status_401",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "remote_status": 401
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"Agent owner's Fizzy token was rejected\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": "Fizzy rejected the linked token (401)"
+    },
+    {
+      "name": "mcp_status_401",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "remote_status": 401
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner's Fizzy token was rejected\"}],\"structuredContent\":{\"error\":\"Agent owner's Fizzy token was rejected\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": "Fizzy rejected the linked token (401)"
+    },
+    {
+      "name": "rest_status_403",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "remote_status": 403
+      },
+      "status": 404,
+      "response_body": "{\"error\":\"Not found in Fizzy\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_status_403",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "remote_status": 403
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Not found in Fizzy\"}],\"structuredContent\":{\"error\":\"Not found in Fizzy\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_status_404",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "remote_status": 404
+      },
+      "status": 404,
+      "response_body": "{\"error\":\"Not found in Fizzy\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_status_404",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "remote_status": 404
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Not found in Fizzy\"}],\"structuredContent\":{\"error\":\"Not found in Fizzy\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_status_422",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "remote_status": 422
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"Fizzy refused: Denied\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_status_422",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "remote_status": 422
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Fizzy refused: Denied\"}],\"structuredContent\":{\"error\":\"Fizzy refused: Denied\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_status_429",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "remote_status": 429
+      },
+      "status": 502,
+      "response_body": "{\"error\":\"Fizzy returned 429\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_status_429",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "remote_status": 429
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Fizzy returned 429\"}],\"structuredContent\":{\"error\":\"Fizzy returned 429\",\"status\":\"bad_gateway\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_status_500",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "remote_status": 500
+      },
+      "status": 502,
+      "response_body": "{\"error\":\"Fizzy returned 500\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_status_500",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "remote_status": 500
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Fizzy returned 500\"}],\"structuredContent\":{\"error\":\"Fizzy returned 500\",\"status\":\"bad_gateway\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_no_grant",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "no_grant": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks fizzy capability\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_no_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "no_grant": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks fizzy capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks fizzy capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_room_grant",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "room_grant": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks fizzy capability\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_room_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "room_grant": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks fizzy capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks fizzy capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_no_owner",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "no_owner": true
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"Agent has no owner recorded\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_no_owner",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "no_owner": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent has no owner recorded\"}],\"structuredContent\":{\"error\":\"Agent has no owner recorded\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_no_account",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "no_account": true
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"Agent owner has no usable Fizzy account\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_no_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "no_account": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_disconnected",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "disconnected": true
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"Agent owner has no usable Fizzy account\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": "Disconnected"
+    },
+    {
+      "name": "mcp_disconnected",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "disconnected": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": "Disconnected"
+    },
+    {
+      "name": "rest_corrupt",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "corrupt": true
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"Agent owner has no usable Fizzy account\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": "The stored token could not be read; link it again"
+    },
+    {
+      "name": "mcp_corrupt",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "corrupt": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": "The stored token could not be read; link it again"
+    },
+    {
+      "name": "rest_invalid_account",
+      "method": "get",
+      "path": "/agents/fizzy/boards?account_id=..%2Fbad",
+      "body": null,
+      "setup": {},
+      "status": 404,
+      "response_body": "{\"error\":\"Not found in Fizzy\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_invalid_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{\"account_id\":\"../bad\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Not found in Fizzy\"}],\"structuredContent\":{\"error\":\"Not found in Fizzy\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_other_account",
+      "method": "get",
+      "path": "/agents/fizzy/boards?account_id=other",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "[{\"id\":\"board\",\"name\":\"Engineering α & β < >\",\"extra\":{\"first\":1,\"second\":2}}]",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/other/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_other_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{\"account_id\":\"other\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":\\\"board\\\",\\\"name\\\":\\\"Engineering α & β < >\\\",\\\"extra\\\":{\\\"first\\\":1,\\\"second\\\":2}}]\"}],\"structuredContent\":[{\"id\":\"board\",\"name\":\"Engineering α & β < >\",\"extra\":{\"first\":1,\"second\":2}}],\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/other/boards.json"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_invalid_number",
+      "method": "get",
+      "path": "/agents/fizzy/cards/897362094/1e3",
+      "body": null,
+      "setup": {},
+      "status": 404,
+      "response_body": "{\"error\":\"Invalid card number\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_invalid_number",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_card\",\"arguments\":{\"account_id\":\"897362094\",\"number\":\"1e3\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Invalid card number\"}],\"structuredContent\":{\"error\":\"Invalid card number\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_invalid_board",
+      "method": "get",
+      "path": "/agents/fizzy/boards/..",
+      "body": null,
+      "setup": {},
+      "status": 404,
+      "response_body": "{\"status\":404,\"error\":\"Not Found\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_invalid_board",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_board\",\"arguments\":{\"board_id\":\"..\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Not found in Fizzy\"}],\"structuredContent\":{\"error\":\"Not found in Fizzy\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_blank_query",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q=+",
+      "body": null,
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"Missing query\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_blank_query",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":\" \"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: q\"}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_query_type_0",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q=false",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"number\":579,\"title\":\"α & β < >\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=false"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_query_type_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":false}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: q\"}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_query_type_1",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q=true",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"number\":579,\"title\":\"α & β < >\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=true"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_query_type_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":true}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"number\\\":579,\\\"title\\\":\\\"α & β < >\\\"}\"}],\"structuredContent\":{\"number\":579,\"title\":\"α & β < >\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=true"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_query_type_2",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?",
+      "body": null,
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"Missing query\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "mcp_query_type_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":[]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: q\"}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null
+    },
+    {
+      "name": "rest_query_type_3",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q%5B%5D=a&q%5B%5D=b",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"number\":579,\"title\":\"α & β < >\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=%5B%22a%22%2C+%22b%22%5D"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_query_type_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":[\"a\",\"b\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"number\\\":579,\\\"title\\\":\\\"α & β < >\\\"}\"}],\"structuredContent\":{\"number\":579,\"title\":\"α & β < >\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=%5B%22a%22%2C+%22b%22%5D"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_query_type_4",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q%5Bname%5D=x",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"number\":579,\"title\":\"α & β < >\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=%7B%22name%22+%3D%3E+%22x%22%7D"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_query_type_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":{\"name\":\"x\"}}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"number\\\":579,\\\"title\\\":\\\"α & β < >\\\"}\"}],\"structuredContent\":{\"number\":579,\"title\":\"α & β < >\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=%7B%22name%22+%3D%3E+%22x%22%7D"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "rest_query_type_5",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q=0",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"number\":579,\"title\":\"α & β < >\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=0"
+        }
+      ],
+      "reason": null
+    },
+    {
+      "name": "mcp_query_type_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":0}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"number\\\":579,\\\"title\\\":\\\"α & β < >\\\"}\"}],\"structuredContent\":{\"number\":579,\"title\":\"α & β < >\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=0"
+        }
+      ],
+      "reason": null
+    }
+  ]
+}

@@ -11,7 +11,7 @@ use campfire_views::messages as views;
 use super::present;
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::page::{self, Rendered, db_error};
+use crate::controllers::presenters::page::{self, db_error};
 use crate::controllers::presenters::user_view;
 
 pub async fn index(c: &mut Ctx) -> Result {
@@ -62,9 +62,8 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     Ok(c.head(StatusCode::NO_CONTENT))
 }
 
-/// Message#broadcast_reactions_replace, shared by human toggle/create and delete. WS11's
-/// separate bot controllers retain their own existing broadcast contract through the helpers.
-async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
+/// Message#broadcast_reactions_replace, shared by human, bot and agent reactions.
+pub(crate) async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
     let (app, id, base) = (c.app().clone(), message.id, page::renderer_base_url(c));
     c.app().db.read(move |conn| {
         let message = Message::find(conn, id)?;
@@ -93,41 +92,10 @@ pub(crate) async fn set_boost(c: &mut Ctx, message: &Message) -> Result<Boost> {
     c.app().db.read(move |conn| Boost::find_by_message_and_booster(conn, message_id, id, user_id)).await.map_err(db_error)
 }
 
-/// `@message.boosts.create!(content:)`, boosted by `Current.user`.
-pub(crate) async fn create_boost(c: &Ctx, message: &Message, content: Option<String>) -> Result<Boost> {
-    let booster_id = require_current_user(c)?.id;
-    let message_id = message.id;
-    // A nil content violates the column's NOT NULL (ActiveRecord::NotNullViolation, a 500).
-    let content = content.ok_or_else(|| Error::internal(anyhow::anyhow!("NOT NULL constraint failed: boosts.content")))?;
-    c.app().db.write(move |tx| Boost::create(tx, message_id, booster_id, &content)).await.map_err(db_error)
-}
-
-/// `@boost.destroy!` then `broadcast_remove`.
+/// `@boost.destroy!` then `Message#broadcast_reactions_replace`.
 pub(crate) async fn destroy_boost(c: &Ctx, message: &Message, boost: Boost) -> Result<()> {
     let destroyed = boost.clone();
     c.app().db.write(move |tx| destroyed.destroy(tx)).await.map_err(db_error)?;
-    let room_id = message.room_id;
-    let room = c.app().db.read(move |conn| Room::find(conn, room_id)).await.map_err(db_error)?;
-    c.app().broadcasts.boost_remove(&room, message, &boost);
+    broadcast_reactions(c, message).await?;
     Ok(())
-}
-
-/// `broadcast_create`: `messages/boosts/_boost` appended to the message's boosts.
-pub(crate) async fn broadcast_create(c: &Ctx, message: &Message, boost: &Boost) -> Result<()> {
-    let (app, message, boost) = (c.app().clone(), message.clone(), boost.clone());
-    let base_url = page::renderer_base_url(c);
-    c.app()
-        .db
-        .read(move |conn| {
-            let presenter = crate::controllers::presenters::Presenter::new(conn, &app, None);
-            let view = presenter.boost(&boost)?;
-            let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::boost(ctx, &view));
-            let room = Room::find(conn, message.room_id)?;
-            let partials = Rendered { boost: Some(html), ..Rendered::default() };
-            app.broadcasts.boost_create(&room, &message, &boost, &partials);
-            Ok(())
-        })
-        .await
-        .map_err(db_error)
 }

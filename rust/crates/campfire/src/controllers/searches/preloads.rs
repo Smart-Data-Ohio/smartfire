@@ -16,6 +16,7 @@ pub(crate) struct GithubRendering {
 }
 
 pub(crate) struct Preloads {
+    pub threads: Option<campfire_db::models::message_rendering::ThreadRenderingRecords>,
     pub github: HashMap<i64, GithubRendering>,
     pub event_views: HashMap<i64, Vec<campfire_views::events::CardView>>,
     pub records: RenderingRecords,
@@ -30,13 +31,42 @@ pub(crate) struct Preloads {
 }
 impl Preloads {
     pub fn load(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
-        let records = RenderingRecords::load(p.conn, messages)?;
-        let mentions = records
+        Self::load_for(p, messages, false)
+    }
+    pub fn load_payload(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
+        Self::load_for(p, messages, true)
+    }
+    fn load_for(p: &Presenter<'_>, messages: &[Message], payload: bool) -> Result<Self> {
+        let records = if payload {
+            RenderingRecords::load_payload(p.conn, messages)?
+        } else {
+            RenderingRecords::load(p.conn, messages)?
+        };
+        let mut mentions = records
             .bodies
             .values()
             .flatten()
             .flat_map(|body| mention_ids(body, 0))
             .collect::<Vec<_>>();
+        let threads = if payload {
+            let all = messages
+                .iter()
+                .chain(records.sources.values())
+                .cloned()
+                .collect::<Vec<_>>();
+            Some(
+                campfire_db::models::message_rendering::ThreadRenderingRecords::load(
+                    p.conn,
+                    &all,
+                    p.current_user_id.unwrap_or(0),
+                )?,
+            )
+        } else {
+            None
+        };
+        if let Some(threads) = &threads {
+            mentions.extend(threads.user_ids(p.current_user_id.unwrap_or(0)));
+        }
         let users = records.users(p.conn, messages, &mentions)?;
         let attachments =
             campfire_storage::Blob::attached_messages(p.conn, &records.body_ids(messages))
@@ -54,20 +84,30 @@ impl Preloads {
             })
             .collect();
         let ids = records.body_ids(messages);
-        let fizzy_cards = crate::integrations::fizzy::cards::Card::for_messages(p.conn, &ids)?;
-        let link_references =
-            crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?;
+        let fizzy_cards = if payload {
+            HashMap::new()
+        } else {
+            crate::integrations::fizzy::cards::Card::for_messages(p.conn, &ids)?
+        };
+        let link_references = if payload {
+            HashMap::new()
+        } else {
+            crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?
+        };
         let page_messages: Vec<_> = messages
             .iter()
             .chain(records.sources.values())
             .cloned()
             .collect();
-        let event_views =
-            crate::controllers::presenters::events::for_messages(p.conn, &page_messages)?;
+        let event_views = if payload {
+            HashMap::new()
+        } else {
+            crate::controllers::presenters::events::for_messages(p.conn, &page_messages)?
+        };
         // Use the owner's presentation/refresh policy with page-scoped persisted facts.
         // Preloading does not schedule refreshes; an actual fragment miss does.
         let mut github = HashMap::new();
-        let linked = if ids.is_empty() {
+        let linked = if payload || ids.is_empty() {
             Vec::new()
         } else {
             let sql = format!(
@@ -149,11 +189,16 @@ impl Preloads {
                 );
             }
         }
-        let cache = crate::controllers::presenters::message_cache_preloads::CacheFacts::load(
-            p, messages, &records,
-        )?;
+        let cache = if payload {
+            Default::default()
+        } else {
+            crate::controllers::presenters::message_cache_preloads::CacheFacts::load(
+                p, messages, &records,
+            )?
+        };
         Ok(Self {
             cache,
+            threads,
             github,
             event_views,
             fizzy_cards,

@@ -190,7 +190,8 @@ pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<Comman
         Err(error) => Err(error),
     }
 }
-pub(crate) fn sentence(messages: Vec<String>) -> String {
+/// Rails' `to_sentence`, also used by JSON adapters for model validation errors.
+pub fn sentence(messages: Vec<String>) -> String {
     match messages.as_slice() {
         [] => String::new(),
         [one] => one.clone(),

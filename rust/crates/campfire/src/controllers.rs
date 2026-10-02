@@ -90,6 +90,11 @@ mod internal_huddle_declaration_tests;
 pub mod workspace_icons;
 pub mod work_threads;
 
+#[cfg(test)]
+mod agent_http_tests;
+#[cfg(test)]
+mod agent_mcp_tests;
+
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
     fn call<'a>(&'a self, c: &'a mut Ctx) -> BoxFuture<'a, Result>;
@@ -426,6 +431,42 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "channel_thread_messages#destroy" => arc(channel_thread_messages::destroy),
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
+        "agents/contexts#show" => arc(agents::pending::contexts_show),
+        "agents/dms#create" => arc(agents::pending::dms_create),
+        "agents/messages#create" => arc(agents::pending::messages_create),
+        "agents/streaming_messages#create" => arc(agents::pending::streaming_messages_create),
+        "agents/streaming_messages#update" => arc(agents::pending::streaming_messages_update),
+        "agents/streaming_messages#finalize" => arc(agents::pending::streaming_messages_finalize),
+        "agents/pins#create" => arc(agents::pending::pins_create),
+        "agents/pins#destroy" => arc(agents::pending::pins_destroy),
+        "agents/polls#create" => arc(agents::pending::polls_create),
+        "agents/polls#show" => arc(agents::pending::polls_show),
+        "agents/posts#index" => arc(agents::pending::posts_index),
+        "agents/posts#create" => arc(agents::pending::posts_create),
+        "agents/work#index" => arc(agents::pending::work_index),
+        "agents/work#show" => arc(agents::pending::work_show),
+        "agents/work#update" => arc(agents::pending::work_update),
+        "agents/work#result" => arc(agents::pending::work_result),
+        "agents/work#handoff" => arc(agents::pending::work_handoff),
+        "agents/fizzy/boards#index" => arc(agents::integrations::fizzy_boards),
+        "agents/fizzy/boards#show" => arc(agents::integrations::fizzy_board),
+        "agents/fizzy/cards#search" => arc(agents::integrations::fizzy_search),
+        "agents/fizzy/cards#show" => arc(agents::integrations::fizzy_card),
+        "agents/fizzy/card_actions#create" => arc(agents::integrations::fizzy_action),
+        "agents/approvals#index" => arc(agents::approvals::index),
+        "agents/approvals#show" => arc(agents::approvals::show),
+        "agents/approvals#create" => arc(agents::approvals::create),
+        "agents/approvals#destroy" => arc(agents::approvals::destroy),
+        "agents/events#index" => arc(agents::events),
+        "agents#me" => arc(agents::me),
+        "agents#update" => arc(agents::update_me),
+        "agents/mcp#create" => arc(agents::mcp::create),
+        "agents/mcp#method_not_allowed" => arc(agents::mcp::method_not_allowed),
+        "agents/events#ack" => arc(agents::ack),
+        "agents/steps#create" => arc(agents::create_step),
+        "agents/steps#update" => arc(agents::update_step),
+        "agents/slash_commands#create" => arc(agents::register_command),
+        "agents/slash_commands#destroy" => arc(agents::unregister_command),
         "messages/by_bots#index" => arc(messages::by_bots::index),
         "messages/by_bots#create" => arc(messages::by_bots::create),
         "messages/by_bots#update" => arc(messages::by_bots::update),
@@ -861,6 +902,9 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "agents#me", "agents#update",
+        "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
+        "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
         "rooms/voices#index",
         "rooms/voices#show",
         "rooms/voices#new",
@@ -1107,21 +1151,22 @@ mod tests {
 
     #[tokio::test]
     async fn unported_actions_say_so_instead_of_404ing() {
-        let unported = campfire_routes::TABLE
-            .iter()
-            .find(|route| {
-                let path = route.spec.trim_end_matches("(.:format)");
-                route.verb == "GET"
-                    && route.action == ActionStatus::Defined
-                    && ported(route.endpoint).is_none()
-                    && !path.contains([':', '*', '('])
-            })
-            .expect("an unported GET route without params");
-        let path = unported.spec.trim_end_matches("(.:format)");
-        let (status, header, body) = request("GET", path).await;
-        assert_eq!(status, StatusCode::NOT_IMPLEMENTED, "{path}");
-        assert_eq!(header.as_deref(), Some(unported.endpoint));
-        assert_eq!(body, format!("Not yet ported: {}\n", unported.endpoint));
+        let unported: Vec<_> = campfire_routes::TABLE.iter().filter(|route| {
+            route.verb == "GET" && route.action == ActionStatus::Defined
+                && ported(route.endpoint).is_none()
+        }).collect();
+        // As actions are ported, the remaining real routes can all have parameters
+        // (or there can be none). Keep exercising every available unported GET.
+        for route in &unported {
+            let path = route.spec.trim_end_matches("(.:format)").split('/').map(|part| {
+                if part.starts_with([':', '*']) { "1" } else { part }
+            }).collect::<Vec<_>>().join("/");
+            let (status, header, body) = request("GET", &path).await;
+            assert_eq!(status, StatusCode::NOT_IMPLEMENTED, "{path}");
+            assert_eq!(header.as_deref(), Some(route.endpoint));
+            assert_eq!(body, format!("Not yet ported: {}\n", route.endpoint));
+        }
+        println!("Dispatch unported GET routes: {} checked", unported.len());
 
         // A route Rails declares without the action stays Rails' 404, and unknown paths too.
         let (status, header, _) = request("GET", "/first_run/new").await;
@@ -1137,3 +1182,57 @@ mod tests {
         assert_eq!(normalize_path("/a%2fb"), "/a%2Fb");
     }
 }
+
+#[cfg(test)]
+mod agent_surface_tests;
+
+#[cfg(test)]
+mod bot_http_tests;
+#[cfg(test)]
+mod agent_legacy_bot_tests;
+
+#[cfg(test)]
+mod agent_conversation_tests;
+
+#[cfg(test)]
+mod agent_fizzy_tests;
+
+#[cfg(test)]
+mod agent_fizzy_action_tests;
+
+#[cfg(test)]
+mod agent_reads_tests;
+
+#[cfg(test)]
+mod agent_pins_tests;
+
+#[cfg(test)]
+mod agent_polls_tests;
+#[cfg(test)]
+mod agent_permissions_tests;
+
+#[cfg(test)]
+mod agent_reactions_tests;
+
+#[cfg(test)]
+mod agent_polling_tests;
+
+#[cfg(test)]
+mod agent_work_validation_tests;
+#[cfg(test)]
+mod agent_work_writes_tests;
+
+#[cfg(test)]
+mod agent_attachments_tests;
+
+#[cfg(test)]
+mod agent_review_tests;
+
+#[cfg(test)]
+mod agent_review_r2_tests;
+#[cfg(test)]
+mod agent_review_r3_tests;
+#[cfg(test)]
+mod agent_review_r4_tests;
+#[cfg(test)]
+mod agent_review_r5_tests;
