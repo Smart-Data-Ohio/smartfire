@@ -202,12 +202,15 @@ pub async fn create_tag_assignment(c: &mut Ctx) -> Result {
 }
 pub async fn destroy_tag_assignment(c: &mut Ctx) -> Result {
     let room = board(c).await?;
-    let id = c.param_str("id").and_then(super::cast_integer).unwrap_or(0);
+    let id = c.param_str("id").and_then(super::cast_integer);
     let room_id = room.id;
     let assignment = c
         .app()
         .db
-        .read(move |conn| BoardTagAssignment::find(conn, id))
+        .read(move |conn| match id {
+            Some(id) => BoardTagAssignment::find(conn, id),
+            None => Ok(None),
+        })
         .await
         .map_err(db_error)?
         .filter(|a| a.room_id == room_id);

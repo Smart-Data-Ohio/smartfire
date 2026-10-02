@@ -62,7 +62,7 @@ impl BoardTagAssignment {
             updated_at: tx.now(),
         };
         rule.normalize();
-        rule.validate(tx.conn())?.into_result()?;
+        rule.validate_excluding(tx.conn(), None)?.into_result()?;
         rule.id = tx.conn().query_row("INSERT INTO board_tag_assignments(room_id,tag,assignee_id,created_by_id,created_at,updated_at) VALUES (?,?,?,?,?,?) RETURNING id",
             params![rule.room_id,rule.tag,rule.assignee_id,rule.created_by_id,rule.created_at,rule.updated_at], |r|r.get(0))?;
         Ok(rule)
@@ -105,6 +105,9 @@ impl BoardTagAssignment {
         self.tag = rails_compat::unicode::downcase(campfire_richtext::ruby::strip(&self.tag));
     }
     pub fn validate(&self, conn: &Connection) -> Result<Errors> {
+        self.validate_excluding(conn, Some(self.id))
+    }
+    fn validate_excluding(&self, conn: &Connection, existing_id: Option<i64>) -> Result<Errors> {
         let mut errors = Errors::default();
         let room = Room::find_by_id(conn, self.room_id)?;
         let assignee = User::find_by_id(conn, self.assignee_id)?;
@@ -128,8 +131,8 @@ impl BoardTagAssignment {
         }
         if crate::sql::exists(
             conn,
-            "SELECT 1 FROM board_tag_assignments WHERE room_id=? AND LOWER(tag)=LOWER(?) AND id != ?",
-            params![self.room_id, self.tag, self.id],
+            "SELECT 1 FROM board_tag_assignments WHERE room_id=? AND LOWER(tag)=LOWER(?) AND (? IS NULL OR id != ?)",
+            params![self.room_id, self.tag, existing_id, existing_id],
         )? {
             errors.add("tag", "has already been taken");
         }
