@@ -112,6 +112,25 @@ async fn fixture(row: &Value, now: Timestamp) -> (TestApp, Arc<Recorded>) {
             );
         }
     }
+    let offsets = row["initial_offsets_us"].as_object().unwrap().clone();
+    a.db()
+        .read(move |c| {
+            for (id, expected) in offsets {
+                let at = c.query_row(
+                    "SELECT expires_at FROM calendar_push_channels WHERE user_id=?",
+                    [id.parse::<i64>().unwrap()],
+                    |r| r.get::<_, Option<Timestamp>>(0),
+                )?;
+                assert_eq!(
+                    json!(at.map(|t| t.as_microsecond() - now.as_microsecond())),
+                    expected,
+                    "persisted expiry offset must match exact oracle microseconds"
+                );
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
     (a, r)
 }
 fn observed_calls(r: &Recorded) -> Value {
@@ -226,6 +245,24 @@ async fn google_push_channel_watch_renewal_and_preload_match_pinned_rails() {
                 reads <= row["user_reads"].as_u64().unwrap() as usize,
                 "{name}: per-channel user lookup regressed: {reads}; {queries:?}"
             );
+            let account_reads = queries
+                .iter()
+                .filter(|q| {
+                    let sql = q.sql.to_ascii_uppercase().replace('"', "");
+                    sql.trim_start().starts_with("SELECT")
+                        && (sql.contains("FROM GOOGLE_ACCOUNTS")
+                            || sql.contains("JOIN GOOGLE_ACCOUNTS"))
+                })
+                .count();
+            assert_eq!(
+                account_reads,
+                row["account_reads"].as_u64().unwrap() as usize,
+                "{name}: per-channel account lookup regressed; {queries:?}"
+            );
+            println!(
+                "Push account preload: {name}; {account_reads} GoogleAccount SELECTs; Rails {}",
+                row["account_reads"]
+            );
             println!(
                 "Push preload: {} channels; {reads} User SELECTs; Rails {} User SELECT",
                 row["user_ids"].as_array().unwrap().len(),
@@ -233,7 +270,10 @@ async fn google_push_channel_watch_renewal_and_preload_match_pinned_rails() {
             );
         }
     }
-    println!("Pinned Rails PushChannel: 27 watch/renew scenarios; 0 skipped");
+    println!(
+        "Pinned Rails PushChannel: {} watch/renew scenarios; 0 skipped",
+        v["rows"].as_array().unwrap().len()
+    );
 }
 #[tokio::test]
 async fn google_push_channel_tokens_and_notification_claims_match_pinned_rails() {
@@ -279,4 +319,79 @@ async fn google_push_channel_tokens_and_notification_claims_match_pinned_rails()
     println!(
         "Pinned Rails PushChannel authentication: 6 token cases; 5 notification claims; 0 skipped"
     );
+}
+
+#[tokio::test]
+async fn google_push_channel_renewal_boundary_offsets_are_exact() {
+    let v = vectors();
+    let now = stamp(&v["now"]).unwrap();
+    for (suffix, expected) in [
+        ("before", 86_399_999_999),
+        ("at", 86_400_000_000),
+        ("after", 86_400_000_001),
+    ] {
+        let name = format!("renew_{suffix}_boundary");
+        let row = v["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["spec"]["name"] == name)
+            .unwrap();
+        let (a, _) = fixture(row, now).await;
+        let at = a
+            .db()
+            .read(|c| {
+                Ok(c.query_row(
+                    "SELECT expires_at FROM calendar_push_channels WHERE user_id=?",
+                    [DAVID],
+                    |r| r.get::<_, Timestamp>(0),
+                )?)
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            at.as_microsecond() - now.as_microsecond(),
+            expected,
+            "{name}: persisted expiry offset must be exact microseconds"
+        );
+    }
+}
+async fn assert_account_preload_budget(name: &str) {
+    let v = vectors();
+    let row = v["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["spec"]["name"] == name)
+        .unwrap();
+    let (a, _) = fixture(row, stamp(&v["now"]).unwrap()).await;
+    let probe = crate::controllers::rooms::query_probe::SqlProbe::start(
+        a.db(),
+        a.booted.app.config.db_readers,
+    )
+    .await;
+    calendar::renew(&a.booted.app).await.unwrap();
+    let queries = probe.finish().await;
+    let reads = queries
+        .iter()
+        .filter(|q| {
+            let sql = q.sql.to_ascii_uppercase().replace('"', "");
+            sql.trim_start().starts_with("SELECT")
+                && (sql.contains("FROM GOOGLE_ACCOUNTS") || sql.contains("JOIN GOOGLE_ACCOUNTS"))
+        })
+        .count();
+    assert_eq!(row["account_reads"], json!(2), "Rails batch observation");
+    assert_eq!(
+        reads,
+        row["account_reads"].as_u64().unwrap() as usize,
+        "{name}: GoogleAccount reads must match Rails' two batch loads; {queries:?}"
+    );
+}
+#[tokio::test]
+async fn google_push_channel_two_accounts_use_two_batch_reads() {
+    assert_account_preload_budget("preload_2").await;
+}
+#[tokio::test]
+async fn google_push_channel_twelve_accounts_use_two_batch_reads() {
+    assert_account_preload_budget("preload_12").await;
 }

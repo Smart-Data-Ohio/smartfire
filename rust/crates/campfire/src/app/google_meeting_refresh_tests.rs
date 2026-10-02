@@ -25,13 +25,14 @@ fn time(value: Option<Timestamp>) -> Value {
 async fn cache_state(a: &TestApp) -> Value {
     a.db().read(|conn| {
         Ok(conn.query_row(
-            "SELECT busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at FROM calendar_meeting_caches WHERE user_id=?",
+            "SELECT busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at,in_meeting_broadcast FROM calendar_meeting_caches WHERE user_id=?",
             [DAVID], |r| Ok(json!({
                 "busy_intervals":serde_json::from_str::<Value>(&r.get::<_,String>(0)?).unwrap(),
                 "ooo_intervals":serde_json::from_str::<Value>(&r.get::<_,String>(1)?).unwrap(),
                 "fetch_error":r.get::<_,Option<String>>(2)?,
                 "fetched_at":time(r.get(3)?),"refresh_pending_at":time(r.get(4)?),
-                "created_at":time(r.get(5)?),"updated_at":time(r.get(6)?)
+                "created_at":time(r.get(5)?),"updated_at":time(r.get(6)?),
+                "in_meeting_broadcast":r.get::<_,Option<bool>>(7)?
             }))
         ).optional()?.unwrap_or(Value::Null))
     }).await.unwrap()
@@ -73,7 +74,7 @@ async fn fixture(case: &Value, now: Timestamp) -> (TestApp, Arc<Recorded>) {
             tx.conn().execute("UPDATE google_accounts SET refresh_token='broken-AR-ciphertext' WHERE user_id=?",[DAVID])?;
         }
         if !initial.is_null() {
-            tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", rusqlite::params![DAVID,initial["busy_intervals"].to_string(),initial["ooo_intervals"].to_string(),initial["fetch_error"].as_str(),initial["fetched_at"].as_str().map(|_|stamp(&initial["fetched_at"])),initial["refresh_pending_at"].as_str().map(|_|stamp(&initial["refresh_pending_at"])),stamp(&initial["created_at"]),stamp(&initial["updated_at"])])?;
+            tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at,in_meeting_broadcast) VALUES(?,?,?,?,?,?,?,?,?)", rusqlite::params![DAVID,initial["busy_intervals"].to_string(),initial["ooo_intervals"].to_string(),initial["fetch_error"].as_str(),initial["fetched_at"].as_str().map(|_|stamp(&initial["fetched_at"])),initial["refresh_pending_at"].as_str().map(|_|stamp(&initial["refresh_pending_at"])),stamp(&initial["created_at"]),stamp(&initial["updated_at"]),initial["in_meeting_broadcast"].as_bool()])?;
         }
         Ok(())
     }).await.unwrap();
@@ -86,6 +87,14 @@ async fn fixture(case: &Value, now: Timestamp) -> (TestApp, Arc<Recorded>) {
                 response[1].as_str().unwrap().as_bytes().to_vec(),
             ));
         }
+    }
+    for (column, expected) in case["initial_offsets_us"].as_object().unwrap() {
+        let state = cache_state(&a).await;
+        assert_eq!(
+            stamp(&state[column]).as_microsecond() - now.as_microsecond(),
+            expected.as_i64().unwrap(),
+            "persisted {column} offset must match exact oracle microseconds"
+        );
     }
     (a, r)
 }
@@ -145,6 +154,23 @@ async fn replay(rows: &[Value], now: Timestamp) {
                 step["disconnected"],
                 "{name}: grant usability"
             );
+            for claim in step["broadcast_claims"].as_array().unwrap() {
+                let active = claim["active"].as_bool().unwrap();
+                let won = a
+                    .db()
+                    .write(move |tx| {
+                        let settings = campfire_db::UserStatusSettings::find(tx.conn(), DAVID)?;
+                        settings.meeting_cache.unwrap().claim_broadcast(tx, active)
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(json!(won), claim["won"], "{name}: owner broadcast claim");
+                assert_eq!(
+                    cache_state(&a).await,
+                    claim["cache"],
+                    "{name}: complete cache after owner claim"
+                );
+            }
         }
     }
 }
@@ -152,7 +178,16 @@ async fn replay(rows: &[Value], now: Timestamp) {
 async fn google_meeting_refresh_complete_states_and_requests_match_pinned_rails() {
     let v = oracle();
     replay(v["rows"].as_array().unwrap(), stamp(&v["now"])).await;
-    println!("Pinned Rails MeetingRefresh: 38 scenarios; 41 ordered refreshes; 0 skipped");
+    println!(
+        "Pinned Rails MeetingRefresh: {} scenarios; {} ordered refreshes; 0 skipped",
+        v["rows"].as_array().unwrap().len(),
+        v["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["steps"].as_array().unwrap().len())
+            .sum::<usize>()
+    );
 }
 #[tokio::test]
 async fn google_meeting_refresh_cache_timestamps_use_the_injected_clock() {
@@ -235,5 +270,64 @@ async fn google_meeting_refresh_followup_rejection_rolls_back_claim_and_cache() 
             .unwrap()
             .refresh_pending_at,
         Some(now)
+    );
+}
+
+async fn assert_refresh_boundary_offsets(prefix: &str, field: &str) {
+    let v = oracle();
+    let now = stamp(&v["now"]);
+    for (suffix, expected) in [
+        ("before", -60_000_001),
+        ("at", -60_000_000),
+        ("after", -59_999_999),
+    ] {
+        let name = format!("{prefix}_{suffix}_boundary");
+        let case = v["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["spec"]["name"] == name)
+            .unwrap();
+        let (a, _) = fixture(case, now).await;
+        let state = cache_state(&a).await;
+        assert_eq!(
+            stamp(&state[field]).as_microsecond() - now.as_microsecond(),
+            expected,
+            "{name}: persisted {field} offset must be exact microseconds"
+        );
+    }
+}
+#[tokio::test]
+async fn google_meeting_refresh_fetched_boundary_offsets_are_exact() {
+    assert_refresh_boundary_offsets("fetched", "fetched_at").await;
+}
+#[tokio::test]
+async fn google_meeting_refresh_pending_boundary_offsets_are_exact() {
+    assert_refresh_boundary_offsets("pending", "refresh_pending_at").await;
+}
+#[tokio::test]
+async fn google_meeting_refresh_broadcast_state_is_in_the_complete_observation() {
+    let v = oracle();
+    let case = v["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["spec"]["name"] == "followup")
+        .unwrap();
+    let (a, _) = fixture(case, stamp(&v["now"])).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE calendar_meeting_caches SET in_meeting_broadcast=0 WHERE user_id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        cache_state(&a).await["in_meeting_broadcast"],
+        json!(false),
+        "complete cache observation must include persisted broadcast state"
     );
 }

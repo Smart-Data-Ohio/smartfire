@@ -27,10 +27,10 @@ specs = [
   {name:'quota', cache:{busy_intervals:BUSY}, responses:[[403, quota.to_json]]},
   {name:'server_error', cache:{busy_intervals:BUSY}, responses:[[500, 'boom']]},
   {name:'malformed', cache:{busy_intervals:BUSY}, responses:[[200, '{oops']]},
-  {name:'fresh', cache:{fetched_offset:-30}},
-  {name:'followup', cache:{fetched_offset:-30}},
-  {name:'dedupe', cache:{fetched_offset:-30}, offsets:[0, 0]},
-  {name:'completed_claim', cache:{fetched_offset:-30}, offsets:[0, 61, 61]},
+  {name:'fresh', cache:{fetched_offset_us:-30000000}},
+  {name:'followup', cache:{fetched_offset_us:-30000000}},
+  {name:'dedupe', cache:{fetched_offset_us:-30000000}, offsets:[0, 0]},
+  {name:'completed_claim', cache:{fetched_offset_us:-30000000}, offsets:[0, 61, 61]},
   {name:'ooo_only', meeting:false, ooo:true, items:[ooo, later]},
   {name:'both_opt_ins', ooo:true, items:[ooo, later]},
   {name:'meeting_only_no_ooo', items:[ooo]},
@@ -45,15 +45,20 @@ specs = [
   {name:'forbidden', cache:{busy_intervals:BUSY}, responses:[[403, '{}']]},
   {name:'null_response', responses:[[200, 'null']]},
   {name:'empty_response', responses:[[200, '{}']]},
-  {name:'stale_pending_cleared', cache:{pending_offset:-120}, items:[busy]},
-  {name:'transient_pending_cleared', cache:{pending_offset:-120, busy_intervals:BUSY}, responses:[[503, '{}']]},
-  {name:'fetched_before_boundary', cache:{fetched_offset:-60.000001}},
-  {name:'fetched_at_boundary', cache:{fetched_offset:-60}},
-  {name:'fetched_after_boundary', cache:{fetched_offset:-59.999999}},
-  {name:'pending_before_boundary', cache:{fetched_offset:-30, pending_offset:-60.000001}},
-  {name:'pending_at_boundary', cache:{fetched_offset:-30, pending_offset:-60}},
-  {name:'pending_after_boundary', cache:{fetched_offset:-30, pending_offset:-59.999999}},
+  {name:'stale_pending_cleared', cache:{pending_offset_us:-120000000}, items:[busy]},
+  {name:'transient_pending_cleared', cache:{pending_offset_us:-120000000, busy_intervals:BUSY}, responses:[[503, '{}']]},
+  {name:'fetched_before_boundary', cache:{fetched_offset_us:-60000001}},
+  {name:'fetched_at_boundary', cache:{fetched_offset_us:-60000000}},
+  {name:'fetched_after_boundary', cache:{fetched_offset_us:-59999999}},
+  {name:'pending_before_boundary', cache:{fetched_offset_us:-30000000, pending_offset_us:-60000001}},
+  {name:'pending_at_boundary', cache:{fetched_offset_us:-30000000, pending_offset_us:-60000000}},
+  {name:'pending_after_boundary', cache:{fetched_offset_us:-30000000, pending_offset_us:-59999999}},
   {name:'all_day_ooo', meeting:false, ooo:true, zone:'Pacific Time (US & Canada)', items:[{'eventType'=>'outOfOffice', 'start'=>{'date'=>'2026-09-28'}, 'end'=>{'date'=>'2026-10-05'}}]},
+  {name:'broadcast_preserve_false', cache:{in_meeting_broadcast:false}, items:[busy]},
+  {name:'broadcast_preserve_true', cache:{in_meeting_broadcast:true}, items:[busy]},
+  {name:'broadcast_unusable_preserves_true', disconnected:true, cache:{busy_intervals:BUSY, in_meeting_broadcast:true}},
+  {name:'broadcast_transient_preserves_false', cache:{busy_intervals:BUSY, in_meeting_broadcast:false}, responses:[[503, '{}']]},
+  {name:'broadcast_boundary_flips', cache:{in_meeting_broadcast:false}, items:[busy], broadcast_claims:[true,true,false,false,true]},
   {name:'pages', responses:[[200, {items:[busy], nextPageToken:'page-2'}.to_json], [200, {items:[later]}.to_json]]}
 ]
 calls = []; answers = []
@@ -75,7 +80,7 @@ end
 cache_state = ->(user_id) {
   cache = Calendar::MeetingCache.find_by(user_id:)
   next nil unless cache
-  state = cache.attributes.slice('busy_intervals', 'ooo_intervals', 'fetch_error', 'fetched_at', 'refresh_pending_at', 'created_at', 'updated_at')
+  state = cache.attributes.slice('busy_intervals', 'ooo_intervals', 'fetch_error', 'fetched_at', 'refresh_pending_at', 'created_at', 'updated_at', 'in_meeting_broadcast')
   state.transform_values { |v| v.is_a?(Time) || v.is_a?(ActiveSupport::TimeWithZone) ? v.utc.iso8601(6) : v }
 }
 rows = specs.map do |spec|
@@ -98,11 +103,32 @@ rows = specs.map do |spec|
     end
     if spec[:cache]
       attrs = spec[:cache].dup
-      attrs[:fetched_at] = BASE + attrs.delete(:fetched_offset) if attrs.key?(:fetched_offset)
-      attrs[:refresh_pending_at] = BASE + attrs.delete(:pending_offset) if attrs.key?(:pending_offset)
+      attrs[:fetched_at] = BASE + Rational(attrs.delete(:fetched_offset_us), 1_000_000) if attrs.key?(:fetched_offset_us)
+      attrs[:refresh_pending_at] = BASE + Rational(attrs.delete(:pending_offset_us), 1_000_000) if attrs.key?(:pending_offset_us)
       Calendar::MeetingCache.create!(user:, created_at:BASE - 300, updated_at:BASE - 300, **attrs)
     end
     initial = cache_state.call(user.id)
+    boundary_offsets = {
+      'fetched_before_boundary'=>['fetched_at', -60_000_001],
+      'fetched_at_boundary'=>['fetched_at', -60_000_000],
+      'fetched_after_boundary'=>['fetched_at', -59_999_999],
+      'pending_before_boundary'=>['refresh_pending_at', -60_000_001],
+      'pending_at_boundary'=>['refresh_pending_at', -60_000_000],
+      'pending_after_boundary'=>['refresh_pending_at', -59_999_999]
+    }
+    if (boundary = boundary_offsets[spec[:name]])
+      column, expected = boundary
+      actual = (Time.iso8601(initial.fetch(column)).to_r - BASE.to_r) * 1_000_000
+      raise "#{spec[:name]}: persisted #{column} offset #{actual} != #{expected} microseconds" unless actual == expected
+    end
+    initial_offsets_us = {}
+    {fetched_at: :fetched_offset_us, refresh_pending_at: :pending_offset_us}.each do |column, key|
+      next unless spec.fetch(:cache, {}).key?(key)
+      actual = (Time.iso8601(initial.fetch(column.to_s)).to_r - BASE.to_r) * 1_000_000
+      expected = spec[:cache].fetch(key)
+      raise "#{spec[:name]}: persisted #{column} offset #{actual} != #{expected} microseconds" unless actual == expected
+      initial_offsets_us[column] = actual.to_i
+    end
     calls.clear; ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     responses = spec.fetch(:responses, [[200, {items:spec.fetch(:items, [])}.to_json]])
     answers.replace(responses.map(&:dup))
@@ -111,10 +137,15 @@ rows = specs.map do |spec|
       result = Calendar::MeetingRefresh.refresh(spec[:missing_user] ? 0 : user.id, now:at)
       jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j[:job] == Calendar::MeetingRefreshJob }
         .map { |j| {class:j[:job].name, args:j[:args], at:Time.at(j[:at]).utc.iso8601(6)} }
-      {at:at.utc.iso8601(6), result:, cache:cache_state.call(user.id), calls:calls.dup, jobs:,
+      stored = cache_state.call(user.id)
+      broadcast_claims = spec.fetch(:broadcast_claims, []).map do |active|
+        won = Calendar::MeetingCache.find_by!(user_id:user.id).claim_broadcast!(active)
+        {active:, won:, cache:cache_state.call(user.id)}
+      end
+      {at:at.utc.iso8601(6), result:, cache:stored, broadcast_claims:, calls:calls.dup, jobs:,
         disconnected:account&.reload&.disconnected_reason}
     end
-    {spec:, initial:, responses:, steps:}
+    {spec:, initial:, initial_offsets_us:, responses:, steps:}
   ensure
     ActiveRecord::Base.connection_pool.disconnect!
     FileUtils.rm_f(["#{database}-wal", "#{database}-shm"])

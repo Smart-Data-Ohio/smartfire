@@ -11,6 +11,7 @@
         127326141
       ],
       "initial": [],
+      "initial_offsets_us": {},
       "calls": [],
       "error": null,
       "channels": [
@@ -19,7 +20,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 0
     },
     {
       "spec": {
@@ -30,6 +32,7 @@
         127326141
       ],
       "initial": [],
+      "initial_offsets_us": {},
       "calls": [],
       "error": null,
       "channels": [
@@ -38,7 +41,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 1
     },
     {
       "spec": {
@@ -55,6 +59,7 @@
         127326141
       ],
       "initial": [],
+      "initial_offsets_us": {},
       "calls": [
         {
           "method": "POST",
@@ -88,7 +93,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 1
     },
     {
       "spec": {
@@ -113,6 +119,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [
         {
           "method": "POST",
@@ -156,7 +165,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -193,6 +203,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [
         {
           "method": "POST",
@@ -226,14 +239,15 @@
       "disconnected": [
         null
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 1
     },
     {
       "spec": {
         "name": "renew_soon",
         "renew": true,
         "old": true,
-        "expiry_offset": 7200
+        "expiry_offset_us": 7200000000
       },
       "user_ids": [
         127326141
@@ -253,6 +267,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": 7200000000
+      },
       "calls": [
         {
           "method": "POST",
@@ -296,14 +313,15 @@
       "disconnected": [
         null
       ],
-      "user_reads": 2
+      "user_reads": 2,
+      "account_reads": 3
     },
     {
       "spec": {
         "name": "renew_fresh",
         "renew": true,
         "old": true,
-        "expiry_offset": 172800
+        "expiry_offset_us": 172800000000
       },
       "user_ids": [
         127326141
@@ -323,6 +341,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": 172800000000
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -343,7 +364,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -370,6 +392,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -378,7 +403,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -389,6 +415,7 @@
         127326141
       ],
       "initial": [],
+      "initial_offsets_us": {},
       "calls": [
         {
           "method": "POST",
@@ -422,7 +449,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 2
+      "user_reads": 2,
+      "account_reads": 1
     },
     {
       "spec": {
@@ -434,6 +462,7 @@
         127326141
       ],
       "initial": [],
+      "initial_offsets_us": {},
       "calls": [],
       "error": null,
       "channels": [
@@ -442,14 +471,15 @@
       "disconnected": [
         "revoked"
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 1
     },
     {
       "spec": {
         "name": "renew_timeout",
         "renew": true,
         "old": true,
-        "expiry_offset": 7200,
+        "expiry_offset_us": 7200000000,
         "response": [
           "timeout",
           null
@@ -473,6 +503,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": 7200000000
+      },
       "calls": [
         {
           "method": "POST",
@@ -506,14 +539,15 @@
       "disconnected": [
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
         "name": "preload_2",
         "renew": true,
         "old": true,
-        "expiry_offset": 172800,
+        "expiry_offset_us": 172800000000,
         "users": 2
       },
       "user_ids": [
@@ -548,6 +582,10 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": 172800000000,
+        "773523960": 172800000000
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -582,14 +620,15 @@
         null,
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
         "name": "preload_12",
         "renew": true,
         "old": true,
-        "expiry_offset": 172800,
+        "expiry_offset_us": 172800000000,
         "users": 12
       },
       "user_ids": [
@@ -764,6 +803,20 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": 172800000000,
+        "773523960": 172800000000,
+        "773523961": 172800000000,
+        "773523962": 172800000000,
+        "773523963": 172800000000,
+        "773523964": 172800000000,
+        "773523965": 172800000000,
+        "773523966": 172800000000,
+        "773523967": 172800000000,
+        "773523968": 172800000000,
+        "773523969": 172800000000,
+        "773523970": 172800000000
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -938,7 +991,770 @@
         null,
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
+    },
+    {
+      "spec": {
+        "name": "preload_soon_2",
+        "renew": true,
+        "old": true,
+        "expiry_offset_us": 7200000000,
+        "users": 2
+      },
+      "user_ids": [
+        127326141,
+        773523960
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 2,
+          "user_id": 773523960,
+          "channel_id": "old-773523960",
+          "token_digest": "6d5ab9f6794254485a700c7f622a4c29658a2acf5fdff3afc10ecc6a1db9834e",
+          "resource_id": "old-resource-773523960",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "initial_offsets_us": {
+        "127326141": 7200000000,
+        "773523960": 7200000000
+      },
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523960",
+            "resourceId": "old-resource-773523960"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523960,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null,
+        null
+      ],
+      "user_reads": 3,
+      "account_reads": 4
+    },
+    {
+      "spec": {
+        "name": "preload_soon_12",
+        "renew": true,
+        "old": true,
+        "expiry_offset_us": 7200000000,
+        "users": 12
+      },
+      "user_ids": [
+        127326141,
+        773523960,
+        773523961,
+        773523962,
+        773523963,
+        773523964,
+        773523965,
+        773523966,
+        773523967,
+        773523968,
+        773523969,
+        773523970
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 2,
+          "user_id": 773523960,
+          "channel_id": "old-773523960",
+          "token_digest": "6d5ab9f6794254485a700c7f622a4c29658a2acf5fdff3afc10ecc6a1db9834e",
+          "resource_id": "old-resource-773523960",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 3,
+          "user_id": 773523961,
+          "channel_id": "old-773523961",
+          "token_digest": "e8b4549af638ef4659a4a752844b0922a928d369d7204a8f2dddb3d22096afca",
+          "resource_id": "old-resource-773523961",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 4,
+          "user_id": 773523962,
+          "channel_id": "old-773523962",
+          "token_digest": "51b773757358df32cab322d7bdd8b085bed6bdbc1387b8a5d4054be50dee12c0",
+          "resource_id": "old-resource-773523962",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 5,
+          "user_id": 773523963,
+          "channel_id": "old-773523963",
+          "token_digest": "f48d3e7aa3e57443d619ee8ee6bd95c47a08b2c3c2a8ef5758adcac4656b34a9",
+          "resource_id": "old-resource-773523963",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 6,
+          "user_id": 773523964,
+          "channel_id": "old-773523964",
+          "token_digest": "7f48b2a8ac96f80a3e76190f9890dd9fdfb20e80b414428ed10ee8597468548b",
+          "resource_id": "old-resource-773523964",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 7,
+          "user_id": 773523965,
+          "channel_id": "old-773523965",
+          "token_digest": "b4c588ac3b8f1384cd32b164579cca5edd43b4f232a2f8b0090af965a53dd90f",
+          "resource_id": "old-resource-773523965",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 8,
+          "user_id": 773523966,
+          "channel_id": "old-773523966",
+          "token_digest": "9549c9696e58e4b795a579375d3014873e880e169a11b0ed793678d5f92280d8",
+          "resource_id": "old-resource-773523966",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 9,
+          "user_id": 773523967,
+          "channel_id": "old-773523967",
+          "token_digest": "8fdce89d88def069e9eebb1159561cad49dc3d97725b24ccc79cdf9dc2946358",
+          "resource_id": "old-resource-773523967",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 10,
+          "user_id": 773523968,
+          "channel_id": "old-773523968",
+          "token_digest": "c6016474f7ff4f00588eca0f2f0ffba737bbf35e0347334dba3275efb516525b",
+          "resource_id": "old-resource-773523968",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 11,
+          "user_id": 773523969,
+          "channel_id": "old-773523969",
+          "token_digest": "03210c334094db8ff1ade43cc0ae82e3fd86616864e0be86535d4a2e6a8a23e6",
+          "resource_id": "old-resource-773523969",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        },
+        {
+          "id": 12,
+          "user_id": 773523970,
+          "channel_id": "old-773523970",
+          "token_digest": "2cab65acde6bd6da69fa62022d1cd2290f1efda4806647af16788e40fb592527",
+          "resource_id": "old-resource-773523970",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "initial_offsets_us": {
+        "127326141": 7200000000,
+        "773523960": 7200000000,
+        "773523961": 7200000000,
+        "773523962": 7200000000,
+        "773523963": 7200000000,
+        "773523964": 7200000000,
+        "773523965": 7200000000,
+        "773523966": 7200000000,
+        "773523967": 7200000000,
+        "773523968": 7200000000,
+        "773523969": 7200000000,
+        "773523970": 7200000000
+      },
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-127326141",
+            "resourceId": "old-resource-127326141"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523960",
+            "resourceId": "old-resource-773523960"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523961",
+            "resourceId": "old-resource-773523961"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523962",
+            "resourceId": "old-resource-773523962"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523963",
+            "resourceId": "old-resource-773523963"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523964",
+            "resourceId": "old-resource-773523964"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523965",
+            "resourceId": "old-resource-773523965"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523966",
+            "resourceId": "old-resource-773523966"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523967",
+            "resourceId": "old-resource-773523967"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523968",
+            "resourceId": "old-resource-773523968"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523969",
+            "resourceId": "old-resource-773523969"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/calendars/primary/events/watch",
+          "body": {
+            "type": "web_hook",
+            "address": "https://app.test/google/calendar/notifications"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token",
+          "uuid_v4": true,
+          "token_hex_64": true
+        },
+        {
+          "method": "POST",
+          "path": "/calendar/v3/channels/stop",
+          "body": {
+            "id": "old-773523970",
+            "resourceId": "old-resource-773523970"
+          },
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523960,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523961,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523962,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523963,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523964,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523965,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523966,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523967,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523968,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523969,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        },
+        {
+          "user_id": 773523970,
+          "resource_id": "new-resource",
+          "expires_at": null,
+          "last_message_number": 0,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": null,
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "same_row": true,
+          "old_identity": false,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "user_reads": 13,
+      "account_reads": 14
     },
     {
       "spec": {
@@ -964,6 +1780,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [
         {
           "method": "POST",
@@ -1007,14 +1826,15 @@
       "disconnected": [
         null
       ],
-      "user_reads": 2
+      "user_reads": 2,
+      "account_reads": 3
     },
     {
       "spec": {
         "name": "renew_before_boundary",
         "renew": true,
         "old": true,
-        "expiry_offset": 86399.999999
+        "expiry_offset_us": 86399999999
       },
       "user_ids": [
         127326141
@@ -1034,6 +1854,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": 86399999999
+      },
       "calls": [
         {
           "method": "POST",
@@ -1077,14 +1900,15 @@
       "disconnected": [
         null
       ],
-      "user_reads": 2
+      "user_reads": 2,
+      "account_reads": 3
     },
     {
       "spec": {
         "name": "renew_at_boundary",
         "renew": true,
         "old": true,
-        "expiry_offset": 86400
+        "expiry_offset_us": 86400000000
       },
       "user_ids": [
         127326141
@@ -1104,6 +1928,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": 86400000000
+      },
       "calls": [
         {
           "method": "POST",
@@ -1147,14 +1974,15 @@
       "disconnected": [
         null
       ],
-      "user_reads": 2
+      "user_reads": 2,
+      "account_reads": 3
     },
     {
       "spec": {
         "name": "renew_after_boundary",
         "renew": true,
         "old": true,
-        "expiry_offset": 86400.000001
+        "expiry_offset_us": 86400000001
       },
       "user_ids": [
         127326141
@@ -1166,7 +1994,7 @@
           "channel_id": "old-127326141",
           "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
           "resource_id": "old-resource-127326141",
-          "expires_at": "2026-09-24T10:30:00.000000Z",
+          "expires_at": "2026-09-24T10:30:00.000001Z",
           "last_message_number": 42,
           "last_notification_at": "2026-09-23T10:29:00.000000Z",
           "last_error": "previous failure",
@@ -1174,50 +2002,31 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
-      "calls": [
-        {
-          "method": "POST",
-          "path": "/calendar/v3/calendars/primary/events/watch",
-          "body": {
-            "type": "web_hook",
-            "address": "https://app.test/google/calendar/notifications"
-          },
-          "content_type": "application/json",
-          "access_token": "access-token",
-          "uuid_v4": true,
-          "token_hex_64": true
-        },
-        {
-          "method": "POST",
-          "path": "/calendar/v3/channels/stop",
-          "body": {
-            "id": "old-127326141",
-            "resourceId": "old-resource-127326141"
-          },
-          "content_type": "application/json",
-          "access_token": "access-token"
-        }
-      ],
+      "initial_offsets_us": {
+        "127326141": 86400000001
+      },
+      "calls": [],
       "error": null,
       "channels": [
         {
           "user_id": 127326141,
-          "resource_id": "new-resource",
-          "expires_at": null,
-          "last_message_number": 0,
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-24T10:30:00.000001Z",
+          "last_message_number": 42,
           "last_notification_at": "2026-09-23T10:29:00.000000Z",
-          "last_error": null,
+          "last_error": "previous failure",
           "created_at": "2026-09-23T10:25:00.000000Z",
-          "updated_at": "2026-09-23T10:30:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
           "same_row": true,
-          "old_identity": false,
+          "old_identity": true,
           "digest_matches": true
         }
       ],
       "disconnected": [
         null
       ],
-      "user_reads": 2
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -1243,6 +2052,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [
         {
           "method": "POST",
@@ -1286,7 +2098,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -1312,6 +2125,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [
         {
           "method": "POST",
@@ -1355,7 +2171,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -1384,6 +2201,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [
         {
           "method": "POST",
@@ -1417,7 +2237,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 1
     },
     {
       "spec": {
@@ -1446,6 +2267,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [
         {
           "method": "POST",
@@ -1479,7 +2303,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 1
     },
     {
       "spec": {
@@ -1505,6 +2330,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -1525,7 +2353,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 1
     },
     {
       "spec": {
@@ -1551,6 +2380,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -1571,7 +2403,8 @@
       "disconnected": [
         "The stored token could not be read; reconnect"
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 1
     },
     {
       "spec": {
@@ -1597,6 +2430,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -1617,7 +2453,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 0
+      "user_reads": 0,
+      "account_reads": 0
     },
     {
       "spec": {
@@ -1644,6 +2481,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -1652,7 +2492,8 @@
       "disconnected": [
         "revoked"
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -1679,6 +2520,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -1687,7 +2531,8 @@
       "disconnected": [
         null
       ],
-      "user_reads": 2
+      "user_reads": 2,
+      "account_reads": 2
     },
     {
       "spec": {
@@ -1714,6 +2559,9 @@
           "updated_at": "2026-09-23T10:25:00.000000Z"
         }
       ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
       "calls": [],
       "error": null,
       "channels": [
@@ -1722,7 +2570,8 @@
       "disconnected": [
         "The stored token could not be read; reconnect"
       ],
-      "user_reads": 1
+      "user_reads": 1,
+      "account_reads": 2
     }
   ],
   "tokens": [

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Reject broken channel authentication, ordering and preload behavior; always restore."""
+import argparse
 import os
 import subprocess
 from pathlib import Path
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--scratch', type=Path)
+args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
-scratch = root.parent / '.scratch/ws14g/calendar-completion/push-mutations'
+scratch = args.scratch.resolve() if args.scratch else root.parent / '.scratch/ws14g/calendar-completion/push-mutations'
 scratch.mkdir(parents=True, exist_ok=True)
 cases = [
     ('token-authentication', 'crates/db/src/models/google_calendar.rs',
@@ -22,6 +26,15 @@ cases = [
      'for (id, user, expiry) in channels {',
      'for (id, user, expiry) in channels {\n'
      '        app.db.read(move |conn| Ok(conn.query_row("SELECT id FROM users WHERE id=?", [user], |r| r.get::<_, i64>(0))?)).await?;',
+     'google_push_channel_watch_renewal_and_preload'),
+    ('account-preload', 'crates/campfire/src/integrations/google/calendar.rs',
+     'for (id, user, expiry) in channels {',
+     'for (id, user, expiry) in channels {\n'
+     '        let _ = app.db.read(move |conn| GoogleAccount::for_user(conn, user)).await?;',
+     'google_push_channel_watch_renewal_and_preload'),
+    ('renewal-boundary', 'crates/campfire/src/integrations/google/calendar.rs',
+     't <= now.since(jiff::SignedDuration::from_hours(24))',
+     't < now.since(jiff::SignedDuration::from_hours(24))',
      'google_push_channel_watch_renewal_and_preload'),
 ]
 for name, relative, before, after, test in cases:
@@ -42,4 +55,4 @@ for name, relative, before, after, test in cases:
         print(name + ': ' + summaries[-1], flush=True)
     finally:
         path.write_text(source)
-print('Calendar channel discrimination: 4 mutations rejected', flush=True)
+print(f'Calendar channel discrimination: {len(cases)} mutations rejected', flush=True)

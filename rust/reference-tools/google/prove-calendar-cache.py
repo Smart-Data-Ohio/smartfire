@@ -7,9 +7,10 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--only', default='')
+parser.add_argument('--scratch', type=Path)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
-scratch = root.parent / '.scratch/ws14g/calendar-completion/mutations'
+scratch = args.scratch.resolve() if args.scratch else root.parent / '.scratch/ws14g/calendar-completion/mutations'
 scratch.mkdir(parents=True, exist_ok=True)
 cases = [
     ('focus-time', 'crates/db/src/models/google_meeting_cache.rs',
@@ -32,6 +33,14 @@ cases = [
      'campfire', 'google_meeting_refresh_complete_states'),
     ('claim-boundary', 'crates/db/src/models/google_meeting_cache.rs',
      'refresh_pending_at<=?', 'refresh_pending_at<?',
+     'campfire', 'google_meeting_refresh_complete_states'),
+    ('broadcast-set-true', 'crates/db/src/models/google_meeting_cache.rs',
+     'fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at',
+     'in_meeting_broadcast=1,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at',
+     'campfire', 'google_meeting_refresh_complete_states'),
+    ('broadcast-set-false', 'crates/db/src/models/google_meeting_cache.rs',
+     'fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at',
+     'in_meeting_broadcast=0,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at',
      'campfire', 'google_meeting_refresh_complete_states'),
 ]
 checked = 0

@@ -9,10 +9,12 @@ from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--only', default='refresh,intervals,push,clock')
-selected = set(parser.parse_args().only.split(','))
+parser.add_argument('--log-dir', type=Path)
+args = parser.parse_args()
+selected = set(args.only.split(','))
 assert selected <= {'refresh', 'intervals', 'push', 'clock'}, selected
 root = Path(__file__).resolve().parents[2]
-scratch = root.parent / '.scratch/ws14g/calendar-completion/logs'
+scratch = args.log_dir.resolve() if args.log_dir else root.parent / '.scratch/ws14g/calendar-completion/logs'
 scratch.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, PARITY_NAMESPACE='ws14g', PARITY_OWNER='ws14g', PARITY_IMAGE='ws9-reference:d7c7de92')
 base = [str(root / 'parity/bin/reference'), 'runner', '--seed', 'default',

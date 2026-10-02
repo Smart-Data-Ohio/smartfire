@@ -37,8 +37,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -61,8 +63,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -82,6 +86,7 @@
         "name": "privacy_fields"
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -99,8 +104,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -121,6 +128,7 @@
         "meeting": false
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -132,6 +140,7 @@
           "at": "2026-09-23T10:30:00.000000Z",
           "result": "skipped",
           "cache": null,
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [],
           "disconnected": null
@@ -144,6 +153,7 @@
         "inactive": true
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -155,6 +165,7 @@
           "at": "2026-09-23T10:30:00.000000Z",
           "result": "skipped",
           "cache": null,
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [],
           "disconnected": null
@@ -197,8 +208,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -216,8 +229,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [],
           "disconnected": "Google rejected the connection"
@@ -255,8 +270,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           400,
@@ -274,8 +291,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "POST",
@@ -320,8 +339,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           429,
@@ -344,8 +365,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -390,8 +413,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           403,
@@ -414,8 +439,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -460,8 +487,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           500,
@@ -484,8 +513,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -530,8 +561,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -554,8 +587,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -574,7 +609,7 @@
       "spec": {
         "name": "fresh",
         "cache": {
-          "fetched_offset": -30
+          "fetched_offset_us": -30000000
         }
       },
       "initial": {
@@ -584,7 +619,11 @@
         "fetched_at": "2026-09-23T10:29:30.000000Z",
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
       },
       "responses": [
         [
@@ -603,8 +642,10 @@
             "fetched_at": "2026-09-23T10:29:30.000000Z",
             "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [
             {
@@ -623,7 +664,7 @@
       "spec": {
         "name": "followup",
         "cache": {
-          "fetched_offset": -30
+          "fetched_offset_us": -30000000
         }
       },
       "initial": {
@@ -633,7 +674,11 @@
         "fetched_at": "2026-09-23T10:29:30.000000Z",
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
       },
       "responses": [
         [
@@ -652,8 +697,10 @@
             "fetched_at": "2026-09-23T10:29:30.000000Z",
             "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [
             {
@@ -672,7 +719,7 @@
       "spec": {
         "name": "dedupe",
         "cache": {
-          "fetched_offset": -30
+          "fetched_offset_us": -30000000
         },
         "offsets": [
           0,
@@ -686,7 +733,11 @@
         "fetched_at": "2026-09-23T10:29:30.000000Z",
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
       },
       "responses": [
         [
@@ -705,8 +756,10 @@
             "fetched_at": "2026-09-23T10:29:30.000000Z",
             "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [
             {
@@ -729,8 +782,10 @@
             "fetched_at": "2026-09-23T10:29:30.000000Z",
             "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [
             {
@@ -749,7 +804,7 @@
       "spec": {
         "name": "completed_claim",
         "cache": {
-          "fetched_offset": -30
+          "fetched_offset_us": -30000000
         },
         "offsets": [
           0,
@@ -764,7 +819,11 @@
         "fetched_at": "2026-09-23T10:29:30.000000Z",
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
       },
       "responses": [
         [
@@ -783,8 +842,10 @@
             "fetched_at": "2026-09-23T10:29:30.000000Z",
             "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [
             {
@@ -807,8 +868,10 @@
             "fetched_at": "2026-09-23T10:31:01.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -839,8 +902,10 @@
             "fetched_at": "2026-09-23T10:31:01.000000Z",
             "refresh_pending_at": "2026-09-23T10:31:01.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -898,6 +963,7 @@
         ]
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -920,8 +986,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -963,6 +1031,7 @@
         ]
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -990,8 +1059,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1023,6 +1094,7 @@
         ]
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1040,8 +1112,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1061,6 +1135,7 @@
         "name": "meeting_lookahead"
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1078,8 +1153,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1125,8 +1202,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           500,
@@ -1149,8 +1228,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1208,8 +1289,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           400,
@@ -1227,8 +1310,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "POST",
@@ -1249,6 +1334,7 @@
         "missing_user": true
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1260,6 +1346,7 @@
           "at": "2026-09-23T10:30:00.000000Z",
           "result": "skipped",
           "cache": null,
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [],
           "disconnected": null
@@ -1272,6 +1359,7 @@
         "account": false
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1289,8 +1377,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [],
           "disconnected": null
@@ -1303,6 +1393,7 @@
         "scopes": "openid email"
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1320,8 +1411,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [],
           "disconnected": null
@@ -1334,6 +1427,7 @@
         "unreadable": true
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1351,8 +1445,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [],
           "disconnected": "The stored token could not be read; reconnect"
@@ -1400,8 +1496,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           "timeout",
@@ -1429,8 +1527,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1475,8 +1575,10 @@
         "fetched_at": null,
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
       },
+      "initial_offsets_us": {},
       "responses": [
         [
           403,
@@ -1499,8 +1601,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1526,6 +1630,7 @@
         ]
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1543,8 +1648,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1570,6 +1677,7 @@
         ]
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -1587,8 +1695,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1607,7 +1717,7 @@
       "spec": {
         "name": "stale_pending_cleared",
         "cache": {
-          "pending_offset": -120
+          "pending_offset_us": -120000000
         },
         "items": [
           {
@@ -1628,7 +1738,11 @@
         "fetched_at": null,
         "refresh_pending_at": "2026-09-23T10:28:00.000000Z",
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "refresh_pending_at": -120000000
       },
       "responses": [
         [
@@ -1652,8 +1766,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1672,7 +1788,7 @@
       "spec": {
         "name": "transient_pending_cleared",
         "cache": {
-          "pending_offset": -120,
+          "pending_offset_us": -120000000,
           "busy_intervals": [
             [
               "2026-09-23T10:00:00Z",
@@ -1699,7 +1815,11 @@
         "fetched_at": null,
         "refresh_pending_at": "2026-09-23T10:28:00.000000Z",
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "refresh_pending_at": -120000000
       },
       "responses": [
         [
@@ -1723,8 +1843,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1743,7 +1865,7 @@
       "spec": {
         "name": "fetched_before_boundary",
         "cache": {
-          "fetched_offset": -60.000001
+          "fetched_offset_us": -60000001
         }
       },
       "initial": {
@@ -1753,7 +1875,11 @@
         "fetched_at": "2026-09-23T10:28:59.999999Z",
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -60000001
       },
       "responses": [
         [
@@ -1772,8 +1898,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1792,7 +1920,7 @@
       "spec": {
         "name": "fetched_at_boundary",
         "cache": {
-          "fetched_offset": -60
+          "fetched_offset_us": -60000000
         }
       },
       "initial": {
@@ -1802,7 +1930,11 @@
         "fetched_at": "2026-09-23T10:29:00.000000Z",
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -60000000
       },
       "responses": [
         [
@@ -1821,8 +1953,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
@@ -1841,17 +1975,21 @@
       "spec": {
         "name": "fetched_after_boundary",
         "cache": {
-          "fetched_offset": -59.999999
+          "fetched_offset_us": -59999999
         }
       },
       "initial": {
         "busy_intervals": [],
         "ooo_intervals": [],
         "fetch_error": null,
-        "fetched_at": "2026-09-23T10:29:00.000000Z",
+        "fetched_at": "2026-09-23T10:29:00.000001Z",
         "refresh_pending_at": null,
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -59999999
       },
       "responses": [
         [
@@ -1862,26 +2000,28 @@
       "steps": [
         {
           "at": "2026-09-23T10:30:00.000000Z",
-          "result": "ok",
+          "result": "fresh",
           "cache": {
             "busy_intervals": [],
             "ooo_intervals": [],
             "fetch_error": null,
-            "fetched_at": "2026-09-23T10:30:00.000000Z",
-            "refresh_pending_at": null,
+            "fetched_at": "2026-09-23T10:29:00.000001Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
-          "calls": [
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
             {
-              "method": "GET",
-              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
-              "body": "",
-              "content_type": "application/json",
-              "access_token": "access-token"
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
             }
           ],
-          "jobs": [],
           "disconnected": null
         }
       ]
@@ -1890,8 +2030,8 @@
       "spec": {
         "name": "pending_before_boundary",
         "cache": {
-          "fetched_offset": -30,
-          "pending_offset": -60.000001
+          "fetched_offset_us": -30000000,
+          "pending_offset_us": -60000001
         }
       },
       "initial": {
@@ -1901,7 +2041,12 @@
         "fetched_at": "2026-09-23T10:29:30.000000Z",
         "refresh_pending_at": "2026-09-23T10:28:59.999999Z",
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000,
+        "refresh_pending_at": -60000001
       },
       "responses": [
         [
@@ -1920,8 +2065,10 @@
             "fetched_at": "2026-09-23T10:29:30.000000Z",
             "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [
             {
@@ -1940,8 +2087,8 @@
       "spec": {
         "name": "pending_at_boundary",
         "cache": {
-          "fetched_offset": -30,
-          "pending_offset": -60
+          "fetched_offset_us": -30000000,
+          "pending_offset_us": -60000000
         }
       },
       "initial": {
@@ -1951,7 +2098,12 @@
         "fetched_at": "2026-09-23T10:29:30.000000Z",
         "refresh_pending_at": "2026-09-23T10:29:00.000000Z",
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000,
+        "refresh_pending_at": -60000000
       },
       "responses": [
         [
@@ -1970,8 +2122,10 @@
             "fetched_at": "2026-09-23T10:29:30.000000Z",
             "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
           "jobs": [
             {
@@ -1990,8 +2144,8 @@
       "spec": {
         "name": "pending_after_boundary",
         "cache": {
-          "fetched_offset": -30,
-          "pending_offset": -59.999999
+          "fetched_offset_us": -30000000,
+          "pending_offset_us": -59999999
         }
       },
       "initial": {
@@ -1999,9 +2153,14 @@
         "ooo_intervals": [],
         "fetch_error": null,
         "fetched_at": "2026-09-23T10:29:30.000000Z",
-        "refresh_pending_at": "2026-09-23T10:29:00.000000Z",
+        "refresh_pending_at": "2026-09-23T10:29:00.000001Z",
         "created_at": "2026-09-23T10:25:00.000000Z",
-        "updated_at": "2026-09-23T10:25:00.000000Z"
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000,
+        "refresh_pending_at": -59999999
       },
       "responses": [
         [
@@ -2018,20 +2177,14 @@
             "ooo_intervals": [],
             "fetch_error": null,
             "fetched_at": "2026-09-23T10:29:30.000000Z",
-            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": "2026-09-23T10:29:00.000001Z",
             "created_at": "2026-09-23T10:25:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:25:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [],
-          "jobs": [
-            {
-              "class": "Calendar::MeetingRefreshJob",
-              "args": [
-                127326141
-              ],
-              "at": "2026-09-23T10:31:00.000000Z"
-            }
-          ],
+          "jobs": [],
           "disconnected": null
         }
       ]
@@ -2055,6 +2208,7 @@
         ]
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -2077,12 +2231,456 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",
               "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-10-23T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_preserve_false",
+        "cache": {
+          "in_meeting_broadcast": false
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          }
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": false
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": false
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_preserve_true",
+        "cache": {
+          "in_meeting_broadcast": true
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          }
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": true
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": true
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_unusable_preserves_true",
+        "disconnected": true,
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ],
+          "in_meeting_broadcast": true
+        }
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": true
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Connect Google Calendar to show calendar status.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": true
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": "Google rejected the connection"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_transient_preserves_false",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ],
+          "in_meeting_broadcast": false
+        },
+        "responses": [
+          [
+            503,
+            "{}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": false
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          503,
+          "{}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": false
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_boundary_flips",
+        "cache": {
+          "in_meeting_broadcast": false
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          }
+        ],
+        "broadcast_claims": [
+          true,
+          true,
+          false,
+          false,
+          true
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": false
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": false
+          },
+          "broadcast_claims": [
+            {
+              "active": true,
+              "won": true,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": true
+              }
+            },
+            {
+              "active": true,
+              "won": false,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": true
+              }
+            },
+            {
+              "active": false,
+              "won": true,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": false
+              }
+            },
+            {
+              "active": false,
+              "won": false,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": false
+              }
+            },
+            {
+              "active": true,
+              "won": true,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": true
+              }
+            }
+          ],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
               "body": "",
               "content_type": "application/json",
               "access_token": "access-token"
@@ -2108,6 +2706,7 @@
         ]
       },
       "initial": null,
+      "initial_offsets_us": {},
       "responses": [
         [
           200,
@@ -2138,8 +2737,10 @@
             "fetched_at": "2026-09-23T10:30:00.000000Z",
             "refresh_pending_at": null,
             "created_at": "2026-09-23T10:30:00.000000Z",
-            "updated_at": "2026-09-23T10:30:00.000000Z"
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
           },
+          "broadcast_claims": [],
           "calls": [
             {
               "method": "GET",

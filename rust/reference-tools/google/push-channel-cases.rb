@@ -12,21 +12,23 @@ Time.define_singleton_method(:current) { BASE }
 callback = 'https://app.test/google/calendar/notifications'
 specs = [
   {name:'no_callback', callback:false}, {name:'no_account', account:false},
-  {name:'first_watch', response:[200, {resourceId:'resource-1', expiration:((BASE+3.days).to_f*1000).to_i.to_s}]},
+  {name:'first_watch', response:[200, {resourceId:'resource-1', expiration:((BASE+3.days).to_i*1000).to_s}]},
   {name:'rewatch', old:true},
   {name:'rewatch_forbidden', old:true, response:[403, {error:{errors:[{reason:'forbidden'}]}}]},
-  {name:'renew_soon', renew:true, old:true, expiry_offset:7200},
-  {name:'renew_fresh', renew:true, old:true, expiry_offset:172800},
+  {name:'renew_soon', renew:true, old:true, expiry_offset_us:7200000000},
+  {name:'renew_fresh', renew:true, old:true, expiry_offset_us:172800000000},
   {name:'renew_missing_account', renew:true, old:true, account:false},
   {name:'heal_missing', renew:true},
   {name:'heal_disconnected', renew:true, disconnected:true},
-  {name:'renew_timeout', renew:true, old:true, expiry_offset:7200, response:['timeout', nil]},
-  {name:'preload_2', renew:true, old:true, expiry_offset:172800, users:2},
-  {name:'preload_12', renew:true, old:true, expiry_offset:172800, users:12},
+  {name:'renew_timeout', renew:true, old:true, expiry_offset_us:7200000000, response:['timeout', nil]},
+  {name:'preload_2', renew:true, old:true, expiry_offset_us:172800000000, users:2},
+  {name:'preload_12', renew:true, old:true, expiry_offset_us:172800000000, users:12},
+  {name:'preload_soon_2', renew:true, old:true, expiry_offset_us:7200000000, users:2},
+  {name:'preload_soon_12', renew:true, old:true, expiry_offset_us:7200000000, users:12},
   {name:'renew_no_expiry', renew:true, old:true},
-  {name:'renew_before_boundary', renew:true, old:true, expiry_offset:86399.999999},
-  {name:'renew_at_boundary', renew:true, old:true, expiry_offset:86400},
-  {name:'renew_after_boundary', renew:true, old:true, expiry_offset:86400.000001},
+  {name:'renew_before_boundary', renew:true, old:true, expiry_offset_us:86399999999},
+  {name:'renew_at_boundary', renew:true, old:true, expiry_offset_us:86400000000},
+  {name:'renew_after_boundary', renew:true, old:true, expiry_offset_us:86400000001},
   {name:'stop_not_found', old:true, stop_status:404},
   {name:'stop_timeout', old:true, stop_status:'timeout'},
   {name:'watch_rate_limit', old:true, response:[429, {}]},
@@ -70,14 +72,27 @@ rows = specs.map do |spec|
     users.each do |user|
       account = GoogleAccount.create!(user:, email:'fixture@example.test', access_token:'access-token', refresh_token:'refresh-token', access_token_expires_at:BASE+3600, scopes:spec[:scopes], disconnected_reason:spec[:disconnected] ? 'revoked' : nil) if spec.fetch(:account, true)
       ActiveRecord::Base.connection.execute("UPDATE google_accounts SET refresh_token='broken-AR-ciphertext' WHERE id=#{account.id}") if spec[:unreadable]
-      Calendar::PushChannel.create!(user:, channel_id:"old-#{user.id}", token_digest:Calendar::PushChannel.digest("old-token-#{user.id}"), resource_id:"old-resource-#{user.id}", expires_at:spec[:expiry_offset] && BASE+spec[:expiry_offset], last_message_number:42, last_notification_at:BASE-60, last_error:'previous failure', created_at:BASE-300, updated_at:BASE-300) if spec[:old]
+      Calendar::PushChannel.create!(user:, channel_id:"old-#{user.id}", token_digest:Calendar::PushChannel.digest("old-token-#{user.id}"), resource_id:"old-resource-#{user.id}", expires_at:spec[:expiry_offset_us] && BASE+Rational(spec[:expiry_offset_us], 1_000_000), last_message_number:42, last_notification_at:BASE-60, last_error:'previous failure', created_at:BASE-300, updated_at:BASE-300) if spec[:old]
     end
     # Raw ciphertext corruption must be observed by a fresh association, as in the helper's reload.
     users.each(&:reload)
     initial = Calendar::PushChannel.order(:id).map { |c| c.attributes.slice('id','user_id','channel_id','token_digest','resource_id','expires_at','last_message_number','last_notification_at','last_error','created_at','updated_at').transform_values { |v| v.is_a?(Time) || v.is_a?(ActiveSupport::TimeWithZone) ? v.utc.iso8601(6) : v } }
-    answers.replace([spec.fetch(:response, [200, {resourceId:'new-resource'}]), [spec.fetch(:stop_status, 200), {}]])
+    boundary_offsets = {'renew_before_boundary'=>86_399_999_999,
+      'renew_at_boundary'=>86_400_000_000, 'renew_after_boundary'=>86_400_000_001}
+    if (expected = boundary_offsets[spec[:name]])
+      actual = (Time.iso8601(initial.first.fetch('expires_at')).to_r - BASE.to_r) * 1_000_000
+      raise "#{spec[:name]}: persisted expiry offset #{actual} != #{expected} microseconds" unless actual == expected
+    end
+    initial_offsets_us = initial.to_h do |channel|
+      next [channel['user_id'].to_s, nil] unless channel['expires_at']
+      actual = (Time.iso8601(channel.fetch('expires_at')).to_r - BASE.to_r) * 1_000_000
+      expected = spec.fetch(:expiry_offset_us)
+      raise "#{spec[:name]}: persisted expiry offset #{actual} != #{expected} microseconds" unless actual == expected
+      [channel['user_id'].to_s, actual.to_i]
+    end
+    answers.replace(users.flat_map { [spec.fetch(:response, [200, {resourceId:'new-resource'}]), [spec.fetch(:stop_status, 200), {}]] })
     calls.clear; error = nil; queries = []
-    listener = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "users"') }
+    listener = ->(*, payload) { queries << payload[:sql] if payload[:sql].match?(/FROM "(?:users|google_accounts)"/) }
     ActiveSupport::Notifications.subscribed(listener, 'sql.active_record') do
       begin
         spec[:renew] ? Calendar::PushChannel.renew_expiring! : Calendar::PushChannel.watch_for!(users.first)
@@ -103,8 +118,9 @@ rows = specs.map do |spec|
       state.merge(same_row:old ? channel.id == old['id'] : nil, old_identity:channel.channel_id == "old-#{user.id}",
         digest_matches:channel.token_digest == Calendar::PushChannel.digest(watched ? watched[:body]['token'] : "old-token-#{user.id}"))
     end
-    {spec:, user_ids:users.map(&:id), initial:, calls:requests, error:, channels:,
-      disconnected:users.map { |u| u.reload.google_account&.disconnected_reason }, user_reads:queries.size}
+    {spec:, user_ids:users.map(&:id), initial:, initial_offsets_us:, calls:requests, error:, channels:,
+      disconnected:users.map { |u| u.reload.google_account&.disconnected_reason }, user_reads:queries.count { |sql| sql.include?('FROM "users"') },
+      account_reads:queries.count { |sql| sql.include?('FROM "google_accounts"') }}
   ensure
     ActiveRecord::Base.connection_pool.disconnect!; FileUtils.rm_f(["#{database}-wal","#{database}-shm"])
     FileUtils.cp(backup, database); FileUtils.rm_f(backup)
@@ -122,5 +138,6 @@ ActiveRecord::Base.transaction do
   end
   raise ActiveRecord::Rollback
 end
+rows.select { |r| r[:spec][:name].start_with?('preload_') }.each { |r| warn "Pinned Rails #{r[:spec][:name]}: #{r[:user_reads]} User SELECTs; #{r[:account_reads]} GoogleAccount SELECTs" }
 puts JSON.pretty_generate(reference:'d7c7de92', now:BASE.iso8601, rows:, tokens:, claims:)
 warn "Pinned Rails PushChannel: #{rows.size} watch/renew scenarios; #{tokens.size} token cases; #{claims.size} notification claims; recorded HTTP only"

@@ -525,7 +525,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — renew_expiring opens a channel for a connected account missing one — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
 - **Ported** — renew_expiring opens nothing for a disconnected account missing one — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
 - **Ported** — renew_expiring never raises — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (27 recorded watch/renew scenarios; exact static HTTP payload, stored state and UUID/token digest relationship).
-- **Ported** — renew_expiring preloads users instead of querying per channel — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (real SQL probes: 2 and 12 fresh channels; Rust 0 User SELECTs, Rails 1 batch SELECT; injected per-user reads fail).
+- **Ported** — renew_expiring preloads users instead of querying per channel — `app::google_push_channel_tests::google_push_channel_watch_renewal_and_preload_match_pinned_rails` (real SQL probes: 2 and 12 fresh/expiring channels; account SELECTs match Rails batches and remote-stop reads exactly (2 fresh, 4/14 expiring); User reads stay within Rails budgets; injected per-user/account reads fail).
 
 ## test/models/drive_attachment_test.rb
 
