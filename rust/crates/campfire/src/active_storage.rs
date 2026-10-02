@@ -441,27 +441,32 @@ fn send_blob_stream(c: &mut Ctx, blob: &Blob, disposition: Option<&str>) -> Resu
     let storage = c.app().storage.clone();
     let path = storage.path_for(blob);
     let disposition = content_types::forced_disposition(blob.content_type()).or(disposition).unwrap_or("inline");
-    if !path.is_file() {
+    let mut response = if !path.is_file() {
         // `rescue ActiveStorage::FileNotFoundError`: expires_now, head :not_found.
         // send_stream sets image headers before download raises in Rails.
         c.expires_now();
-        return Ok(c.send_data(bytes::Bytes::new(), SendOptions {
+        c.send_data(bytes::Bytes::new(), SendOptions {
             filename: Some(blob.filename.sanitized()),
             content_type: Some(content_types::for_serving(blob.content_type()).to_string()),
             disposition: Some(disposition.to_string()),
             status: StatusCode::NOT_FOUND,
             ..SendOptions::default()
-        }));
-    }
-    c.send_file(
-        &path,
-        SendOptions {
-            filename: Some(blob.filename.sanitized()),
-            content_type: Some(content_types::for_serving(blob.content_type()).to_string()),
-            disposition: Some(disposition.to_string()),
-            ..SendOptions::default()
-        },
-    )
+        })
+    } else {
+        c.send_file(
+            &path,
+            SendOptions {
+                filename: Some(blob.filename.sanitized()),
+                content_type: Some(content_types::for_serving(blob.content_type()).to_string()),
+                disposition: Some(disposition.to_string()),
+                ..SendOptions::default()
+            },
+        )?
+    };
+    // Rails send_stream omits the send_file/send_data transfer encoding, on
+    // success and on its handled FileNotFoundError. Range responses use send_data.
+    response.headers.remove("content-transfer-encoding");
+    Ok(response)
 }
 
 /// `send_blob_byte_range_data(blob, range_header)`

@@ -11,7 +11,7 @@ def response(session,path)
   session.get(path,headers:{"Accept"=>"*/*"})
   reply=session.response
   {path:path,status:reply.status,body_base64:Base64.strict_encode64(reply.body.b),body_bytes:reply.body.bytesize,
-   headers:%w[Content-Type Cache-Control Content-Disposition Content-Length Location Last-Modified ETag Accept-Ranges].to_h{|header|[header,reply.headers[header]]}}
+   headers:%w[Content-Type Cache-Control Content-Disposition Content-Length Location Last-Modified ETag Accept-Ranges Content-Transfer-Encoding].to_h{|header|[header,reply.headers[header]]}}
 end
 travel_to Time.utc(2026,3,2,16) do
   original=ActiveStorage::Blob.find(kind=="jpeg_variant" ? 1 : 9)
