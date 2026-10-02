@@ -1,9 +1,10 @@
 //! `Accounts::BotsController` (reference/app/controllers/accounts/bots_controller.rb).
 
 pub mod credentials;
+mod date_parse;
 pub mod github_connections;
 pub mod grants;
-mod input_casts;
+pub(crate) mod input_casts;
 pub mod keys;
 pub mod webhook_secrets;
 
@@ -214,6 +215,22 @@ pub async fn update(c: &mut Ctx) -> Result {
         ..Default::default()
     };
     let agent_changes = agent_params(c);
+    // Rails set_agent/assign_attributes retain a request's original values;
+    // save! only persists attributes dirtied against that snapshot.
+    let before_agent = c
+        .app()
+        .db
+        .read({
+            let id = bot.id;
+            move |conn| Agent::for_user(conn, id)
+        })
+        .await
+        .map_err(Error::internal)?;
+    let dirty_agent = before_agent
+        .as_ref()
+        .map(|agent| dirty_agent_changes(agent, agent_changes.clone()))
+        .unwrap_or_default();
+    let audit_changes = dirty_agent.clone();
     let avatar = Assignment::from_params(&params, "avatar")?
         .stage(c.app())
         .await?;
@@ -225,10 +242,11 @@ pub async fn update(c: &mut Ctx) -> Result {
     let before_bot = bot.clone();
     let requested_agent = agent_changes.clone();
     let validation_changes = agent_changes.clone();
+    let mut agent = before_agent.clone();
+    let validation_agent = before_agent.clone();
     let result = async {
-        let (bot, mut agent, before_agent, after_url) = c.app().db.write(move |tx| {
-        let agent = Agent::for_user(tx.conn(), bot.id)?;
-        let before_agent = agent.clone();
+        let (bot, after_url) = c.app().db.write(move |tx| {
+        let agent = validation_agent;
         if let Some(agent) = &agent { agent.validate_changes(tx.conn(), validation_changes)?.into_result()?; }
         if webhook_submitted {
             bot.update_bot(tx, changes, webhook_url.as_deref())?;
@@ -237,13 +255,13 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
         let after_url = bot.webhook_url(tx.conn())?;
         attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
-        Ok((bot, agent, before_agent, after_url))
+        Ok((bot, after_url))
         }).await?;
         if let Some(mut updated) = agent.take() {
             agent = Some(c.app().db.write(move |tx| {
                 // Rails save! follows the already committed update_bot. A late
                 // save failure is not the earlier invalid? form response.
-                updated.update(tx, agent_changes).map_err(|error| match error {
+                updated.update(tx, dirty_agent).map_err(|error| match error {
                     campfire_db::Error::RecordInvalid(_) => campfire_db::Error::Other(error.to_string()),
                     error => error,
                 })?;
@@ -261,7 +279,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         if before_bot.name != bot.name { pairs.insert("name".into(), audit_log::pair(json!(before_bot.name), json!(bot.name))); }
         if before_bot.icon_name != bot.icon_name { pairs.insert("icon_name".into(), audit_log::pair(json!(before_bot.icon_name), json!(bot.icon_name))); }
         if let (Some(before), Some(after)) = (&before_agent, &agent) {
-            macro_rules! changed { ($($field:ident),*) => {$(if before.$field != after.$field { pairs.insert(stringify!($field).into(), audit_log::pair(json!(before.$field), json!(after.$field))); })*}; }
+            macro_rules! changed { ($($field:ident),*) => {$(if agent_field_submitted(&audit_changes, stringify!($field)) && before.$field != after.$field { pairs.insert(stringify!($field).into(), audit_log::pair(json!(before.$field), json!(after.$field))); })*}; }
             changed!(provider, runtime, description, daily_message_cap, daily_board_post_cap, daily_external_action_cap);
         }
         if !pairs.is_empty() {
@@ -329,6 +347,40 @@ pub async fn update(c: &mut Ctx) -> Result {
             .await
         }
         Err(error) => Err(Error::internal(error)),
+    }
+}
+
+/// Casting stays with WS11; the controller only tracks Rails' dirty attributes.
+fn dirty_agent_changes(before: &Agent, mut changes: AgentChanges) -> AgentChanges {
+    macro_rules! string { ($($field:ident),*) => {$(
+        if changes.$field.as_ref() == Some(&before.$field) { changes.$field = None; }
+    )*}; }
+    string!(provider, runtime, description);
+    macro_rules! cap {
+        ($field:ident, $raw:ident) => {
+            if changes
+                .budget_cap_input(stringify!($field))
+                .is_some_and(|input| input.value == json!(before.$field))
+            {
+                changes.$field = None;
+                changes.$raw = None;
+            }
+        };
+    }
+    cap!(daily_message_cap, daily_message_cap_before_type_cast);
+    cap!(daily_board_post_cap, daily_board_post_cap_before_type_cast);
+    cap!(
+        daily_external_action_cap,
+        daily_external_action_cap_before_type_cast
+    );
+    changes
+}
+fn agent_field_submitted(changes: &AgentChanges, field: &str) -> bool {
+    match field {
+        "provider" => changes.provider.is_some(),
+        "runtime" => changes.runtime.is_some(),
+        "description" => changes.description.is_some(),
+        field => changes.budget_cap_input(field).is_some(),
     }
 }
 
@@ -645,3 +697,6 @@ mod coercion_tests;
 
 #[cfg(test)]
 mod mutation_boundary_tests;
+
+#[cfg(test)]
+mod interleaving_tests;

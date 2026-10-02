@@ -83,7 +83,8 @@ pub async fn create(c: &mut Ctx) -> Result {
                 agent.id,
                 CredentialForm {
                     name: Some(form_name),
-                    expires_at: expires_at.map(|t| zone.format(t.jiff(), "%Y-%m-%dT%H:%M:%S")),
+                    expires_at: expires_at
+                        .map(|t| super::input_casts::extended_datetime(t, &zone, false)),
                     errors: Some(super::error_sentence(&errors)),
                     error_fields: errors.0.iter().map(|(f, _)| f.to_string()).collect(),
                 },
@@ -153,10 +154,11 @@ async fn render_index(
     status: StatusCode,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
+    let zone = super::viewer_zone(c).await?;
     let credentials = c
         .app()
         .db
-        .read(move |conn| presenters::accounts::bot_access::credentials(conn, agent_id))
+        .read(move |conn| presenters::accounts::bot_access::credentials(conn, agent_id, &zone))
         .await
         .map_err(Error::internal)?;
     let (bot_id, bot_name, now) = (bot.id, bot.name.clone(), c.now());

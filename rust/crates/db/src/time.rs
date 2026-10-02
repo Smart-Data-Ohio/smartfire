@@ -18,81 +18,150 @@ pub const SQLITE_NOW: &str = "STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')";
 
 /// A UTC instant with microsecond precision, stored the way Active Record stores it.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Timestamp(JiffTimestamp);
+pub struct Timestamp(i64);
 
 impl Timestamp {
     pub fn from_jiff(ts: JiffTimestamp) -> Self {
-        Self(JiffTimestamp::from_microsecond(ts.as_microsecond()).expect("in range"))
+        Self(
+            ts.as_nanosecond()
+                .div_euclid(1000)
+                .try_into()
+                .expect("Jiff microseconds in range"),
+        )
     }
 
     pub fn from_microsecond(us: i64) -> Self {
-        Self(JiffTimestamp::from_microsecond(us).expect("in range"))
+        Self(us)
     }
 
     pub fn from_second(s: i64) -> Self {
-        Self(JiffTimestamp::from_second(s).expect("in range"))
+        Self(
+            s.checked_mul(1_000_000)
+                .expect("timestamp microseconds in range"),
+        )
     }
 
     pub fn jiff(self) -> JiffTimestamp {
-        self.0
+        self.try_jiff()
+            .expect("timestamp within Jiff calendar range")
     }
 
     pub fn as_microsecond(self) -> i64 {
-        self.0.as_microsecond()
+        self.0
     }
 
     pub fn as_second(self) -> i64 {
-        self.0.as_second()
+        self.0.div_euclid(1_000_000)
     }
 
     pub fn subsec_microsecond(self) -> i32 {
-        self.0.subsec_microsecond()
+        self.0.rem_euclid(1_000_000) as i32
     }
 
     /// `1.hour.ago`-style arithmetic.
     pub fn ago(self, duration: SignedDuration) -> Self {
-        Self::from_jiff(self.0 - duration)
+        Self::from_microsecond(
+            (i128::from(self.0) * 1000 - duration.as_nanos())
+                .div_euclid(1000)
+                .try_into()
+                .expect("timestamp in range"),
+        )
     }
 
     pub fn since(self, duration: SignedDuration) -> Self {
-        Self::from_jiff(self.0 + duration)
+        Self::from_microsecond(
+            (i128::from(self.0) * 1000 + duration.as_nanos())
+                .div_euclid(1000)
+                .try_into()
+                .expect("timestamp in range"),
+        )
     }
 
-    /// The exact text Active Record writes to SQLite.
+    /// Jiff's civil calendar ends at 9999; Rails credentials also accept 10000.
+    /// Readers that render such input must use calendar_proxy rather than jiff.
+    pub fn try_jiff(self) -> Option<JiffTimestamp> {
+        JiffTimestamp::from_microsecond(self.0).ok()
+    }
+
+    /// A Gregorian 400-year cycle preserves month/day and weekday. The shift is
+    /// only an encoding bridge; no timezone rules are inferred from this proxy.
+    pub fn from_shifted_jiff(ts: JiffTimestamp, year_shift: i64) -> Option<Self> {
+        if year_shift % 400 != 0 {
+            return None;
+        }
+        let us = ts.as_nanosecond().div_euclid(1000)
+            + i128::from(year_shift / 400) * 146_097 * 86_400_000_000;
+        Some(Self(us.try_into().ok()?))
+    }
+    pub fn calendar_proxy(self) -> (JiffTimestamp, i64) {
+        if let Some(ts) = self.try_jiff() {
+            return (ts, 0);
+        }
+        let base_year = if self.0 < 0 { -9600 } else { 9200 };
+        let base = jiff::civil::Date::new(base_year, 1, 1)
+            .unwrap()
+            .at(0, 0, 0, 0)
+            .to_zoned(jiff::tz::TimeZone::UTC)
+            .unwrap()
+            .timestamp()
+            .as_microsecond();
+        let cycle_us = 146_097_i128 * 86_400_000_000;
+        let cycles = (i128::from(self.0) - i128::from(base)).div_euclid(cycle_us);
+        let proxy = i128::from(self.0) - cycles * cycle_us;
+        (
+            JiffTimestamp::from_microsecond(proxy.try_into().expect("calendar proxy in range"))
+                .expect("calendar proxy in Jiff range"),
+            (cycles * 400).try_into().expect("year shift in range"),
+        )
+    }
+
+    /// The exact text Active Record writes to SQLite, including signed years.
     pub fn to_db(self) -> String {
-        let base = self.0.strftime("%Y-%m-%d %H:%M:%S").to_string();
-        match self.0.subsec_microsecond() {
+        let (proxy, shift) = self.calendar_proxy();
+        let year = i64::from(proxy.to_zoned(jiff::tz::TimeZone::UTC).year()) + shift;
+        let year = if year < 0 {
+            format!("-{:04}", year.unsigned_abs())
+        } else {
+            format!("{year:04}")
+        };
+        let base = format!("{year}{}", proxy.strftime("-%m-%d %H:%M:%S"));
+        match self.subsec_microsecond() {
             0 => base,
             us => format!("{base}.{us:06}"),
         }
     }
 
-    /// Parses what Rails (or SQLite's `STRFTIME`) wrote: `YYYY-MM-DD HH:MM:SS[.fraction]`,
-    /// also tolerating a `T` separator and a trailing `Z` or ` UTC`.
+    /// Parses Rails' signed/extended-year UTC datetime(6) encoding.
     pub fn parse_db(text: &str) -> Option<Self> {
-        let text = text.trim();
         let text = text
+            .trim()
             .strip_suffix(" UTC")
-            .or_else(|| text.strip_suffix('Z'))
-            .unwrap_or(text);
-        if text.len() < 19 || !text.is_char_boundary(19) {
+            .or_else(|| text.trim().strip_suffix('Z'))
+            .unwrap_or(text.trim());
+        let year_end = text.get(usize::from(text.starts_with('-'))..)?.find('-')?
+            + usize::from(text.starts_with('-'));
+        let year = text.get(..year_end)?.parse::<i64>().ok()?;
+        let remainder = text.get(year_end + 1..)?;
+        if remainder.len() < 14 {
             return None;
         }
-        let (whole, fraction) = text.split_at(19);
+        let whole = remainder.get(..14)?;
         let b = whole.as_bytes();
-        if b[4] != b'-'
-            || b[7] != b'-'
-            || !(b[10] == b' ' || b[10] == b'T')
-            || b[13] != b':'
-            || b[16] != b':'
-        {
+        if b[2] != b'-' || !matches!(b[5], b' ' | b'T') || b[8] != b':' || b[11] != b':' {
             return None;
         }
-        let num = |range: std::ops::Range<usize>| whole.get(range)?.parse::<i32>().ok();
-        let date = jiff::civil::Date::new(num(0..4)? as i16, num(5..7)? as i8, num(8..10)? as i8).ok()?;
+        let num = |range: std::ops::Range<usize>| whole.get(range)?.parse::<i8>().ok();
+        let proxy_year = if (-9999..=9999).contains(&year) {
+            year
+        } else {
+            2000 + year.rem_euclid(400)
+        };
+        let date =
+            jiff::civil::Date::new(proxy_year.try_into().ok()?, num(0..2)?, num(3..5)?).ok()?;
+        let fraction = remainder.get(14..)?;
         let micros = match fraction.strip_prefix('.') {
-            Some(digits) if !digits.is_empty() && digits.bytes().all(|d| d.is_ascii_digit()) => {
-                let mut padded: String = digits.chars().take(6).collect();
+            Some(d) if !d.is_empty() && d.bytes().all(|b| b.is_ascii_digit()) => {
+                let mut padded: String = d.chars().take(6).collect();
                 while padded.len() < 6 {
                     padded.push('0');
                 }
@@ -101,16 +170,13 @@ impl Timestamp {
             None if fraction.is_empty() => 0,
             _ => return None,
         };
-        let time = jiff::civil::Time::new(
-            num(11..13)? as i8,
-            num(14..16)? as i8,
-            num(17..19)? as i8,
-            micros * 1000,
-        )
-        .ok()?;
-        let datetime = jiff::civil::DateTime::from_parts(date, time);
-        let zoned = datetime.to_zoned(jiff::tz::TimeZone::UTC).ok()?;
-        Some(Self(zoned.timestamp()))
+        let time =
+            jiff::civil::Time::new(num(6..8)?, num(9..11)?, num(12..14)?, micros * 1000).ok()?;
+        let ts = jiff::civil::DateTime::from_parts(date, time)
+            .to_zoned(jiff::tz::TimeZone::UTC)
+            .ok()?
+            .timestamp();
+        Self::from_shifted_jiff(ts, year.checked_sub(proxy_year)?)
     }
 }
 

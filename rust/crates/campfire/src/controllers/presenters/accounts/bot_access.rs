@@ -1,7 +1,11 @@
 //! Public credential/grant page facts; plaintext secrets never enter these records.
 use campfire_db::{Agent, Connection, Result, Room, User};
-use campfire_views::accounts::bot_access::{Credential, Grant};
-pub fn credentials(conn: &Connection, agent_id: i64) -> Result<Vec<Credential>> {
+use campfire_views::accounts::bot_access::{Credential, CredentialExpiry, Grant};
+pub fn credentials(
+    conn: &Connection,
+    agent_id: i64,
+    zone: &campfire_views::time::Zone,
+) -> Result<Vec<Credential>> {
     let mut statement=conn.prepare("SELECT c.id,c.name,c.token_last_four,u.name,c.created_at,c.expires_at,c.last_used_at,c.revoked_at IS NOT NULL FROM agent_credentials c JOIN users u ON u.id=c.created_by_id WHERE c.agent_id=? ORDER BY c.created_at DESC")?;
     Ok(statement
         .query_map([agent_id], |r| {
@@ -11,9 +15,15 @@ pub fn credentials(conn: &Connection, agent_id: i64) -> Result<Vec<Credential>> 
                 last_four: r.get(2)?,
                 created_by: r.get(3)?,
                 created_at: r.get::<_, campfire_db::Timestamp>(4)?.jiff(),
-                expires_at: r
-                    .get::<_, Option<campfire_db::Timestamp>>(5)?
-                    .map(|t| t.jiff()),
+                expires_at: r.get::<_, Option<campfire_db::Timestamp>>(5)?.map(|t| {
+                    CredentialExpiry::Extended {
+                        datetime:
+                            crate::controllers::accounts::bots::input_casts::extended_datetime(
+                                t, zone, true,
+                            ),
+                        microseconds: t.as_microsecond(),
+                    }
+                }),
                 last_used_at: r
                     .get::<_, Option<campfire_db::Timestamp>>(6)?
                     .map(|t| t.jiff()),

@@ -12,6 +12,22 @@ fn oracle() -> Value {
 
 #[tokio::test]
 async fn ws11ui_credential_date_grammar_and_multiparameters_match_rails() {
+    expiry_cases(oracle(), 118).await;
+}
+
+#[tokio::test]
+async fn pr196_extra_expiry_matches_rails() {
+    expiry_cases(
+        serde_json::from_str(include_str!(
+            "../../../../../../vectors/bot-ui-input-extended.json"
+        ))
+        .unwrap(),
+        300,
+    )
+    .await;
+}
+
+async fn expiry_cases(oracle: Value, expected_count: usize) {
     let t = TestApp::boot_frozen()
         .await
         .unwrap()
@@ -20,7 +36,6 @@ async fn ws11ui_credential_date_grammar_and_multiparameters_match_rails() {
     let mut browser = t.david();
     browser.grant_sudo().await;
     let path = format!("/account/bots/{BENDER}/credentials");
-    let oracle = oracle();
     let mut failures = Vec::new();
     let mut checked = 0;
     for (index, case) in oracle["expiry"].as_array().unwrap().iter().enumerate() {
@@ -88,9 +103,81 @@ async fn ws11ui_credential_date_grammar_and_multiparameters_match_rails() {
         }
         checked += 1;
     }
-    assert_eq!(checked, 118);
+    assert_eq!(checked, expected_count);
     println!(
-        "Credential expiry differential: {checked} matched candidates; 10 owner-blocked raw saves"
+        "Credential expiry differential: {checked} compared; {} mismatches",
+        failures.len()
     );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn pr196_generated_date_casts_match_pinned_model() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/bot-ui-generated-casts.json"
+    ))
+    .unwrap();
+    let now = campfire_db::Timestamp::parse_db("2026-03-02 16:00:00").unwrap();
+    let mut failures = Vec::new();
+    let cases = oracle["expiry"].as_array().unwrap();
+    for case in cases {
+        let zone = campfire_views::time::Zone::for_user(case["zone"].as_str());
+        let input = campfire_kit::Param::from_json(case["input"].clone());
+        let actual = super::input_casts::datetime(Some(&input), &zone, now).map(|t| t.to_db());
+        let expected = case["stored"].as_str().map(str::to_owned);
+        if actual != expected {
+            failures.push(format!(
+                "{} {}: {actual:?}; Rails {expected:?}",
+                case["zone"], case["input"]
+            ));
+        }
+    }
+    println!(
+        "Generated expiry differential: {} compared; {} mismatches",
+        cases.len(),
+        failures.len()
+    );
+    assert!(
+        failures.is_empty(),
+        "{}",
+        failures
+            .iter()
+            .take(50)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+#[test]
+fn pr196_generated_floats_match_ruby_shortest_format() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/bot-ui-generated-casts.json"
+    ))
+    .unwrap();
+    let mut failures = Vec::new();
+    let cases = oracle["floats"].as_array().unwrap();
+    for case in cases {
+        let input = campfire_kit::Param::from_json(case["input"].clone());
+        let actual = super::input_casts::token_string(&input);
+        let expected = case["string"].as_str().unwrap();
+        if actual != expected {
+            failures.push(format!("{}: {actual}; Rails {expected}", case["input"]));
+        }
+    }
+    println!(
+        "Generated float differential: {} compared; {} mismatches",
+        cases.len(),
+        failures.len()
+    );
+    assert!(
+        failures.is_empty(),
+        "{}",
+        failures
+            .iter()
+            .take(50)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
 }

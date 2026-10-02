@@ -1,0 +1,260 @@
+{
+  "reference": "d7c7de92",
+  "initial": {
+    "provider": "Original",
+    "runtime": "Original",
+    "description": "Original",
+    "daily_message_cap": 7,
+    "daily_board_post_cap": 7,
+    "daily_external_action_cap": 7
+  },
+  "cases": [
+    {
+      "name": "clean provider",
+      "submitted": {
+        "provider": "Original"
+      },
+      "concurrent": {
+        "provider": "Concurrent B"
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Concurrent B",
+        "runtime": "Original",
+        "description": "Original",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clean runtime",
+      "submitted": {
+        "runtime": "Original"
+      },
+      "concurrent": {
+        "runtime": "Concurrent B"
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Original",
+        "runtime": "Concurrent B",
+        "description": "Original",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clean description",
+      "submitted": {
+        "description": "Original"
+      },
+      "concurrent": {
+        "description": "Concurrent B"
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Original",
+        "runtime": "Original",
+        "description": "Concurrent B",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clean daily_message_cap",
+      "submitted": {
+        "daily_message_cap": "7"
+      },
+      "concurrent": {
+        "daily_message_cap": 99
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Original",
+        "runtime": "Original",
+        "description": "Original",
+        "daily_message_cap": 99,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clean daily_board_post_cap",
+      "submitted": {
+        "daily_board_post_cap": "7"
+      },
+      "concurrent": {
+        "daily_board_post_cap": 99
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Original",
+        "runtime": "Original",
+        "description": "Original",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 99,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clean daily_external_action_cap",
+      "submitted": {
+        "daily_external_action_cap": "7"
+      },
+      "concurrent": {
+        "daily_external_action_cap": 99
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Original",
+        "runtime": "Original",
+        "description": "Original",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 99
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dirty provider",
+      "submitted": {
+        "provider": "Request A"
+      },
+      "concurrent": {
+        "provider": "Concurrent B"
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Request A",
+        "runtime": "Original",
+        "description": "Original",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          },
+          "provider": {
+            "before": "Original",
+            "after": "Request A"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dirty null cap",
+      "submitted": {
+        "daily_message_cap": null
+      },
+      "concurrent": {
+        "daily_message_cap": 99
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Original",
+        "runtime": "Original",
+        "description": "Original",
+        "daily_message_cap": null,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          },
+          "daily_message_cap": {
+            "before": 7,
+            "after": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "dirty runtime with clean provider",
+      "submitted": {
+        "runtime": "Request A",
+        "provider": "Original"
+      },
+      "concurrent": {
+        "provider": "Concurrent B"
+      },
+      "status": 302,
+      "stored": {
+        "provider": "Concurrent B",
+        "runtime": "Request A",
+        "description": "Original",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": [
+        {
+          "name": {
+            "before": "Bender Bot",
+            "after": "Review interleaved"
+          },
+          "runtime": {
+            "before": "Original",
+            "after": "Request A"
+          }
+        }
+      ]
+    }
+  ]
+}
