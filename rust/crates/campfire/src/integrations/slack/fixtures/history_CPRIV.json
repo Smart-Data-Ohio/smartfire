@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U002",
+      "text": "Secret plans with <@U001|jane>",
+      "ts": "1700000030.000030"
+    }
+  ],
+  "has_more": false,
+  "response_metadata": { "next_cursor": "" }
+}

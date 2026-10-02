@@ -1,0 +1,5 @@
+<section aria-labelledby="run-status" class="fill-shade border-radius pad"{% if data.finished() %} data-frame-poll-finished{% endif %}>
+  <h2 id="run-status" class="margin-none">Status</h2>
+  {% include "slack/import_runs/status_body.html" %}
+</section>
+{% let preserve_trailing_newline = true %}
