@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 288 ported domain/API/controller cases; 323 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
+Path-glob ledger: 48 files; 611 named cases; 325 ported domain/API/controller cases; 286 partial, deferred or outside slice. Additional Google cases in other controller files: 37, all ported.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -433,7 +433,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Outside slice** — ooo_window_epochs returns epoch windows and skips malformed pairs — WS17 claims/readers.
 - **Outside slice** — claim_broadcast! wins the first claim and each flip, and loses re-runs — WS17 claims/readers.
 - **Outside slice** — claim_broadcast! lets only one concurrent claimant win — WS17 claims/readers.
-- **Deferred** — one cache per user — WS14g cache persistence.
+- **Ported** — one cache per user — `models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness`; original Rails declaration executed and captured, second create rejects with RecordInvalid and retains exactly one cache.
 - **Outside slice** — the cache row references its member with a cascading foreign key — WS17 claims/readers.
 
 ## test/models/calendar/meeting_dispatcher_test.rb
@@ -452,41 +452,41 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/models/calendar/meeting_intervals_test.rb
 
-- **Deferred** — derives busy intervals from timed events — WS14g continuation.
-- **Deferred** — cancelled events never count — WS14g continuation.
-- **Deferred** — out-of-office events never count as busy — WS14g continuation.
-- **Deferred** — focus-time events never count as busy — WS14g continuation.
-- **Deferred** — events declined by the member never count — WS14g continuation.
-- **Deferred** — transparent (show-as-free) events never count — WS14g continuation.
-- **Deferred** — all-day events never count — WS14g continuation.
-- **Deferred** — tentative and needs-action events count as busy — WS14g continuation.
-- **Deferred** — organizer-only events without attendees count as busy — WS14g continuation.
-- **Deferred** — malformed items are skipped without raising — WS14g continuation.
-- **Deferred** — a declined event from another attendee still counts — WS14g continuation.
+- **Ported** — derives busy intervals from timed events — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — cancelled events never count — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — out-of-office events never count as busy — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — focus-time events never count as busy — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — events declined by the member never count — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — transparent (show-as-free) events never count — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — all-day events never count — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — tentative and needs-action events count as busy — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — organizer-only events without attendees count as busy — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — malformed items are skipped without raising — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — a declined event from another attendee still counts — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
 
 ## test/models/calendar/meeting_refresh_test.rb
 
-- **Deferred** — a successful refresh stores busy intervals and clears the error — WS14g continuation.
-- **Deferred** — only free/busy fields are requested: no titles or attendee identities — WS14g continuation.
-- **Deferred** — a member who never opted in is skipped without a request — WS14g continuation.
-- **Deferred** — a deactivated member is skipped without a request — WS14g continuation.
-- **Deferred** — a member without a usable account records a connect notice and clears intervals — WS14g continuation.
-- **Deferred** — a revoked grant records a reconnect notice and turns the status off — WS14g continuation.
-- **Deferred** — rate limits keep the last good intervals and record a retry notice — WS14g continuation.
-- **Deferred** — a quota 403 keeps the last good intervals and records a retry notice — WS14g continuation.
-- **Deferred** — a server error keeps the last good intervals and records a retry notice — WS14g continuation.
-- **Deferred** — a malformed response body keeps the last good intervals and records a retry notice — WS14g continuation.
+- **Ported** — a successful refresh stores busy intervals and clears the error — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`success`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — only free/busy fields are requested: no titles or attendee identities — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`privacy_fields`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a member who never opted in is skipped without a request — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`never_opted_in`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a deactivated member is skipped without a request — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`inactive`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a member without a usable account records a connect notice and clears intervals — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`unusable`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a revoked grant records a reconnect notice and turns the status off — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`revoked`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — rate limits keep the last good intervals and record a retry notice — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`rate_limit`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a quota 403 keeps the last good intervals and records a retry notice — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`quota`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a server error keeps the last good intervals and records a retry notice — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`server_error`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a malformed response body keeps the last good intervals and records a retry notice — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`malformed`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
 - **Deferred** — a JSON parse failure escaping the client is recorded instead of raising — WS14g continuation.
-- **Deferred** — a fresh cache is not refetched — WS14g continuation.
-- **Deferred** — a throttled refresh enqueues one delayed follow-up — WS14g continuation.
-- **Deferred** — a second throttled refresh inside the window enqueues no further follow-up — WS14g continuation.
-- **Deferred** — a completed fetch clears the follow-up claim — WS14g continuation.
-- **Deferred** — an OOO-only member's refresh stores OOO intervals with the wider lookahead — WS14g continuation.
-- **Deferred** — a member with both opt-ins stores both interval sets — WS14g continuation.
-- **Deferred** — a meeting-only member stores no OOO intervals — WS14g continuation.
-- **Deferred** — a meeting-only member fetches the meeting lookahead — WS14g continuation.
-- **Deferred** — a server error keeps OOO intervals too — WS14g continuation.
-- **Deferred** — a revoked grant clears both meeting and OOO intervals — WS14g continuation.
+- **Ported** — a fresh cache is not refetched — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`fresh`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a throttled refresh enqueues one delayed follow-up — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`followup`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a second throttled refresh inside the window enqueues no further follow-up — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`dedupe`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a completed fetch clears the follow-up claim — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`completed_claim`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — an OOO-only member's refresh stores OOO intervals with the wider lookahead — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`ooo_only`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a member with both opt-ins stores both interval sets — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`both_opt_ins`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a meeting-only member stores no OOO intervals — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`meeting_only_no_ooo`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a meeting-only member fetches the meeting lookahead — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`meeting_lookahead`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a server error keeps OOO intervals too — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`ooo_server_error`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
+- **Ported** — a revoked grant clears both meeting and OOO intervals — `app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails` (`both_revoked`; complete cache timestamps/intervals/error, grant state, exact recorded HTTP and durable follow-up schedule).
 
 ## test/models/calendar/ooo_dispatcher_test.rb
 
@@ -505,11 +505,11 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/models/calendar/ooo_intervals_test.rb
 
-- **Deferred** — derives intervals from timed out-of-office events — WS14g continuation.
-- **Deferred** — ordinary events never count, even timed ones — WS14g continuation.
-- **Deferred** — cancelled out-of-office events never count — WS14g continuation.
-- **Deferred** — all-day out-of-office events resolve in the member's zone — WS14g continuation.
-- **Deferred** — malformed items are skipped without raising — WS14g continuation.
+- **Ported** — derives intervals from timed out-of-office events — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — ordinary events never count, even timed ones — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — cancelled out-of-office events never count — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — all-day out-of-office events resolve in the member's zone — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
+- **Ported** — malformed items are skipped without raising — `models::google_meeting_cache::tests::google_named_meeting_and_ooo_intervals_match_original_rails_declarations`; original pinned declaration and every model input/result captured with source SHA256 verification (16 declarations, 26 original assertions).
 
 ## test/models/calendar/push_channel_test.rb
 

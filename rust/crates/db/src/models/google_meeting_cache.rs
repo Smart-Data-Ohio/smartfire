@@ -58,7 +58,8 @@ pub fn complete(
     }) {
         return Ok(());
     }
-    tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,NULL,STRFTIME('%Y-%m-%d %H:%M:%f','NOW'),STRFTIME('%Y-%m-%d %H:%M:%f','NOW')) ON CONFLICT(user_id) DO UPDATE SET busy_intervals=excluded.busy_intervals,ooo_intervals=excluded.ooo_intervals,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at,refresh_pending_at=NULL,updated_at=excluded.updated_at",params![user_id,busy.to_string(),ooo.to_string(),error,fetched_at])?;
+    // Rails' upsert timestamps use the process clock, including the frozen parity clock.
+    tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,NULL,?,?) ON CONFLICT(user_id) DO UPDATE SET busy_intervals=excluded.busy_intervals,ooo_intervals=excluded.ooo_intervals,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at,refresh_pending_at=NULL,updated_at=excluded.updated_at",params![user_id,busy.to_string(),ooo.to_string(),error,fetched_at,tx.now(),tx.now()])?;
     Ok(())
 }
 pub fn follow_up(tx: &mut Tx<'_>, user_id: i64, now: Timestamp) -> Result<bool> {
@@ -155,8 +156,13 @@ mod tests {
     use crate::{NewUser, tests::TestDb};
     #[test]
     fn google_meeting_cache_creation_validates_user_and_uniqueness() {
+        let oracle: Value = serde_json::from_str(include_str!(
+            "../../../../vectors/google_named_intervals.json"
+        ))
+        .unwrap();
+        assert_eq!(oracle["cache_uniqueness"]["test"], "one cache per user");
         let db = TestDb::new();
-        db.write(|tx| {
+        db.write(move |tx| {
             let user = User::create(
                 tx,
                 NewUser {
@@ -174,6 +180,14 @@ mod tests {
                 create(tx, user.id),
                 Err(crate::Error::RecordInvalid(_))
             ));
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM calendar_meeting_caches WHERE user_id=?",
+                    [user.id],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                oracle["cache_uniqueness"]["rows"].as_i64().unwrap()
+            );
             Ok(())
         });
     }
@@ -188,5 +202,29 @@ mod tests {
             assert_eq!(busy, case["busy"], "{}", case["name"]);
             assert_eq!(ooo, case["ooo"], "{}", case["name"]);
         }
+    }
+    #[test]
+    fn google_named_meeting_and_ooo_intervals_match_original_rails_declarations() {
+        let v: Value = serde_json::from_str(include_str!(
+            "../../../../vectors/google_named_intervals.json"
+        ))
+        .unwrap();
+        let rows = v["rows"].as_array().unwrap();
+        assert_eq!(rows.len(), 16);
+        for row in rows {
+            let calls = row["calls"].as_array().unwrap();
+            assert!(
+                !calls.is_empty(),
+                "original Rails test must call the model: {row}"
+            );
+            for call in calls {
+                let (busy, ooo) = intervals(&call["items"], call["zone"].as_str().unwrap());
+                let actual = if call["kind"] == "meeting" { busy } else { ooo };
+                assert_eq!(actual, call["result"], "{}", row["test"]);
+            }
+        }
+        println!(
+            "Pinned Rails named intervals: 16 declarations; 26 original assertions; 0 skipped"
+        );
     }
 }
