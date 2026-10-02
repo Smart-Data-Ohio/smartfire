@@ -59,6 +59,7 @@ add.call("update","global_read",{work_status:"done"},["global_read"])
  ["long_link",{summary:"Hi",links:["https://example.test/#{'x'*500}"]}],
  ["many_questions",{summary:"Hi",open_questions:(1..11).map { |i|"Why #{i}?" }}],
  ["long_question",{summary:"Hi",open_questions:["é"*501]}],
+ ["false_links",{summary:"Hi",links:false}], ["false_questions",{summary:"Hi",open_questions:false}],
  ["summary_boundary",{summary:"é"*2000}], ["odd_package",{summary:"Hi",links:{a:false},open_questions:[nil,false,12,["nested"]]}]
 ].each { |name,input|add.call("handoff",name,input) }
 %w[nonmember unreadable no_manage other_owner receiver_outside receiver_suspended receiver_no_post receiver_no_manage receiver_no_read receiver_self receiver_missing].each { |flag|add.call("handoff",flag,{summary:"Hi"},[flag]) }

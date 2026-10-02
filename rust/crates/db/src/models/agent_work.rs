@@ -263,6 +263,15 @@ pub fn handoff_work(
     }
     let receiver = receiver.expect("receiver policy requires an Agent");
     let sender = User::find(tx.conn(), agent.user_id)?;
+    // The service uses `links || []` / `open_questions || []` before the model's
+    // Array(value) normalization. Ruby treats an explicit false as absent here.
+    let mut package = package;
+    if package.links == Value::Bool(false) {
+        package.links = Value::Null;
+    }
+    if package.open_questions == Value::Bool(false) {
+        package.open_questions = Value::Null;
+    }
     match thread.hand_off(tx, &sender, &receiver, package, context) {
         Ok(handoff) => Ok(Outcome::ok(
             HandedOffWork {

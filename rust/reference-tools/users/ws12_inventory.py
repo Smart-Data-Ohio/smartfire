@@ -40,7 +40,7 @@ for path in files:
         if "activity_items_controller" in relative or "activity_items_helper" in relative or "system/activity_inbox" in relative:
             owner, evidence = "WS11-UI controller/rendering + WS12 domain integration", "Merge WS11-UI and replace its flagged activity adapters with ActivityItem domain APIs; verify full response bytes and inbox interactions."
         elif any(part in relative for part in ("channel_thread_agent_assignment", "agents/work", "agent_boards", "agent_working_presence", "agent_work_assignment", "agents/posts_controller", "agents/mcp_handoff")):
-            owner,evidence = "WS12 using merged WS11 #176", "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+            owner,evidence = "WS12 using merged WS11 #176", "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
         elif relative=="test/models/user_star_test.rb":
             status,evidence="ported","crates/db/src/tests/user_star_test.rs (5 discriminating model/independent-writer tests)."
         elif relative=="test/controllers/rooms/boards_controller_test.rb":
@@ -148,8 +148,6 @@ for path in files:
             status,owner,evidence="ported","WS12","board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
         if relative=="test/models/work_handoff_test.rb":
             status,owner,evidence="ported","WS12","agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
-        if relative=="test/models/channel_thread_board_test.rb" and title=="board posts accept an eligible agent owner":
-            status,owner,evidence="ported","WS12 using merged WS11 #176","Existing work_mutations_test.rs owner path plus agent_work_test.rs actual Rails service creation, fresh post/read membership policy and ledger snapshots."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")

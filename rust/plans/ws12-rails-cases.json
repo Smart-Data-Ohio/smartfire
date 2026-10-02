@@ -200,7 +200,7 @@
       "test": "handoff_work hands off through the shared service",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -208,7 +208,7 @@
       "test": "handoff_work denies a thread the agent does not own",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -216,7 +216,7 @@
       "test": "handoff_work denies a missing manage_threads grant",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -224,7 +224,7 @@
       "test": "handoff_work denies an ineligible receiver",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -232,7 +232,7 @@
       "test": "handoff_work denies a receiver missing read_messages",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -240,7 +240,7 @@
       "test": "handoff_work denies a kill-switched receiver",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -248,7 +248,7 @@
       "test": "handoff_work rejects missing arguments",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -256,7 +256,7 @@
       "test": "handoff_work shares its throttle bucket with the rest endpoint",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -264,7 +264,7 @@
       "test": "creates a post with defaults and returns the work payload",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -272,7 +272,7 @@
       "test": "creates a post with tags, status, run_url, and a human owner",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -280,7 +280,7 @@
       "test": "creates a post with an array of tags",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -288,7 +288,7 @@
       "test": "creates a post owned by another agent through the assignment path",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -296,7 +296,7 @@
       "test": "owner defaults to the agent itself, like a blank owner_id",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -304,7 +304,7 @@
       "test": "a first message writes the posted ledger row and notifies the board",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -312,7 +312,7 @@
       "test": "a messageless post still assigns the owner without a posted row",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -320,7 +320,7 @@
       "test": "rejects invalid posts with 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -328,7 +328,7 @@
       "test": "requires post_messages and manage_threads in the board",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -336,7 +336,7 @@
       "test": "requires post_messages even with manage_threads",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -344,7 +344,7 @@
       "test": "is 404 for rooms the agent is not a member of",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -352,7 +352,7 @@
       "test": "is 422 for non-board rooms",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -360,7 +360,7 @@
       "test": "rejects session and bot-key requests",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -368,7 +368,7 @@
       "test": "lists the board's open posts newest activity first",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -376,7 +376,7 @@
       "test": "a reply moves the post to the top of the list",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -384,7 +384,7 @@
       "test": "lists by single status, done, and all",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -392,7 +392,7 @@
       "test": "rejects invalid list filters with 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -400,7 +400,7 @@
       "test": "lists by owner me, agents, and id",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -408,7 +408,7 @@
       "test": "lists by tag",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -416,7 +416,7 @@
       "test": "caps the list at 100 posts",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -424,7 +424,7 @@
       "test": "listing requires read_messages",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -432,7 +432,7 @@
       "test": "a legacy agent without grants can list but cannot create",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -440,7 +440,7 @@
       "test": "listing is 404 once the agent leaves the board",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -448,7 +448,7 @@
       "test": "creation, listing, and event delivery share one work payload",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -456,7 +456,7 @@
       "test": "list shows only owned threads newest first with the work fields",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -464,7 +464,7 @@
       "test": "list is capped at 100 threads",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -472,7 +472,7 @@
       "test": "list only includes rooms where the agent holds read_messages",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -480,7 +480,7 @@
       "test": "list is Bearer-only and empty without owned threads",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -488,7 +488,7 @@
       "test": "show returns one owned thread",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -496,7 +496,7 @@
       "test": "work links omit a private pull request's title and branches unless the owner can read it",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -504,7 +504,7 @@
       "test": "show includes links with pull request, event, and drive entries",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -512,7 +512,7 @@
       "test": "list includes links on owned threads",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -520,7 +520,7 @@
       "test": "show is 404 for threads the agent does not own",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -528,7 +528,7 @@
       "test": "patch changes the status and records the note in work history",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -536,7 +536,7 @@
       "test": "patch is 404 for threads the agent does not own",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -544,7 +544,7 @@
       "test": "list excludes rooms the agent no longer belongs to",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -552,7 +552,7 @@
       "test": "show and patch are 404 once the agent is no longer a room member",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -560,7 +560,7 @@
       "test": "patch is 403 without manage_threads in the thread room",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -568,7 +568,7 @@
       "test": "patch is 403 when manage_threads covers another room",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -576,7 +576,7 @@
       "test": "patch rejects invalid statuses and long notes with 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -584,7 +584,7 @@
       "test": "patch cannot reassign, convert, or stop tracking",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -592,7 +592,7 @@
       "test": "patch updates tags and run_url alongside the status",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -600,7 +600,7 @@
       "test": "patch updates tags alone in array and string forms",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -608,7 +608,7 @@
       "test": "patch updates run_url alone and blank clears it",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -616,7 +616,7 @@
       "test": "patch rejects invalid tags and run_url with 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -624,7 +624,7 @@
       "test": "patch cannot stop tracking with a blank status",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -632,7 +632,7 @@
       "test": "patch with only a note and no field is 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -640,7 +640,7 @@
       "test": "patch tags without manage_threads is 403",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -648,7 +648,7 @@
       "test": "put replaces the pinned result and records the event",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -656,7 +656,7 @@
       "test": "put result requires ownership and manage_threads",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -664,7 +664,7 @@
       "test": "put result rejects missing markdown and overlong results with 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -672,7 +672,7 @@
       "test": "put result checks ownership and grants before markdown presence",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -680,7 +680,7 @@
       "test": "put result with blank markdown clears",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -688,7 +688,7 @@
       "test": "put result with unchanged markdown writes nothing",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -696,7 +696,7 @@
       "test": "put result reaches the human inbox as work_update",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -704,7 +704,7 @@
       "test": "patch and put result are Bearer-only",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -712,7 +712,7 @@
       "test": "a revoked read grant hides an owned thread from show, update, and result",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -720,7 +720,7 @@
       "test": "a read grant for another room does not unlock an owned thread",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -728,7 +728,7 @@
       "test": "a workspace-wide read grant still reads an owned thread",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -736,7 +736,7 @@
       "test": "a revoked credential is 401",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -744,7 +744,7 @@
       "test": "assignment appears in event polling with the work payload",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -752,7 +752,7 @@
       "test": "assignment work payload includes links",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -760,7 +760,7 @@
       "test": "unassignment appears in event polling",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -768,7 +768,7 @@
       "test": "ack works on work rows",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -776,7 +776,7 @@
       "test": "assignment enqueues the webhook instead of blocking on it",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -784,7 +784,7 @@
       "test": "assignment posts no webhook without read_messages",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -792,7 +792,7 @@
       "test": "polling omits work rows for rooms the agent lost read_messages in",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -800,7 +800,7 @@
       "test": "polling omits work rows after membership removal",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -808,7 +808,7 @@
       "test": "work events do not count toward the message rate limit",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -816,7 +816,7 @@
       "test": "an agent hands off its thread with a context package",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -824,7 +824,7 @@
       "test": "the receiver polls the handoff with its context package",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -832,7 +832,7 @@
       "test": "the receiver acks the handoff row",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -840,7 +840,7 @@
       "test": "the handoff enqueues the receiver webhook with the package",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -848,7 +848,7 @@
       "test": "a thread the agent does not own is 404",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -856,7 +856,7 @@
       "test": "a missing manage_threads grant is 403",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -864,7 +864,7 @@
       "test": "a human session is 403",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -872,7 +872,7 @@
       "test": "an ineligible receiver is 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -880,7 +880,7 @@
       "test": "a receiver missing manage_threads is 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -888,7 +888,7 @@
       "test": "a receiver missing read_messages is 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -896,7 +896,7 @@
       "test": "handing off to the current owner is 422",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -904,7 +904,7 @@
       "test": "an over-capped package is 422 and keeps the owner",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -912,7 +912,7 @@
       "test": "handoffs throttle at 60 a minute per credential",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1944,7 +1944,7 @@
       "test": "an agent post flows from creation through reply to result",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -2144,7 +2144,7 @@
       "test": "sets presence with a TTL",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
@@ -2152,7 +2152,7 @@
       "test": "blank clears presence",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
@@ -2160,7 +2160,7 @@
       "test": "expired presence reads as cleared",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
@@ -2168,7 +2168,7 @@
       "test": "presence is capped in length",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
@@ -2176,7 +2176,7 @@
       "test": "shared service sets and clears",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
@@ -2184,7 +2184,7 @@
       "test": "shared service rejects overlong text",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agents/work_payload_test.rb",
@@ -2192,7 +2192,7 @@
       "test": "carries the full work shape for a channel thread",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agents/work_payload_test.rb",
@@ -2200,7 +2200,7 @@
       "test": "marks human owners and null owners",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/agents/work_payload_test.rb",
@@ -2208,7 +2208,7 @@
       "test": "carries board identity, tags, run_url, and links for a post",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2608,7 +2608,7 @@
       "test": "an active member agent with post_messages is an eligible work owner",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2632,7 +2632,7 @@
       "test": "a non-member agent is rejected with a validation error",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2640,7 +2640,7 @@
       "test": "an agent without post_messages is rejected with a validation error",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2648,7 +2648,7 @@
       "test": "a human outside the parent room keeps the human eligibility error",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2656,7 +2656,7 @@
       "test": "a bot without an agent row is rejected with a validation error",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2664,7 +2664,7 @@
       "test": "suspending the agent or revoking its membership reads as an unavailable owner",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2680,7 +2680,7 @@
       "test": "unassignment writes one work_unassigned row",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2696,7 +2696,7 @@
       "test": "assignment webhooks are enqueued after the outermost transaction commits",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2704,7 +2704,7 @@
       "test": "reassignment to a human writes work_unassigned and no work_assigned",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2712,7 +2712,7 @@
       "test": "reassignment between agents notifies both",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2720,7 +2720,7 @@
       "test": "status-only changes and human-to-human assignment write no agent rows",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2744,7 +2744,7 @@
       "test": "an agent status update records a work event with the note",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2752,7 +2752,7 @@
       "test": "an agent status update reaches the inbox through the human path",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2760,7 +2760,7 @@
       "test": "an agent tags update replaces the set without touching the status",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2768,7 +2768,7 @@
       "test": "an agent work update validates tags and run_url",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2776,7 +2776,7 @@
       "test": "an agent result update records the event with the agent as actor",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2784,7 +2784,7 @@
       "test": "an agent cannot write the result of work it does not own",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2792,7 +2792,7 @@
       "test": "an agent cannot move work it does not own",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2800,7 +2800,7 @@
       "test": "an agent status update rejects unknown statuses and long notes",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2808,7 +2808,7 @@
       "test": "two agents assigning posts to each other stop at the hop limit",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2816,7 +2816,7 @@
       "test": "deleting an agent-owned thread emits work_unassigned",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2824,7 +2824,7 @@
       "test": "deleting a thread without an agent owner emits nothing",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2832,7 +2832,7 @@
       "test": "a human assignment starts a new root at hop 0",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -3720,7 +3720,7 @@
       "test": "assigns an agent from the update dialog and renders its API status change after refresh",
       "status": "deferred",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+      "evidence": "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
     },
     {
       "file": "test/system/board_automations_test.rb",

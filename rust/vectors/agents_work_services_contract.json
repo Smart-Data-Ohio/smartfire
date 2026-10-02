@@ -2830,6 +2830,208 @@
     },
     {
       "operation": "handoff",
+      "name": "false_links",
+      "input": {
+        "summary": "Hi",
+        "links": false
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 900082030,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 900082030,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "planned",
+                "owner": {
+                  "id": 900082030,
+                  "name": "Receiver",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "handoff_id": "handoff",
+              "handoff_summary": "Hi",
+              "handoff_links_count": 0,
+              "handoff_questions_count": 0
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_unassigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": null,
+            "webhook_status": "pending"
+          },
+          {
+            "agent": 900082031,
+            "kind": "work_handed_off",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": {
+              "id": "handoff",
+              "summary": "Hi",
+              "links": [],
+              "open_questions": [],
+              "sender_name": "Bender Bot",
+              "receiver_agent_id": 900082031
+            },
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "false_questions",
+      "input": {
+        "summary": "Hi",
+        "open_questions": false
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 900082030,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 900082030,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "planned",
+                "owner": {
+                  "id": 900082030,
+                  "name": "Receiver",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "handoff_id": "handoff",
+              "handoff_summary": "Hi",
+              "handoff_links_count": 0,
+              "handoff_questions_count": 0
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_unassigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": null,
+            "webhook_status": "pending"
+          },
+          {
+            "agent": 900082031,
+            "kind": "work_handed_off",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": {
+              "id": "handoff",
+              "summary": "Hi",
+              "links": [],
+              "open_questions": [],
+              "sender_name": "Bender Bot",
+              "receiver_agent_id": 900082031
+            },
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "handoff",
       "name": "summary_boundary",
       "input": {
         "summary": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
