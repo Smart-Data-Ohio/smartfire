@@ -63,6 +63,16 @@ end
 [[room],[0,room],[[room]],{id:room}].each_with_index do |value,i|
  tool.call("list_board_posts",{room_id:value},{board:true},"posts_room_shape_#{i}")
 end
+# Owner-disallowed and unknown repositories redact only their sensitive details.
+# No account or external repository access is fabricated by these vectors.
+[false,true,nil].each_with_index do |private,i|
+ setup={work_pr:true,pr_private:private}
+ add.call("work_pr_show_#{i}",:get,"/agents/work/#{thread}",nil,setup)
+ add.call("work_pr_index_#{i}",:get,"/agents/work",nil,setup)
+ tool.call("list_work",{},setup,"work_pr_index_#{i}")
+ add.call("posts_pr_#{i}",:get,"/rooms/#{room}/agents/posts",nil,setup.merge(board:true))
+ tool.call("list_board_posts",{room_id:room},setup.merge(board:true),"posts_pr_#{i}")
+end
 travel_to Time.utc(2026,3,2,16) do
  results=cases.map do |item|
   result=nil
@@ -79,6 +89,10 @@ travel_to Time.utc(2026,3,2,16) do
     Message.create!(room_id:room,creator_id:394959859,markdown_source:"Agent",client_message_id:"read-agent")
     ActiveRecord::Base.connection.execute("INSERT INTO channel_threads(id,name,room_id,creator_id,work_owner_id,work_status,locked_at,last_activity_at,created_at,updated_at) VALUES(#{thread},'Owned α & β',#{room},394959859,#{item[:setup][:other_owner] ? 127326141 : 394959859},'in_progress',#{item[:setup][:locked] ? "'2026-03-02 16:00:00'" : 'NULL'},'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')")
     ThreadTag.create!(channel_thread_id:thread,name:"api")
+    if item[:setup][:work_pr]
+     pr=Github::PullRequest.create!(id:1900700030,owner:"acme",repo:"secret",number:3,title:"Secret acquisition α & β",state:"open",head_branch:"secret-branch",base_branch:"main",review_decision:"approved",check_status:"passing",private:item[:setup][:pr_private])
+     WorkThreadLink.create!(id:1900700031,channel_thread_id:thread,kind:"pull_request",github_pull_request:pr,created_by_id:127326141)
+    end
     Message.create!(room_id:room,creator_id:394959859,thread_id:thread,markdown_source:"Thread",client_message_id:"read-thread")
     Room.where(id:room).update_all(type:"Rooms::Board") if item[:setup][:board]
     Membership.where(room_id:room,user_id:394959859).delete_all if item[:setup][:remove_member]

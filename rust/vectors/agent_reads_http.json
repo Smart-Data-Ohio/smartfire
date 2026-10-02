@@ -3087,6 +3087,297 @@
         "Retry-After": null,
         "Location": null
       }
+    },
+    {
+      "name": "work_pr_show_0",
+      "method": "get",
+      "path": "/agents/work/1900700020",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": false
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":\"Secret acquisition α & β\",\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":\"Secret acquisition α & β\",\"state\":\"open\",\"head_branch\":\"secret-branch\",\"base_branch\":\"main\",\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "work_pr_index_0",
+      "method": "get",
+      "path": "/agents/work",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": false
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":\"Secret acquisition α & β\",\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":\"Secret acquisition α & β\",\"state\":\"open\",\"head_branch\":\"secret-branch\",\"base_branch\":\"main\",\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]},{\"id\":6,\"room_id\":699448332,\"board_id\":699448332,\"board_name\":\"Release board\",\"title\":\"Blocked work\",\"work_status\":\"blocked\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"release\",\"rust\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/699448332?thread=6\",\"updated_at\":\"2026-03-02T15:12:00.000Z\",\"links\":[]}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_work_pr_index_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"list_work\",\"arguments\":{}}}",
+      "setup": {
+        "work_pr": true,
+        "pr_private": false
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":1900700020,\\\"room_id\\\":486777696,\\\"board_id\\\":null,\\\"board_name\\\":null,\\\"title\\\":\\\"Owned α & β\\\",\\\"work_status\\\":\\\"in_progress\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"api\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/486777696?thread=1900700020\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"links\\\":[{\\\"kind\\\":\\\"pull_request\\\",\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"title\\\":\\\"Secret acquisition α & β\\\",\\\"pull_request\\\":{\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"owner\\\":\\\"acme\\\",\\\"repo\\\":\\\"secret\\\",\\\"number\\\":3,\\\"title\\\":\\\"Secret acquisition α & β\\\",\\\"state\\\":\\\"open\\\",\\\"head_branch\\\":\\\"secret-branch\\\",\\\"base_branch\\\":\\\"main\\\",\\\"review_decision\\\":\\\"approved\\\",\\\"checks_state\\\":\\\"passing\\\"},\\\"event\\\":null}]},{\\\"id\\\":6,\\\"room_id\\\":699448332,\\\"board_id\\\":699448332,\\\"board_name\\\":\\\"Release board\\\",\\\"title\\\":\\\"Blocked work\\\",\\\"work_status\\\":\\\"blocked\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"release\\\",\\\"rust\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/699448332?thread=6\\\",\\\"updated_at\\\":\\\"2026-03-02T15:12:00.000Z\\\",\\\"links\\\":[]}]\"}],\"structuredContent\":[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":\"Secret acquisition α & β\",\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":\"Secret acquisition α & β\",\"state\":\"open\",\"head_branch\":\"secret-branch\",\"base_branch\":\"main\",\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]},{\"id\":6,\"room_id\":699448332,\"board_id\":699448332,\"board_name\":\"Release board\",\"title\":\"Blocked work\",\"work_status\":\"blocked\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"release\",\"rust\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/699448332?thread=6\",\"updated_at\":\"2026-03-02T15:12:00.000Z\",\"links\":[]}],\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "posts_pr_0",
+      "method": "get",
+      "path": "/rooms/486777696/agents/posts",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": false,
+        "board": true
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":486777696,\"board_name\":\"All Talk\",\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":\"Secret acquisition α & β\",\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":\"Secret acquisition α & β\",\"state\":\"open\",\"head_branch\":\"secret-branch\",\"base_branch\":\"main\",\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_posts_pr_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"list_board_posts\",\"arguments\":{\"room_id\":486777696}}}",
+      "setup": {
+        "work_pr": true,
+        "pr_private": false,
+        "board": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":1900700020,\\\"room_id\\\":486777696,\\\"board_id\\\":486777696,\\\"board_name\\\":\\\"All Talk\\\",\\\"title\\\":\\\"Owned α & β\\\",\\\"work_status\\\":\\\"in_progress\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"api\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/486777696?thread=1900700020\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"links\\\":[{\\\"kind\\\":\\\"pull_request\\\",\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"title\\\":\\\"Secret acquisition α & β\\\",\\\"pull_request\\\":{\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"owner\\\":\\\"acme\\\",\\\"repo\\\":\\\"secret\\\",\\\"number\\\":3,\\\"title\\\":\\\"Secret acquisition α & β\\\",\\\"state\\\":\\\"open\\\",\\\"head_branch\\\":\\\"secret-branch\\\",\\\"base_branch\\\":\\\"main\\\",\\\"review_decision\\\":\\\"approved\\\",\\\"checks_state\\\":\\\"passing\\\"},\\\"event\\\":null}]}]\"}],\"structuredContent\":[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":486777696,\"board_name\":\"All Talk\",\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":\"Secret acquisition α & β\",\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":\"Secret acquisition α & β\",\"state\":\"open\",\"head_branch\":\"secret-branch\",\"base_branch\":\"main\",\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}],\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "work_pr_show_1",
+      "method": "get",
+      "path": "/agents/work/1900700020",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "work_pr_index_1",
+      "method": "get",
+      "path": "/agents/work",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": true
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]},{\"id\":6,\"room_id\":699448332,\"board_id\":699448332,\"board_name\":\"Release board\",\"title\":\"Blocked work\",\"work_status\":\"blocked\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"release\",\"rust\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/699448332?thread=6\",\"updated_at\":\"2026-03-02T15:12:00.000Z\",\"links\":[]}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_work_pr_index_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"list_work\",\"arguments\":{}}}",
+      "setup": {
+        "work_pr": true,
+        "pr_private": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":1900700020,\\\"room_id\\\":486777696,\\\"board_id\\\":null,\\\"board_name\\\":null,\\\"title\\\":\\\"Owned α & β\\\",\\\"work_status\\\":\\\"in_progress\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"api\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/486777696?thread=1900700020\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"links\\\":[{\\\"kind\\\":\\\"pull_request\\\",\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"title\\\":null,\\\"pull_request\\\":{\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"owner\\\":\\\"acme\\\",\\\"repo\\\":\\\"secret\\\",\\\"number\\\":3,\\\"title\\\":null,\\\"state\\\":\\\"open\\\",\\\"head_branch\\\":null,\\\"base_branch\\\":null,\\\"review_decision\\\":\\\"approved\\\",\\\"checks_state\\\":\\\"passing\\\"},\\\"event\\\":null}]},{\\\"id\\\":6,\\\"room_id\\\":699448332,\\\"board_id\\\":699448332,\\\"board_name\\\":\\\"Release board\\\",\\\"title\\\":\\\"Blocked work\\\",\\\"work_status\\\":\\\"blocked\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"release\\\",\\\"rust\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/699448332?thread=6\\\",\\\"updated_at\\\":\\\"2026-03-02T15:12:00.000Z\\\",\\\"links\\\":[]}]\"}],\"structuredContent\":[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]},{\"id\":6,\"room_id\":699448332,\"board_id\":699448332,\"board_name\":\"Release board\",\"title\":\"Blocked work\",\"work_status\":\"blocked\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"release\",\"rust\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/699448332?thread=6\",\"updated_at\":\"2026-03-02T15:12:00.000Z\",\"links\":[]}],\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "posts_pr_1",
+      "method": "get",
+      "path": "/rooms/486777696/agents/posts",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": true,
+        "board": true
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":486777696,\"board_name\":\"All Talk\",\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_posts_pr_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"list_board_posts\",\"arguments\":{\"room_id\":486777696}}}",
+      "setup": {
+        "work_pr": true,
+        "pr_private": true,
+        "board": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":1900700020,\\\"room_id\\\":486777696,\\\"board_id\\\":486777696,\\\"board_name\\\":\\\"All Talk\\\",\\\"title\\\":\\\"Owned α & β\\\",\\\"work_status\\\":\\\"in_progress\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"api\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/486777696?thread=1900700020\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"links\\\":[{\\\"kind\\\":\\\"pull_request\\\",\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"title\\\":null,\\\"pull_request\\\":{\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"owner\\\":\\\"acme\\\",\\\"repo\\\":\\\"secret\\\",\\\"number\\\":3,\\\"title\\\":null,\\\"state\\\":\\\"open\\\",\\\"head_branch\\\":null,\\\"base_branch\\\":null,\\\"review_decision\\\":\\\"approved\\\",\\\"checks_state\\\":\\\"passing\\\"},\\\"event\\\":null}]}]\"}],\"structuredContent\":[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":486777696,\"board_name\":\"All Talk\",\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}],\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "work_pr_show_2",
+      "method": "get",
+      "path": "/agents/work/1900700020",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": null
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "work_pr_index_2",
+      "method": "get",
+      "path": "/agents/work",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": null
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]},{\"id\":6,\"room_id\":699448332,\"board_id\":699448332,\"board_name\":\"Release board\",\"title\":\"Blocked work\",\"work_status\":\"blocked\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"release\",\"rust\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/699448332?thread=6\",\"updated_at\":\"2026-03-02T15:12:00.000Z\",\"links\":[]}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_work_pr_index_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"list_work\",\"arguments\":{}}}",
+      "setup": {
+        "work_pr": true,
+        "pr_private": null
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":1900700020,\\\"room_id\\\":486777696,\\\"board_id\\\":null,\\\"board_name\\\":null,\\\"title\\\":\\\"Owned α & β\\\",\\\"work_status\\\":\\\"in_progress\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"api\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/486777696?thread=1900700020\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"links\\\":[{\\\"kind\\\":\\\"pull_request\\\",\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"title\\\":null,\\\"pull_request\\\":{\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"owner\\\":\\\"acme\\\",\\\"repo\\\":\\\"secret\\\",\\\"number\\\":3,\\\"title\\\":null,\\\"state\\\":\\\"open\\\",\\\"head_branch\\\":null,\\\"base_branch\\\":null,\\\"review_decision\\\":\\\"approved\\\",\\\"checks_state\\\":\\\"passing\\\"},\\\"event\\\":null}]},{\\\"id\\\":6,\\\"room_id\\\":699448332,\\\"board_id\\\":699448332,\\\"board_name\\\":\\\"Release board\\\",\\\"title\\\":\\\"Blocked work\\\",\\\"work_status\\\":\\\"blocked\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"release\\\",\\\"rust\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/699448332?thread=6\\\",\\\"updated_at\\\":\\\"2026-03-02T15:12:00.000Z\\\",\\\"links\\\":[]}]\"}],\"structuredContent\":[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]},{\"id\":6,\"room_id\":699448332,\"board_id\":699448332,\"board_name\":\"Release board\",\"title\":\"Blocked work\",\"work_status\":\"blocked\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"release\",\"rust\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/699448332?thread=6\",\"updated_at\":\"2026-03-02T15:12:00.000Z\",\"links\":[]}],\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "posts_pr_2",
+      "method": "get",
+      "path": "/rooms/486777696/agents/posts",
+      "body": null,
+      "setup": {
+        "work_pr": true,
+        "pr_private": null,
+        "board": true
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":486777696,\"board_name\":\"All Talk\",\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_posts_pr_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"list_board_posts\",\"arguments\":{\"room_id\":486777696}}}",
+      "setup": {
+        "work_pr": true,
+        "pr_private": null,
+        "board": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":1900700020,\\\"room_id\\\":486777696,\\\"board_id\\\":486777696,\\\"board_name\\\":\\\"All Talk\\\",\\\"title\\\":\\\"Owned α & β\\\",\\\"work_status\\\":\\\"in_progress\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[\\\"api\\\"],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/486777696?thread=1900700020\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"links\\\":[{\\\"kind\\\":\\\"pull_request\\\",\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"title\\\":null,\\\"pull_request\\\":{\\\"url\\\":\\\"https://github.com/acme/secret/pull/3\\\",\\\"owner\\\":\\\"acme\\\",\\\"repo\\\":\\\"secret\\\",\\\"number\\\":3,\\\"title\\\":null,\\\"state\\\":\\\"open\\\",\\\"head_branch\\\":null,\\\"base_branch\\\":null,\\\"review_decision\\\":\\\"approved\\\",\\\"checks_state\\\":\\\"passing\\\"},\\\"event\\\":null}]}]\"}],\"structuredContent\":[{\"id\":1900700020,\"room_id\":486777696,\"board_id\":486777696,\"board_name\":\"All Talk\",\"title\":\"Owned α & β\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"api\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1900700020\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[{\"kind\":\"pull_request\",\"url\":\"https://github.com/acme/secret/pull/3\",\"title\":null,\"pull_request\":{\"url\":\"https://github.com/acme/secret/pull/3\",\"owner\":\"acme\",\"repo\":\"secret\",\"number\":3,\"title\":null,\"state\":\"open\",\"head_branch\":null,\"base_branch\":null,\"review_decision\":\"approved\",\"checks_state\":\"passing\"},\"event\":null}]}],\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
     }
   ]
 }

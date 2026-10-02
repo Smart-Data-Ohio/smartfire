@@ -23,6 +23,10 @@ pub(super) async fn check(case: &Value) {
         }
         tx.conn().execute("INSERT INTO channel_threads(id,name,room_id,creator_id,work_owner_id,work_status,locked_at,last_activity_at,created_at,updated_at) VALUES(1900700020,'Owned α & β',486777696,394959859,?,'in_progress',?,?,?,?)",rusqlite::params![if config["other_owner"]==true {127326141} else {394959859},if config["locked"]==true {Some(tx.now())} else {None},tx.now(),tx.now(),tx.now()])?;
         campfire_db::ThreadTag::create(tx,1900700020,"api")?;
+        if config["work_pr"]==true {
+            tx.conn().execute("INSERT INTO github_pull_requests(id,owner,repo,number,title,state,head_branch,base_branch,review_decision,check_status,private,created_at,updated_at) VALUES(1900700030,'acme','secret',3,'Secret acquisition α & β','open','secret-branch','main','approved','passing',?,?,?)",rusqlite::params![config["pr_private"].as_bool(),tx.now(),tx.now()])?;
+            tx.conn().execute("INSERT INTO work_thread_links(id,channel_thread_id,kind,github_pull_request_id,created_by_id,created_at,updated_at) VALUES(1900700031,1900700020,'pull_request',1900700030,127326141,?,?)",[tx.now(),tx.now()])?;
+        }
         Message::create(tx,NewMessage{room_id:486777696,creator_id:394959859,thread_id:Some(1900700020),markdown_source:Some("Thread".into()),client_message_id:Some("read-thread".into()),..Default::default()})?;
         if config["board"]==true {tx.conn().execute("UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",[])?;}
         if config["remove_member"]==true {tx.conn().execute("DELETE FROM memberships WHERE room_id=486777696 AND user_id=394959859",[])?;}

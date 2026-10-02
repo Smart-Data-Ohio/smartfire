@@ -34,6 +34,7 @@ def main():
     files += ["app/controllers/messages/by_bots_controller.rb", "app/controllers/messages/boosts/by_bots_controller.rb", "app/controllers/concerns/fizzy_agent_authentication.rb", "app/services/agents/fizzy_reads.rb", "app/services/agents/fizzy_card_actions.rb", "app/models/fizzy/agent_card_action.rb", "app/models/github/agent_pull_request_action.rb", "app/models/github/review_logins.rb", "app/models/github/agent_identity.rb", "app/models/github_connected_account.rb", "app/models/fizzy_connected_account.rb", "app/models/fizzy/client.rb", "app/views/users/_user.json.jbuilder", "app/views/messages/_message.json.jbuilder"]
     files += ["app/controllers/concerns/set_time_zone.rb", "app/models/message/attachment.rb", "app/models/message/pagination.rb", "test/fixtures/files/moon.jpg"]
     files += ["app/controllers/messages_controller.rb", "app/models/user/bot.rb", "app/models/message/bot_webhook_fanout.rb", "app/models/message/mention_preloader.rb", "app/models/agent/delivery.rb", "app/jobs/bot/webhook_job.rb"]
+    files += ["app/models/work_thread_link.rb", "app/models/github/pull_request.rb"]
     assert (root / "test/fixtures/files/moon.jpg").read_bytes() == (root / "rust/vectors/users_logos/moon.jpg").read_bytes()
     lines = subprocess.check_output([
         "docker", "run", "--rm", "--name", "ws11api-source-check", "--entrypoint", "sha256sum",
