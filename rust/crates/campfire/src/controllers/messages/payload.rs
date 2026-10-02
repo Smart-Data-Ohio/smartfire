@@ -2,8 +2,6 @@
 use campfire_db::{ChannelThread, Message, MessagePin, SavedItem, Timestamp, User};
 use campfire_views::helpers::{AvatarIcon, IconSource};
 use campfire_views::messages::support::json_time;
-use rails_compat::unicode;
-use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 
 use crate::controllers::presenters::{Presenter, Result, avatar_path};
@@ -118,9 +116,8 @@ pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, b
     let room = thread.room(p.conn)?;
     let settings = thread.settings_manageable_by(p.conn, viewer)?;
     let lifecycle = thread.manageable_by(p.conn, viewer)?;
-    let accessible = viewer.is_active() && !viewer.is_bot() && campfire_db::Membership::find_by_room_and_user(p.conn, room.id, viewer.id)?.is_some();
-    let work_assignment = accessible && settings;
-    let work_manageable = accessible && (settings || thread.work_owner_id == Some(viewer.id));
+    let work_assignment = thread.work_assignment_manageable_by(p.conn, viewer)?;
+    let work_manageable = thread.work_manageable_by(p.conn, viewer)?;
     let owner = thread.work_owner_id.map(|id| p.user(id)).transpose()?;
     let owner_active = match &owner {
         Some(owner) if owner.is_active() && campfire_db::Membership::find_by_room_and_user(p.conn, room.id, owner.id)?.is_some() => {
@@ -159,28 +156,18 @@ pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, b
 pub(crate) fn thread_details(p: &Presenter<'_>, record: &ChannelThread, viewer: &User, base: &str) -> Result<Value> {
     let mut value = thread(p, record, viewer, base)?;
     let room = record.room(p.conn)?;
-    let mut query = p.conn.prepare("SELECT user_id FROM memberships WHERE room_id = ?")?;
-    let ids = query.query_map([room.id], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
-    let (mut humans, mut agents) = (Vec::new(), Vec::new());
-    for id in ids {
-        let owner = p.user(id)?;
-        if !owner.is_active() { continue; }
+    let (humans, agents) = ChannelThread::work_owner_candidates_for(p.conn, room.id)?;
+    let choices = humans.into_iter().chain(agents).map(|owner| -> Result<Value> {
         let mut entry = user(p, &owner, base)?;
         entry["active"] = true.into(); entry["human"] = (!owner.is_bot()).into(); entry["agent"] = owner.is_bot().into();
         if owner.is_bot() {
-            if !agent_may_post(p, id, &room)? { continue; }
-            let (provider, description): (Option<String>, Option<String>) = p.conn.query_row(
-                "SELECT provider, description FROM agents WHERE user_id = ? AND suspended_at IS NULL LIMIT 1", [id],
-                |row| Ok((row.get(0)?, row.get(1)?)))?;
-            entry["provider"] = json!(provider); entry["description"] = json!(description);
+            let agent = campfire_db::Agent::for_user(p.conn, owner.id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            entry["provider"] = json!(agent.provider); entry["description"] = json!(agent.description);
             entry.as_object_mut().expect("user payload").retain(|_, value| !value.is_null());
-            agents.push(entry);
-        } else { humans.push(entry); }
-    }
-    humans.sort_by_key(|entry| unicode::downcase(entry["name"].as_str().unwrap_or_default()));
-    agents.sort_by_key(|entry| unicode::downcase(entry["name"].as_str().unwrap_or_default()));
-    humans.extend(agents);
-    value["work_owner_options"] = humans.into();
+        }
+        Ok(entry)
+    }).collect::<Result<Vec<Value>>>()?;
+    value["work_owner_options"] = choices.into();
     let mut query = p.conn.prepare("SELECT id, event_type, created_at, actor_id, from_status, to_status, from_owner_id, from_owner_name, to_owner_id, to_owner_name, metadata FROM work_thread_events WHERE channel_thread_id = ? ORDER BY created_at DESC, id DESC")?;
     let events = query.query_map([record.id], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?,
         row.get::<_, Timestamp>(2)?, row.get::<_, Option<i64>>(3)?, row.get::<_, Option<String>>(4)?, row.get::<_, Option<String>>(5)?,
@@ -211,9 +198,8 @@ fn owner_state(id: Option<i64>, name: Option<String>) -> Value {
 
 fn agent_may_post(p: &Presenter<'_>, user: i64, room: &campfire_db::Room) -> Result<bool> {
     if room.deleted_at.is_some() { return Ok(false) }
-    let id: Option<i64> = p.conn.query_row("SELECT id FROM agents WHERE user_id = ? AND suspended_at IS NULL LIMIT 1", [user], |row| row.get(0)).optional()?;
-    let Some(id) = id else { return Ok(false) };
-    Ok(p.conn.query_row("SELECT NOT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id = ?1) OR EXISTS(SELECT 1 FROM agent_grants WHERE agent_id = ?1 AND revoked_at IS NULL AND capability = 'post_messages' AND (room_id IS NULL OR room_id = ?2))", (id, room.id), |row| row.get(0))?)
+    let Some(agent) = campfire_db::Agent::for_user(p.conn, user)? else { return Ok(false) };
+    Ok(agent.active(p.conn)? && agent.can(p.conn, "post_messages", Some(room.id))?)
 }
 
 fn renderable_embeds(p: &Presenter<'_>, message: &Message) -> Result<bool> {

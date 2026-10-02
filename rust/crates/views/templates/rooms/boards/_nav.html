@@ -1,0 +1,35 @@
+  {{ room.header_html(ctx) }}
+
+  <div class="room-header__actions">
+    <button type="button"
+            class="btn room-header__action member-panel-toggle"
+            aria-controls="channel-members"
+            aria-expanded="false"
+            aria-label="Show members"
+            title="Show members"
+            data-member-panel-target="toggle"
+            data-action="member-panel#toggle">
+      {{ h::image_tag(ctx,"everyone.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="member-panel-toggle__count" data-member-panel-target="toggleCount" aria-hidden="true"></span>
+    </button>
+
+    {% filter link_to("/rooms/" ~ room.id ~ "/events",h::attrs().class("btn room-header__action room-header__action--events").aria("label","Show events").attr("title","Show events")) %}
+      {{ h::image_tag(ctx,"calendar.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="room-header__action-label">Events</span>
+{% endfilter %}
+    {% filter link_to("/rooms/" ~ room.id ~ "/files",h::attrs().class("btn room-header__action room-header__action--files").aria("label","Show files").attr("title","Show files")) %}
+      {{ h::image_tag(ctx,"attachment.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="room-header__action-label">Files</span>
+{% endfilter %}
+    {% filter link_to("/rooms/" ~ room.id ~ "/threads/new",h::attrs().class("btn room-header__action").aria("label","New post").attr("title","New post")) %}
+      {{ h::image_tag(ctx,"add.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="room-header__action-label">New post</span>
+{% endfilter %}
+    {% filter link_to(room.edit_path(),h::attrs().class("btn room-header__action room-header__action--settings").style("view-transition-name: edit-room-" ~ room.id).data("room_id",room.id)) %}
+      {{ h::image_tag(ctx,"settings.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="for-screen-reader">Settings for this board</span>
+{% endfilter %}
+    {% include "rooms/involvements/_bell.html" %}
+
+    {% include "rooms/show/_header_overflow.html" %}
+  </div>{{ "\n" }}

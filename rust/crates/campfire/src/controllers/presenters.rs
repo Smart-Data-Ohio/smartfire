@@ -21,6 +21,8 @@ mod room_list;
 pub mod room_native;
 pub mod room_shell;
 pub mod rooms_directory;
+pub mod boards;
+pub mod board_posts;
 pub mod status_settings;
 pub mod switcher;
 #[cfg(test)]
@@ -96,7 +98,8 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
         RoomType::Direct => RoomKind::Direct,
         // The views' RoomKind has no voice, stage or board rooms yet (their screens aren't
         // ported); they're explicit-membership rooms like closed ones.
-        RoomType::Voice | RoomType::Stage | RoomType::Board => RoomKind::Closed,
+        RoomType::Voice | RoomType::Stage => RoomKind::Closed,
+        RoomType::Board => RoomKind::Board,
     }
 }
 

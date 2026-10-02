@@ -22,7 +22,7 @@
        aria-label="More actions"
        hidden
        data-header-overflow-target="menu">
-{% if !room.is_direct() %}      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+{% if !room.is_direct() && !room.is_board() %}      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
               data-action="header-overflow#forward"
               data-header-overflow-forward-value=".room-header__actions .room-header__action--threads"
               data-thread-panel-target="browserToggle">
@@ -35,7 +35,7 @@
       {{ h::image_tag(ctx,"calendar.svg",h::attrs().size(20).aria_hidden()) }}
       <span>Events</span>
 {% endfilter %}
-{% if true %}      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+{% if !room.is_board() %}      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
               data-action="header-overflow#forward"
               data-header-overflow-forward-value=".room-header__actions [aria-label='Show pinned messages']">
         {{ h::image_tag(ctx,"pin.svg",h::attrs().size(20).aria_hidden()) }}
