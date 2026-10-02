@@ -3,7 +3,7 @@
 //! work on the job runner), plus sign-out through the real controller. Over a copy of the
 //! `default` parity seed; skipped (with a note) when it isn't built.
 use axum::http::Method;
-use campfire_db::{Room, User};
+use campfire_db::{Message, Room, User};
 use serde_json::json;
 
 use super::support::{Client, delivery, html_json, identifier};
@@ -518,7 +518,7 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
             .await
             .contains("Real presentation partial")
     );
-    let message = hub.app.db().read(move |conn| campfire_db::Message::find(conn,id)).await.unwrap();
+    let message = hub.app.db().read(move |conn| Message::find(conn,id)).await.unwrap();
     for part in ["meta", "github_pr_cards", "twitter_cards", "message_link_cards", "fizzy_cards", "linkedin_cards", "link_embed_cards"] {
         let html = broadcast_html(&mut client).await;
         let target = crate::channels::broadcasts::message_dom_id(&message,Some(part));

@@ -14,6 +14,11 @@
 use crate::models::{Message, Room, RoomType};
 use serde::{Deserialize, Serialize};
 
+/// `UnreadRoomsChannel.stream_name_for`: shared by subscribers and model broadcasts.
+pub fn unread_rooms_stream_name(user_id: i64) -> String {
+    format!("user_{user_id}_unreads")
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Broadcast {
     /// `broadcast_<action>_to(*streamables, target:, partial:, locals:, attributes:)`

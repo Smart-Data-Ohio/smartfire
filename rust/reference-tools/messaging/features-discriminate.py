@@ -40,12 +40,53 @@ def check(name, relative, old, new, test):
         source.write_text(original)
 
 
+check("calendar-short-year", "rust/crates/db/src/slash_commands/calendar.rs",
+      'p.year.unwrap_or(today.year()),', 'p.year.map(|y| if y < 100 {y + 2000} else {y}).unwrap_or(today.year()),',
+      "controllers::message_features::date_tests::broader_calendar_inputs_match_actual_rails")
+check("coercion-array-reminder", "rust/crates/campfire/src/controllers/saved_items.rs",
+      '&features::param_string(raw)', '&raw.to_s().unwrap_or_default()',
+      "controllers::message_features::date_tests::reminder_parameter_shapes_match_eight_actual_rails_responses")
+check("composer-thread-field-ids", "rust/crates/views/src/helpers/forms.rs",
+      'self.namespace.as_ref().map_or(id.clone(),|namespace|format!("{namespace}_{id}"))', 'id',
+      "controllers::message_features::composer_tests::complete_markdown_composers_match_four_actual_rails_partials")
+check("x-identity-order", "rust/crates/db/src/models/message_rendering/twitter.rs",
+      "a.len().cmp(&b.len()).then_with(|| a.cmp(b))", "b.len().cmp(&a.len()).then_with(|| b.cmp(a))",
+      "controllers::message_features::provider_tests::preloaded_x_cards_match_actual_rails_numeric_order_and_warm_refresh")
+check("event-meet-scheme", "rust/crates/campfire/src/controllers/presenters/provider_cards.rs",
+      "meet_link,", "meet_link: card.meet_link.clone(),",
+      "controllers::message_features::provider_tests::populated_event_cards_match_actual_rails_without_viewer_attendance_state")
+check("provider-private-content", "rust/crates/campfire/src/controllers/presenters/provider_cards.rs",
+      "if card.private != Some(false)", "if false",
+      "controllers::message_features::provider_tests::shared_provider_cards_expose_no_private_content_or_session_values")
+check("provider-reference-url", "rust/crates/db/src/models/message_rendering/providers.rs",
+      "EmbedCard { url,normalized_url", "EmbedCard { url: normalized_url.clone(),normalized_url",
+      "controllers::message_features::provider_tests::populated_github_and_embed_containers_match_actual_rails")
+
 check("quote-inline-privacy", "rust/crates/campfire/src/controllers/presenters.rs",
       "source.room_id == message.room_id", "true",
       "controllers::message_features::quote_integration_tests::cross_room_quote_renders_lazy_without_source_facts")
 check("quote-neutral-label", "rust/crates/campfire/src/controllers/presenters.rs",
       '"a direct message".into()', '"David and Jason".into()',
       "controllers::message_features::quote_integration_tests::two_cached_direct_room_viewers_see_the_same_neutral_quote_label")
+check("cache-root-fragment", "rust/crates/views/src/messages.rs",
+      "Some(key) => composite_fragment_key(key, base_url)",
+      "Some(_key) => message_fragment_key(message.id, message.updated_at, base_url)",
+      "controllers::message_features::root_cache_tests::warm_root_fragments_refresh_after_legacy_source_edit_and_name_changes")
+check("cache-pin-validator", "rust/crates/campfire/src/controllers/messages.rs",
+      'let etag = format!("{records}/{}/{pins}/{}",',
+      'let etag = format!("{records}/{}/{}",',
+      "controllers::message_features::root_cache_tests::message_page_conditional_get_tracks_related_stamps_and_unpin_without_last_modified")
+check("panel-room-gate", "rust/crates/campfire/src/controllers/rooms.rs",
+      "Room::find_for_user(conn, user_id, id)", "Room::find_by_id(conn, id)",
+      "controllers::message_features::panel_tests::inaccessible_rooms_never_mount_pin_panels_or_load_pin_rows")
+check("panel-sti-targets", "rust/crates/views/src/rooms.rs",
+      "self.show.pin_param_key.as_deref().unwrap_or(self.show.room.kind.param_key())",
+      "self.show.room.kind.param_key()",
+      "controllers::message_features::panel_tests::pin_header_targets_preserve_voice_stage_and_board_sti_identity")
+check("date-builder-calendar", "rust/crates/campfire/src/controllers/message_features.rs",
+      "parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))",
+      'parse_calendar("", zone.tz(), Timestamp::from_jiff(now))',
+      "controllers::message_features::date_tests::builder_calendar_inputs_match_actual_rails_including_exception_and_nil_results")
 
 check("membership", "rust/crates/campfire/src/controllers/message_features.rs",
       "let (_, room) = concerns::set_room(c).await?;",
