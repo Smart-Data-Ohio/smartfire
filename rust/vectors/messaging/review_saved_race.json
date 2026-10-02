@@ -1,0 +1,30 @@
+{
+  "reference": "d7c7de92",
+  "after_status_response": {
+    "id": 3,
+    "message_id": 935962058,
+    "status": "done",
+    "remind_at": "2026-03-02T16:01:00.000Z",
+    "reminded_at": null,
+    "url": "http://campfire.test/saved/3.json"
+  },
+  "after_reschedule_response": {
+    "id": 4,
+    "message_id": 935962059,
+    "status": "done",
+    "remind_at": "2026-03-02T16:01:00.000Z",
+    "reminded_at": null,
+    "url": "http://campfire.test/saved/4.json"
+  },
+  "claimed": "2026-03-02T16:02:00.000000Z",
+  "after_status": {
+    "status": "done",
+    "remind_at": "2026-03-02T16:01:00.000000Z",
+    "reminded_at": "2026-03-02T16:02:00.000000Z"
+  },
+  "after_reschedule": {
+    "status": "done",
+    "remind_at": "2026-03-02T18:00:00.000000Z",
+    "reminded_at": null
+  }
+}

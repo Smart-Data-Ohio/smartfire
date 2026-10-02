@@ -5,33 +5,89 @@ use sha2::{Digest, Sha256};
 use crate::controllers::presenters::cache_key_with_version;
 
 pub fn etag(conn: &Connection, messages: &[Message]) -> Result<String> {
-    let ids = messages.iter().map(|message| message.id).collect::<Vec<_>>();
-    let placeholders = std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
-    // Only timestamps/ids are selected. No rich-text, blob, card or creator records are loaded
-    // until fresh_when has established that the browser's page needs rendering.
-    let sql = format!(r#"
-        WITH page AS (SELECT id, creator_id, reply_to_message_id, edited_at FROM messages WHERE id IN ({placeholders}))
-        SELECT MAX(stamp) FROM (
-          SELECT MAX(edited_at) AS stamp FROM page
-          UNION ALL SELECT MAX(updated_at) FROM messages WHERE id IN (SELECT reply_to_message_id FROM page)
-          UNION ALL SELECT MAX(edited_at) FROM messages WHERE id IN (SELECT reply_to_message_id FROM page)
-          UNION ALL SELECT MAX(c.updated_at) FROM github_pull_request_references r JOIN github_pull_requests c ON c.id = r.github_pull_request_id WHERE r.message_id IN (SELECT id FROM page)
-          UNION ALL SELECT MAX(c.updated_at) FROM twitter_post_references r JOIN twitter_posts c ON c.id = r.twitter_post_id WHERE r.message_id IN (SELECT id FROM page)
-          UNION ALL SELECT MAX(c.updated_at) FROM link_embed_references r JOIN link_embeds c ON c.id = r.link_embed_id WHERE r.message_id IN (SELECT id FROM page)
-          UNION ALL SELECT MAX(c.updated_at) FROM event_references r JOIN events c ON c.id = r.event_id WHERE r.message_id IN (SELECT id FROM page)
-          UNION ALL SELECT MAX(updated_at) FROM polls WHERE message_id IN (SELECT id FROM page)
-          UNION ALL SELECT MAX(updated_at) FROM messages WHERE id IN (SELECT referenced_message_id FROM message_references WHERE message_id IN (SELECT id FROM page))
-          UNION ALL SELECT MAX(edited_at) FROM messages WHERE id IN (SELECT referenced_message_id FROM message_references WHERE message_id IN (SELECT id FROM page))
-          UNION ALL SELECT MAX(updated_at) FROM users WHERE id IN (SELECT creator_id FROM page)
-        )"#);
-    let related: Option<Timestamp> = conn.query_row(&sql, rusqlite::params_from_iter(&ids), |row| row.get(0))?;
-    let pairs = conn.prepare(&format!("SELECT message_id, id FROM message_pins WHERE message_id IN ({placeholders}) ORDER BY message_id, id"))?
-        .query_map(rusqlite::params_from_iter(&ids), |row| Ok(format!("[{}, {}]", row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)))?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
-    let pin_stamp = format!("{:x}", Sha256::digest(format!("[{}]", pairs.join(", "))));
-    let record_keys = messages.iter().map(|message| cache_key_with_version("messages", message.id, message.updated_at.jiff())).collect::<Vec<_>>().join("/");
-    let related_stamp = related.map(|time| time.jiff().strftime("%Y%m%d%H%M%S%6f").to_string()).unwrap_or_default();
-    Ok(format!("{record_keys}/{related_stamp}/{pin_stamp}/{}", campfire_views::fragment_cache::keys::PRESENTATION_CACHE_VERSION))
+    Ok(etags_for_pages(conn, &[(0, messages.to_vec())])?
+        .remove(&0)
+        .unwrap())
+}
+
+/// Independent aggregate validators for a page of fragment roots, in two reads.
+/// A reply preview includes its source in that root's validator, exactly as the
+/// singleton production path does; unrelated roots never share a maximum.
+pub(crate) fn etags_for_pages(
+    conn: &Connection,
+    pages: &[(i64, Vec<Message>)],
+) -> Result<std::collections::HashMap<i64, String>> {
+    use std::collections::HashMap;
+    if pages.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let requested = pages
+        .iter()
+        .flat_map(|(root, messages)| messages.iter().map(move |m| format!("({root},{})", m.id)))
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut related = HashMap::new();
+    let mut pairs: HashMap<i64, Vec<String>> = HashMap::new();
+    if !requested.is_empty() {
+        let prefix = format!(
+            "WITH requested(root,id) AS (VALUES {requested}), page AS (SELECT requested.root,m.* FROM requested JOIN messages m ON m.id=requested.id) "
+        );
+        let sql = format!("{prefix} SELECT root,MAX(stamp) FROM (
+            SELECT root,edited_at AS stamp FROM page
+            UNION ALL SELECT p.root,m.updated_at FROM page p JOIN messages m ON m.id=p.reply_to_message_id
+            UNION ALL SELECT p.root,m.edited_at FROM page p JOIN messages m ON m.id=p.reply_to_message_id
+            UNION ALL SELECT p.root,c.updated_at FROM page p JOIN github_pull_request_references r ON r.message_id=p.id JOIN github_pull_requests c ON c.id=r.github_pull_request_id
+            UNION ALL SELECT p.root,c.updated_at FROM page p JOIN twitter_post_references r ON r.message_id=p.id JOIN twitter_posts c ON c.id=r.twitter_post_id
+            UNION ALL SELECT p.root,c.updated_at FROM page p JOIN link_embed_references r ON r.message_id=p.id JOIN link_embeds c ON c.id=r.link_embed_id
+            UNION ALL SELECT p.root,c.updated_at FROM page p JOIN event_references r ON r.message_id=p.id JOIN events c ON c.id=r.event_id
+            UNION ALL SELECT p.root,c.updated_at FROM page p JOIN polls c ON c.message_id=p.id
+            UNION ALL SELECT p.root,m.updated_at FROM page p JOIN message_references r ON r.message_id=p.id JOIN messages m ON m.id=r.referenced_message_id
+            UNION ALL SELECT p.root,m.edited_at FROM page p JOIN message_references r ON r.message_id=p.id JOIN messages m ON m.id=r.referenced_message_id
+            UNION ALL SELECT p.root,u.updated_at FROM page p JOIN users u ON u.id=p.creator_id
+        ) GROUP BY root");
+        related = conn
+            .prepare(&sql)?
+            .query_map([], |r| {
+                Ok((r.get::<_, i64>(0)?, r.get::<_, Option<Timestamp>>(1)?))
+            })?
+            .collect::<std::result::Result<_, _>>()?;
+        for row in conn.prepare(&format!("{prefix} SELECT p.root,t.message_id,t.id FROM page p JOIN message_pins t ON t.message_id=p.id ORDER BY p.root,t.message_id,t.id"))?.query_map([],|r|Ok((r.get::<_,i64>(0)?,format!("[{}, {}]",r.get::<_,i64>(1)?,r.get::<_,i64>(2)?))))? {
+            let (root,pair) = row?;
+            pairs.entry(root).or_default().push(pair);
+        }
+    }
+    Ok(pages
+        .iter()
+        .map(|(root, messages)| {
+            let pin_stamp = format!(
+                "{:x}",
+                Sha256::digest(format!(
+                    "[{}]",
+                    pairs.get(root).map(|v| v.join(", ")).unwrap_or_default()
+                ))
+            );
+            let record_keys = messages
+                .iter()
+                .map(|m| cache_key_with_version("messages", m.id, m.updated_at.jiff()))
+                .collect::<Vec<_>>()
+                .join("/");
+            let related_stamp = related
+                .get(root)
+                .copied()
+                .flatten()
+                .map(|t| t.jiff().strftime("%Y%m%d%H%M%S%6f").to_string())
+                .unwrap_or_default();
+            (
+                *root,
+                format!(
+                    "{record_keys}/{related_stamp}/{pin_stamp}/{}",
+                    campfire_views::fragment_cache::keys::PRESENTATION_CACHE_VERSION
+                ),
+            )
+        })
+        .collect())
 }
 
 /// ActionView::Digestor's pinned Rails digest, regenerated by reference-tools/messaging/paging.rb.

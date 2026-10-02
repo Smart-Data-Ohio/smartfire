@@ -483,3 +483,22 @@ fn a_thread_message_reminder_links_into_its_thread() {
     let push = push(&t, &item, &|_| true).unwrap();
     assert_eq!(push.payload.path, format!("/rooms/{}?message_id={}&thread={}", id("designers"), reply.id, thread.id));
 }
+
+#[test]
+fn stale_reminder_update_preserves_a_concurrent_status_change() {
+    let t = frozen();
+    let mut stale = save(&t,"david","first",None);
+    let item_id = stale.id;
+    t.write(move |tx| {
+        let mut fresh = SavedItem::find(tx.conn(),item_id)?;
+        fresh.update(tx,SavedItemChanges {status:Some("done".into()),..Default::default()})
+    });
+    let stale = t.write(move |tx| {
+        let remind_at = tx.now().since(minutes(60));
+        stale.update(tx,SavedItemChanges {remind_at:Some(Some(remind_at)),..Default::default()})?;
+        Ok(stale)
+    });
+    let item = reload(&t,&stale);
+    assert_eq!(item.status,"done");
+    assert!(item.remind_at.is_some());
+}

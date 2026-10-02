@@ -7,14 +7,16 @@ use campfire_db::{Message, Room, SavedItem, SavedItemChanges, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 
 async fn prepare(c: &mut Ctx) -> Result<()> {
+    c.rescue_not_found();
     before_actions(c, Before::default()).await?;
     c.no_store();
     c.set_header("Pragma", "no-cache");
+    c.start_action();
     Ok(())
 }
 fn filter(c: &Ctx) -> String {
     c.param("status")
-        .and_then(campfire_kit::Param::to_s)
+        .map(features::param_string)
         .filter(|status| campfire_db::models::saved_item::STATUSES.contains(&status.as_str()))
         .unwrap_or_else(|| "all".into())
 }
@@ -104,7 +106,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let zone = features::user_zone(c).await?;
     let remind_at = match raw {
         None => None,
-        Some(raw) => match features::parse_time(&raw.to_s().unwrap_or_default(), &zone, c.now()) {
+        Some(raw) => match features::parse_time(&features::param_string(raw), &zone, c.now()) {
             Ok(Some(time)) => Some(time),
             _ => {
                 return invalid(

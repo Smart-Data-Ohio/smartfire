@@ -1,0 +1,350 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "zone": "UTC",
+      "input": "",
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "not a date",
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "March 5, 2026 14:30",
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "5 March 2026",
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026/03/05",
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "05/03/2026",
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "March 2027",
+      "result": "2027-03-01T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-02-30",
+      "result": "2026-03-02T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-08 02:30",
+      "result": "2026-03-08T02:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-11-01 01:30",
+      "result": "2026-11-01T01:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T24:00:00",
+      "result": "2026-03-06T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T12:30:60",
+      "result": "2026-03-05T12:31:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T12:30:05.123456789Z",
+      "result": "2026-03-05T12:30:05.123456Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "Thu, 05 Mar 2026 14:30:00 -0500",
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305",
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000",
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-15-01",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-32",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "25:30",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "12:61",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "tomorrow",
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "sunday",
+      "result": "2026-03-02T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "17:00 MART",
+      "result": "2026-03-03T01:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "",
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "not a date",
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "March 5, 2026 14:30",
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "5 March 2026",
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026/03/05",
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "05/03/2026",
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "March 2027",
+      "result": "2027-03-01T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-02-30",
+      "result": "2026-03-02T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-08 02:30",
+      "result": "2026-03-08T07:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-11-01 01:30",
+      "result": "2026-11-01T05:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T24:00:00",
+      "result": "2026-03-06T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T12:30:60",
+      "result": "2026-03-05T17:31:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T12:30:05.123456789Z",
+      "result": "2026-03-05T12:30:05.123456Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "Thu, 05 Mar 2026 14:30:00 -0500",
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305",
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000",
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-15-01",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-32",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "25:30",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "12:61",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "tomorrow",
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "sunday",
+      "result": "2026-03-02T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "17:00 MART",
+      "result": "2026-03-03T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "",
+      "result": null
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "not a date",
+      "result": null
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "March 5, 2026 14:30",
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "5 March 2026",
+      "result": "2026-03-04T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026/03/05",
+      "result": "2026-03-04T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "05/03/2026",
+      "result": "2026-03-04T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "March 2027",
+      "result": "2027-02-28T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-02-30",
+      "result": "2026-03-01T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-08 02:30",
+      "result": "2026-03-07T13:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-11-01 01:30",
+      "result": "2026-10-31T12:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T24:00:00",
+      "result": "2026-03-05T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T12:30:60",
+      "result": "2026-03-04T23:31:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T12:30:05.123456789Z",
+      "result": "2026-03-05T12:30:05.123456Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "Thu, 05 Mar 2026 14:30:00 -0500",
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305",
+      "result": "2026-03-04T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000",
+      "result": "2026-03-05T01:30:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-15-01",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-32",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "25:30",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "12:61",
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "tomorrow",
+      "result": null
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "sunday",
+      "result": "2026-03-02T11:00:00.000000Z"
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "17:00 MART",
+      "result": "2026-03-04T01:30:00.000000Z"
+    }
+  ]
+}
