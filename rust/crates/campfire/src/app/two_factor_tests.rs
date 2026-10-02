@@ -392,17 +392,12 @@ async fn enrollment_user_limit_follows_the_account_across_ips() {
 }
 
 #[tokio::test]
-async fn enrollment_rolls_back_every_write_if_the_audit_cannot_be_saved() {
+async fn enrollment_keeps_confirmed_state_if_the_audit_cannot_be_saved() {
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
     assert_eq!(b.get("/two_factor_setup").await.status, StatusCode::OK);
     let (id, secret) = setup(&a).await;
-    let before = a
-        .db()
-        .read(|c| Ok(Session::for_user(c, DAVID)?.len()))
-        .await
-        .unwrap();
     a.db().write(|tx| { tx.conn().execute_batch("CREATE TRIGGER refuse_enable_audit BEFORE INSERT ON audit_logs WHEN NEW.action='two_factor.enable' BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END")?; Ok(()) }).await.unwrap();
     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
     assert_eq!(
@@ -411,16 +406,16 @@ async fn enrollment_rolls_back_every_write_if_the_audit_cannot_be_saved() {
             .status,
         StatusCode::INTERNAL_SERVER_ERROR
     );
-    assert_eq!(setup(&a).await.1, secret);
     a.db()
         .read(move |c| {
-            assert!(!User::find(c, DAVID)?.two_factor_enabled(c)?);
-            assert_eq!(Session::for_user(c, DAVID)?.len(), before);
+            assert!(User::find(c, DAVID)?.two_factor_enabled(c)?);
+            assert_eq!(Session::for_user(c, DAVID)?.len(), 1);
             assert!(Session::find(c, id)?.two_factor_verified()); // test helper began verified
+            assert!(TwoFactorSetupSecret::for_session(c, id)?.is_none());
             assert_eq!(
                 c.query_row("SELECT count(*) FROM two_factor_backup_codes", [], |r| r
                     .get::<_, i64>(0))?,
-                0
+                10
             );
             Ok(())
         })

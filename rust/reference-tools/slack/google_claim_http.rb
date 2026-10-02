@@ -215,6 +215,10 @@ request.call('replay-page','get','/slack/imports')
 sources=%w[app/controllers/sessions/google_controller.rb app/controllers/concerns/google_sign_in_flow.rb app/controllers/concerns/two_factor_enforcement.rb app/controllers/two_factor/setups_controller.rb app/controllers/sudos_controller.rb app/controllers/slack/oauth_controller.rb app/controllers/slack/imports_controller.rb app/models/google/sign_in/account_linker.rb app/models/slack/user_mapper.rb app/models/slack/message_writer.rb]
 raise 'claim lost historical identity' unless GoogleIdentity.find_by!(subject:'ws16-claim-subject').user_id==claimant.id && User.where("LOWER(email_address) = ?",'jane@smartdata.net').count==1
 raise 'personal import failed' unless personal.reload.completed? && preview.reload.completed? && SlackConnection.find_by!(user_id:claimant.id).slack_user_id=='UCLAIM'
-output={reference:'d7c7de92',layout_reference:'2e20b24c',sources:sources.to_h {|p|[p,Digest::SHA256.file(Rails.root.join(p)).hexdigest]},columns:COLUMNS,initial:,rows:,calls:$calls}
+main_calls=$calls.dup
+# Keep review fixtures separate from the original 30-response ownership snapshots.
+backup_index=0
+review_results=eval(File.read(File.join(WORK,'reference-tools/slack/google_claim_review.rb')),binding,'google_claim_review.rb')
+output={reference:'d7c7de92',layout_reference:'2e20b24c',sources:sources.to_h {|p|[p,Digest::SHA256.file(Rails.root.join(p)).hexdigest]},columns:COLUMNS,initial:,rows:,calls:main_calls,review:review_results}
 File.write(File.join(WORK,'vectors/slack/google_claim_http.json'),JSON.pretty_generate(output)+"\n")
 puts "Google → Slack claim Rails oracle: #{rows.size} HTTP responses; 2 Google verifications; personal preview/import completed; #{COLUMNS.size} ownership tables per stage"
