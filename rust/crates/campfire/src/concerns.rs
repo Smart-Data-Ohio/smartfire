@@ -44,6 +44,13 @@ pub mod session_keys;
 pub mod sudo;
 pub mod two_factor;
 pub mod user_agent;
+pub mod agent_api;
+
+#[derive(Clone, Copy)]
+pub struct CurrentAgent {
+    pub agent_id: i64,
+    pub credential_id: i64,
+}
 
 use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
 use campfire_kit::{Cookie, Ctx, Error, Result, SameSite, StatusCode, halt};
@@ -479,9 +486,10 @@ fn authenticate_bot_reply_token(
 pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
     let Some(secret) = agent_bearer_secret(c.request.header("authorization")).map(str::to_string) else { return Ok(false) };
     let ip = c.request.remote_ip()?.to_string();
-    let user = c.app().db.write(move |tx| campfire_db::models::agent_access::authenticate(tx, &secret, &ip)).await.map_err(Error::internal)?;
-    let Some(user) = user else { return halt(head(StatusCode::UNAUTHORIZED)) };
-    c.set_current(CurrentUser(user));
+    let identity = c.app().db.write(move |tx| campfire_db::models::agent_access::authenticate_identity(tx, &secret, &ip)).await.map_err(Error::internal)?;
+    let Some(identity) = identity else { return halt(head(StatusCode::UNAUTHORIZED)) };
+    c.set_current(CurrentAgent { agent_id: identity.agent_id, credential_id: identity.credential_id });
+    c.set_current(CurrentUser(identity.user));
     set_authenticated_by(c, AuthenticatedBy::AgentToken);
     Ok(true)
 }

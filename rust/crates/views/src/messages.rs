@@ -869,7 +869,7 @@ pub struct BoostsPartial<'a> {
     pub message: &'a MessageView,
 }
 
-/// The complete replacement fragment used by the modern reaction toggle and delete actions.
+/// The grouped replacement fragment shared by human, bot and MCP reaction actions and broadcasts.
 #[derive(Template)]
 #[template(path = "messages/boosts/_reactions.html")]
 pub struct ReactionsPartial<'a> {

@@ -75,6 +75,14 @@ pub fn create(
     request: ApprovalRequest,
     credential_id: Option<i64>,
 ) -> Result<ServiceResult> {
+    create_with_input_error(tx, agent_id, request, credential_id, None)
+}
+
+/// Transport seam: resolve raw expiry errors after authorization, replay and budget.
+pub fn create_with_input_error(
+    tx: &mut Tx<'_>, agent_id: i64, request: ApprovalRequest,
+    credential_id: Option<i64>, input_error: Option<String>,
+) -> Result<ServiceResult> {
     if let Some(room) = request.room_id
         && !exists(
             tx.conn(),
@@ -110,6 +118,7 @@ pub fn create(
     if let Some(denial) = check_budget(tx, agent_id, Cap::ExternalActions)? {
         return Ok(ServiceResult::budget(denial));
     };
+    if let Some(error) = input_error { return Ok(ServiceResult::fail(error, 422)); }
     let attributes = NewApproval {
         agent_id,
         room_id: request.room_id,

@@ -311,29 +311,27 @@ pub enum PostResult {
     Denied(super::agent_service::ServiceResult),
 }
 
-/// Agents::Posting. Caller supplies authenticated room membership and post grant.
-/// This additive service keeps the existing canonical `post` signature intact.
-pub fn post_service(
-    tx: &mut Tx<'_>,
-    agent_id: i64,
-    mut a: NewMessage,
-    drive: DriveInput,
-) -> Result<PostResult> {
+enum PostCheck {
+    Allowed(Option<Box<crate::ChannelThread>>),
+    Finished(PostResult),
+}
+
+fn check_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveInput) -> Result<PostCheck> {
     use super::agent_service::{ServiceResult, invalid};
     let thread = if let Some(id) = a.thread_id {
         let Some(thread) =
             crate::ChannelThread::find_by_id(tx.conn(), id)?.filter(|t| t.room_id == a.room_id)
         else {
-            return Ok(PostResult::Denied(ServiceResult::fail(
+            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::fail(
                 "Thread not found",
                 404,
-            )));
+            ))));
         };
         if thread.locked_at.is_some() {
-            return Ok(PostResult::Denied(ServiceResult::fail(
+            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::fail(
                 "This thread is locked",
                 422,
-            )));
+            ))));
         }
         Some(thread)
     } else {
@@ -347,32 +345,51 @@ pub fn post_service(
         None
     };
     match prepare(tx, agent_id, a.room_id, a.client_message_id.as_deref())? {
-        PostingCheck::Replay(message) => return Ok(PostResult::Posted(message)),
+        PostingCheck::Replay(message) => return Ok(PostCheck::Finished(PostResult::Posted(message))),
         PostingCheck::Budget(payload) => {
-            return Ok(PostResult::Denied(ServiceResult::budget(payload)));
+            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::budget(payload))));
         }
         PostingCheck::Allowed => {}
     }
-    match drive {
-        DriveInput::Absent => {}
-        DriveInput::Ids(ids) if ids.iter().all(|id| super::message::valid_drive_file_id(id)) => {
-            a.drive_file_ids = ids;
-        }
-        _ => {
-            let mut errors = crate::Errors::default();
-            errors.add("drive_attachments", "includes an invalid file id");
-            return Ok(PostResult::Denied(invalid(errors)));
-        }
+    if !matches!(drive, DriveInput::Absent)
+        && !matches!(drive, DriveInput::Ids(ids) if ids.iter().all(|id| super::message::valid_drive_file_id(id)))
+    {
+        let mut errors = crate::Errors::default();
+        errors.add("drive_attachments", "includes an invalid file id");
+        return Ok(PostCheck::Finished(PostResult::Denied(invalid(errors))));
     }
-    if a.markdown_source.is_some() {
-        a.body = None;
-    }
-    a.creator_id =
-        tx.conn()
-            .query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| {
-                r.get(0)
-            })?;
+    Ok(PostCheck::Allowed(thread.map(Box::new)))
+}
+
+/// The same service preflight, before the app stages an attachment. The writer checks again.
+pub fn preflight_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveInput) -> Result<Option<PostResult>> {
+    Ok(match check_service(tx, agent_id, a, drive)? {
+        PostCheck::Allowed(_) => None,
+        PostCheck::Finished(result) => Some(result),
+    })
+}
+
+/// Agents::Posting. Caller supplies authenticated room membership and post grant.
+pub fn post_service(tx: &mut Tx<'_>, agent_id: i64, a: NewMessage, drive: DriveInput) -> Result<PostResult> {
+    post_service_with_preparation(tx, agent_id, a, drive, |_, _| Ok(()))
+}
+
+/// Storage preparation runs in the message savepoint. Denials roll back its rows and callbacks.
+/// REST and MCP still call the same posting service, with the app owning upload staging.
+pub fn post_service_with_preparation(
+    tx: &mut Tx<'_>, agent_id: i64, mut a: NewMessage, drive: DriveInput,
+    prepare_attachment: impl FnOnce(&mut Tx<'_>, &mut NewMessage) -> Result<()>,
+) -> Result<PostResult> {
+    use super::agent_service::invalid;
+    let thread = match check_service(tx, agent_id, &a, &drive)? {
+        PostCheck::Allowed(thread) => thread,
+        PostCheck::Finished(result) => return Ok(result),
+    };
+    if let DriveInput::Ids(ids) = drive { a.drive_file_ids = ids; }
+    if a.markdown_source.is_some() { a.body = None; }
+    a.creator_id = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| r.get(0))?;
     let message = match tx.savepoint(|tx| {
+        prepare_attachment(tx, &mut a)?;
         if let Some(mut thread) = thread {
             thread.post_message(tx, a.creator_id, a)
         } else {
@@ -385,7 +402,6 @@ pub fn post_service(
     };
     broadcast_create(tx, &message)?;
     super::bot_webhook_fanout::deliver(tx, &message)?;
-    // Attachment analysis/thumbnail processing is supplied by the storage/app owner.
     Ok(PostResult::Posted(Box::new(message)))
 }
 

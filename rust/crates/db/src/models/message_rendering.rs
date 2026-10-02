@@ -104,48 +104,57 @@ fn rows<T>(
 }
 impl RenderingRecords {
     pub fn load(conn: &Connection, messages: &[Message]) -> Result<Self> {
+        Self::load_for(conn,messages,false)
+    }
+    /// MessagePayloadHelper needs body, reply, author, room and Drive facts only.
+    pub fn load_payload(conn: &Connection, messages: &[Message]) -> Result<Self> {
+        Self::load_for(conn,messages,true)
+    }
+    fn load_for(conn: &Connection, messages: &[Message], payload:bool) -> Result<Self> {
         let mut data = Self::default();
         if messages.is_empty() {
             return Ok(data);
         }
         let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
-        // WS8bm2 root cache seam. These association reads are bounded by the page,
-        // and cache invalidation must include public and private provider rows alike.
-        for (message, stamp) in rows(conn, "WITH page AS (SELECT id FROM messages WHERE id IN ($ids))
-            SELECT r.message_id,c.updated_at FROM github_pull_request_references r JOIN github_pull_requests c ON c.id=r.github_pull_request_id JOIN page ON page.id=r.message_id
-            UNION ALL SELECT r.message_id,c.updated_at FROM fizzy_card_references r JOIN fizzy_cards c ON c.id=r.fizzy_card_id JOIN page ON page.id=r.message_id
-            UNION ALL SELECT r.message_id,c.updated_at FROM twitter_post_references r JOIN twitter_posts c ON c.id=r.twitter_post_id JOIN page ON page.id=r.message_id
-            UNION ALL SELECT r.message_id,c.updated_at FROM event_references r JOIN events c ON c.id=r.event_id JOIN page ON page.id=r.message_id",
-            &ids, |r| Ok((r.get(0)?,r.get(1)?)))? {
-            data.cache.entry(message).or_default().cards.push(stamp);
-        }
-        for (message, reference, stamp) in rows(
-            conn,
-            "SELECT r.message_id,r.id,c.updated_at FROM link_embed_references r LEFT JOIN link_embeds c ON c.id=r.link_embed_id WHERE r.message_id IN ($ids) ORDER BY r.id",
-            &ids,
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-        )? {
-            data.cache
-                .entry(message)
-                .or_default()
-                .embeds
-                .push((reference, stamp));
-        }
-        for message in rows(conn,
-            "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ($ids)",
-            &ids, |r| r.get(0))? {
-            data.cache.entry(message).or_default().has_pull_requests = true;
-        }
-        for (message, reference, source) in rows(
-            conn,
-            "SELECT message_id,id,referenced_message_id FROM message_references WHERE message_id IN ($ids) ORDER BY id",
-            &ids,
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-        )? {
-            data.quotes
-                .entry(message)
-                .or_default()
-                .push((reference, source));
+        if !payload {
+            // WS8bm2 root cache seam. These association reads are bounded by the page,
+            // and cache invalidation must include public and private provider rows alike.
+            for (message, stamp) in rows(conn, "WITH page AS (SELECT id FROM messages WHERE id IN ($ids))
+                SELECT r.message_id,c.updated_at FROM github_pull_request_references r JOIN github_pull_requests c ON c.id=r.github_pull_request_id JOIN page ON page.id=r.message_id
+                UNION ALL SELECT r.message_id,c.updated_at FROM fizzy_card_references r JOIN fizzy_cards c ON c.id=r.fizzy_card_id JOIN page ON page.id=r.message_id
+                UNION ALL SELECT r.message_id,c.updated_at FROM twitter_post_references r JOIN twitter_posts c ON c.id=r.twitter_post_id JOIN page ON page.id=r.message_id
+                UNION ALL SELECT r.message_id,c.updated_at FROM event_references r JOIN events c ON c.id=r.event_id JOIN page ON page.id=r.message_id",
+                &ids, |r| Ok((r.get(0)?,r.get(1)?)))? {
+                data.cache.entry(message).or_default().cards.push(stamp);
+            }
+            for (message, reference, stamp) in rows(
+                conn,
+                "SELECT r.message_id,r.id,c.updated_at FROM link_embed_references r LEFT JOIN link_embeds c ON c.id=r.link_embed_id WHERE r.message_id IN ($ids) ORDER BY r.id",
+                &ids,
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )? {
+                data.cache
+                    .entry(message)
+                    .or_default()
+                    .embeds
+                    .push((reference, stamp));
+            }
+            for message in rows(conn,
+                "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ($ids)",
+                &ids, |r| r.get(0))? {
+                data.cache.entry(message).or_default().has_pull_requests = true;
+            }
+            for (message, reference, source) in rows(
+                conn,
+                "SELECT message_id,id,referenced_message_id FROM message_references WHERE message_id IN ($ids) ORDER BY id",
+                &ids,
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )? {
+                data.quotes
+                    .entry(message)
+                    .or_default()
+                    .push((reference, source));
+            }
         }
         let reply_ids: Vec<_> = messages
             .iter()
@@ -182,9 +191,11 @@ impl RenderingRecords {
             &room_ids,
             |r| Ok((Room::from_row(r)?, r.get::<_, Option<String>>("icon_name")?)),
         )?;
-        data.pr_thread_stamps = rows(conn,
-            "SELECT room_id,MAX(updated_at) FROM github_pull_request_threads WHERE room_id IN ($ids) GROUP BY room_id",
-            &room_ids, |r| Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
+        if !payload {
+            data.pr_thread_stamps = rows(conn,
+                "SELECT room_id,MAX(updated_at) FROM github_pull_request_threads WHERE room_id IN ($ids) GROUP BY room_id",
+                &room_ids, |r| Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
+        }
         for (room, icon) in rooms {
             data.room_icons.insert(room.id, icon);
             data.rooms.insert(room.id, room);
@@ -204,24 +215,26 @@ impl RenderingRecords {
             data.direct_names.entry(id).or_default().push(user.name.clone());
             data.direct_members.entry(id).or_default().push(user);
         }
-        for boost in rows(
-            conn,
-            "SELECT * FROM boosts WHERE message_id IN ($ids) ORDER BY created_at",
-            &ids,
-            Boost::from_row,
-        )? {
-            data.boosts.entry(boost.message_id).or_default().push(boost);
+        if !payload {
+            for boost in rows(
+                conn,
+                "SELECT * FROM boosts WHERE message_id IN ($ids) ORDER BY created_at",
+                &ids,
+                Boost::from_row,
+            )? {
+                data.boosts.entry(boost.message_id).or_default().push(boost);
+            }
+            for (message, stamp) in rows(
+                conn,
+                "SELECT message_id,updated_at FROM message_pins WHERE message_id IN ($ids)",
+                &ids,
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )? {
+                data.pinned.insert(message);
+                data.cache.entry(message).or_default().pins.push(stamp);
+            }
+            data.reply_counts = rows(conn,"SELECT parent_message_id,messages_count FROM channel_threads WHERE parent_message_id IN ($ids)",&ids,|r|Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
         }
-        for (message, stamp) in rows(
-            conn,
-            "SELECT message_id,updated_at FROM message_pins WHERE message_id IN ($ids)",
-            &ids,
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )? {
-            data.pinned.insert(message);
-            data.cache.entry(message).or_default().pins.push(stamp);
-        }
-        data.reply_counts = rows(conn,"SELECT parent_message_id,messages_count FROM channel_threads WHERE parent_message_id IN ($ids)",&ids,|r|Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
         for (id, file) in rows(
             conn,
             "SELECT message_id,file_id FROM drive_attachments WHERE message_id IN ($ids) ORDER BY id",
@@ -230,54 +243,56 @@ impl RenderingRecords {
         )? {
             data.drive_files.entry(id).or_default().push(file);
         }
-        for (id, step) in rows(
-            conn,
-            "SELECT * FROM agent_steps WHERE message_id IN ($ids) ORDER BY position,id",
-            &ids,
-            |r| {
-                Ok((
-                    r.get("message_id")?,
-                    AgentStep {
-                        updated_at: r.get("updated_at")?,
-                        name: r.get("name")?,
-                        status: r.get("status")?,
-                        duration_ms: r.get("duration_ms")?,
-                        input_summary: r.get("input_summary")?,
-                        output_summary: r.get("output_summary")?,
-                    },
-                ))
-            },
-        )? {
-            data.steps.entry(id).or_default().push(step);
-        }
-        data.polls = rows(
-            conn,
-            "SELECT * FROM polls WHERE message_id IN ($ids)",
-            &ids,
-            Poll::from_row,
-        )?
-        .into_iter()
-        .map(|p| (p.message_id, p))
-        .collect();
-        let poll_ids: Vec<_> = data.polls.values().map(|p| p.id).collect();
-        for option in rows(
-            conn,
-            "SELECT * FROM poll_options WHERE poll_id IN ($ids) ORDER BY position,id",
-            &poll_ids,
-            PollOption::from_row,
-        )? {
-            data.options.entry(option.poll_id).or_default().push(option);
-        }
-        for (vote, name) in rows(
-            conn,
-            "SELECT poll_votes.*,users.name AS user_name FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_id IN ($ids) ORDER BY poll_votes.id",
-            &poll_ids,
-            |r| Ok((PollVote::from_row(r)?, r.get("user_name")?)),
-        )? {
-            data.votes
-                .entry(vote.poll_id)
-                .or_default()
-                .push((vote, name));
+        if !payload {
+            for (id, step) in rows(
+                conn,
+                "SELECT * FROM agent_steps WHERE message_id IN ($ids) ORDER BY position,id",
+                &ids,
+                |r| {
+                    Ok((
+                        r.get("message_id")?,
+                        AgentStep {
+                            updated_at: r.get("updated_at")?,
+                            name: r.get("name")?,
+                            status: r.get("status")?,
+                            duration_ms: r.get("duration_ms")?,
+                            input_summary: r.get("input_summary")?,
+                            output_summary: r.get("output_summary")?,
+                        },
+                    ))
+                },
+            )? {
+                data.steps.entry(id).or_default().push(step);
+            }
+            data.polls = rows(
+                conn,
+                "SELECT * FROM polls WHERE message_id IN ($ids)",
+                &ids,
+                Poll::from_row,
+            )?
+            .into_iter()
+            .map(|p| (p.message_id, p))
+            .collect();
+            let poll_ids: Vec<_> = data.polls.values().map(|p| p.id).collect();
+            for option in rows(
+                conn,
+                "SELECT * FROM poll_options WHERE poll_id IN ($ids) ORDER BY position,id",
+                &poll_ids,
+                PollOption::from_row,
+            )? {
+                data.options.entry(option.poll_id).or_default().push(option);
+            }
+            for (vote, name) in rows(
+                conn,
+                "SELECT poll_votes.*,users.name AS user_name FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_id IN ($ids) ORDER BY poll_votes.id",
+                &poll_ids,
+                |r| Ok((PollVote::from_row(r)?, r.get("user_name")?)),
+            )? {
+                data.votes
+                    .entry(vote.poll_id)
+                    .or_default()
+                    .push((vote, name));
+            }
         }
         Ok(data)
     }
@@ -325,6 +340,107 @@ impl RenderingRecords {
             .iter()
             .map(|m| m.id)
             .chain(self.sources.keys().copied())
+            .collect()
+    }
+}
+
+/// Request-scoped thread facts for Message.with_payload_details. All associations are
+/// batched before serialization; permissions still use the shared ChannelThread policy.
+#[derive(Default)]
+pub struct ThreadRenderingRecords {
+    pub threads: HashMap<i64, crate::ChannelThread>,
+    pub by_parent: HashMap<i64, i64>,
+    pub members: HashMap<i64, crate::ThreadMembership>,
+    pub member_counts: HashMap<i64, i64>,
+    pub message_counts: HashMap<i64, i64>,
+    pub room_members: HashSet<(i64, i64)>,
+    pub posting: HashSet<(i64, i64)>,
+}
+impl ThreadRenderingRecords {
+    pub fn load(conn: &Connection, messages: &[Message], viewer: i64) -> Result<Self> {
+        let mut data = Self::default();
+        if messages.is_empty() {
+            return Ok(data);
+        }
+        let message_ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
+        let thread_ids = messages
+            .iter()
+            .filter_map(|m| m.thread_id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let threads = rows(
+            conn,
+            "SELECT * FROM channel_threads WHERE parent_message_id IN ($ids)",
+            &message_ids,
+            crate::ChannelThread::from_row,
+        )?;
+        let contexts = rows(
+            conn,
+            "SELECT * FROM channel_threads WHERE id IN ($ids)",
+            &thread_ids,
+            crate::ChannelThread::from_row,
+        )?;
+        for thread in threads.into_iter().chain(contexts) {
+            if let Some(parent) = thread.parent_message_id {
+                data.by_parent.insert(parent, thread.id);
+            }
+            data.threads.insert(thread.id, thread);
+        }
+        let ids = data.threads.keys().copied().collect::<Vec<_>>();
+        let rooms = data
+            .threads
+            .values()
+            .map(|t| t.room_id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        for member in rows(
+            conn,
+            "SELECT * FROM thread_memberships WHERE thread_id IN ($ids)",
+            &ids,
+            crate::ThreadMembership::from_row,
+        )? {
+            *data.member_counts.entry(member.thread_id).or_default() += 1;
+            if member.user_id == viewer {
+                data.members.insert(member.thread_id, member);
+            }
+        }
+        data.message_counts = rows(
+            conn,
+            "SELECT thread_id,count(*) FROM messages WHERE thread_id IN ($ids) GROUP BY thread_id",
+            &ids,
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?
+        .into_iter()
+        .collect();
+        data.room_members = rows(
+            conn,
+            "SELECT room_id,user_id FROM memberships WHERE room_id IN ($ids)",
+            &rooms,
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?
+        .into_iter()
+        .collect();
+        let owners = data
+            .threads
+            .values()
+            .filter_map(|t| t.work_owner_id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        data.posting = super::agent_access::capabilities_for_users_in_rooms(
+            conn,
+            &owners,
+            &rooms,
+            "post_messages",
+        )?;
+        Ok(data)
+    }
+    pub fn user_ids(&self, viewer: i64) -> Vec<i64> {
+        std::iter::once(viewer)
+            .chain(self.threads.values().map(|t| t.creator_id))
+            .chain(self.threads.values().filter_map(|t| t.work_owner_id))
             .collect()
     }
 }

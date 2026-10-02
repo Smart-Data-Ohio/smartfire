@@ -1,0 +1,327 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "pin_create",
+      "method": "post",
+      "path": "/agents/messages/1900700001/pin",
+      "body": "{}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"pinned\":true,\"message_id\":1900700001,\"pin_count\":1}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_replay",
+      "method": "post",
+      "path": "/agents/messages/1900700001/pin",
+      "body": "{}",
+      "setup": {
+        "repeat": 1
+      },
+      "status": 201,
+      "response_body": "{\"pinned\":true,\"message_id\":1900700001,\"pin_count\":1}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_unpin",
+      "method": "delete",
+      "path": "/agents/messages/1900700001/pin",
+      "body": null,
+      "setup": {
+        "pin": true
+      },
+      "status": 200,
+      "response_body": "{\"pinned\":false,\"message_id\":1900700001,\"pin_count\":0}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_unpin_absent",
+      "method": "delete",
+      "path": "/agents/messages/1900700001/pin",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"pinned\":false,\"message_id\":1900700001,\"pin_count\":0}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_missing",
+      "method": "post",
+      "path": "/agents/messages/0/pin",
+      "body": "{}",
+      "setup": {},
+      "status": 404,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_nonmember",
+      "method": "post",
+      "path": "/agents/messages/1900700001/pin",
+      "body": "{}",
+      "setup": {
+        "remove_member": true
+      },
+      "status": 404,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_no_grant",
+      "method": "post",
+      "path": "/agents/messages/1900700001/pin",
+      "body": "{}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ]
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_revoked",
+      "method": "post",
+      "path": "/agents/messages/1900700001/pin",
+      "body": "{}",
+      "setup": {
+        "grant": [
+          "post_messages"
+        ],
+        "revoked": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_cap",
+      "method": "post",
+      "path": "/agents/messages/1900700002/pin",
+      "body": "{}",
+      "setup": {
+        "cap": true
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"This channel already has 50 pinned messages\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "pin_cap_replay",
+      "method": "post",
+      "path": "/agents/messages/1900700001/pin",
+      "body": "{}",
+      "setup": {
+        "cap": true
+      },
+      "status": 201,
+      "response_body": "{\"pinned\":true,\"message_id\":1900700001,\"pin_count\":50}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_pin_message",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"pin_message\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"pinned\\\":true,\\\"message_id\\\":1900700001,\\\"pin_count\\\":1}\"}],\"structuredContent\":{\"pinned\":true,\"message_id\":1900700001,\"pin_count\":1},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_pin_replay",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"pin_message\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {
+        "repeat": 1
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"pinned\\\":true,\\\"message_id\\\":1900700001,\\\"pin_count\\\":1}\"}],\"structuredContent\":{\"pinned\":true,\"message_id\":1900700001,\"pin_count\":1},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_unpin_message",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"unpin_message\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {
+        "pin": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"pinned\\\":false,\\\"message_id\\\":1900700001,\\\"pin_count\\\":0}\"}],\"structuredContent\":{\"pinned\":false,\"message_id\":1900700001,\"pin_count\":0},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_unpin_absent",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"unpin_message\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"pinned\\\":false,\\\"message_id\\\":1900700001,\\\"pin_count\\\":0}\"}],\"structuredContent\":{\"pinned\":false,\"message_id\":1900700001,\"pin_count\":0},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_pin_no_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"pin_message\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ]
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks post_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks post_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_unpin_nonmember",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"unpin_message\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {
+        "pin": true,
+        "remove_member": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_pin_cap",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"pin_message\",\"arguments\":{\"message_id\":1900700002}}}",
+      "setup": {
+        "cap": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"This channel already has 50 pinned messages\"}],\"structuredContent\":{\"error\":\"This channel already has 50 pinned messages\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_pin_cap_replay",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"pin_message\",\"arguments\":{\"message_id\":1900700001}}}",
+      "setup": {
+        "cap": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"pinned\\\":true,\\\"message_id\\\":1900700001,\\\"pin_count\\\":50}\"}],\"structuredContent\":{\"pinned\":true,\"message_id\":1900700001,\"pin_count\":50},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    }
+  ]
+}
