@@ -156,6 +156,19 @@ for path in files:
             status,owner,evidence="ported","WS12 using merged WS14g #190","human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
         if relative == "test/models/work_thread_link_test.rb":
             status,owner,evidence="ported","WS12","work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
+        if relative in {"test/models/board_sla_rule_test.rb","test/models/board_automations/sla_dispatcher_test.rb","test/models/board_automations/digest_dispatcher_test.rb"}:
+            status,owner,evidence="ported","WS12","board_automations_test.rs: pinned Rails rule/SLA/digest vectors, exact status thresholds, recipients, dedupe/new crossings, quiet notes, escaped text, query growth and retained failed-post claims. board_nudge.rs retains claimed-source accessibility and atomic queue/concurrent writer tests."
+        if relative=="test/controllers/rooms/boards/automations_controller_test.rb":
+            status,owner,evidence="ported","WS12","rooms/board_automation_tests.rs: 34 whole HTTP bodies and saved rule/tag/audit facts, membership-before-admin rights, all-status validation before writes, no-op writes, error form drafts, removal and missing/cross-board rules; 10/100 distinct assignees stay flat."
+        if relative=="test/jobs/room/destroy_job_board_automations_test.rb":
+            status,owner,evidence="ported","WS12 using merged WS8 deletion API","board_automation_destroy_job_matches_rails_cleanup_with_digests_and_scheduled_poll_sources: both pinned Rails cleanup outcomes, real dispatch/claim/note and Room::DestroyJob, source inbox rows, scheduled messages, polls, options and votes."
+        if relative=="test/models/board_automations/nudge_pusher_test.rb":
+            status,owner,evidence="existing peer tests","WS17","models/notification_push.rs and integrations/web_push: typed BoardNudgeJob source, delivery-time membership/human/policy checks and exact payload. New dispatcher queue rollback tests preserve the shared job contract."
+        # Deferred here means this original assertion set still needs explicit reconciliation;
+        # peer services/controllers may already be implemented on main. Do not present this
+        # old per-declaration inventory as a count of missing production behaviours.
+        if status=="deferred":
+            evidence="Original declaration still needs a complete named assertion mapping; no claim of a missing production path follows from this status. Consult ws12-board-automations-2-unported.md for the current functional gaps. " + evidence
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")
