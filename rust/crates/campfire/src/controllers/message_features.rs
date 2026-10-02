@@ -2,9 +2,15 @@
 #[cfg(test)]
 mod saved_tests;
 #[cfg(test)]
+mod coercion_tests;
+#[cfg(test)]
 mod scheduled_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod review_tests;
+#[cfg(test)]
+mod rescue_format_tests;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, cast_integer, require_current_user};
@@ -13,6 +19,7 @@ use campfire_db::{Message, Role, Room, Timestamp};
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, halt};
 
 pub(crate) async fn room(c: &mut Ctx) -> Result<Room> {
+    c.rescue_not_found();
     let (_, room) = concerns::set_room(c).await?;
     if room.deleted_at.is_some() {
         return Err(Error::NotFound);
@@ -28,7 +35,8 @@ pub(crate) fn active_human(c: &Ctx) -> Result<()> {
     Ok(())
 }
 
-pub(crate) async fn reachable_message(c: &Ctx) -> Result<Message> {
+pub(crate) async fn reachable_message(c: &mut Ctx) -> Result<Message> {
+    c.rescue_not_found();
     let user_id = require_current_user(c)?.id;
     let id = c
         .param("message_id")
@@ -86,6 +94,24 @@ pub(crate) fn sentence(errors: &campfire_db::Errors) -> String {
     campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
 }
 
+/// Explicit request `to_s` sites, including Ruby Array/Parameters coercion. This does
+/// not change the kit-wide parameter API or ActiveRecord lookup casting.
+pub(crate) fn param_string(value:&Param)->String {
+    use campfire_richtext::ruby::{json_value_to_s,json_value_inspect};
+    fn inspect(value:&Param)->String {
+        match value {
+            Param::Hash(_)=>format!("#<ActionController::Parameters {} permitted: false>",param_string(value)),
+            Param::Array(_)=>param_string(value),
+            value=>json_value_inspect(&value.to_json()),
+        }
+    }
+    match value {
+        Param::Array(values)=>format!("[{}]",values.iter().map(inspect).collect::<Vec<_>>().join(", ")),
+        Param::Hash(map)=>format!("{{{}}}",map.iter().map(|(k,v)|format!("{} => {}",json_value_inspect(&serde_json::Value::String(k.clone())),inspect(v))).collect::<Vec<_>>().join(", ")),
+        value=>json_value_to_s(&value.to_json()),
+    }
+}
+
 pub(crate) fn boolean(value: Option<&Param>) -> bool {
     !matches!(value, None | Some(Param::Null | Param::Bool(false)))
         && !matches!(
@@ -111,40 +137,15 @@ pub(crate) async fn user_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
     Ok(campfire_views::time::Zone::for_user(name.as_deref()))
 }
 
-/// ISO/date/datetime-local inputs used by the builders and a time-only value. Rails'
-/// `Time.zone.parse` chooses DST at folds and advances hourly through gaps.
-/// Its broader Date._parse grammar remains an explicit parity follow-up.
+/// WS8bm2 builder calendar parser; slash-relative expressions use a separate entry
+/// point. Unrecognized input and Ruby's invalid-calendar exception stay distinct.
 pub(crate) fn parse_time(
     raw: &str,
     zone: &campfire_views::time::Zone,
     now: jiff::Timestamp,
 ) -> Result<Option<Timestamp>> {
-    let raw = raw.trim_matches([' ', '\t', '\r', '\n', '\x0b', '\x0c', '\0']);
-    if raw.is_empty() {
-        return Ok(None);
-    }
-    if let Ok(time) = raw.parse::<jiff::Timestamp>() {
-        return Ok(Some(Timestamp::from_jiff(time)));
-    }
-    let civil = raw
-        .parse::<jiff::civil::DateTime>()
-        .ok()
-        .or_else(|| {
-            raw.parse::<jiff::civil::Date>()
-                .ok()
-                .map(|date| date.at(0, 0, 0, 0))
-        })
-        .or_else(|| {
-            raw.parse::<jiff::civil::Time>()
-                .ok()
-                .map(|time| now.to_zoned(zone.tz().clone()).date().to_datetime(time))
-        });
-    civil
-        .map(|time| {
-            campfire_db::slash_commands::time_parser::local_datetime(time, zone.tz())
-                .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid date")))
-        })
-        .transpose()
+    campfire_db::slash_commands::time_parser::parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))
+        .map_err(db_error)
 }
 
 pub(crate) fn poll_view(
@@ -200,3 +201,15 @@ mod links_files_tests;
 mod reminder_tests;
 #[cfg(test)]
 mod quote_integration_tests;
+#[cfg(test)]
+mod root_cache_tests;
+#[cfg(test)]
+mod panel_tests;
+#[cfg(test)]
+mod date_tests;
+
+#[cfg(test)]
+mod provider_tests;
+
+#[cfg(test)]
+mod composer_tests;

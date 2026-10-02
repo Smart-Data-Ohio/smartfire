@@ -1,0 +1,16 @@
+{
+  "reference": "d7c7de92",
+  "status": 200,
+  "body": "{\"status\":\"ephemeral\",\"message\":\"Sent to Bender Bot\"}",
+  "event": {
+    "agent_id": 773018776,
+    "room_id": 486777696,
+    "actor_id": 127326141,
+    "event_type": "slash_command",
+    "outcome": "delivered",
+    "metadata": {
+      "command": "deploy",
+      "arguments": "staging"
+    }
+  }
+}

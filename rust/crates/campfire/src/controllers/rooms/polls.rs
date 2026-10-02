@@ -27,6 +27,7 @@ async fn set_poll(c: &Ctx, room_id: i64) -> Result<Poll> {
 
 pub async fn create(c: &mut Ctx) -> Result {
     let room = prepare(c).await?;
+    c.start_action();
     let result = create_poll(c, &room).await;
     let poll = match result {
         Ok(poll) => poll,
@@ -134,12 +135,14 @@ async fn create_poll(c: &Ctx, room: &campfire_db::Room) -> Result<Poll> {
 pub async fn show(c: &mut Ctx) -> Result {
     let room = prepare(c).await?;
     let poll = set_poll(c, room.id).await?;
+    c.start_action();
     payload(c, poll, StatusCode::OK).await
 }
 
 pub async fn vote(c: &mut Ctx) -> Result {
     let room = prepare(c).await?;
     let poll = set_poll(c, room.id).await?;
+    c.start_action();
     let ids = ballot(c.param("option_ids"))?;
     let user_id = require_current_user(c)?.id;
     let voted = poll.clone();

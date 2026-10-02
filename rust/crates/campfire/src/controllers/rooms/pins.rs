@@ -10,6 +10,7 @@ use campfire_kit::{Ctx, Result, StatusCode, format};
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = message_features::room(c).await?;
+    c.start_action();
     c.respond_to(&[&format::HTML])?;
     let app = c.app().clone();
     let list = c

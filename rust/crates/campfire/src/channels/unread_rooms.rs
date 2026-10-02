@@ -7,9 +7,7 @@ pub struct UnreadRoomsChannel;
 
 /// `UnreadRoomsChannel.stream_name_for(user_id)`: per user, so activity in a room only reaches
 /// its members.
-pub fn stream_name_for(user_id: i64) -> String {
-    format!("user_{user_id}_unreads")
-}
+pub use campfire_db::broadcasts::unread_rooms_stream_name as stream_name_for;
 
 #[async_trait::async_trait]
 impl Channel<CableUser> for UnreadRoomsChannel {

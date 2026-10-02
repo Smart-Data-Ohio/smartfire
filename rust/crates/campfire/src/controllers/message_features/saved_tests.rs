@@ -11,7 +11,7 @@ async fn fixture() -> (TestApp, i64, Arc<campfire_kit::clock::FrozenClock>) {
     ));
     let app = TestApp::boot_with_test_clock(clock.clone())
         .await
-        .expect("WS8bm2 requires default seed");
+        .expect("WS8bm2 requires default seed").without_job_runner().await;
     let message = app
         .db()
         .write(|tx| {
@@ -560,4 +560,168 @@ async fn reminder_dispatch_rolls_back_failed_jobs_and_refires_the_same_inbox_ite
         .await
         .unwrap();
     assert_eq!(first, next);
+}
+
+#[tokio::test]
+async fn review_regression_status_patch_preserves_dispatch_claim() {
+    let (app, message, clock) = fixture().await;
+    let mut browser = app.david();
+    let response = save(&mut browser, message, Some("2026-03-02T16:01:00Z")).await;
+    assert_eq!(response.status, StatusCode::CREATED);
+    let id = response.json()["id"].as_i64().unwrap();
+    let token = browser.authenticity_token().await;
+    clock.set("2026-03-02T16:02:00Z".parse().unwrap());
+    let db = app.db().clone();
+    let (started, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let blocker = tokio::spawn(async move {
+        db.write(move |tx| {
+            assert!(SavedItem::dispatch_reminder(tx, id, tx.now())?);
+            started.send(()).unwrap();
+            wait.recv()
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            Ok(())
+        })
+        .await
+        .unwrap()
+    });
+    ready.await.unwrap();
+    let path = format!("/saved/{id}");
+    let request = browser.send(
+        req(
+            Method::PATCH,
+            &path,
+            json!({"saved_item":{"status":"done"}}),
+        )
+        .header(campfire_kit::csrf::HEADER, &token),
+    );
+    let release = async {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            while app.db().queued_writes() == 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("status write queued after its stale read");
+        release.send(()).unwrap();
+    };
+    let (response, ()) = tokio::join!(request, release);
+    blocker.await.unwrap();
+    assert_eq!(response.status, StatusCode::OK);
+    let row = item(&app, message).await;
+    println!(
+        "REVIEW_RACE after HTTP patch: status={} reminded_at={:?}",
+        row.status, row.reminded_at
+    );
+    let refired = app
+        .db()
+        .write(move |tx| SavedItem::dispatch_reminder(tx, id, tx.now()))
+        .await
+        .unwrap();
+    let jobs: i64 = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM background_jobs WHERE job_class='SavedItem::ReminderPushJob'",
+                [],
+                |r| r.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    println!(
+        "REVIEW_RACE repeated_dispatch={} durable_push_jobs={}",
+        refired, jobs
+    );
+    assert!(
+        !refired,
+        "status-only PATCH erased the claim and dispatched twice"
+    );
+    assert_eq!(
+        row.reminded_at,
+        Some(campfire_db::Timestamp::from_jiff(
+            race_oracle()["claimed"].as_str().unwrap().parse().unwrap()
+        ))
+    );
+    assert_eq!(jobs, 1);
+    assert_eq!(response.json()["reminded_at"], race_oracle()["after_status_response"]["reminded_at"]);
+    assert_eq!(response.json()["remind_at"], race_oracle()["after_status_response"]["remind_at"]);
+}
+
+#[tokio::test]
+async fn review_regression_status_patch_preserves_concurrent_reschedule() {
+    let (app, message, clock) = fixture().await;
+    let mut browser = app.david();
+    let response = save(&mut browser, message, Some("2026-03-02T16:01:00Z")).await;
+    assert_eq!(response.status, StatusCode::CREATED);
+    let id = response.json()["id"].as_i64().unwrap();
+    let token = browser.authenticity_token().await;
+    clock.set("2026-03-02T16:02:00Z".parse().unwrap());
+    let db = app.db().clone();
+    let (started, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let blocker = tokio::spawn(async move {
+        db.write(move |tx| {
+            let mut fresh = SavedItem::find(tx.conn(), id)?;
+            fresh.update(
+                tx,
+                campfire_db::SavedItemChanges {
+                    remind_at: Some(Some(campfire_db::Timestamp::from_jiff(
+                        "2026-03-02T18:00:00Z".parse().unwrap(),
+                    ))),
+                    ..Default::default()
+                },
+            )?;
+            started.send(()).unwrap();
+            wait.recv()
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            Ok(())
+        })
+        .await
+        .unwrap()
+    });
+    ready.await.unwrap();
+    let path = format!("/saved/{id}");
+    let request = browser.send(
+        req(
+            Method::PATCH,
+            &path,
+            json!({"saved_item":{"status":"done"}}),
+        )
+        .header(campfire_kit::csrf::HEADER, &token),
+    );
+    let release = async {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            while app.db().queued_writes() == 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("status write queued after its stale read");
+        release.send(()).unwrap();
+    };
+    let (response, ()) = tokio::join!(request, release);
+    blocker.await.unwrap();
+    assert_eq!(response.status, StatusCode::OK);
+    let row = item(&app, message).await;
+    println!(
+        "REVIEW_RACE after HTTP patch: status={} reminded_at={:?}",
+        row.status, row.reminded_at
+    );
+    assert_eq!(
+        row.remind_at,
+        Some(campfire_db::Timestamp::from_jiff(
+            "2026-03-02T18:00:00Z".parse().unwrap()
+        )),
+        "status PATCH overwrote the concurrent reminder schedule"
+    );
+    assert_eq!(response.json()["remind_at"], race_oracle()["after_reschedule_response"]["remind_at"]);
+    assert_eq!(response.json()["reminded_at"], race_oracle()["after_reschedule_response"]["reminded_at"]);
+}
+
+fn race_oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/review_saved_race.json"
+    ))
+    .unwrap()
 }
