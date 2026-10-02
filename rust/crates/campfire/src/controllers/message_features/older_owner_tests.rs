@@ -121,12 +121,43 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
         let rolled: campfire_db::Result<()> = app
             .db()
             .write(move |tx| {
-                update(tx, &rolled_kind, id, "Rolled back secret")?;
+                if rolled_kind == "fizzy" {
+                    // Match the oracle's private cache write. Card.broadcast_updates
+                    // is an explicit job step, not a CardCache save callback.
+                    let card = fizzy::cards::Card::find(tx.conn(), id)?;
+                    let cache = fizzy::cards::Cache::for_viewer(tx, &card, DAVID)?;
+                    cache.save(tx, Some(&json!({"title":"Rolled back secret"})), None, None)?;
+                } else {
+                    update(tx, &rolled_kind, id, "Rolled back secret")?;
+                }
                 Err(campfire_db::Error::Other("fixture rollback".into()))
             })
             .await;
         assert!(rolled.is_err());
         client.assert_silent().await;
+        if kind == "fizzy" {
+            app.db()
+                .read(move |conn| {
+                    assert!(
+                        fizzy::cards::Cache::find(conn, id, DAVID)?.is_none(),
+                        "rolled-back private cache row persisted"
+                    );
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        } else {
+            app.db()
+                .read(move |conn| {
+                    assert_eq!(
+                        twitter::post::Post::find(conn, id)?.text.as_deref(),
+                        Some("Old text")
+                    );
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
         let queries = app.db().capture_read_queries();
         let writer = queries.clone();
         let operation = kind.clone();
