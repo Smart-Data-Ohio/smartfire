@@ -1,0 +1,15 @@
+Production baseline: approved PR202 05bdf0f7, merged with main 4fd0a74cc on the new branch.
+Only the per-path SELECT ceilings were added before this run. All nine paths exceeded their ceilings; response bytes and statuses still matched pinned Rails.
+
+Raw evidence:
+WORK_WRITE_QUERIES rest_create owned_rows=5/50 Rust_all_SELECTs=209/209 Rails_all_SELECTs=60/60
+WORK_WRITE_QUERIES rest_update owned_rows=5/50 Rust_all_SELECTs=85/85 Rails_all_SELECTs=33/33
+WORK_WRITE_QUERIES rest_result owned_rows=5/50 Rust_all_SELECTs=35/35 Rails_all_SELECTs=26/26
+WORK_WRITE_QUERIES rest_handoff owned_rows=5/50 Rust_all_SELECTs=113/113 Rails_all_SELECTs=55/55
+WORK_WRITE_QUERIES mcp_create owned_rows=5/50 Rust_all_SELECTs=197/197 Rails_all_SELECTs=61/61
+WORK_WRITE_QUERIES mcp_update owned_rows=5/50 Rust_all_SELECTs=85/85 Rails_all_SELECTs=34/34
+WORK_WRITE_QUERIES mcp_board_update owned_rows=5/50 Rust_all_SELECTs=85/85 Rails_all_SELECTs=34/34
+WORK_WRITE_QUERIES mcp_result owned_rows=5/50 Rust_all_SELECTs=35/35 Rails_all_SELECTs=27/27
+WORK_WRITE_QUERIES mcp_handoff owned_rows=5/50 Rust_all_SELECTs=113/113 Rails_all_SELECTs=56/56
+avoidable API reads: ["rest_create: 209 SELECTs exceeds 201", "rest_update: 85 SELECTs exceeds 83", "rest_result: 35 SELECTs exceeds 33", "rest_handoff: 113 SELECTs exceeds 111", "mcp_create: 197 SELECTs exceeds 189", "mcp_update: 85 SELECTs exceeds 83", "mcp_board_update: 85 SELECTs exceeds 83", "mcp_result: 35 SELECTs exceeds 33", "mcp_handoff: 113 SELECTs exceeds 111"]
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2551 filtered out; finished in 7.67s
