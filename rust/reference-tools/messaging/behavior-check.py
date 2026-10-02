@@ -207,8 +207,21 @@ subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"]
 subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
+# The two provider system cases enqueue fetches under ActiveJob::TestHelper
+# (test_helper.rb:13). Production workers would turn their loading/title checks
+# into races. Use the real Rust test app without its runner, not mocked routes.
+paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card"}
+needs_paused_jobs=not args.slice and any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
+test_host=None
+if needs_paused_jobs:
+    build=subprocess.run(["mise","exec","rust@1.98.1","--","cargo","test","--locked","-j2","--manifest-path","rust/Cargo.toml","-p","campfire","--bin","campfire","--no-run","--message-format=json"],cwd=ROOT,env=env,stdout=subprocess.PIPE,text=True,check=True)
+    for line in build.stdout.splitlines():
+        message=json.loads(line)
+        if message.get("reason")=="compiler-artifact" and message.get("target",{}).get("name")=="campfire" and message.get("profile",{}).get("test") and message.get("executable"):
+            test_host=message["executable"]
+    assert test_host,"test-only browser host binary must be built from current source"
 browser_image = "ws8bm-browser-reference-d7c7de92"
-subprocess.run(["docker", "build", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/rooms/browser.Dockerfile"), "-t", browser_image, str(RUST / "parity/docker")], cwd=ROOT, check=True)
+subprocess.run(["docker", "build", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/messaging/browser.Dockerfile"), "-t", browser_image, str(RUST)], cwd=ROOT, check=True)
 env["PARITY_IMAGE"] = browser_image
 visibility_atom = subprocess.check_output([
     "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
@@ -352,11 +365,20 @@ for file in files:
                 run_env["WS8BM_MUTANT"] = variant
             if file == "composer_attach_menu":
                 run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
+            paused_jobs=case in paused_job_cases
+            if paused_jobs:
+                run_env["WS8BM_BROWSER_HOST"]="1"
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log:
                 try:
-                    subprocess.run([reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
-                    process = subprocess.Popen([str(target / "debug/campfire"), "server"], cwd=ROOT, env=run_env, stdout=log, stderr=log)
+                    reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
+                    if paused_jobs:
+                        reference_up += ["-e", "WS8BM_TEST_JOB_ADAPTER=1"]
+                    subprocess.run(reference_up, cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
+                    host_command=[test_host,"controllers::presenters::test_support::ws8bm_browser_host_without_jobs","--exact","--ignored","--nocapture","--test-threads=1"] if paused_jobs else [str(target / "debug/campfire"), "server"]
+                    process = subprocess.Popen(host_command, cwd=ROOT, env=run_env, stdout=log, stderr=log)
+                    if paused_jobs:
+                        print("WS8bm job boundary: Rails ActiveJob::TestAdapter; Rust TestApp::without_job_runner; no selector deadline changes",flush=True)
                     deadline = time.monotonic() + 120
                     while True:
                         if process.poll() is not None:
