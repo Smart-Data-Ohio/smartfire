@@ -703,3 +703,6 @@ mod interleaving_tests;
 
 #[cfg(test)]
 mod normalized_tests;
+
+#[cfg(test)]
+mod render_replay_tests;

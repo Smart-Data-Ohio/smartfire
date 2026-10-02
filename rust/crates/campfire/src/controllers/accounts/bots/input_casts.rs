@@ -213,7 +213,8 @@ fn json_float(text: &str) -> serde_json::Result<f64> {
     let negative = exponent.starts_with('-');
     let digits = exponent.trim_start_matches(['-', '+']);
     let magnitude = digits.parse::<u64>().ok();
-    let exponent = if digits.len() >= 20 || magnitude.is_none_or(|n| n > i64::MAX as u64) {
+    let saturated = digits.len() >= 20 || magnitude.is_none_or(|n| n > i64::MAX as u64);
+    let exponent = if saturated {
         if negative { i64::MIN } else { i64::MAX }
     } else {
         let n = magnitude.expect("bounded exponent") as i64;
@@ -222,8 +223,14 @@ fn json_float(text: &str) -> serde_json::Result<f64> {
     let fractional_digits = mantissa
         .split_once('.')
         .map_or(0, |(_, fraction)| fraction.len() as i64);
-    // Saturation preserves the i32 threshold checks even at the i64 boundary.
-    let exponent = exponent.saturating_sub(fractional_digits);
+    // In the pinned compiled json-2.21.2 parser, the saturated branch keeps its
+    // sign at the i32 cutoffs. The in-range branch's signed decimal adjustment
+    // wraps instead. The Rails boundary vectors cover both execution paths.
+    let exponent = if saturated {
+        exponent
+    } else {
+        exponent.wrapping_sub(fractional_digits)
+    };
     let sign = if text.starts_with('-') { -1.0 } else { 1.0 };
     if exponent > i64::from(i32::MAX) {
         Ok(sign * f64::INFINITY)
@@ -399,13 +406,15 @@ fn boundary_offset(zone: &Zone, seconds: i64, local: bool) -> Option<i64> {
 }
 /// Extended-year rendering uses the same pinned zone periods as the request cast.
 pub(crate) fn extended_datetime(at: Timestamp, zone: &Zone, suffix: bool) -> String {
-    let (proxy, shift) = at.calendar_proxy();
+    let (proxy, _) = at.calendar_proxy();
     let offset = boundary_offset(zone, at.transition_second(), false)
         .unwrap_or_else(|| i64::from(zone.tz().to_offset_info(proxy).offset().seconds()));
-    let local = proxy
-        .checked_add(jiff::SignedDuration::from_secs(offset))
-        .expect("bounded zone offset")
-        .to_zoned(jiff::tz::TimeZone::UTC);
+    // Shift the wide instant before choosing the safe calendar proxy. A valid
+    // local +/-9999 date can lie outside Jiff's offset-reserved UTC envelope.
+    let (local, shift) = at
+        .since(jiff::SignedDuration::from_secs(offset))
+        .calendar_proxy();
+    let local = local.to_zoned(jiff::tz::TimeZone::UTC);
     let year = I512::from(local.year()) + shift;
     let year = if year.is_negative() {
         format!("-{:04}", year.unsigned_abs())

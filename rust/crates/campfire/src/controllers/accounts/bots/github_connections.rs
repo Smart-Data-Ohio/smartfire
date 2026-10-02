@@ -15,6 +15,8 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Result};
 
 pub async fn create(c: &mut Ctx) -> Result {
+    // Rails ParamsWrapper runs before sudo stores the JSON request for replay.
+    c.wrap_parameters("github_connection", None);
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let bot = super::find_active_bot(c, "bot_id").await?;
@@ -191,16 +193,13 @@ pub(crate) fn json_body_params(
 
 /// This action reads only access_token. Keep ordinary types for its other fields,
 /// but don't reject the document for Ruby Integers/floats that Value can't hold.
-/// Extended numbers in unused fields retain their Ruby string representation;
-/// this fallback never participates in any other controller's number parsing.
+/// Preserve large Integer digits and Float#as_json's null for nonfinite values
+/// when sudo stores these ignored fields. Other controllers keep their parser.
 fn unused_json_param(
     raw: &serde_json::value::RawValue,
 ) -> std::result::Result<campfire_kit::Param, campfire_kit::params::ParamError> {
     use campfire_kit::{Param, ParamMap, params::ParamError};
     use serde_json::value::RawValue;
-    if let Ok(value) = serde_json::from_str(raw.get()) {
-        return Ok(Param::from_json(value));
-    }
     Ok(match raw.get().as_bytes().first() {
         Some(b'[') => {
             let values: Vec<Box<RawValue>> =
@@ -222,7 +221,19 @@ fn unused_json_param(
             }
             Param::Hash(fields)
         }
-        _ => Param::Str(super::input_casts::json_token_string(raw).map_err(|_| ParamError::Parse)?),
+        Some(b'-' | b'0'..=b'9') => {
+            let text = super::input_casts::json_token_string(raw).map_err(|_| ParamError::Parse)?;
+            if matches!(text.as_str(), "Infinity" | "-Infinity") {
+                Param::Null
+            } else if let Ok(serde_json::Value::Number(number)) = serde_json::from_str(raw.get())
+                && (raw.get().contains(['.', 'e', 'E']) || number.is_i64() || number.is_u64())
+            {
+                Param::Number(number)
+            } else {
+                Param::Str(text)
+            }
+        }
+        _ => Param::from_json(serde_json::from_str(raw.get()).map_err(|_| ParamError::Parse)?),
     })
 }
 
