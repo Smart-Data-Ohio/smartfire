@@ -1,4 +1,4 @@
-//! HTTP policy/validation around explicitly missing WS11 service operations.
+//! Shared HTTP policy and dispatch to the agent domain services.
 //! REST and MCP enter the same operation after their own callback/throttle order.
 use super::mcp::blank;
 use super::{id, render_result, ruby_i64, text};
@@ -62,6 +62,7 @@ async fn dispatch(
         "get_context" => return super::conversations::context(c, agent_id, args).await,
         "post_message" => return super::conversations::post(c, agent_id, args, rest).await,
         "open_dm" => return super::conversations::dm(c, agent_id, args, rest).await,
+        "create_board_post" | "update_work" | "update_board_post" | "set_result" | "handoff_work" => return super::work_writes::operation(c,agent_id,operation,args,rest).await,
         _ => {}
     }
     let reader = matches!(
@@ -152,8 +153,7 @@ fn preflight(
                 }
             }
         }
-        "post_message" | "start_stream" | "create_poll" | "get_poll" | "list_board_posts"
-        | "create_board_post" => {
+        "post_message" | "start_stream" | "create_poll" | "get_poll" | "list_board_posts" => {
             let missing = if op == "get_poll" {
                 "Poll not found"
             } else {
@@ -176,10 +176,7 @@ fn preflight(
             if !allowed(tx, &agent, cap, Some(room.id))? {
                 return Ok(forbidden(cap));
             }
-            if op == "create_board_post" && !allowed(tx, &agent, "manage_threads", Some(room.id))? {
-                return Ok(forbidden("manage_threads"));
-            }
-            if matches!(op, "list_board_posts" | "create_board_post") && !room.board() {
+            if op == "list_board_posts" && !room.board() {
                 return Ok(fail("Room is not a board", 422));
             }
             if matches!(op, "post_message" | "start_stream") && present(&args, "thread_id") {
@@ -193,13 +190,9 @@ fn preflight(
             }
             if matches!(
                 op,
-                "post_message" | "start_stream" | "create_poll" | "create_board_post"
+                "post_message" | "start_stream" | "create_poll"
             ) {
-                let cap = if op == "create_board_post" {
-                    campfire_db::models::agent_posting::Cap::BoardPosts
-                } else {
-                    campfire_db::models::agent_posting::Cap::Messages
-                };
+                let cap = campfire_db::models::agent_posting::Cap::Messages;
                 if let Some(denial) =
                     campfire_db::models::agent_posting::check_budget(tx, agent_id, cap)?
                 {
@@ -230,23 +223,13 @@ fn preflight(
                 }
             }
         }
-        "get_work" | "update_work" | "update_board_post" | "set_result" | "handoff_work" => {
+        "get_work" => {
             let owned=tx.conn().query_row("SELECT t.room_id FROM channel_threads t JOIN memberships m ON m.room_id=t.room_id WHERE t.id=? AND t.work_status IS NOT NULL AND t.work_owner_id=? AND m.user_id=?",rusqlite::params![number(&args,"work_id"),agent.user_id,agent.user_id],|r|r.get::<_,i64>(0)).optional()?;
             let Some(room) = owned else {
                 return Ok(fail("Work not found", 404));
             };
             if !allowed(tx, &agent, "read_messages", Some(room))? {
                 return Ok(fail("Work not found", 404));
-            }
-            if op != "get_work" && !allowed(tx, &agent, "manage_threads", Some(room))? {
-                return Ok(forbidden("manage_threads"));
-            }
-            if op == "set_result" && !args.as_object().is_some_and(|a| a.contains_key("markdown")) {
-                return Ok(fail("Markdown can't be blank", 422));
-            }
-            if op!="get_work" {
-                let thread=campfire_db::ChannelThread::find(tx.conn(),number(&args,"work_id"))?;
-                if let Some(denial)=super::work_validation::check(tx,&thread,op,&args)? {return Ok(denial);}
             }
         }
         "list_work" | "list_rooms" => {}

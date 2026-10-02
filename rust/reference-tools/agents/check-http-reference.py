@@ -35,6 +35,7 @@ def main():
     files += ["app/controllers/concerns/set_time_zone.rb", "app/models/message/attachment.rb", "app/models/message/pagination.rb", "test/fixtures/files/moon.jpg"]
     files += ["app/controllers/messages_controller.rb", "app/models/user/bot.rb", "app/models/message/bot_webhook_fanout.rb", "app/models/message/mention_preloader.rb", "app/models/agent/delivery.rb", "app/jobs/bot/webhook_job.rb"]
     files += ["app/models/work_thread_link.rb", "app/models/github/pull_request.rb"]
+    files += ["app/services/agents/work_handoffs.rb", "app/models/work_handoff.rb", "app/models/work_thread_event.rb", "app/models/board_tag_assignment.rb"]
     assert (root / "test/fixtures/files/moon.jpg").read_bytes() == (root / "rust/vectors/users_logos/moon.jpg").read_bytes()
     lines = subprocess.check_output([
         "docker", "run", "--rm", "--name", "ws11api-source-check", "--entrypoint", "sha256sum",

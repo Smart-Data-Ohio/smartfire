@@ -16,7 +16,7 @@ mod reads;
 mod pins;
 mod polls;
 mod reactions;
-mod work_validation;
+mod work_writes;
 pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {
