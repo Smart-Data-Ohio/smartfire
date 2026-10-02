@@ -172,7 +172,7 @@ impl TestApp {
     }
 
     pub async fn boot_with_fizzy(clock: campfire_kit::SharedClock, fizzy: crate::integrations::fizzy::State) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy("default", clock, crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(), None, Some(fizzy)).await
+        Self::boot_seed_with_fizzy("default", clock, crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(), (None, None), Some(fizzy)).await
     }
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
@@ -348,7 +348,7 @@ impl TestApp {
         github_app: Option<crate::integrations::github::client::AppClient>,
         github_read: Option<crate::integrations::github::client::ReadClient>,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(name, clock, network, extra, huddle, github_app, None).await
+        Self::boot_seed_with_fizzy(name, clock, network, extra, huddle, (github_app, github_read), None).await
     }
 
     async fn boot_seed_with_fizzy(
@@ -357,7 +357,10 @@ impl TestApp {
         network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
-        github_app: Option<crate::integrations::github::client::AppClient>,
+        (github_app, github_read): (
+            Option<crate::integrations::github::client::AppClient>,
+            Option<crate::integrations::github::client::ReadClient>,
+        ),
         fizzy: Option<crate::integrations::fizzy::State>,
     ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
