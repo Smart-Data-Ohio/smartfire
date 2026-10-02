@@ -389,7 +389,10 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
     let result_markdown = attributes.get("result_markdown").cloned();
     let actor = require_current_user(c)?.clone();
-    let name = attributes.get("name").and_then(messages::string_column);
+    // A submitted nil validates as blank; only an absent key omits the assignment.
+    let name = attributes
+        .get("name")
+        .map(|value| messages::string_column(value).unwrap_or_default());
     let minutes = attributes
         .get("auto_archive_after_minutes")
         .map(archive_minutes)

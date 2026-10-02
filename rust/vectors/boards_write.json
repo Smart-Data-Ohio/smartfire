@@ -1442,6 +1442,261 @@
       "content_type": "application/json; charset=utf-8"
     },
     {
+      "name": "create-null-title",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads.json",
+      "method": "post",
+      "input": {
+        "thread": {
+          "name": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 422,
+      "encoding": "json",
+      "body": "{\"error\":\"Name can't be blank\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "update-null-title",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "name": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 422,
+      "encoding": "json",
+      "body": "{\"error\":\"Name can't be blank\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "update-null-title-result",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "name": null,
+          "result_markdown": "x"
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 422,
+      "encoding": "json",
+      "body": "{\"error\":\"Name can't be blank\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "update-null-status",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "status": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 200,
+      "encoding": "json",
+      "body": "{\"thread\":{\"id\":4,\"name\":\"Planned work\",\"status\":\"active\",\"room_id\":699448332,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T15:10:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"planned\",\"work_owner_id\":712064548,\"work_owner\":{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},\"work_owner_active\":true,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/699448332/threads/4\",\"permalink_url\":\"http://campfire.test/rooms/699448332?thread=4\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":false,\"can_manage_work\":true,\"can_update_work_status\":true,\"can_assign_work\":true,\"can_remove_work\":false}}}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "update-null-tags",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "tags": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 200,
+      "encoding": "json",
+      "body": "{\"thread\":{\"id\":4,\"name\":\"Planned work\",\"status\":\"active\",\"room_id\":699448332,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T15:10:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"planned\",\"work_owner_id\":712064548,\"work_owner\":{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},\"work_owner_active\":true,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/699448332/threads/4\",\"permalink_url\":\"http://campfire.test/rooms/699448332?thread=4\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":false,\"can_manage_work\":true,\"can_update_work_status\":true,\"can_assign_work\":true,\"can_remove_work\":false}}}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "update-null-result",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "result_markdown": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4",
+        "UPDATE channel_threads SET result_markdown='Existing',result_updated_at='2026-03-02 15:00:00' WHERE id=4"
+      ],
+      "status": 200,
+      "encoding": "json",
+      "body": "{\"thread\":{\"id\":4,\"name\":\"Planned work\",\"status\":\"active\",\"room_id\":699448332,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T15:10:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"planned\",\"work_owner_id\":712064548,\"work_owner\":{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},\"work_owner_active\":true,\"work_history\":[{\"id\":1,\"event_type\":\"result_updated\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"actor\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"before\":{\"status\":\"planned\",\"owner\":{\"id\":712064548,\"name\":\"Kevin\"}},\"after\":{\"status\":\"planned\",\"owner\":{\"id\":712064548,\"name\":\"Kevin\"}}}],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/699448332/threads/4\",\"permalink_url\":\"http://campfire.test/rooms/699448332?thread=4\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":false,\"can_manage_work\":true,\"can_update_work_status\":true,\"can_assign_work\":true,\"can_remove_work\":false}}}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "update-null-work-status",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "work_status": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 422,
+      "encoding": "json",
+      "body": "{\"error\":\"Work owner requires work tracking\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "update-null-work-owner",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "work_owner_id": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 200,
+      "encoding": "json",
+      "body": "{\"thread\":{\"id\":4,\"name\":\"Planned work\",\"status\":\"active\",\"room_id\":699448332,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T15:10:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"planned\",\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[{\"id\":1,\"event_type\":\"work_assignment\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"actor\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"before\":{\"status\":\"planned\",\"owner\":{\"id\":712064548,\"name\":\"Kevin\"}},\"after\":{\"status\":\"planned\",\"owner\":null}}],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":773523953,\"name\":\"JZ\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/699448332/threads/4\",\"permalink_url\":\"http://campfire.test/rooms/699448332?thread=4\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":false,\"can_manage_work\":true,\"can_update_work_status\":true,\"can_assign_work\":true,\"can_remove_work\":false}}}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "owner-null-work-owner",
+      "user_id": 712064548,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "work_owner_id": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 403,
+      "encoding": "json",
+      "body": "",
+      "location": null,
+      "content_type": "application/json"
+    },
+    {
+      "name": "update-null-archive",
+      "user_id": 127326141,
+      "path": "/rooms/699448332/threads/4.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "auto_archive_after_minutes": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 422,
+      "encoding": "json",
+      "body": "{\"error\":\"Auto archive after minutes is not available for board posts\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "ordinary-null-title-result",
+      "user_id": 127326141,
+      "path": "/rooms/654632876/threads/1.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "name": null,
+          "result_markdown": "x"
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 422,
+      "encoding": "json",
+      "body": "{\"error\":\"Name can't be blank\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "name": "ordinary-null-archive",
+      "user_id": 127326141,
+      "path": "/rooms/654632876/threads/1.json",
+      "method": "patch",
+      "input": {
+        "thread": {
+          "auto_archive_after_minutes": null
+        }
+      },
+      "setup": [
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,712064548,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(699448332,773523953,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE channel_threads SET work_owner_id=712064548 WHERE id=4"
+      ],
+      "status": 422,
+      "encoding": "json",
+      "body": "{\"error\":\"Auto archive after minutes is not included in the list\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
       "name": "post-creator-status",
       "user_id": 773523953,
       "path": "/rooms/699448332/threads/4.json",

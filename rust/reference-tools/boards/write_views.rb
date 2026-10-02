@@ -100,6 +100,23 @@ add.call('ordinary-untrack',admin,'/rooms/654632876/threads/1.json','patch',{thr
  add.call(name,admin,path,method,{thread:input},[],status)
  fixtures.last[:encoding]='json'
 end
+[
+ ['create-null-title', 'post', create+'.json', {name:nil}, [], 422],
+ ['update-null-title', 'patch', update+'.json', {name:nil}, [], 422],
+ ['update-null-title-result', 'patch', update+'.json', {name:nil,result_markdown:'x'}, [], 422],
+ ['update-null-status', 'patch', update+'.json', {status:nil}, [], 200],
+ ['update-null-tags', 'patch', update+'.json', {tags:nil}, [], 200],
+ ['update-null-result', 'patch', update+'.json', {result_markdown:nil}, ["UPDATE channel_threads SET result_markdown='Existing',result_updated_at='2026-03-02 15:00:00' WHERE id=4"], 200],
+ ['update-null-work-status', 'patch', update+'.json', {work_status:nil}, [], 422],
+ ['update-null-work-owner', 'patch', update+'.json', {work_owner_id:nil}, [], 200],
+ ['owner-null-work-owner', 'patch', update+'.json', {work_owner_id:nil}, [], 403],
+ ['update-null-archive', 'patch', update+'.json', {auto_archive_after_minutes:nil}, [], 422],
+ ['ordinary-null-title-result', 'patch', '/rooms/654632876/threads/1.json', {name:nil,result_markdown:'x'}, [], 422],
+ ['ordinary-null-archive', 'patch', '/rooms/654632876/threads/1.json', {auto_archive_after_minutes:nil}, [], 422]
+].each do |name,method,path,input,setup,status|
+ add.call(name,name=='owner-null-work-owner' ? owner : admin,path,method,{thread:input},setup,status)
+ fixtures.last[:encoding]='json'
+end
 creator_setup=["UPDATE channel_threads SET creator_id=773523953 WHERE id=4"]
 add.call('post-creator-status',observer,update+'.json','patch',{thread:{work_status:'done'}},creator_setup)
 add.call('post-creator-assign',observer,update+'.json','patch',{thread:{work_owner_id:394959859}},creator_setup)

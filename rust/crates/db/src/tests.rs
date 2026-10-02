@@ -42,6 +42,7 @@ mod calendar_dispatch_test;
 mod channel_thread_test;
 mod board_test;
 mod work_mutations_test;
+mod work_recorder_review_test;
 mod work_read_test;
 mod calendar_event_test;
 mod differential_test;
