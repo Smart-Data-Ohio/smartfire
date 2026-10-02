@@ -157,14 +157,12 @@ pub(super) fn render_work_header(
     thread: &ChannelThread,
     viewer: &campfire_db::User,
 ) -> campfire_db::Result<campfire_views::channel_threads::Work> {
-    let facts = crate::controllers::presenters::boards::rows(
-        p, thread.room_id, std::slice::from_ref(thread),
-    )?.remove(0);
+    let (owner_label,owner_agent) = crate::controllers::presenters::boards::owner(p,thread)?;
     Ok(campfire_views::channel_threads::Work {
         id: thread.id,
         status_label: thread.work_status_label(),
-        owner_label: facts.owner_label,
-        owner_agent: facts.agent,
+        owner_label,
+        owner_agent,
         can_manage: thread.work_manageable_by(p.conn, viewer)?,
         history: crate::controllers::presenters::board_posts::history(p, thread.id)?,
         links: crate::controllers::presenters::board_posts::links(p, thread)?,

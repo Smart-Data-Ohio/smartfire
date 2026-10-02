@@ -5,7 +5,6 @@ use campfire_views::{
     channel_threads::board::{History, Link, Links, NewPost, Post},
     helpers as h,
 };
-use rusqlite::params;
 
 pub fn new_post(p: &Presenter<'_>, room: &Room, viewer: &User) -> Result<NewPost> {
     let (humans, agents) = ChannelThread::work_owner_candidates_for(p.conn, room.id)?;
@@ -108,10 +107,17 @@ pub fn history_records(
     records: Vec<campfire_db::WorkThreadEvent>,
 ) -> Result<Vec<History>> {
     // Rails includes(:actor); preload once, preserving the missing-actor fallback.
-    let ids = records.iter().filter_map(|record| record.actor_id)
-        .collect::<std::collections::BTreeSet<_>>().into_iter().collect::<Vec<_>>();
-    let actors = User::where_ids(p.conn, &ids)?.into_iter()
-        .map(|user| (user.id, user.name)).collect::<std::collections::HashMap<_, _>>();
+    let ids = records
+        .iter()
+        .filter_map(|record| record.actor_id)
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let actors = if ids.is_empty() {
+        std::collections::HashMap::new()
+    } else {
+        User::where_ids(p.conn, &ids)?.into_iter().map(|user| (user.id,user.name)).collect()
+    };
     records
         .into_iter()
         .map(|record| {
@@ -167,37 +173,44 @@ pub fn history_records(
 pub fn links(p: &Presenter<'_>, thread: &ChannelThread) -> Result<Links> {
     let rows = campfire_db::WorkThreadLink::for_thread(p.conn, thread.id)?;
     let items = link_items(p, thread.room_id, rows)?;
-    let mut stmt=p.conn.prepare("SELECT id FROM events WHERE room_id=? AND cancelled_at IS NULL AND COALESCE(ends_at,starts_at)>=? AND id NOT IN (SELECT event_id FROM work_thread_links WHERE channel_thread_id=? AND event_id IS NOT NULL) ORDER BY starts_at,id")?;
-    let ids = stmt
-        .query_map(
-            params![thread.room_id, Timestamp::from_jiff(p.now), thread.id],
-            |r| r.get::<_, i64>(0),
-        )?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    let events = ids
-        .into_iter()
-        .map(|id| {
-            let e = CalendarEvent::find(p.conn, id)?;
-            let zone = campfire_views::time::Zone::for_user(Some(&e.time_zone));
-            Ok((
-                format!(
-                    "{} — {}",
-                    e.title,
-                    zone.format(e.starts_at.jiff(), "%b %-d, %Y, %-I:%M %p")
-                ),
-                id,
-            ))
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let events = CalendarEvent::work_link_candidates(
+        p.conn,
+        thread.room_id,
+        thread.id,
+        Timestamp::from_jiff(p.now),
+    )?
+    .into_iter()
+    .map(|e| {
+        let zone = campfire_views::time::Zone::for_user(Some(&e.time_zone));
+        Ok((
+            format!(
+                "{} — {}",
+                e.title,
+                zone.format(e.starts_at.jiff(), "%b %-d, %Y, %-I:%M %p")
+            ),
+            e.id,
+        ))
+    })
+    .collect::<Result<Vec<_>>>()?;
     Ok(Links { items, events })
 }
 
 /// The row context renders linked items, without the panel's unused event choices.
-pub fn link_items(p: &Presenter<'_>, room_id: i64, rows: Vec<campfire_db::WorkThreadLink>) -> Result<Vec<Link>> {
+pub fn link_items(
+    p: &Presenter<'_>,
+    room_id: i64,
+    rows: Vec<campfire_db::WorkThreadLink>,
+) -> Result<Vec<Link>> {
     let mut items = Vec::new();
     for record in rows {
-        let (id, kind, pr, event, url, title) = (record.id, record.kind, record.github_pull_request_id,
-            record.event_id, record.url, record.title);
+        let (id, kind, pr, event, url, title) = (
+            record.id,
+            record.kind,
+            record.github_pull_request_id,
+            record.event_id,
+            record.url,
+            record.title,
+        );
         let mut link = Link {
             id,
             kind: kind.clone(),

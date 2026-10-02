@@ -7,6 +7,84 @@ use crate::broadcasts::{TurboAction, TurboStream};
 pub const BOARD_POSTS_PER_PAGE: i64 = 50;
 pub const BOARD_POSTS_MAX_PAGE: i64 = 20;
 
+/// Live owner labels/availability for one page. This is a read snapshot, not write authority.
+pub struct WorkOwners {
+    users: HashMap<i64, User>,
+    available: HashMap<(i64, i64), bool>,
+}
+impl WorkOwners {
+    pub fn owner(&self, post: &ChannelThread) -> Option<&User> {
+        post.work_owner_id.and_then(|id| self.users.get(&id))
+    }
+    pub fn available(&self, post: &ChannelThread) -> bool {
+        post.work_owner_id.is_some_and(|id| {
+            self.available
+                .get(&(post.room_id, id))
+                .copied()
+                .unwrap_or(false)
+        })
+    }
+    fn load(conn: &Connection, pairs: &[(i64, i64)]) -> Result<Self> {
+        if pairs.is_empty() {
+            return Ok(Self {users: HashMap::new(), available: HashMap::new()});
+        }
+        let ids = pairs
+            .iter()
+            .map(|&(_, id)| id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let users = User::where_ids(conn, &ids)?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect::<HashMap<_, _>>();
+        let room_ids = pairs
+            .iter()
+            .map(|&(room, _)| room)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let members = Membership::for_rooms(conn, &room_ids)?
+            .into_iter()
+            .map(|member| (member.room_id, member.user_id))
+            .collect::<HashSet<_>>();
+        let bot_ids = users
+            .values()
+            .filter(|user| user.is_active() && user.is_bot())
+            .map(|user| user.id)
+            .collect::<Vec<_>>();
+        let agents = crate::Agent::for_users(conn, &bot_ids)?
+            .into_iter()
+            .map(|agent| (agent.user_id, agent.id))
+            .collect::<HashMap<_, _>>();
+        let requests = pairs
+            .iter()
+            .filter_map(|&(room, user)| agents.get(&user).map(|&agent| (agent, Some(room))))
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let capabilities = crate::Agent::capabilities_for_rooms(conn, "post_messages", &requests)?;
+        let available = pairs
+            .iter()
+            .map(|&(room, id)| {
+                let active = users.get(&id).is_some_and(|user| {
+                    user.is_active()
+                        && members.contains(&(room, id))
+                        && (!user.is_bot()
+                            || agents.get(&id).is_some_and(|agent| {
+                                capabilities
+                                    .get(&(*agent, Some(room)))
+                                    .copied()
+                                    .unwrap_or(false)
+                            }))
+                });
+                ((room, id), active)
+            })
+            .collect();
+        Ok(Self { users, available })
+    }
+}
+
 /// `[[params[:page].to_s.to_i, 1].max, BOARD_POSTS_MAX_PAGE].min`, including Ruby's
 /// numeric prefix and inter-digit underscores. Saturation preserves the clamp for big ints.
 pub fn board_page_number(value: &str) -> i64 {
@@ -125,46 +203,28 @@ impl ChannelThread {
         room_id: i64,
         posts: impl IntoIterator<Item = &'a Self>,
     ) -> Result<HashMap<i64, bool>> {
-        let ids = posts
+        let pairs = posts
             .into_iter()
             .filter_map(|post| post.work_owner_id)
-            .collect::<HashSet<_>>()
-            .into_iter()
+            .map(|id| (room_id, id))
             .collect::<Vec<_>>();
-        if ids.is_empty() {
-            return Ok(HashMap::new());
-        }
-        let users = User::where_ids(conn, &ids)?
+        Ok(WorkOwners::load(conn, &pairs)?
+            .available
             .into_iter()
-            .map(|user| (user.id, user))
-            .collect::<HashMap<_, _>>();
-        let members = Membership::for_room(conn, room_id)?
-            .into_iter()
-            .map(|m| m.user_id)
-            .collect::<HashSet<_>>();
-        ids.into_iter()
-            .map(|id| {
-                let available = match users.get(&id) {
-                    Some(user) if user.is_active() && members.contains(&id) => {
-                        if user.is_bot() {
-                            match crate::Agent::for_user(conn, id)? {
-                                Some(agent) => {
-                                    agent.active(conn)?
-                                        && agent.can(conn, "post_messages", Some(room_id))?
-                                }
-                                None => false,
-                            }
-                        } else {
-                            true
-                        }
-                    }
-                    _ => false,
-                };
-                Ok((id, available))
-            })
-            .collect()
+            .map(|((_, id), active)| (id, active))
+            .collect())
     }
 
+    /// WorkThreadsController/board includes, across every room and owner on the page.
+    pub fn work_owners(conn: &Connection, posts: &[Self]) -> Result<WorkOwners> {
+        WorkOwners::load(
+            conn,
+            &posts
+                .iter()
+                .filter_map(|post| post.work_owner_id.map(|owner| (post.room_id, owner)))
+                .collect::<Vec<_>>(),
+        )
+    }
     pub fn work_status_label(&self) -> String {
         match self.work_status.as_deref() {
             Some("planned") => "Planned".into(),

@@ -207,6 +207,17 @@ impl Membership {
         )
     }
 
+    pub fn for_rooms(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM memberships WHERE room_id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
     /// `room.memberships.find_by(user:)` / `user.memberships.find_by(room_id:)`
     pub fn find_by_room_and_user(
         conn: &Connection,

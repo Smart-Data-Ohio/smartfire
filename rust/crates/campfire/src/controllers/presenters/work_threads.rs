@@ -7,27 +7,19 @@ use std::collections::{BTreeSet, HashMap};
 pub fn rows(p: &Presenter<'_>, threads: &[ChannelThread], viewer: &User) -> Result<Vec<Row>> {
     let ids = threads.iter().map(|thread| thread.id).collect::<Vec<_>>();
     let counts = ChannelThread::board_reply_counts(p.conn, &ids)?;
-    let owner_ids = threads
+    let room_ids = threads
         .iter()
-        .filter_map(|thread| thread.work_owner_id)
+        .map(|thread| thread.room_id)
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect::<Vec<_>>();
-    let owners = User::where_ids(p.conn, &owner_ids)?
+    let rooms = Room::for_ids(p.conn, &room_ids)?;
+    let names = Room::display_names_for(p.conn, &rooms, Some(viewer))?;
+    let rooms = rooms
         .into_iter()
-        .map(|user| (user.id, user))
+        .map(|room| (room.id, room))
         .collect::<HashMap<_, _>>();
-    let mut groups: HashMap<i64, Vec<&ChannelThread>> = HashMap::new();
-    for thread in threads {
-        groups.entry(thread.room_id).or_default().push(thread);
-    }
-    let mut rooms = HashMap::new();
-    for (room_id, group) in groups {
-        let room = Room::find(p.conn, room_id)?;
-        let name = p.room_display_name(&room, Some(viewer))?;
-        let available = ChannelThread::board_owner_active_map(p.conn, room_id, group)?;
-        rooms.insert(room_id, (room, name, available));
-    }
+    let owners = ChannelThread::work_owners(p.conn, threads)?;
     let mut links: HashMap<i64, Vec<WorkThreadLink>> = HashMap::new();
     for link in WorkThreadLink::for_threads(p.conn, &ids)? {
         links.entry(link.channel_thread_id).or_default().push(link);
@@ -35,10 +27,12 @@ pub fn rows(p: &Presenter<'_>, threads: &[ChannelThread], viewer: &User) -> Resu
     threads
         .iter()
         .map(|thread| {
-            let (room, room_name, available) = &rooms[&thread.room_id];
-            let owner = thread.work_owner_id.and_then(|id| owners.get(&id));
+            let room = rooms
+                .get(&thread.room_id)
+                .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
+            let owner = owners.owner(thread);
             let owner_label = match owner {
-                Some(owner) if available.get(&owner.id).copied().unwrap_or(false) => {
+                Some(owner) if owners.available(thread) => {
                     format!("Owner: {}", owner.name)
                 }
                 Some(owner) => format!("Owner unavailable ({})", owner.name),
@@ -54,7 +48,7 @@ pub fn rows(p: &Presenter<'_>, threads: &[ChannelThread], viewer: &User) -> Resu
                 },
                 status: thread.work_status.clone().unwrap_or_default(),
                 status_label: thread.work_status_label(),
-                room_name: room_name.clone(),
+                room_name: names[&thread.room_id].clone(),
                 owner_label,
                 agent: owner.is_some_and(User::is_bot),
                 count: counts.get(&thread.id).copied().unwrap_or_default(),

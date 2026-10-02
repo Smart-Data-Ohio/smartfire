@@ -4,6 +4,25 @@ use campfire_db::{ChannelThread, ThreadTag, Timestamp, User};
 use campfire_views::rooms::boards::{Listing, Row};
 use std::collections::HashMap;
 
+fn owner_label(
+    owners: &campfire_db::models::channel_thread::WorkOwners,
+    post: &ChannelThread,
+) -> (String, bool) {
+    let owner = owners.owner(post);
+    let label = match owner {
+        Some(owner) if owners.available(post) => owner.name.clone(),
+        Some(owner) => format!("Owner unavailable ({})", owner.name),
+        None => "Unassigned".into(),
+    };
+    (label, owner.is_some_and(User::is_bot))
+}
+
+/// The ordinary work pane uses only the owner facts, not the board row's counts or tags.
+pub fn owner(p: &Presenter<'_>, post: &ChannelThread) -> campfire_db::Result<(String, bool)> {
+    let owners = ChannelThread::work_owners(p.conn, std::slice::from_ref(post))?;
+    Ok(owner_label(&owners, post))
+}
+
 pub fn rows(
     p: &Presenter<'_>,
     room_id: i64,
@@ -12,15 +31,7 @@ pub fn rows(
     let ids = posts.iter().map(|post| post.id).collect::<Vec<_>>();
     let replies = ChannelThread::board_reply_counts(p.conn, &ids)?;
     let links = ChannelThread::board_link_counts(p.conn, &ids)?;
-    let available = ChannelThread::board_owner_active_map(p.conn, room_id, posts)?;
-    let owner_ids = posts
-        .iter()
-        .filter_map(|post| post.work_owner_id)
-        .collect::<Vec<_>>();
-    let owners = User::where_ids(p.conn, &owner_ids)?
-        .into_iter()
-        .map(|user| (user.id, user))
-        .collect::<HashMap<_, _>>();
+    let owners = ChannelThread::work_owners(p.conn, posts)?;
     let mut tags: HashMap<i64, Vec<String>> = HashMap::new();
     for tag in ThreadTag::for_threads(p.conn, &ids)? {
         tags.entry(tag.channel_thread_id)
@@ -30,14 +41,7 @@ pub fn rows(
     posts
         .iter()
         .map(|post| {
-            let owner = post.work_owner_id.and_then(|id| owners.get(&id));
-            let owner_label = match owner {
-                Some(owner) if available.get(&owner.id).copied().unwrap_or(false) => {
-                    owner.name.clone()
-                }
-                Some(owner) => format!("Owner unavailable ({})", owner.name),
-                None => "Unassigned".into(),
-            };
+            let (owner_label, agent) = owner_label(&owners, post);
             Ok(Row {
                 id: post.id,
                 room_id,
@@ -50,7 +54,7 @@ pub fn rows(
                     .into(),
                 owner_id: post.work_owner_id,
                 owner_label,
-                agent: owner.is_some_and(|user| user.is_bot()),
+                agent,
                 tags: tags.remove(&post.id).unwrap_or_default(),
                 replies: replies.get(&post.id).copied().unwrap_or_default(),
                 links: links.get(&post.id).copied().unwrap_or_default(),

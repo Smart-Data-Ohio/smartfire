@@ -117,6 +117,20 @@ impl CalendarEvent {
         )?
         .or_not_found("Event")
     }
+    /// Upcoming, unlinked choices for the work pane; retain Rails' starts_at/id order.
+    pub fn work_link_candidates(
+        conn: &Connection,
+        room_id: i64,
+        thread_id: i64,
+        now: Timestamp,
+    ) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM events WHERE room_id=? AND cancelled_at IS NULL AND COALESCE(ends_at,starts_at)>=? AND id NOT IN (SELECT event_id FROM work_thread_links WHERE channel_thread_id=? AND event_id IS NOT NULL) ORDER BY starts_at,id",
+            params![room_id, now, thread_id],
+            Self::from_row,
+        )
+    }
     /// The controller's RoomScoped lookup. Always require membership, even for administrators
     /// and open rooms: direct event URLs do not join a room.
     pub fn find_visible(conn: &Connection, room_id: i64, id: i64, user_id: i64) -> Result<Self> {

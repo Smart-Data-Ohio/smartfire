@@ -208,7 +208,16 @@ pub fn thread_header(
         return Ok(String::new());
     };
     let pr = PullRequest::find(conn, id)?;
-    let data = shared_card(conn, &pr, thread.room_id, true)?;
+    thread_header_for_pull_request(conn, ctx, thread, &pr)
+}
+
+fn thread_header_for_pull_request(
+    conn: &Connection,
+    ctx: &campfire_views::ViewContext<'_>,
+    thread: &campfire_db::ChannelThread,
+    pr: &PullRequest,
+) -> Result<String> {
+    let data = shared_card(conn, pr, thread.room_id, true)?;
     Ok(campfire_views::github::thread_header(
         ctx,
         thread.room_id,
@@ -220,18 +229,31 @@ pub fn thread_header(
 impl super::Presenter<'_> {
     /// The owned thread page calls WS15g's private-safe adapter after room authorization.
     /// Rendering records refresh intent; the caller enqueues after releasing this reader.
-    pub fn github_thread_header(&self, thread: &campfire_db::ChannelThread) -> Result<campfire_views::helpers::Html> {
+    pub fn github_thread_header(
+        &self,
+        thread: &campfire_db::ChannelThread,
+    ) -> Result<campfire_views::helpers::Html> {
         use rusqlite::OptionalExtension;
         let id = self.conn.query_row(
             "SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=? AND room_id=?",
             rusqlite::params![thread.id, thread.room_id], |r| r.get::<_, i64>(0),
         ).optional()?;
-        if let Some(id) = id {
-            let pr = PullRequest::find(self.conn, id)?;
-            if pr.stale(campfire_db::Timestamp::from_jiff(self.now)) { self.remember_github_refresh(id); }
+        let pr = id.map(|id| PullRequest::find(self.conn, id)).transpose()?;
+        if let Some(pr) = &pr
+            && pr.stale(campfire_db::Timestamp::from_jiff(self.now))
+        {
+            self.remember_github_refresh(pr.id);
         }
-        let base = self.cache_base_url.as_deref().unwrap_or("http://example.org");
-        super::page::render_detached_in_zone(self.app, None, base, &self.render_zone, |ctx| thread_header(self.conn, ctx, thread))
-            .map(campfire_views::helpers::raw)
+        let base = self
+            .cache_base_url
+            .as_deref()
+            .unwrap_or("http://example.org");
+        super::page::render_detached_in_zone(self.app, None, base, &self.render_zone, |ctx| {
+            match &pr {
+                Some(pr) => thread_header_for_pull_request(self.conn, ctx, thread, pr),
+                None => Ok(String::new()),
+            }
+        })
+        .map(campfire_views::helpers::raw)
     }
 }

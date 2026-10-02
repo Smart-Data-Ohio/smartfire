@@ -59,6 +59,48 @@ fn sentence(names: &[String]) -> String {
     }
 }
 impl Room {
+    /// Batch the ordinary (SQLite LOWER ordering) room-display-name association path.
+    /// Do not pass these rows through the Ruby-sorted preloaded-members path: non-ASCII
+    /// names have different ordering there. Named direct rooms need no user reads.
+    pub fn display_names_for(
+        conn: &Connection,
+        rooms: &[Room],
+        for_user: Option<&User>,
+    ) -> Result<std::collections::HashMap<i64, String>> {
+        let ids = rooms
+            .iter()
+            .filter(|room| room.direct() && room.name.as_deref().is_none_or(is_blank))
+            .map(|room| room.id)
+            .collect::<Vec<_>>();
+        let mut members: std::collections::HashMap<i64, Vec<User>> = Default::default();
+        if !ids.is_empty() {
+            for (room, user) in query_all(
+                conn,
+                "SELECT users.*, memberships.room_id AS name_room_id FROM users JOIN memberships ON users.id=memberships.user_id WHERE memberships.room_id IN (SELECT value FROM json_each(?)) ORDER BY memberships.room_id, LOWER(users.name)",
+                [serde_json::json!(ids).to_string()],
+                |row| Ok((row.get::<_, i64>("name_room_id")?, User::from_row(row)?)),
+            )? {
+                members.entry(room).or_default().push(user);
+            }
+        }
+        Ok(rooms
+            .iter()
+            .map(|room| {
+                let name = if room.direct() && room.name.as_deref().is_none_or(is_blank) {
+                    let list = members
+                        .get(&room.id)
+                        .into_iter()
+                        .flatten()
+                        .filter(|user| for_user.is_none_or(|viewer| viewer.id != user.id))
+                        .collect::<Vec<_>>();
+                    display_ordered_members(for_user, &list).unwrap_or_default()
+                } else {
+                    room.name.clone().unwrap_or_default()
+                };
+                (room.id, name)
+            })
+            .collect())
+    }
     pub fn direct_group_capable(&self, conn: &Connection) -> Result<bool> {
         let current = Room::find(conn, self.id)?;
         Ok(current.direct()

@@ -33,7 +33,7 @@ mod tag_assignment;
 mod work;
 mod work_listing;
 pub use agent_work::{AgentWorkChanges, tag_names_from_value};
-pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, board_page_number};
+pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_page_number};
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
@@ -191,6 +191,17 @@ impl ChannelThread {
         )
     }
 
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM channel_threads WHERE id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
     /// `message.channel_thread`: the thread started from a message.
     pub fn find_by_parent_message(conn: &Connection, message_id: i64) -> Result<Option<Self>> {
         query_one(

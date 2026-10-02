@@ -57,6 +57,17 @@ impl WorkThreadEvent {
             Self::from_row,
         )
     }
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM work_thread_events WHERE id IN (SELECT value FROM json_each(?))",
+            [json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
     pub fn for_thread(conn: &Connection, thread_id: i64) -> Result<Vec<Self>> {
         query_all(
             conn,
