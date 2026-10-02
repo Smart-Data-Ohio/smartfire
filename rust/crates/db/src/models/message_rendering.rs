@@ -191,9 +191,11 @@ impl RenderingRecords {
             &room_ids,
             |r| Ok((Room::from_row(r)?, r.get::<_, Option<String>>("icon_name")?)),
         )?;
-        data.pr_thread_stamps = rows(conn,
-            "SELECT room_id,MAX(updated_at) FROM github_pull_request_threads WHERE room_id IN ($ids) GROUP BY room_id",
-            &room_ids, |r| Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
+        if !payload {
+            data.pr_thread_stamps = rows(conn,
+                "SELECT room_id,MAX(updated_at) FROM github_pull_request_threads WHERE room_id IN ($ids) GROUP BY room_id",
+                &room_ids, |r| Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
+        }
         for (room, icon) in rooms {
             data.room_icons.insert(room.id, icon);
             data.rooms.insert(room.id, room);

@@ -30,6 +30,7 @@ for script, filename in [
     ('permissions_http_contract.rb', 'agent_permissions_http.json'),
     ('review192_contract.rb', 'agent_review192_http.json'),
     ('review192r2_attachment_diagnosis.rb', 'agent_review192r2_attachment.json'),
+    ('review192r3_attachment_diagnosis.rb', 'agent_review192r3_attachment.json'),
 ]:
     with (output / filename).open('w') as stdout, (output / (script + '.log')).open('w') as stderr:
         result = subprocess.run([

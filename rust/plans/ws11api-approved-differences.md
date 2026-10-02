@@ -33,3 +33,35 @@ Only random storage keys and attachment/variant surrogate IDs are omitted;
 relationships and exact counts are checked. Native media versions may change
 encoded image size/checksum; the pinned runtime is the canonical state oracle.
 This approval does not permit other status, header, response or state drift.
+
+## Fresh video in a closed thread (PR #192 third review)
+
+The maintainer also approved returning Rust 201 for a fresh uploaded copy of
+fixture video 9. Pinned Rails returns 500 with
+`ActiveStorage::FileNotFoundError: ActiveStorage::FileNotFoundError`, raised at
+`activestorage/lib/active_storage/service/disk_service.rb:152`, in
+`DiskService#stream` rescuing `Errno::ENOENT`. The preview image upload is deferred
+until commit, but `VariantWithRecord#transform_blob` opens that image at line 48
+while `ChannelThread#post_message!` still has one transaction open. This is an
+accidental upload-ordering defect, not a validation. Rails rolls back the message,
+thread reopening, preview/variant rows and jobs; the separately uploaded source
+blob/file survives.
+
+The `fresh_video_closed_thread` vector in `agent_review192r3_attachment.json`
+retains that failing request and its rollback state. Its separate approved state
+comes from ordinary Rails preprocessing outside the posting transaction, followed
+by the same HTTP request: the preview is generated and analyzed first, then the
+WebP variant is generated. This produces Rails' successful response and a valid
+media-state oracle without patching the failing request or masking either status.
+Rust returns 201, commits the message and reopening, retains the source, preview
+and WebP files, and queues variant analysis and thread push with the recorded
+logical arguments. Every nonrandom row field and every file size is asserted in
+the pinned runtime. Queue execution/insertion order is not an API contract.
+
+The JPEG discard is scoped to the original JPEG source, before a video source is
+replaced by its JPEG preview. The documented JPEG file-absence exception above
+is retained; it cannot apply to a video's JPEG preview. New/reused video variants
+and reused existing JPEG variants retain their files. Injected in-transaction
+failures remove staged preview/variant files and roll back every domain/media/job
+row. These narrow approvals authorize neither other missing files nor other
+response/state differences.

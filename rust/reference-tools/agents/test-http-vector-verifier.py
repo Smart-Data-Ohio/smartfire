@@ -75,6 +75,36 @@ class VerifierInjections(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 api['compare_vectors'](json.dumps(changed).encode(), expected, 'approved drift')
 
+    def test_approved_video_difference_is_narrow(self):
+        root = Path(__file__).resolve().parents[2]
+        vector = json.loads((root / 'vectors/agent_review192r3_attachment.json').read_bytes())
+        api['check_approved_video_difference'](vector)
+        changes = [
+            ('rails', 'status', 201), ('approved', 'status', 500),
+            ('exception', 'open_transactions', 0), ('rails_state', 'jobs', ['InjectedJob']),
+            ('rails_state', 'row_deltas', {'messages': 1}), ('state', 'variant_count', 0),
+        ]
+        for section, field, value in changes:
+            changed = deepcopy(vector)
+            changed['cases'][0][section][field] = value
+            with self.assertRaises(AssertionError):
+                api['check_approved_video_difference'](changed)
+        for index in range(3):
+            changed = deepcopy(vector)
+            changed['cases'][0]['state']['blobs'][index]['file_exists'] = False
+            with self.assertRaises(AssertionError):
+                api['check_approved_video_difference'](changed)
+
+    def test_approved_video_state_and_headers_are_not_masked(self):
+        root = Path(__file__).resolve().parents[2]
+        vector = json.loads((root / 'vectors/agent_review192r3_attachment.json').read_bytes())
+        expected = json.dumps(vector).encode()
+        for section, field, value in [('state', 'jobs', []), ('state', 'attachments', []), ('approved', 'headers', {}), ('approved', 'response', '{}')]:
+            changed = deepcopy(vector)
+            changed['cases'][0][section][field] = value
+            with self.assertRaises(AssertionError):
+                api['compare_vectors'](json.dumps(changed).encode(), expected, 'approved video drift')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -210,7 +210,7 @@ async fn pr192_board_filters_query_count_is_flat() {
     work_queries(true).await;
 }
 
-async fn snapshot(app: &TestApp) -> String {
+pub(super) async fn snapshot(app: &TestApp) -> String {
     use sha2::{Digest, Sha256};
     let rows = app
         .db()
@@ -248,7 +248,7 @@ async fn snapshot(app: &TestApp) -> String {
         .unwrap();
     format!("{:x}", Sha256::digest(serde_json::to_vec(&rows).unwrap()))
 }
-fn stored_files(app: &TestApp) -> Vec<std::path::PathBuf> {
+pub(super) fn stored_files(app: &TestApp) -> Vec<std::path::PathBuf> {
     fn visit(root: &std::path::Path, path: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
         for entry in std::fs::read_dir(path).unwrap() {
             let path = entry.unwrap().path();

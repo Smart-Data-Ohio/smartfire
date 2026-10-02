@@ -1,0 +1,341 @@
+{
+  "notes": [
+    "Maintainer-approved difference: Rails fresh-video preview opens an unuploaded file before commit (FileNotFoundError); Rust does not reproduce this accidental crash and returns 201 with usable preview and WebP files.",
+    "Rails failure is captured unchanged first, including rollback and transaction depth. The successful body/state oracle uses ordinary Rails preprocessing in committed transactions, analyzes the preview, then posts the same source. This avoids the defect without patching the request or masking its outcome.",
+    "All nonrandom message/thread/blob fields, attachment relationships, file sizes and logical queued-job arguments are checked. Random storage keys and attachment surrogate IDs are omitted."
+  ],
+  "cases": [
+    {
+      "name": "fresh_video_closed_thread",
+      "method": "POST",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"thread_id\":1900700030,\"message\":{\"attachment\":\"eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a\",\"client_message_id\":\"pr192-r3-fresh-video\"}}",
+      "rails": {
+        "status": 500,
+        "response": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+        "headers": {
+          "content-type": "application/json; charset=UTF-8"
+        }
+      },
+      "rails_state": {
+        "row_deltas": {
+          "messages": 0,
+          "channel_threads": 0,
+          "active_storage_blobs": 0,
+          "active_storage_attachments": 0,
+          "active_storage_variant_records": 0
+        },
+        "thread_closed_at": "2026-03-01 16:00:00 UTC",
+        "source_file_exists": true,
+        "jobs": []
+      },
+      "exception": {
+        "class": "ActiveStorage::FileNotFoundError",
+        "message": "ActiveStorage::FileNotFoundError",
+        "open_transactions": 1,
+        "backtrace": [
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/lib/active_storage/service/disk_service.rb:152:in 'ActiveStorage::Service::DiskService#stream'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/lib/active_storage/service/disk_service.rb:31:in 'block in ActiveStorage::Service::DiskService#download'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/notifications.rb:210:in 'block in ActiveSupport::Notifications.instrument'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/notifications/instrumenter.rb:58:in 'ActiveSupport::Notifications::Instrumenter#instrument'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/notifications.rb:210:in 'ActiveSupport::Notifications.instrument'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/lib/active_storage/service.rb:169:in 'ActiveStorage::Service#instrument'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/lib/active_storage/service/disk_service.rb:30:in 'ActiveStorage::Service::DiskService#download'",
+          "/work/reference-tools/agents/review192r3_attachment_diagnosis.rb:10:in 'block (2 levels) in <top (required)>'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/lib/active_storage/downloader.rb:29:in 'ActiveStorage::Downloader#download'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/lib/active_storage/downloader.rb:13:in 'ActiveStorage::Downloader#open'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/lib/active_storage/service.rb:92:in 'ActiveStorage::Service#open'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/app/models/active_storage/blob.rb:288:in 'ActiveStorage::Blob#open'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/app/models/active_storage/variant_with_record.rb:48:in 'ActiveStorage::VariantWithRecord#transform_blob'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/app/models/active_storage/variant_with_record.rb:44:in 'ActiveStorage::VariantWithRecord#process'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/app/models/active_storage/variant_with_record.rb:19:in 'ActiveStorage::VariantWithRecord#processed'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activestorage/app/models/active_storage/preview.rb:54:in 'ActiveStorage::Preview#processed'",
+          "/rails/app/models/message/attachment.rb:36:in 'Message::Attachment#process_attachment_thumbnail'",
+          "/rails/app/models/message/attachment.rb:25:in 'Message::Attachment#process_attachment'",
+          "/rails/app/models/channel_thread.rb:504:in 'block (2 levels) in ChannelThread#post_message!'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/locking/pessimistic.rb:102:in 'block in ActiveRecord::Locking::Pessimistic#with_lock'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb:440:in 'ActiveRecord::ConnectionAdapters::DatabaseStatements#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/transactions.rb:234:in 'block (2 levels) in ActiveRecord::Transactions::ClassMethods#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb:485:in 'ActiveRecord::ConnectionAdapters::ConnectionPool#with_pool_transaction_isolation_level'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/transactions.rb:233:in 'block in ActiveRecord::Transactions::ClassMethods#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb:457:in 'ActiveRecord::ConnectionAdapters::ConnectionPool#with_connection'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_handling.rb:318:in 'ActiveRecord::ConnectionHandling#with_connection'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/transactions.rb:232:in 'ActiveRecord::Transactions::ClassMethods#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/transactions.rb:373:in 'ActiveRecord::Transactions#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/locking/pessimistic.rb:100:in 'ActiveRecord::Locking::Pessimistic#with_lock'",
+          "/rails/app/models/channel_thread.rb:490:in 'block in ChannelThread#post_message!'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/transaction.rb:647:in 'block in ActiveRecord::ConnectionAdapters::TransactionManager#within_new_transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/concurrency/null_lock.rb:9:in 'ActiveSupport::Concurrency::NullLock#synchronize'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/transaction.rb:644:in 'ActiveRecord::ConnectionAdapters::TransactionManager#within_new_transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb:450:in 'ActiveRecord::ConnectionAdapters::DatabaseStatements#within_new_transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb:442:in 'ActiveRecord::ConnectionAdapters::DatabaseStatements#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/transactions.rb:234:in 'block (2 levels) in ActiveRecord::Transactions::ClassMethods#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb:485:in 'ActiveRecord::ConnectionAdapters::ConnectionPool#with_pool_transaction_isolation_level'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/transactions.rb:233:in 'block in ActiveRecord::Transactions::ClassMethods#transaction'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb:463:in 'ActiveRecord::ConnectionAdapters::ConnectionPool#with_connection'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_handling.rb:318:in 'ActiveRecord::ConnectionHandling#with_connection'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/transactions.rb:232:in 'ActiveRecord::Transactions::ClassMethods#transaction'",
+          "/rails/app/models/channel_thread.rb:489:in 'ChannelThread#post_message!'",
+          "/rails/app/services/agents/posting.rb:70:in 'Agents::Posting.post_thread_reply'",
+          "/rails/app/services/agents/posting.rb:15:in 'Agents::Posting.post'",
+          "/rails/app/controllers/agents/messages_controller.rb:27:in 'Agents::MessagesController#create'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal/basic_implicit_render.rb:8:in 'ActionController::BasicImplicitRender#send_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/abstract_controller/base.rb:221:in 'AbstractController::Base#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal/rendering.rb:199:in 'ActionController::Rendering#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/abstract_controller/callbacks.rb:267:in 'block in AbstractController::Callbacks#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/callbacks.rb:121:in 'block in ActiveSupport::Callbacks#run_callbacks'",
+          "/rails/app/controllers/concerns/set_time_zone.rb:24:in 'SetTimeZone#isolate_time_zone'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/callbacks.rb:130:in 'block in ActiveSupport::Callbacks#run_callbacks'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/turbo-rails-30cd8fcc6f82/lib/turbo-rails.rb:24:in 'Turbo.with_request_id'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/turbo-rails-30cd8fcc6f82/app/controllers/concerns/turbo/request_id_tracking.rb:10:in 'Turbo::RequestIdTracking#turbo_tracking_request_id'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/callbacks.rb:130:in 'block in ActiveSupport::Callbacks#run_callbacks'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actiontext/lib/action_text/rendering.rb:24:in 'ActionText::Rendering::ClassMethods#with_renderer'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actiontext/lib/action_text/engine.rb:72:in 'block (4 levels) in <class:Engine>'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/callbacks.rb:130:in 'BasicObject#instance_exec'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/callbacks.rb:130:in 'block in ActiveSupport::Callbacks#run_callbacks'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/callbacks.rb:141:in 'ActiveSupport::Callbacks#run_callbacks'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/abstract_controller/callbacks.rb:266:in 'AbstractController::Callbacks#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal/rescue.rb:36:in 'ActionController::Rescue#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal/instrumentation.rb:76:in 'block in ActionController::Instrumentation#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/notifications.rb:210:in 'block in ActiveSupport::Notifications.instrument'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/notifications/instrumenter.rb:58:in 'ActiveSupport::Notifications::Instrumenter#instrument'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/notifications.rb:210:in 'ActiveSupport::Notifications.instrument'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal/instrumentation.rb:75:in 'ActionController::Instrumentation#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal/params_wrapper.rb:259:in 'ActionController::ParamsWrapper#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/railties/controller_runtime.rb:39:in 'ActiveRecord::Railties::ControllerRuntime#process_action'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/abstract_controller/base.rb:154:in 'AbstractController::Base#process'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionview/lib/action_view/rendering.rb:40:in 'ActionView::Rendering#process'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal.rb:252:in 'ActionController::Metal#dispatch'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_controller/metal.rb:335:in 'ActionController::Metal.dispatch'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/routing/route_set.rb:65:in 'ActionDispatch::Routing::RouteSet::Dispatcher#dispatch'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/routing/route_set.rb:50:in 'ActionDispatch::Routing::RouteSet::Dispatcher#serve'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/journey/router.rb:35:in 'block in ActionDispatch::Journey::Router#serve'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/journey/router.rb:86:in 'block in ActionDispatch::Journey::Router#recognize'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/journey/router.rb:66:in 'Array#each'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/journey/router.rb:66:in 'ActionDispatch::Journey::Router#recognize'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/journey/router.rb:31:in 'ActionDispatch::Journey::Router#serve'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/routing/route_set.rb:906:in 'ActionDispatch::Routing::RouteSet#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-3.2.6/lib/rack/tempfile_reaper.rb:20:in 'Rack::TempfileReaper#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-3.2.6/lib/rack/etag.rb:29:in 'Rack::ETag#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-3.2.6/lib/rack/conditional_get.rb:44:in 'Rack::ConditionalGet#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-3.2.6/lib/rack/head.rb:15:in 'Rack::Head#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/http/content_security_policy.rb:38:in 'ActionDispatch::ContentSecurityPolicy::Middleware#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-session-2.1.2/lib/rack/session/abstract/id.rb:274:in 'Rack::Session::Abstract::Persisted#context'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-session-2.1.2/lib/rack/session/abstract/id.rb:268:in 'Rack::Session::Abstract::Persisted#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/cookies.rb:708:in 'ActionDispatch::Cookies#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/callbacks.rb:31:in 'block in ActionDispatch::Callbacks#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/callbacks.rb:101:in 'ActiveSupport::Callbacks#run_callbacks'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/callbacks.rb:30:in 'ActionDispatch::Callbacks#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/sentry-rails-5.26.0/lib/sentry/rails/rescued_exception_interceptor.rb:11:in 'Sentry::Rails::RescuedExceptionInterceptor#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/debug_exceptions.rb:31:in 'ActionDispatch::DebugExceptions#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/sentry-ruby-5.26.0/lib/sentry/rack/capture_exceptions.rb:15:in 'Sentry::Rack::CaptureExceptions#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/show_exceptions.rb:32:in 'ActionDispatch::ShowExceptions#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/rack/logger.rb:41:in 'Rails::Rack::Logger#call_app'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/rack/logger.rb:29:in 'Rails::Rack::Logger#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/rack/silence_request.rb:31:in 'Rails::Rack::SilenceRequest#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/remote_ip.rb:98:in 'ActionDispatch::RemoteIp#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/request_id.rb:34:in 'ActionDispatch::RequestId#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-3.2.6/lib/rack/method_override.rb:28:in 'Rack::MethodOverride#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-3.2.6/lib/rack/runtime.rb:24:in 'Rack::Runtime#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/cache/strategy/local_cache_middleware.rb:30:in 'ActiveSupport::Cache::Strategy::LocalCache::Middleware#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/executor.rb:20:in 'ActionDispatch::Executor#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/middleware/static.rb:27:in 'ActionDispatch::Static#call'",
+          "/rails/lib/rails_ext/immutable_asset_headers.rb:43:in 'RailsExt::ImmutableAssetHeaders#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-3.2.6/lib/rack/sendfile.rb:131:in 'Rack::Sendfile#call'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/engine.rb:534:in 'Rails::Engine#call'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-test-2.2.0/lib/rack/test.rb:360:in 'Rack::Test::Session#process_request'",
+          "/usr/local/bundle/ruby/3.4.0/gems/rack-test-2.2.0/lib/rack/test.rb:153:in 'Rack::Test::Session#request'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/testing/integration.rb:297:in 'ActionDispatch::Integration::Session#process'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/actionpack/lib/action_dispatch/testing/integration.rb:25:in 'ActionDispatch::Integration::RequestHelpers#post'",
+          "/work/reference-tools/agents/review192r3_attachment_diagnosis.rb:31:in 'block in <top (required)>'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/testing/time_helpers.rb:196:in 'ActiveSupport::Testing::TimeHelpers#travel_to'",
+          "/work/reference-tools/agents/review192r3_attachment_diagnosis.rb:16:in '<top (required)>'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/commands/runner/runner_command.rb:44:in 'Kernel.load'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/commands/runner/runner_command.rb:44:in 'block in Rails::Command::RunnerCommand#perform'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activesupport/lib/active_support/execution_wrapper.rb:91:in 'ActiveSupport::ExecutionWrapper.wrap'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/commands/runner/runner_command.rb:70:in 'Rails::Command::RunnerCommand#conditional_executor'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/commands/runner/runner_command.rb:43:in 'Rails::Command::RunnerCommand#perform'",
+          "/usr/local/bundle/ruby/3.4.0/gems/thor-1.4.0/lib/thor/command.rb:28:in 'Thor::Command#run'",
+          "/usr/local/bundle/ruby/3.4.0/gems/thor-1.4.0/lib/thor/invocation.rb:127:in 'Thor::Invocation#invoke_command'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/command/base.rb:176:in 'Rails::Command::Base#invoke_command'",
+          "/usr/local/bundle/ruby/3.4.0/gems/thor-1.4.0/lib/thor.rb:538:in 'Thor.dispatch'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/command/base.rb:71:in 'Rails::Command::Base.perform'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/command.rb:65:in 'block in Rails::Command.invoke'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/command.rb:143:in 'Rails::Command.with_argv'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/command.rb:63:in 'Rails::Command.invoke'",
+          "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/railties/lib/rails/commands.rb:18:in '<top (required)>'",
+          "/usr/local/lib/ruby/3.4.0/bundled_gems.rb:82:in 'Kernel.require'",
+          "/usr/local/lib/ruby/3.4.0/bundled_gems.rb:82:in 'block (2 levels) in Kernel#replace_require'",
+          "bin/rails:4:in '<main>'"
+        ]
+      },
+      "approved": {
+        "status": 201,
+        "response": "{\"id\":935962058,\"client_message_id\":\"pr192-r3-fresh-video\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"alpha-centuri.mov\",\"html\":\"\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1900700030,\"name\":\"Review\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1900700030\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1900700030\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=935962058&thread=1900700030\",\"thread_id\":1900700030}",
+        "headers": {
+          "content-type": "application/json; charset=utf-8"
+        }
+      },
+      "state": {
+        "message": {
+          "id": 935962058,
+          "action": false,
+          "board_post_opener": false,
+          "client_message_id": "pr192-r3-fresh-video",
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 394959859,
+          "edited_at": null,
+          "embeds_suppressed": false,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": false,
+          "markdown_source": null,
+          "reply_notify_author": true,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 486777696,
+          "stream_broadcast_at": null,
+          "streaming": false,
+          "streaming_updated_at": null,
+          "system_note": false,
+          "thread_id": 1900700030,
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "thread": {
+          "id": 1900700030,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "created_at": "2026-03-01 16:00:00 UTC",
+          "creator_id": 394959859,
+          "last_activity_at": "2026-03-02 16:00:00 UTC",
+          "locked_at": null,
+          "messages_count": 1,
+          "name": "Review",
+          "parent_message_id": null,
+          "result_markdown": null,
+          "result_updated_at": null,
+          "result_updated_by_id": null,
+          "room_id": 486777696,
+          "run_url": null,
+          "updated_at": "2026-03-02 16:00:00 UTC",
+          "work_owner_id": 394959859,
+          "work_status": "in_progress",
+          "work_status_changed_at": null
+        },
+        "source_metadata": {
+          "identified": true,
+          "width": 320.0,
+          "height": 180.0,
+          "duration": 65.84,
+          "display_aspect_ratio": [
+            16,
+            9
+          ],
+          "audio": false,
+          "video": true,
+          "analyzed": true
+        },
+        "blobs": [
+          {
+            "attributes": {
+              "id": 15,
+              "byte_size": 3945267,
+              "checksum": "uBpNcgufEylNjFfte1x5LQ==",
+              "content_type": "video/quicktime",
+              "created_at": "2026-03-02 16:00:00 UTC",
+              "filename": "alpha-centuri.mov",
+              "metadata": {
+                "identified": true,
+                "width": 320.0,
+                "height": 180.0,
+                "duration": 65.84,
+                "display_aspect_ratio": [
+                  16,
+                  9
+                ],
+                "audio": false,
+                "video": true,
+                "analyzed": true
+              },
+              "service_name": "local"
+            },
+            "file_exists": true,
+            "file_size": 3945267
+          },
+          {
+            "attributes": {
+              "id": 16,
+              "byte_size": 11788,
+              "checksum": "untJ1VKBeYvbPA/dvRXh9A==",
+              "content_type": "image/jpeg",
+              "created_at": "2026-03-02 16:00:00 UTC",
+              "filename": "alpha-centuri.jpg",
+              "metadata": {
+                "identified": true,
+                "width": 320,
+                "height": 180,
+                "analyzed": true
+              },
+              "service_name": "local"
+            },
+            "file_exists": true,
+            "file_size": 11788
+          },
+          {
+            "attributes": {
+              "id": 17,
+              "byte_size": 3326,
+              "checksum": "f41i6Z376J8tfJGLMf6SEw==",
+              "content_type": "image/webp",
+              "created_at": "2026-03-02 16:00:00 UTC",
+              "filename": "alpha-centuri.webp",
+              "metadata": {
+                "identified": true
+              },
+              "service_name": "local"
+            },
+            "file_exists": true,
+            "file_size": 3326
+          }
+        ],
+        "variant_count": 1,
+        "attachments": [
+          {
+            "blob_id": 16,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "name": "preview_image",
+            "record_type": "ActiveStorage::Blob"
+          },
+          {
+            "blob_id": 17,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "name": "image",
+            "record_type": "ActiveStorage::VariantRecord"
+          },
+          {
+            "blob_id": 15,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "name": "attachment",
+            "record_type": "Message"
+          }
+        ],
+        "jobs": [
+          {
+            "class": "ActiveStorage::AnalyzeJob",
+            "args": {
+              "blob_id": 17
+            }
+          },
+          {
+            "class": "ChannelThread::PushMessageJob",
+            "args": {
+              "thread_id": 1900700030,
+              "message_id": 935962058
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

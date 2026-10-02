@@ -25,6 +25,30 @@ def check_approved_difference(vector):
     assert json.loads(case['approved']['response'])['id'] == case['state']['message']['id']
 
 
+def check_approved_video_difference(vector):
+    assert len(vector['cases']) == 1
+    case = vector['cases'][0]
+    assert case['name'] == 'fresh_video_closed_thread'
+    assert case['rails']['status'] == 500
+    assert case['approved']['status'] == 201
+    assert case['exception']['class'] == 'ActiveStorage::FileNotFoundError'
+    assert 'disk_service.rb:152' in case['exception']['backtrace'][0]
+    assert case['exception']['open_transactions'] == 1
+    assert all(delta == 0 for delta in case['rails_state']['row_deltas'].values())
+    assert case['rails_state']['thread_closed_at'] == '2026-03-01 16:00:00 UTC'
+    assert case['rails_state']['source_file_exists'] is True
+    assert case['rails_state']['jobs'] == []
+    assert case['state']['thread']['closed_at'] is None
+    assert case['state']['variant_count'] == 1
+    assert len(case['state']['blobs']) == 3
+    for blob in case['state']['blobs']:
+        assert blob['file_exists'] is True
+        assert blob['file_size'] == blob['attributes']['byte_size'] > 0
+    assert [job['class'] for job in case['state']['jobs']] == ['ActiveStorage::AnalyzeJob', 'ChannelThread::PushMessageJob']
+    assert case['state']['jobs'][0]['args']['blob_id'] == case['state']['blobs'][2]['attributes']['id']
+    assert json.loads(case['approved']['response'])['id'] == case['state']['message']['id']
+
+
 def check_dispatch(names, source):
     # A match arm can contain alternatives, e.g. register | unregister.
     branches = set(re.findall(r'"([a-z_]+)"\s*(?:\||=>)', source))
@@ -34,12 +58,14 @@ def check_dispatch(names, source):
 def main():
     root = Path(__file__).resolve().parents[2]
     scratch = Path(sys.argv[1]).resolve()
-    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json'), ('legacy bot/fanout/replacement', 'agent_legacy_bot_http.json'), ('conversation', 'agent_conversation_http.json'), ('Fizzy reads', 'agent_fizzy_http.json'), ('Fizzy approvals', 'agent_fizzy_action_http.json'), ('readers', 'agent_reads_http.json'), ('pins', 'agent_pins_http.json'), ('polls', 'agent_polls_http.json'), ('polling', 'agent_polling_http.json'), ('reactions', 'agent_reactions_http.json'), ('bot reactions', 'agent_bot_reactions_http.json'), ('work validation', 'agent_work_validation_http.json'), ('attachments', 'agent_attachments_http.json'), ('permissions', 'agent_permissions_http.json'), ('PR192 zones and ID shapes', 'agent_review192_http.json'), ('PR192 approved JPEG difference', 'agent_review192r2_attachment.json')]:
+    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json'), ('legacy bot/fanout/replacement', 'agent_legacy_bot_http.json'), ('conversation', 'agent_conversation_http.json'), ('Fizzy reads', 'agent_fizzy_http.json'), ('Fizzy approvals', 'agent_fizzy_action_http.json'), ('readers', 'agent_reads_http.json'), ('pins', 'agent_pins_http.json'), ('polls', 'agent_polls_http.json'), ('polling', 'agent_polling_http.json'), ('reactions', 'agent_reactions_http.json'), ('bot reactions', 'agent_bot_reactions_http.json'), ('work validation', 'agent_work_validation_http.json'), ('attachments', 'agent_attachments_http.json'), ('permissions', 'agent_permissions_http.json'), ('PR192 zones and ID shapes', 'agent_review192_http.json'), ('PR192 approved JPEG difference', 'agent_review192r2_attachment.json'), ('PR192 approved video difference', 'agent_review192r3_attachment.json')]:
         expected = (root / 'vectors' / filename).read_bytes()
         actual = (scratch / filename).read_bytes()
         compare_vectors(actual, expected, filename)
         if filename == 'agent_review192r2_attachment.json':
             check_approved_difference(json.loads(actual))
+        if filename == 'agent_review192r3_attachment.json':
+            check_approved_video_difference(json.loads(actual))
         print(f'WS11-api fresh {kind} oracle: {len(json.loads(actual)["cases"])} request/response pairs; byte-identical committed vectors')
     metadata = json.loads((root / 'crates/campfire/src/controllers/agents/mcp_metadata.json').read_text())
     names = {tool['name'] for tool in metadata['tools']}

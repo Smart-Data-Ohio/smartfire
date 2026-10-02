@@ -284,6 +284,9 @@ pub(crate) fn process_attachment_in(
     storage: &Storage,
     mut blob: Blob,
 ) -> campfire_db::Result<()> {
+    // The approved post-commit JPEG exception concerns the original attachment,
+    // never a video's generated JPEG preview.
+    let discard_jpeg_variant = blob.content_type() == "image/jpeg";
     let mut source = blob.clone();
     source.metadata = Json::object();
     let metadata = storage
@@ -331,19 +334,21 @@ pub(crate) fn process_attachment_in(
             .transform_variant(&blob, &variation)
             .map_err(storage_db_error)?
             .defer_analysis();
-        if storage
+        if let Some(recorded) = storage
             .record_variant(tx.conn(), &blob, &variation, &staged, tx.now().jiff())
             .map_err(storage_db_error)?
-            .is_some()
         {
-            // Pinned Rails commits these rows, then its deferred variant upload raises
-            // IOError because transform_blob already closed the output IO. Preserve its
-            // missing file and suppressed analysis job, while returning the approved 201.
-            // In-transaction failures still roll back the post and staged media together.
-            tx.after_commit(move |_| {
-                drop(staged);
-                Ok(())
-            });
+            if discard_jpeg_variant {
+                // Approved JPEG-only state: Rails commits the rows, then its closed
+                // output stream prevents upload and analysis. See the recorded oracle.
+                tx.after_commit(move |_| {
+                    drop(staged);
+                    Ok(())
+                });
+            } else {
+                crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
+                keep_after_commit(tx, staged);
+            }
         }
     }
     Ok(())

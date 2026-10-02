@@ -246,7 +246,7 @@ async fn pr192_r2_context_reuses_preloaded_authors() {
     println!("PR192_R2_CONTEXT author_batch_SELECTs={count}");
     assert_eq!(count, 1, "context must share its payload author's batch");
 }
-fn row_state(
+pub(super) fn row_state(
     conn: &campfire_db::Connection,
     sql: &str,
     expected: &Value,
