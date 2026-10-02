@@ -48,14 +48,10 @@ fn directory_record(
     record: campfire_db::models::agent_profile::DirectoryRecord,
 ) -> Result<DirectoryAgent> {
     let user = &record.user;
-    let icon_name: Option<String> =
-        conn.query_row("SELECT icon_name FROM users WHERE id=?", [user.id], |row| {
-            row.get(0)
-        })?;
     let icon = if user.is_bot()
         && attachments::attached_blob(conn, "User", user.id, "avatar")?.is_none()
     {
-        icon_name
+        user.icon_name
             .as_deref()
             .and_then(|name| resolve_avatar_icon(conn, name))
     } else {
