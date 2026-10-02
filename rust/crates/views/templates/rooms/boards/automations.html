@@ -1,0 +1,63 @@
+{% extends "layouts/application.html" %}
+{% block head %}{% endblock %}
+{% block nav %}  <div class="flex-item-justify-start">
+    {{ h::link_back_to_last_room_visited(ctx) }}
+  </div>
+{% endblock %}
+{% block content %}
+
+<section class="panel" aria-labelledby="automations-title">
+  <h1 id="automations-title">Automations for {{ settings.room_name }}</h1>
+  <p>Tag rules and SLA timers run for every post on this board. Only the board's creator and administrators can change them.</p>
+
+  <h2 id="tag-rules-title">Auto-assign by tag</h2>
+  <p>When a post gains one of these tags while it has no owner, the post is assigned automatically. Rules never override an existing assignment.</p>
+
+{% if !settings.tags.is_empty() %}    <ul aria-labelledby="tag-rules-title">
+{% for tag in settings.tags %}        <li>
+          <span class="board-tag">{{ tag.tag }}</span>
+          → {{ tag.name }}{% if tag.agent %}<span class="agent-badge">agent</span>{% endif %}
+          {{ self.remove(tag) }}
+        </li>
+{% endfor %}    </ul>
+{% else %}    <p>No tag rules yet.</p>
+{% endif %}
+{{ "  " }}{% let tag_form=self.tag_form() %}{% filter form_with(tag_form) %}
+{% if let Some(error)=settings.tag_error %}      <p class="form-error" role="alert">{{ error }}</p>
+{% endif %}    <label>
+      <span>Tag</span>
+      {{ tag_form.text_field("tag", None, h::attrs().attr("autocomplete","off").attr("placeholder","bug").attr("maxlength","30").attr("required","required")) }}
+    </label>
+    <label>
+      <span>Assign to</span>
+      {{ tag_form.select("assignee_id",settings.candidates,"Choose a member",None,h::attrs().attr("required","required")) }}
+    </label>
+    {{ tag_form.submit("Add rule",h::attrs().class("btn btn--reversed")) }}
+{% endfilter %}
+  <h2 id="sla-rules-title">SLA timers</h2>
+  <p>A post sitting in a status past the nudge time notifies its owner; past the escalation time it escalates to the board's creator. Each fires once per status change. Leave both blank to disable a status.</p>
+
+{{ "  " }}{% let sla_form=self.sla_form() %}{% filter form_with(sla_form) %}
+{% if let Some(error)=settings.sla_error %}      <p class="form-error" role="alert">{{ error }}</p>
+{% endif %}    <table>
+      <thead>
+        <tr>
+          <th scope="col">Status</th>
+          <th scope="col">Nudge after (minutes)</th>
+          <th scope="col">Escalate after (minutes)</th>
+        </tr>
+      </thead>
+      <tbody>
+{% for (status,label) in self.statuses() %}          <tr>
+            <th scope="row">{{ label }}</th>
+            <td>{{ self.minutes(sla_form,status,false) }}</td>
+            <td>{{ self.minutes(sla_form,status,true) }}</td>
+          </tr>
+{% endfor %}      </tbody>
+    </table>
+    {{ sla_form.submit("Save SLA timers",h::attrs().class("btn btn--reversed")) }}
+{% endfilter %}
+  <h2>Stale-work digest</h2>
+  <p>Every day the board posts one quiet digest of the posts sitting past their nudge time. No configuration needed.</p>
+</section>
+{% endblock %}
