@@ -36,6 +36,33 @@ tool.call("list_work",{},{remove_member:true},"work_removed_member")
  tool.call("list_board_posts",{room_id:room}.merge(args),{board:true},"posts_#{i}")
 end
 tool.call("list_board_posts",{room_id:room},{board:true,grant:["post_messages"]},"posts_denied")
+# find_by accepts IN lists, including nested lists, and chooses the first matching
+# row in the authorized association. Cursor resolution follows limit validation.
+{
+ room_id:[nil,false,true,0,"",[],{},[room],[0,room],[[room]],{id:room},[201306877,room]],
+ thread_id:[nil,false,true,0,"",[],{},[thread],[0,thread],[[thread]],{id:thread}],
+ before:[nil,false,true,0,"",[],{},[base+1],[0,base+1],[[base+1]],{id:base+1},[base+2,base+1]],
+ after:[nil,false,true,0,"",[],{},[base],[0,base],[[base]],{id:base},[base+2,base]]
+}.each do |field,values|
+ values.each_with_index do |value,i|
+  args=[:before,:after].include?(field) ? {room_id:room,limit:2} : {}
+  tool.call("read_messages",args.merge(field=>value),{},"history_shape_#{field}_#{i}")
+ end
+end
+[true,[1],{n:1}].each_with_index do |limit,i|
+ tool.call("read_messages",{room_id:room,limit:limit,before:0},{},"history_limit_before_cursor_#{i}")
+ tool.call("read_messages",{thread_id:thread,limit:limit,after:0},{grant:["react"]},"history_grant_before_limit_#{i}")
+end
+[:status,:owner,:tag].each do |field|
+ [nil,false,true,0,[],["all"],{k:"all"},"\u00a0all\u00a0","\u0000all\u0000","\tall\r\n"].each_with_index do |value,i|
+  args={field=>value}
+  add.call("posts_shape_#{field}_#{i}",:get,"/rooms/#{room}/agents/posts?#{Rack::Utils.build_nested_query(args)}",nil,{board:true})
+  tool.call("list_board_posts",{room_id:room}.merge(args),{board:true},"posts_shape_#{field}_#{i}")
+ end
+end
+[[room],[0,room],[[room]],{id:room}].each_with_index do |value,i|
+ tool.call("list_board_posts",{room_id:value},{board:true},"posts_room_shape_#{i}")
+end
 travel_to Time.utc(2026,3,2,16) do
  results=cases.map do |item|
   result=nil

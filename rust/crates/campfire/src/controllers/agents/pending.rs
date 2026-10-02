@@ -58,6 +58,7 @@ async fn dispatch(
         "start_stream" | "append_stream" | "finalize_stream" => {
             return super::conversations::stream(c, agent_id, operation, args, rest).await;
         }
+        "read_messages" => return super::reads::operation(c, agent_id, operation, args).await,
         "get_context" => return super::conversations::context(c, agent_id, args).await,
         "post_message" => return super::conversations::post(c, agent_id, args, rest).await,
         "open_dm" => return super::conversations::dm(c, agent_id, args, rest).await,
@@ -69,10 +70,18 @@ async fn dispatch(
     );
     let op = operation.to_owned();
     let fields = args.clone();
-    let result = c
+    let (result, args) = c
         .app()
         .db
-        .write(move |tx| preflight(tx, agent_id, &op, fields))
+        .write(move |tx| {
+            let mut fields=fields;
+            if op=="list_board_posts" {
+                let agent=Agent::find(tx.conn(),agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+                let ids=super::reads::lookup_ids(&fields["room_id"]);
+                fields["room_id"]=json!(Room::for_user(tx.conn(),agent.user_id)?.into_iter().filter(|room|ids.contains(&room.id)).map(|room|room.id).min().unwrap_or(0));
+            }
+            Ok((preflight(tx,agent_id,&op,fields.clone())?,fields))
+        })
         .await
         .map_err(db_error)?;
     if reader && result.is_ok() {
@@ -92,71 +101,6 @@ fn preflight(
     let agent =
         Agent::find(tx.conn(), agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
     match op {
-        "get_context" | "read_messages" => {
-            let context = op == "get_context";
-            let first = if context { "message_id" } else { "room_id" };
-            if !present(&args, first) && !present(&args, "thread_id") {
-                return Ok(fail(
-                    if context {
-                        "message_id or thread_id is required"
-                    } else {
-                        "room_id or thread_id is required"
-                    },
-                    422,
-                ));
-            }
-            if !context && present(&args, first) && present(&args, "thread_id") {
-                return Ok(fail("Pass only one of room_id, thread_id", 422));
-            }
-            let (room_id, missing, thread_id) = if present(&args, first) {
-                if context {
-                    let Some(message) = Message::find_by_id(tx.conn(), number(&args, first))?
-                    else {
-                        return Ok(fail("Message not found", 404));
-                    };
-                    (message.room_id, "Message not found", message.thread_id)
-                } else {
-                    (number(&args, first), "Room not found", None)
-                }
-            } else {
-                let record = tx
-                    .conn()
-                    .query_row(
-                        "SELECT room_id FROM channel_threads WHERE id=?",
-                        [number(&args, "thread_id")],
-                        |r| r.get::<_, i64>(0),
-                    )
-                    .optional()?;
-                let Some(room) = record else {
-                    return Ok(fail("Thread not found", 404));
-                };
-                (room, "Thread not found", Some(number(&args, "thread_id")))
-            };
-            if member_room(tx, &agent, room_id)?.is_none() {
-                return Ok(fail(missing, 404));
-            }
-            if !allowed(tx, &agent, "read_messages", Some(room_id))? {
-                return Ok(forbidden("read_messages"));
-            }
-            if context
-                && present(&args, "message_id")
-                && present(&args, "thread_id")
-                && number(&args, "thread_id") != thread_id.unwrap_or(0)
-            {
-                return Ok(fail("Message is not in the given thread", 422));
-            }
-            if !context {
-                for cursor in ["before", "after"] {
-                    if present(&args, cursor) {
-                        let anchor = Message::find_by_id(tx.conn(), number(&args, cursor))?
-                            .filter(|m| m.room_id == room_id && m.thread_id == thread_id);
-                        if anchor.is_none() {
-                            return Ok(fail("Message not found", 404));
-                        }
-                    }
-                }
-            }
-        }
         "open_dm" => {
             let target = campfire_db::User::find_by_id(tx.conn(), number(&args, "user_id"))?;
             let Some(target) = target else {
@@ -264,7 +208,7 @@ fn preflight(
             }
             if op == "list_board_posts" {
                 let status = text(args.get("status")).unwrap_or_default();
-                let status = status.trim();
+                let status = campfire_richtext::ruby::strip(&status);
                 if !status.is_empty()
                     && !matches!(
                         status,
@@ -277,7 +221,7 @@ fn preflight(
                     ));
                 }
                 let owner = text(args.get("owner")).unwrap_or_default();
-                let owner = owner.trim();
+                let owner = campfire_richtext::ruby::strip(&owner);
                 if !owner.is_empty()
                     && !matches!(owner, "me" | "agents")
                     && !owner.bytes().all(|b| b.is_ascii_digit())
