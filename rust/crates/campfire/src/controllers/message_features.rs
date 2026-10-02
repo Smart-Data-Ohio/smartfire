@@ -1,5 +1,7 @@
 //! Shared HTTP seams for the message features, kept separate from message-root ownership.
 #[cfg(test)]
+mod ws12_consumer_tests;
+#[cfg(test)]
 mod saved_tests;
 #[cfg(test)]
 mod coercion_tests;
