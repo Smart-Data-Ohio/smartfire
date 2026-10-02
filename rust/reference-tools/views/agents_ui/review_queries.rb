@@ -6,17 +6,18 @@ ApplicationController.allow_forgery_protection = false
 labels = JSON.parse(File.read(File.join(ENV.fetch('PARITY_WORK'), 'parity/.seed/default/labels.json')))
 david = User.find(127326141)
 room = Room.find(486777696)
-request = lambda do |path, table, accept = 'application/json'|
-  queries = []
+request = lambda do |path, tables, accept = 'application/json'|
+  counts = tables.to_h { |table| [table, 0] }
   subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
     sql = payload[:sql]
-    queries << sql if sql.match?(/\ASELECT/i) && sql[/\bFROM\s+"?([a-z_]+)/i, 1] == table && !payload[:cached]
+    table = sql[/\bFROM\s+"?([a-z_]+)/i, 1]
+    counts[table] += 1 if sql.match?(/\ASELECT/i) && counts.key?(table) && !payload[:cached]
   end
   browser = ActionDispatch::Integration::Session.new(Rails.application)
   browser.host! 'campfire.test'
   browser.get(path, headers: { 'Cookie' => "session_token=#{labels.fetch('session_cookies.david')}", 'Accept' => accept, 'HTTP_USER_AGENT' => 'Mozilla/5.0 Chrome/140.0.0.0' })
   raise "#{path}: #{browser.response.status}" unless browser.response.status == 200
-  queries.size
+  counts
 ensure
   ActiveSupport::Notifications.unsubscribe(subscriber)
   ActiveSupport::ExecutionContext.clear
@@ -27,9 +28,13 @@ end
     room.messages.order(:id).limit(size).each do |message|
       ActivityItem.create!(user: david, source: message, event_type: 'mention')
     end
-    count = request.call('/activity', 'messages', accept)
-    puts "Rails inbox #{accept}: #{size} items; message_selects=#{count}; expected=1"
-    raise "Message source N+1: #{count}" unless count == 1
+    expected = { 'messages' => 1 }
+    expected.merge!('rooms' => 1, 'users' => 1, 'action_text_rich_texts' => size) if accept == 'application/json'
+    counts = request.call('/activity', expected.keys, accept)
+    counts.each do |table, count|
+      puts "Rails inbox #{accept}: #{size} items; #{table}_selects=#{count}; expected=#{expected.fetch(table)}"
+    end
+    raise "Inbox query counts: #{counts}" unless counts == expected
   end
 end
 [0, 10].each do |additional|
@@ -38,7 +43,7 @@ end
     Agent.create!(user: bot, owner: david)
     Membership.create!(room: room, user: bot)
   end
-  count = request.call("/rooms/#{room.id}/members.json", 'agents')
+  count = request.call("/rooms/#{room.id}/members.json", ['agents']).fetch('agents')
   puts "Rails member polling +#{additional} bots: agent_selects=#{count}; expected=1"
   raise "Agent N+1: #{count}" unless count == 1
 end

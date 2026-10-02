@@ -8,6 +8,7 @@ use std::collections::HashMap;
 pub struct MessageSources {
     saved: HashMap<i64, i64>,
     messages: HashMap<i64, campfire_db::Message>,
+    rooms: HashMap<i64, campfire_db::Room>,
 }
 impl MessageSources {
     pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
@@ -27,11 +28,27 @@ impl MessageSources {
             .map(|row| row.source_id)
             .chain(saved.values().copied())
             .collect();
-        let messages = campfire_db::Message::for_ids(conn, &ids)?
+        let messages: HashMap<_, _> = campfire_db::Message::for_ids(conn, &ids)?
             .into_iter()
             .map(|message| (message.id, message))
             .collect();
-        Ok(Self { saved, messages })
+        let mut room_ids: Vec<_> = messages.values().map(|message| message.room_id).collect();
+        room_ids.sort_unstable();
+        room_ids.dedup();
+        let rooms = campfire_db::Room::for_ids(conn, &room_ids)?
+            .into_iter()
+            .map(|room| (room.id, room))
+            .collect();
+        Ok(Self {
+            saved,
+            messages,
+            rooms,
+        })
+    }
+    fn room(&self, id: i64) -> Result<&campfire_db::Room> {
+        self.rooms
+            .get(&id)
+            .ok_or(campfire_db::Error::RecordNotFound("Room"))
     }
     fn message(&self, row: &ActivityItem) -> Option<&campfire_db::Message> {
         let id = if row.source_type == "SavedItem" {
@@ -152,9 +169,9 @@ pub fn item(
         }
         "Message" | "SavedItem" => {
             if let Some(message) = messages.message(item) {
-                let room = campfire_db::Room::find(conn, message.room_id)?;
+                let room = messages.room(message.room_id)?;
                 result.created_at = Some(message.created_at.jiff());
-                result.title = super::accounts::room_display_name(conn, &room, viewer)?;
+                result.title = super::accounts::room_display_name(conn, room, viewer)?;
                 if let Some(id) = message.thread_id {
                     result.title +=
                         &format!(" · {}", campfire_db::ChannelThread::find(conn, id)?.name);
@@ -182,19 +199,10 @@ pub fn item(
                 campfire_db::Error::Other("Budget notice agent is missing".into())
             })?;
             let user = campfire_db::User::find(conn, agent.user_id)?;
-            let (label, limit) = match cap.as_str() {
-                "messages" => ("messages", agent.daily_message_cap),
-                "board_posts" => ("board posts", agent.daily_board_post_cap),
-                "external_actions" => ("external actions", agent.daily_external_action_cap),
-                _ => (cap.as_str(), None),
-            };
+            let (label, _) = budget_details(&agent, &cap);
             result.created_at = Some(created.jiff());
             result.title = format!("{} · daily {label} budget", user.name);
-            result.body = format!(
-                "{} hit its daily {label} budget ({}/day).",
-                user.name,
-                limit.map(|v| v.to_string()).unwrap_or_default()
-            );
+            result.body = budget_body(&agent, &user.name, &cap);
             result.author = Some(user.name);
         }
         "Event" => {
@@ -212,41 +220,7 @@ pub fn item(
             );
             result.author =
                 campfire_db::User::find_by_id(conn, event.organizer_id)?.map(|u| u.name);
-            let start = campfire_views::time::Zone::for_user(Some(&event.time_zone))
-                .format(event.starts_at.jiff(), "%B %-d, %Y at %-I:%M %p %Z");
-            result.body = match item.event_type.as_str() {
-                "event_invitation" => {
-                    if let (Some(rule), Some(until)) = (
-                        event
-                            .recurrence_rule
-                            .as_deref()
-                            .filter(|r| !campfire_richtext::ruby::is_blank(r)),
-                        event.recurrence_until,
-                    ) {
-                        format!(
-                            "You are invited: {start} (repeats {} until {}).",
-                            campfire_db::models::calendar_event::recurrence::phrase(rule),
-                            until.strftime("%B %-d, %Y")
-                        )
-                    } else {
-                        format!("You are invited: {start}.")
-                    }
-                }
-                "event_update" => format!("The time changed: {start}."),
-                "event_cancelled" => "This event was cancelled.".into(),
-                "event_reminder" => {
-                    if let Some(id) = event.venue_room_id {
-                        format!(
-                            "Starts in 15 minutes: {} in {}.",
-                            event.title,
-                            campfire_db::Room::find(conn, id)?.name.unwrap_or_default()
-                        )
-                    } else {
-                        format!("Starts in 15 minutes: {}.", event.title)
-                    }
-                }
-                _ => format!("Event updated: {start}."),
-            };
+            result.body = event_body(conn, &event, &item.event_type)?;
         }
         "HuddleGrant" => {
             let grant =
@@ -290,27 +264,7 @@ pub fn item(
                     .map(|u| u.name)
                     .unwrap_or_else(|| "Work thread".into()),
             );
-            let mut changes = Vec::new();
-            if from != to {
-                changes.push(format!(
-                    "Status: {} → {}",
-                    humanize(from.as_deref()),
-                    humanize(to.as_deref())
-                ));
-            }
-            if from_id != to_id {
-                let name = |value: Option<String>| {
-                    value
-                        .filter(|v| !campfire_richtext::ruby::is_blank(v))
-                        .unwrap_or_else(|| "unassigned".into())
-                };
-                changes.push(format!("Owner: {} → {}", name(from_name), name(to_name)));
-            }
-            result.body = if changes.is_empty() {
-                "Work thread updated".into()
-            } else {
-                campfire_views::helpers::to_sentence(&changes, " and ")
-            };
+            result.body = work_body(from, to, from_id, to_id, from_name, to_name);
         }
         "BoardSlaNudge" => {
             // FLAGGED WS12 BoardSlaNudge facts reader; no writer is implemented here.
@@ -384,15 +338,7 @@ pub fn item(
             let session = campfire_db::Session::find(conn, item.source_id)?;
             result.created_at = Some(session.created_at.jiff());
             result.title = "Account security".into();
-            let at = item
-                .created_at
-                .jiff()
-                .to_zoned(jiff::tz::TimeZone::UTC)
-                .strftime("%B %-d, %Y at %-I:%M %p %Z");
-            result.body = format!(
-                "New sign-in to your account from {}, {at}. Wasn't you? Review your sessions.",
-                crate::authentication::device_description(&session)
-            );
+            result.body = session_body(item.created_at, &session);
         }
         other => {
             return Err(campfire_db::Error::Other(format!(
@@ -458,26 +404,23 @@ pub fn payload(
     conn: &Connection,
     app: &crate::app::AppState,
     row: &ActivityItem,
-    viewer: &User,
 ) -> Result<Payload> {
     let messages = MessageSources::load(conn, std::slice::from_ref(row))?;
-    payload_with_sources(conn, app, row, viewer, &messages)
+    payload_with_sources(conn, app, row, &messages)
 }
 pub fn payload_with_sources(
     conn: &Connection,
     app: &crate::app::AppState,
     row: &ActivityItem,
-    viewer: &User,
     messages: &MessageSources,
 ) -> Result<Payload> {
-    let view = item(conn, app, row, viewer, messages)?;
     let mut source = Source {
         kind: row.source_type.clone(),
         id: row.source_id,
         room_id: None,
         thread_id: None,
         creator_id: None,
-        body: view.body,
+        body: String::new(),
         path: "/activity".into(),
         status: None,
     };
@@ -486,20 +429,25 @@ pub fn payload_with_sources(
             let message = messages
                 .message(row)
                 .ok_or(campfire_db::Error::RecordNotFound("Message"))?;
+            let room = messages.room(message.room_id)?;
             source.room_id = Some(message.room_id);
             source.thread_id = message.thread_id;
             source.creator_id = Some(message.creator_id);
             source.path = if let Some(thread) = message.thread_id {
                 format!(
                     "/rooms/{}?thread={thread}&message_id={}",
-                    message.room_id, message.id
+                    room.id, message.id
                 )
             } else {
-                campfire_routes::room_at_message(message.room_id, message.id)
+                campfire_routes::room_at_message(room.id, message.id)
             };
-            // Message JSON uses plain text directly; SavedItem uses the reminder helper.
-            if row.source_type == "Message" {
-                source.body = truncate(message.plain_text_body(conn, &*app.db.env().rich_text)?);
+            source.body = message.plain_text_body(conn, &*app.db.env().rich_text)?;
+            // Message JSON is always plain text; SavedItem uses the reminder helper.
+            if row.source_type == "SavedItem" && row.event_type == "message_reminder" {
+                source.body = format!(
+                    "You asked to be reminded about this message: {}",
+                    source.body
+                );
             }
             Some(source)
         }
@@ -507,6 +455,14 @@ pub fn payload_with_sources(
             let grant =
                 campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
                     .ok_or(campfire_db::Error::RecordNotFound("HuddleGrant"))?;
+            let caller = campfire_db::User::find_by_id(conn, grant.user_id)?
+                .map(|user| user.name)
+                .unwrap_or_else(|| "Someone".into());
+            source.body = if row.event_type == "huddle_missed" {
+                format!("You missed a huddle from {caller}")
+            } else {
+                format!("{caller} started a huddle")
+            };
             source.room_id = Some(grant.room_id);
             source.creator_id = Some(grant.user_id);
             source.path = format!("/rooms/{}", grant.room_id);
@@ -514,11 +470,10 @@ pub fn payload_with_sources(
         }
         "WorkThreadEvent" => {
             // FLAGGED WS12 WorkThreadEvent facts reader; access and mutations use ActivityItem.
-            let (thread, actor): (i64, Option<i64>) = conn.query_row(
-                "SELECT channel_thread_id,actor_id FROM work_thread_events WHERE id=?",
-                [row.source_id],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )?;
+            let (thread, actor, from, to, from_id, to_id, from_name, to_name) = conn.query_row(
+                "SELECT channel_thread_id,actor_id,from_status,to_status,from_owner_id,to_owner_id,from_owner_name,to_owner_name FROM work_thread_events WHERE id=?",
+                [row.source_id], |r| Ok((r.get::<_,i64>(0)?, r.get::<_,Option<i64>>(1)?, r.get::<_,Option<String>>(2)?, r.get::<_,Option<String>>(3)?, r.get::<_,Option<i64>>(4)?, r.get::<_,Option<i64>>(5)?, r.get::<_,Option<String>>(6)?, r.get::<_,Option<String>>(7)?)))?;
+            source.body = work_body(from, to, from_id, to_id, from_name, to_name);
             let thread = campfire_db::ChannelThread::find(conn, thread)?;
             source.room_id = Some(thread.room_id);
             source.thread_id = Some(thread.id);
@@ -529,6 +484,7 @@ pub fn payload_with_sources(
         "Event" => {
             let event =
                 campfire_db::models::calendar_event::CalendarEvent::find(conn, row.source_id)?;
+            source.body = event_body(conn, &event, &row.event_type)?;
             source.room_id = Some(event.room_id);
             source.creator_id = Some(event.organizer_id);
             source.path = format!("/rooms/{}/events/{}", event.room_id, event.id);
@@ -541,7 +497,7 @@ pub fn payload_with_sources(
                 .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
             source.room_id = approval.room_id;
             source.creator_id = Some(agent.user_id);
-            source.body = truncate(approval.summary.clone());
+            source.body = approval.summary.clone();
             source.path = format!("/agents/{}/approvals", agent.id);
             source.status = Some(approval.effective_status(app.db.env().now()).into());
             Some(source)
@@ -555,12 +511,16 @@ pub fn payload_with_sources(
             )?;
             let agent = campfire_db::Agent::find(conn, id)?
                 .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            let user = campfire_db::User::find(conn, agent.user_id)?;
+            source.body = budget_body(&agent, &user.name, &cap);
             source.creator_id = Some(agent.user_id);
             source.path = format!("/account/bots/{}/edit", agent.user_id);
             source.status = Some(cap);
             Some(source)
         }
         "Session" => {
+            let session = campfire_db::Session::find(conn, row.source_id)?;
+            source.body = session_body(row.created_at, &session);
             source.path = "/users/me/sessions".into();
             Some(source)
         }
@@ -568,6 +528,10 @@ pub fn payload_with_sources(
         "BoardSlaNudge" | "ScheduledMessage" | "TwoFactorCredential" => None,
         _ => None,
     };
+    let source = source.map(|mut source| {
+        source.body = truncate(source.body);
+        source
+    });
     let stamp = |t: campfire_db::Timestamp| t.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     Ok(Payload {
         id: row.id,
@@ -596,4 +560,101 @@ fn humanize(value: Option<&str>) -> String {
         .next()
         .map(|c| c.to_uppercase().to_string() + &rails_compat::unicode::downcase(chars.as_str()))
         .unwrap_or_default()
+}
+
+fn event_body(
+    conn: &Connection,
+    event: &campfire_db::models::calendar_event::CalendarEvent,
+    kind: &str,
+) -> Result<String> {
+    let start = campfire_views::time::Zone::for_user(Some(&event.time_zone))
+        .format(event.starts_at.jiff(), "%B %-d, %Y at %-I:%M %p %Z");
+    Ok(match kind {
+        "event_invitation" => {
+            if let (Some(rule), Some(until)) = (
+                event
+                    .recurrence_rule
+                    .as_deref()
+                    .filter(|r| !campfire_richtext::ruby::is_blank(r)),
+                event.recurrence_until,
+            ) {
+                format!(
+                    "You are invited: {start} (repeats {} until {}).",
+                    campfire_db::models::calendar_event::recurrence::phrase(rule),
+                    until.strftime("%B %-d, %Y")
+                )
+            } else {
+                format!("You are invited: {start}.")
+            }
+        }
+        "event_update" => format!("The time changed: {start}."),
+        "event_cancelled" => "This event was cancelled.".into(),
+        "event_reminder" => {
+            if let Some(id) = event.venue_room_id {
+                format!(
+                    "Starts in 15 minutes: {} in {}.",
+                    event.title,
+                    campfire_db::Room::find(conn, id)?.name.unwrap_or_default()
+                )
+            } else {
+                format!("Starts in 15 minutes: {}.", event.title)
+            }
+        }
+        _ => format!("Event updated: {start}."),
+    })
+}
+fn work_body(
+    from: Option<String>,
+    to: Option<String>,
+    from_id: Option<i64>,
+    to_id: Option<i64>,
+    from_name: Option<String>,
+    to_name: Option<String>,
+) -> String {
+    let mut changes = Vec::new();
+    if from != to {
+        changes.push(format!(
+            "Status: {} → {}",
+            humanize(from.as_deref()),
+            humanize(to.as_deref())
+        ));
+    }
+    if from_id != to_id {
+        let name = |value: Option<String>| {
+            value
+                .filter(|v| !campfire_richtext::ruby::is_blank(v))
+                .unwrap_or_else(|| "unassigned".into())
+        };
+        changes.push(format!("Owner: {} → {}", name(from_name), name(to_name)));
+    }
+    if changes.is_empty() {
+        "Work thread updated".into()
+    } else {
+        campfire_views::helpers::to_sentence(&changes, " and ")
+    }
+}
+fn session_body(created_at: campfire_db::Timestamp, session: &campfire_db::Session) -> String {
+    let at = created_at
+        .jiff()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .strftime("%B %-d, %Y at %-I:%M %p %Z");
+    format!(
+        "New sign-in to your account from {}, {at}. Wasn't you? Review your sessions.",
+        crate::authentication::device_description(session)
+    )
+}
+fn budget_details<'a>(agent: &campfire_db::Agent, cap: &'a str) -> (&'a str, Option<i64>) {
+    match cap {
+        "messages" => ("messages", agent.daily_message_cap),
+        "board_posts" => ("board posts", agent.daily_board_post_cap),
+        "external_actions" => ("external actions", agent.daily_external_action_cap),
+        _ => (cap, None),
+    }
+}
+fn budget_body(agent: &campfire_db::Agent, name: &str, cap: &str) -> String {
+    let (label, limit) = budget_details(agent, cap);
+    format!(
+        "{name} hit its daily {label} budget ({}/day).",
+        limit.map(|v| v.to_string()).unwrap_or_default()
+    )
 }

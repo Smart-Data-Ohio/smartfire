@@ -67,7 +67,7 @@ pub async fn index(c: &mut Ctx) -> Result {
             let sources = activity::MessageSources::load(conn, &rows)?;
             let payloads = if json {
                 rows.iter()
-                    .map(|i| activity::payload_with_sources(conn, &app, i, &viewer, &sources))
+                    .map(|i| activity::payload_with_sources(conn, &app, i, &sources))
                     .collect::<campfire_db::Result<Vec<_>>>()?
             } else {
                 Vec::new()
@@ -187,7 +187,7 @@ pub async fn handled(c: &mut Ctx) -> Result {
     change(c, true).await
 }
 
-async fn find(c: &mut Ctx) -> Result<(campfire_db::User, ActivityItem)> {
+async fn find(c: &mut Ctx) -> Result<ActivityItem> {
     concerns::before_actions(c, Before::default()).await?;
     no_store(c);
     let viewer = concerns::require_current_user(c)?.clone();
@@ -195,19 +195,18 @@ async fn find(c: &mut Ctx) -> Result<(campfire_db::User, ActivityItem)> {
         .param_str("id")
         .and_then(concerns::cast_integer)
         .ok_or(Error::NotFound)?;
-    let user = viewer.clone();
     let item = c
         .app()
         .db
-        .read(move |conn| ActivityItem::find_accessible(conn, &user, id))
+        .read(move |conn| ActivityItem::find_accessible(conn, &viewer, id))
         .await
         .map_err(Error::internal)?
         .ok_or(Error::NotFound)?;
-    Ok((viewer, item))
+    Ok(item)
 }
 
 async fn change(c: &mut Ctx, handled: bool) -> Result {
-    let (viewer, item) = find(c).await?;
+    let item = find(c).await?;
     // A compound Rails parameter has a nonempty to_s, so it cannot select the default state.
     let state = c
         .param("state")
@@ -227,7 +226,7 @@ async fn change(c: &mut Ctx, handled: bool) -> Result {
         } else {
             "State must be read or unread"
         };
-        return state_response(c, &viewer, None, Some(message)).await;
+        return state_response(c, None, Some(message)).await;
     }
     let saved = c
         .app()
@@ -240,12 +239,11 @@ async fn change(c: &mut Ctx, handled: bool) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    state_response(c, &viewer, Some(saved), None).await
+    state_response(c, Some(saved), None).await
 }
 
 async fn state_response(
     c: &mut Ctx,
-    viewer: &campfire_db::User,
     item: Option<ActivityItem>,
     error: Option<&str>,
 ) -> Result {
@@ -258,12 +256,11 @@ async fn state_response(
             );
         }
         let app = c.app().clone();
-        let viewer = viewer.clone();
         let item = item.expect("successful mutation supplies a row");
         let payload = c
             .app()
             .db
-            .read(move |conn| activity::payload(conn, &app, &item, &viewer))
+            .read(move |conn| activity::payload(conn, &app, &item))
             .await
             .map_err(Error::internal)?;
         return c.json(StatusCode::OK, &payload);
@@ -294,7 +291,7 @@ async fn state_response(
 }
 
 pub async fn open(c: &mut Ctx) -> Result {
-    let (viewer, item) = find(c).await?;
+    let item = find(c).await?;
     let item = c
         .app()
         .db
@@ -307,7 +304,7 @@ pub async fn open(c: &mut Ctx) -> Result {
         let payload = c
             .app()
             .db
-            .read(move |conn| activity::payload(conn, &app, &item, &viewer))
+            .read(move |conn| activity::payload(conn, &app, &item))
             .await
             .map_err(Error::internal)?;
         c.json(StatusCode::OK, &payload)

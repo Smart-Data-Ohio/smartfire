@@ -22,6 +22,7 @@ async fn ws11ui_review_inbox_preloads_message_sources_once_for_every_format() {
         .iter()
         .find(|case| case["name"] == "pagination ")
         .unwrap();
+    let mut failures = Vec::new();
     for accept in [
         "application/json",
         "text/html",
@@ -62,14 +63,30 @@ async fn ws11ui_review_inbox_preloads_message_sources_once_for_every_format() {
                     size as usize
                 );
             }
-            let count = table_selects(&log.lock().unwrap(), "messages");
-            println!("inbox {accept}: {size} items; message_selects={count}; Rails=1");
-            assert_eq!(
-                count, 1,
-                "Rails preloads Message sources in one query ({accept}, {size})"
-            );
+            let queries = log.lock().unwrap();
+            let expected = if accept == "application/json" {
+                vec![
+                    ("messages", 1),
+                    ("rooms", 1),
+                    ("users", 1),
+                    ("action_text_rich_texts", size as usize),
+                ]
+            } else {
+                vec![("messages", 1)]
+            };
+            for (table, rails) in expected {
+                let count = table_selects(&queries, table);
+                println!("inbox {accept}: {size} items; {table}_selects={count}; Rails={rails}");
+                if count != rails {
+                    failures.push(format!("{accept}, {size}: {table}={count}, Rails={rails}"));
+                }
+            }
         }
     }
+    assert!(
+        failures.is_empty(),
+        "Rails inbox query counts: {failures:?}"
+    );
 }
 
 #[tokio::test]
