@@ -25,8 +25,8 @@
 
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Condvar, Mutex};
 
 use rusqlite::{Connection, OpenFlags};
 use tokio::sync::{mpsc, oneshot};
@@ -158,9 +158,16 @@ impl AfterCommit {
     /// model callback; a later callback error cannot revoke those committed jobs.
     fn wake_committed_job(self, env: &Env) {
         match self {
-            Self::RecordJob { event: Some(event), .. }
-            | Self::Event(event @ (Event::Job(_) | Event::PushMessage { .. } | Event::RemoveBannedContent { .. }
-                | Event::DeliverWebhook { .. } | Event::PurgeBlob { .. })) => env.sink.emit(event),
+            Self::RecordJob {
+                event: Some(event), ..
+            }
+            | Self::Event(
+                event @ (Event::Job(_)
+                | Event::PushMessage { .. }
+                | Event::RemoveBannedContent { .. }
+                | Event::DeliverWebhook { .. }
+                | Event::PurgeBlob { .. }),
+            ) => env.sink.emit(event),
             _ => (),
         }
     }
@@ -317,9 +324,18 @@ impl<'c> Tx<'c> {
     /// One record callback per transaction, at its first registration's position, with the
     /// last save's state. Append registrations so savepoint rollback restores earlier hooks.
     /// These hooks run after commit; durable jobs must use the job APIs instead.
-    pub fn after_commit_record_latest(&mut self, key: &'static str, id: i64, hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static) {
+    pub fn after_commit_record_latest(
+        &mut self,
+        key: &'static str,
+        id: i64,
+        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static,
+    ) {
         if self.in_transaction {
-            self.after_commit.push(AfterCommit::RecordHook { key, id, hook: Box::new(hook) });
+            self.after_commit.push(AfterCommit::RecordHook {
+                key,
+                id,
+                hook: Box::new(hook),
+            });
         } else {
             self.after_commit(hook);
         }
@@ -369,9 +385,16 @@ impl<'c> Tx<'c> {
         }
     }
 
-    pub fn after_commit_record(&mut self, table: &'static str, id: i64,
-        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static) {
-        if !self.in_transaction { self.after_commit(hook); return; }
+    pub fn after_commit_record(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static,
+    ) {
+        if !self.in_transaction {
+            self.after_commit(hook);
+            return;
+        }
         self.register_record(table, id);
         if let Some(AfterCommit::RecordHooks {hooks, ..}) = self.after_commit.iter_mut().find(|item| {
             matches!(item, AfterCommit::RecordHooks {table: t, id: i, ..} if *t == table && *i == id)
@@ -388,9 +411,18 @@ impl<'c> Tx<'c> {
     pub fn savepoint<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let callbacks = self.after_commit.len();
         let finalizers = self.commit_finalizers.len();
-        let record_hooks: Vec<_> = self.after_commit.iter().enumerate().filter_map(|(i, item)| {
-            if let AfterCommit::RecordHooks {hooks, ..} = item {Some((i, hooks.len()))} else {None}
-        }).collect();
+        let record_hooks: Vec<_> = self
+            .after_commit
+            .iter()
+            .enumerate()
+            .filter_map(|(i, item)| {
+                if let AfterCommit::RecordHooks { hooks, .. } = item {
+                    Some((i, hooks.len()))
+                } else {
+                    None
+                }
+            })
+            .collect();
         self.conn.execute_batch("SAVEPOINT model_operation")?;
         match f(self) {
             Ok(value) => {
@@ -402,7 +434,9 @@ impl<'c> Tx<'c> {
                 self.after_commit.truncate(callbacks);
                 self.commit_finalizers.truncate(finalizers);
                 for (index, length) in record_hooks {
-                    if let AfterCommit::RecordHooks {hooks, ..} = &mut self.after_commit[index] {hooks.truncate(length);}
+                    if let AfterCommit::RecordHooks { hooks, .. } = &mut self.after_commit[index] {
+                        hooks.truncate(length);
+                    }
                 }
                 self.conn.execute_batch(
                     "ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation",
@@ -514,7 +548,10 @@ pub fn run_write<T>(
                 }
                 None
             }
-            AfterCommit::Event(event) => { env.sink.emit(event); None }
+            AfterCommit::Event(event) => {
+                env.sink.emit(event);
+                None
+            }
             AfterCommit::RecordBroadcast { table, id, event } => {
                 // A later destroy suppresses the record's earlier update callback.
                 match conn.query_row(
@@ -528,12 +565,17 @@ pub fn run_write<T>(
                 }
                 None
             }
-            AfterCommit::RecordHook {hook, ..} => hook(&mut after).err(),
-            AfterCommit::RecordHooks {hooks, ..} => hooks.into_iter().try_for_each(|hook| hook(&mut after)).err(),
+            AfterCommit::RecordHook { hook, .. } => hook(&mut after).err(),
+            AfterCommit::RecordHooks { hooks, .. } => hooks
+                .into_iter()
+                .try_for_each(|hook| hook(&mut after))
+                .err(),
             AfterCommit::Hook(hook) => hook(&mut after).err(),
         };
         if let Some(error) = callback_error {
-            for pending in callbacks { pending.wake_committed_job(env); }
+            for pending in callbacks {
+                pending.wake_committed_job(env);
+            }
             return Err(error);
         }
     }
@@ -566,12 +608,17 @@ impl Config {
 
 type Job = Box<dyn FnOnce(&Connection, &Env) + Send>;
 
+#[cfg(feature = "test-support")]
+type QueryLog = Arc<Mutex<Vec<String>>>;
+
 /// The database handle. Cheap to clone.
 #[derive(Clone)]
 pub struct Database {
     writer_generation: Arc<AtomicU64>,
     writer: mpsc::Sender<Job>,
     readers: Arc<ReaderPool>,
+    #[cfg(feature = "test-support")]
+    writer_query_log: Arc<Mutex<Option<QueryLog>>>,
     env: Env,
     path: PathBuf,
 }
@@ -588,12 +635,22 @@ impl Database {
 
         let (sender, mut receiver) = mpsc::channel::<Job>(config.write_queue.max(1));
         let writer_env = env.clone();
+        #[cfg(feature = "test-support")]
+        let writer_query_log = Arc::new(Mutex::new(None));
+        #[cfg(feature = "test-support")]
+        let query_log = writer_query_log.clone();
         let writer_generation = Arc::new(AtomicU64::new(0));
         let generation = writer_generation.clone();
         std::thread::Builder::new()
             .name("campfire-db-writer".into())
             .spawn(move || {
                 while let Some(job) = receiver.blocking_recv() {
+                    #[cfg(feature = "test-support")]
+                    let _trace = query_log
+                        .lock()
+                        .unwrap()
+                        .clone()
+                        .map(|log| QueryTrace::enter(&conn, log));
                     generation.fetch_add(1, Ordering::SeqCst);
                     // A panicking write must not take the writer down with it.
                     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -620,6 +677,8 @@ impl Database {
             writer: sender,
             writer_generation,
             readers: Arc::new(ReaderPool::new(readers)),
+            #[cfg(feature = "test-support")]
+            writer_query_log,
             env,
             path: config.path,
         })
@@ -657,7 +716,11 @@ impl Database {
 
     /// Holds a caller-owned runtime guard across the write AND its ordered after-commit
     /// callbacks. Models remain unaware of request/rendering context.
-    pub async fn write_scoped<T, F, G>(&self, scope: impl FnOnce() -> G + Send + 'static, f: F) -> Result<T>
+    pub async fn write_scoped<T, F, G>(
+        &self,
+        scope: impl FnOnce() -> G + Send + 'static,
+        f: F,
+    ) -> Result<T>
     where
         T: Send + 'static,
         F: FnOnce(&mut Tx<'_>) -> Result<T> + Send + 'static,
@@ -725,6 +788,20 @@ impl Database {
         let readers = self.readers.idle.lock().unwrap();
         assert!(!readers.is_empty(), "parameter-limit test needs idle readers");
         readers.iter().map(|conn| conn.set_limit(rusqlite::limits::Limit::SQLITE_LIMIT_VARIABLE_NUMBER, limit).expect("valid SQLite limit")).collect()
+    }
+
+    /// Trace the pooled readers and SELECTs issued from writer transactions.
+    #[cfg(feature = "test-support")]
+    pub fn capture_queries(&self) -> Arc<Mutex<Vec<String>>> {
+        let log = self.capture_read_queries();
+        *self.writer_query_log.lock().unwrap() = Some(log.clone());
+        log
+    }
+
+    #[cfg(feature = "test-support")]
+    pub fn stop_capturing_queries(&self) {
+        self.stop_capturing_read_queries();
+        *self.writer_query_log.lock().unwrap() = None;
     }
 
     /// [`Database::read`] for synchronous callers.
@@ -842,7 +919,7 @@ fn open_connection(path: &Path, reader: bool) -> Result<Connection> {
 
 struct ReaderPool {
     #[cfg(feature = "test-support")]
-    query_log: Mutex<Option<Arc<Mutex<Vec<String>>>>>,
+    query_log: Mutex<Option<QueryLog>>,
     idle: Mutex<Vec<Connection>>,
     available: Condvar,
 }
@@ -873,10 +950,18 @@ impl ReaderPool {
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
             }
         };
-        let checkout = Checkout { pool: self, conn: Some(conn) };
+        let checkout = Checkout {
+            pool: self,
+            conn: Some(conn),
+        };
         let conn = checkout.conn.as_ref().expect("checked out");
         #[cfg(feature = "test-support")]
-        let _trace = self.query_log.lock().unwrap().clone().map(|log| QueryTrace::enter(conn, log));
+        let _trace = self
+            .query_log
+            .lock()
+            .unwrap()
+            .clone()
+            .map(|log| QueryTrace::enter(conn, log));
         f(conn)
     }
 }
@@ -887,7 +972,7 @@ thread_local! {
 }
 
 #[cfg(feature = "test-support")]
-struct QueryTrace<'a>(&'a Connection, Option<Arc<Mutex<Vec<String>>>>);
+struct QueryTrace<'a>(&'a Connection, Option<QueryLog>);
 
 #[cfg(feature = "test-support")]
 impl<'a> QueryTrace<'a> {
@@ -895,12 +980,17 @@ impl<'a> QueryTrace<'a> {
         fn record(event: rusqlite::trace::TraceEvent<'_>) {
             if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
                 READ_QUERIES.with(|log| {
-                    if let Some(log) = log.borrow().as_ref() { log.lock().unwrap().push(sql.into()); }
+                    if let Some(log) = log.borrow().as_ref() {
+                        log.lock().unwrap().push(sql.into());
+                    }
                 });
             }
         }
         let previous = READ_QUERIES.with(|slot| slot.replace(Some(log)));
-        conn.trace_v2(rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT, Some(record));
+        conn.trace_v2(
+            rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
+            Some(record),
+        );
         Self(conn, previous)
     }
 }
@@ -908,8 +998,11 @@ impl<'a> QueryTrace<'a> {
 #[cfg(feature = "test-support")]
 impl Drop for QueryTrace<'_> {
     fn drop(&mut self) {
-        self.0.trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
-        READ_QUERIES.with(|slot| { slot.replace(self.1.take()); });
+        self.0
+            .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+        READ_QUERIES.with(|slot| {
+            slot.replace(self.1.take());
+        });
     }
 }
 
@@ -937,6 +1030,40 @@ impl Drop for Checkout<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "test-support")]
+    #[tokio::test]
+    async fn query_capture_includes_writer_and_reader_statements_and_can_stop() {
+        let dir = tempfile::tempdir().unwrap();
+        let db =
+            Database::open(Config::new(dir.path().join("test.sqlite3")), Env::default()).unwrap();
+        let log = db.capture_queries();
+        db.write(|tx| {
+            Ok(tx
+                .conn()
+                .query_row("SELECT 11", [], |row| row.get::<_, i64>(0))?)
+        })
+        .await
+        .unwrap();
+        db.read(|conn| Ok(conn.query_row("SELECT 22", [], |row| row.get::<_, i64>(0))?))
+            .await
+            .unwrap();
+        db.stop_capturing_queries();
+        let before = log.lock().unwrap().clone();
+        assert!(before.iter().any(|sql| sql == "SELECT 11"));
+        assert!(before.iter().any(|sql| sql == "SELECT 22"));
+        db.write(|tx| {
+            Ok(tx
+                .conn()
+                .query_row("SELECT 33", [], |row| row.get::<_, i64>(0))?)
+        })
+        .await
+        .unwrap();
+        db.read(|conn| Ok(conn.query_row("SELECT 44", [], |row| row.get::<_, i64>(0))?))
+            .await
+            .unwrap();
+        assert_eq!(*log.lock().unwrap(), before);
+    }
 
     #[test]
     fn commit_finalizers_precede_fallible_model_callbacks() {
@@ -972,7 +1099,8 @@ mod tests {
             });
             assert!(nested.is_err());
             Ok(())
-        }).unwrap();
+        })
+        .unwrap();
         assert_eq!(*trace.lock().unwrap(), ["outer"]);
     }
 
@@ -991,7 +1119,11 @@ mod tests {
         assert!(result.is_err(), "deferred foreign key must reject COMMIT");
         assert!(!finalized.load(Ordering::SeqCst));
         assert!(conn.is_autocommit());
-        assert_eq!(conn.query_row("SELECT count(*) FROM child", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
+        assert_eq!(
+            conn.query_row("SELECT count(*) FROM child", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
     }
 
     #[test]

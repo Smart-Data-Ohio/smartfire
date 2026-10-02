@@ -27,24 +27,32 @@ pub fn grants(conn: &Connection, agent_id: i64, bot_id: i64, viewer: &User) -> R
     let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
     let mut statement=conn.prepare("SELECT g.id,g.capability,g.room_id,u.name,g.created_at,g.revoked_at IS NOT NULL FROM agent_grants g JOIN users u ON u.id=g.granted_by_id WHERE g.agent_id=? ORDER BY g.revoked_at,g.capability,g.room_id")?;
     let mut grants = Vec::new();
-    let rows = statement.query_map([agent_id], |r| {
-        Ok((
-            r.get::<_, i64>(0)?,
-            r.get::<_, String>(1)?,
-            r.get::<_, Option<i64>>(2)?,
-            r.get::<_, String>(3)?,
-            r.get::<_, campfire_db::Timestamp>(4)?,
-            r.get::<_, bool>(5)?,
-        ))
-    })?;
-    for row in rows {
-        let (id, capability, room_id, granted_by, created_at, revoked) = row?;
+    let rows = statement
+        .query_map([agent_id], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, Option<i64>>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, campfire_db::Timestamp>(4)?,
+                r.get::<_, bool>(5)?,
+            ))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut ids: Vec<_> = rows.iter().filter_map(|row| row.2).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let names: std::collections::HashMap<_, _> = Room::for_ids(conn, &ids)?
+        .iter()
+        .map(|room| Ok((room.id, super::room_display_name(conn, room, viewer)?)))
+        .collect::<Result<_>>()?;
+    for (id, capability, room_id, granted_by, created_at, revoked) in rows {
         let room_name = match room_id {
             None => "Workspace-wide".into(),
-            Some(id) => match Room::find_by_id(conn, id)? {
-                Some(room) => super::room_display_name(conn, &room, viewer)?,
-                None => "Deleted room".into(),
-            },
+            Some(id) => names
+                .get(&id)
+                .cloned()
+                .unwrap_or_else(|| "Deleted room".into()),
         };
         grants.push(Grant {
             id,

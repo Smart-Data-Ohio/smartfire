@@ -166,19 +166,48 @@ const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created
 impl User {
     /// A `SELECT "users".*` row.
     pub fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+        Self::from_prefixed_row(row, "")
+    }
+
+    pub(crate) fn projection(table: &str, prefix: &str) -> String {
+        [
+            "id",
+            "name",
+            "email_address",
+            "password_digest",
+            "role",
+            "status",
+            "bio",
+            "icon_name",
+            "bot_token_digest",
+            "created_at",
+            "updated_at",
+        ]
+        .into_iter()
+        .map(|name| format!("{table}.{name} AS {prefix}{name}"))
+        .collect::<Vec<_>>()
+        .join(",")
+    }
+
+    pub(crate) fn from_prefixed_row(row: &Row<'_>, prefix: &str) -> rusqlite::Result<Self> {
+        macro_rules! field {
+            ($name:literal) => {
+                row.get(format!("{prefix}{}", $name).as_str())?
+            };
+        }
         Ok(Self {
-            id: row.get("id")?,
-            name: row.get("name")?,
-            email_address: row.get("email_address")?,
-            password_digest: row.get("password_digest")?,
-            role: row.get("role")?,
-            status: row.get("status")?,
-            bio: row.get("bio")?,
-            icon_name: row.get("icon_name")?,
-            bot_token_digest: row.get("bot_token_digest")?,
+            id: field!("id"),
+            name: field!("name"),
+            email_address: field!("email_address"),
+            password_digest: field!("password_digest"),
+            role: field!("role"),
+            status: field!("status"),
+            bio: field!("bio"),
+            icon_name: field!("icon_name"),
+            bot_token_digest: field!("bot_token_digest"),
             plain_bot_token: None,
-            created_at: row.get("created_at")?,
-            updated_at: row.get("updated_at")?,
+            created_at: field!("created_at"),
+            updated_at: field!("updated_at"),
         })
     }
 
@@ -194,6 +223,20 @@ impl User {
             r#"SELECT * FROM "users" WHERE "users"."id" = ? LIMIT 1"#,
             [id],
             Self::from_row,
+        )
+    }
+
+    /// Read additional facts from the same complete row, without reloading the user.
+    pub fn find_by_id_with<T>(
+        conn: &Connection,
+        id: i64,
+        mut project: impl FnMut(&Row<'_>) -> rusqlite::Result<T>,
+    ) -> Result<Option<(Self, T)>> {
+        query_one(
+            conn,
+            r#"SELECT * FROM users WHERE id=? LIMIT 1"#,
+            [id],
+            |row| Ok((Self::from_row(row)?, project(row)?)),
         )
     }
 

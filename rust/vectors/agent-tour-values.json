@@ -1,0 +1,959 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "name": "original_null",
+      "value": null,
+      "sql": "UPDATE users SET tour_completed_at=NULL WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "original_valid_datetime",
+      "value": "2026-01-01 00:00:00",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "original_empty",
+      "value": "",
+      "sql": "UPDATE users SET tour_completed_at='' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "original_invalid",
+      "value": "not-a-date",
+      "sql": "UPDATE users SET tour_completed_at='not-a-date' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "original_string_zero",
+      "value": "0",
+      "sql": "UPDATE users SET tour_completed_at='0' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "original_integer_zero",
+      "value": 0,
+      "sql": "UPDATE users SET tour_completed_at=0 WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "original_normalized_day",
+      "value": "2026-02-31 12:00:00",
+      "sql": "UPDATE users SET tour_completed_at='2026-02-31 12:00:00' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "original_date",
+      "value": "2026-01-01",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "whitespace",
+      "value": " \\t\\n",
+      "sql": "UPDATE users SET tour_completed_at=' \\t\\n' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "padded_valid",
+      "value": " 2026-01-01 00:00:00 ",
+      "sql": "UPDATE users SET tour_completed_at=' 2026-01-01 00:00:00 ' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "long_leading_spaces",
+      "value": "                                                                                                                                 2026-01-01 00:00:00",
+      "sql": "UPDATE users SET tour_completed_at='                                                                                                                                 2026-01-01 00:00:00' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "long_trailing_spaces",
+      "value": "2026-01-01 00:00:00                                                                                                                                 ",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00                                                                                                                                 ' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "month_and_year",
+      "value": "January 2026",
+      "sql": "UPDATE users SET tour_completed_at='January 2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "RFC_2822",
+      "value": "Fri, 02 Oct 2026 12:00:00 GMT",
+      "sql": "UPDATE users SET tour_completed_at='Fri, 02 Oct 2026 12:00:00 GMT' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "offset",
+      "value": "2026-01-01T23:59:59+05:45",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T23:59:59+05:45' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "fractional",
+      "value": "2026-01-01 00:00:00.123456789",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00.123456789' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "ISO_week_date",
+      "value": "2026-W01-1",
+      "sql": "UPDATE users SET tour_completed_at='2026-W01-1' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "ordinal_date",
+      "value": "2026-001",
+      "sql": "UPDATE users SET tour_completed_at='2026-001' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "short_year",
+      "value": "26-01-01",
+      "sql": "UPDATE users SET tour_completed_at='26-01-01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "year_one",
+      "value": "0001-01-01",
+      "sql": "UPDATE users SET tour_completed_at='0001-01-01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "year_10000",
+      "value": "10000-01-01",
+      "sql": "UPDATE users SET tour_completed_at='10000-01-01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "BC_date",
+      "value": "-0044-03-15",
+      "sql": "UPDATE users SET tour_completed_at='-0044-03-15' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "invalid_month",
+      "value": "2026-13-01",
+      "sql": "UPDATE users SET tour_completed_at='2026-13-01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "invalid_day",
+      "value": "2026-01-32",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-32' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "midnight_24",
+      "value": "2026-01-01 24:00:00",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 24:00:00' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "leap_second",
+      "value": "2026-01-01 23:59:60",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 23:59:60' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "date_slashes",
+      "value": "2026/10/02",
+      "sql": "UPDATE users SET tour_completed_at='2026/10/02' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "US_date",
+      "value": "10/02/2026",
+      "sql": "UPDATE users SET tour_completed_at='10/02/2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "named_month",
+      "value": "2 October 2026",
+      "sql": "UPDATE users SET tour_completed_at='2 October 2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "time_only",
+      "value": "12:34:56",
+      "sql": "UPDATE users SET tour_completed_at='12:34:56' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "month_day_only",
+      "value": "October 2",
+      "sql": "UPDATE users SET tour_completed_at='October 2' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "unix_decimal",
+      "value": 1.5,
+      "sql": "UPDATE users SET tour_completed_at=1.5 WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "negative_integer",
+      "value": -1,
+      "sql": "UPDATE users SET tour_completed_at=-1 WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "explicit_null",
+      "value": null,
+      "sql": "UPDATE users SET tour_completed_at=NULL WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "very_long_invalid",
+      "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "sql": "UPDATE users SET tour_completed_at='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "datetime_suffix_junk",
+      "value": "2026-01-01 00:00:00 not-a-date",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00 not-a-date' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "datetime_prefix_junk",
+      "value": "not-a-date 2026-01-01 00:00:00",
+      "sql": "UPDATE users SET tour_completed_at='not-a-date 2026-01-01 00:00:00' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "year_month_name",
+      "value": "2026 Jan",
+      "sql": "UPDATE users SET tour_completed_at='2026 Jan' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "year_month_full",
+      "value": "2026 January",
+      "sql": "UPDATE users SET tour_completed_at='2026 January' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "month_year_hyphen",
+      "value": "Jan-2026",
+      "sql": "UPDATE users SET tour_completed_at='Jan-2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "ISO_year_month",
+      "value": "2026-01",
+      "sql": "UPDATE users SET tour_completed_at='2026-01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "slash_year_month",
+      "value": "2026/01",
+      "sql": "UPDATE users SET tour_completed_at='2026/01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "year_first_words",
+      "value": "2026 Jan 1",
+      "sql": "UPDATE users SET tour_completed_at='2026 Jan 1' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "month_abbrev_dot",
+      "value": "Jan. 1, 2026",
+      "sql": "UPDATE users SET tour_completed_at='Jan. 1, 2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "day_month_abbrev_dot",
+      "value": "1 Jan. 2026",
+      "sql": "UPDATE users SET tour_completed_at='1 Jan. 2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "month_day_AD_year",
+      "value": "January 1, AD 2026",
+      "sql": "UPDATE users SET tour_completed_at='January 1, AD 2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "asctime",
+      "value": "Thu Jan 1 00:00:00 2026",
+      "sql": "UPDATE users SET tour_completed_at='Thu Jan 1 00:00:00 2026' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "ISO_without_seconds",
+      "value": "2026-01-01T00:00",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T00:00' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "invalid_hour",
+      "value": "2026-01-01 99:00",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 99:00' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "invalid_minute",
+      "value": "2026-01-01 09:99",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 09:99' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+    },
+    {
+      "name": "year_1900_leap_day",
+      "value": "1900-02-29",
+      "sql": "UPDATE users SET tour_completed_at='1900-02-29' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "unsigned_extended_year",
+      "value": "+2026-01-01",
+      "sql": "UPDATE users SET tour_completed_at='+2026-01-01' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "eastern_zone",
+      "value": "Thu, 1 Jan 2026 09:00:00 EST",
+      "sql": "UPDATE users SET tour_completed_at='Thu, 1 Jan 2026 09:00:00 EST' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    }
+  ]
+}
