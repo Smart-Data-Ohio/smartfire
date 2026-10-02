@@ -277,8 +277,9 @@ pub async fn connection(
     })
 }
 
-/// WS8b-m calls this after authorizing the thread's room. Empty for ordinary threads.
-/// Uses the same file-bearing, private-safe card adapter as the registered cable callback.
+/// Test adapter for the file-bearing, private-safe owner header.
+/// Production uses the presenter and the bounded callback adapter.
+#[cfg(test)]
 pub fn thread_header(
     conn: &Connection,
     ctx: &campfire_views::ViewContext<'_>,

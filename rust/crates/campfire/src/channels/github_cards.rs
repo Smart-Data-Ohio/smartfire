@@ -82,9 +82,9 @@ fn publish_headers(
             };
             let html = if thread.room_id == room_id {
                 if header_card.is_none() {
-                    header_card = Some(github::thread_header_card(&pr)?);
+                    header_card = Some(github::thread_header_card(pr)?);
                 }
-                page::render_detached(&app, account, |ctx| {
+                page::render_detached(app, account, |ctx| {
                     campfire_views::github::thread_header(
                         ctx,
                         room_id,
