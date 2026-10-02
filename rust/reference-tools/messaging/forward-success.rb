@@ -14,6 +14,14 @@ legacy = room.root_messages.create!(creator: viewer, body: '<div>Legacy &amp; <s
 file = room.root_messages.create!(creator: viewer, body: 'File snapshot', client_message_id: 'success-file', attachment: ActiveStorage::Blob.find(13))
 thread = ChannelThread.create!(room:, creator: User.find(149087659), name: 'Success closed')
 thread.update_columns(closed_at: Time.current, last_activity_at: 2.hours.ago)
+targets = [room, Room.find(699448326), Room.find(186869642), thread]
+recipients = [127326141, 149087659, 712064548, 394959859].map do |user_id|
+  user = User.find(user_id)
+  {user_id:, channels: targets.map do |target|
+    stream = Turbo::StreamsChannel.send(:stream_name_from, [target, :messages])
+    {stream:, allowed: RoomMessagesChannel.subscribable_target(user, stream).present?}
+  end}
+end
 child = thread.messages.create!(room:, creator: viewer, markdown_source: 'Nested snapshot', client_message_id: 'success-child')
 ThreadMembership.where(thread:, user: viewer).delete_all
 thread.update_columns(closed_at: Time.current, last_activity_at: 2.hours.ago)
@@ -50,5 +58,5 @@ capture.call('forward_of_forward', copies.first, {destinations: [{room_id: room.
 capture.call('file', file, {destinations: [{room_id: 699448326}]})
 capture.call('nested_html', child, {destinations: [{room_id: 699448326}]}, :html)
 raise 'forward fixture UUID count' unless ids.length == 1
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', source_id: source.id, legacy_id: legacy.id, file_id: file.id, thread_id: thread.id, child_id: child.id, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', source_id: source.id, legacy_id: legacy.id, file_id: file.id, thread_id: thread.id, child_id: child.id, recipients:, rows:) + "\n")
 puts "WS8bm forward-success oracle: #{rows.size} positive actual requests; #{rows.sum { |r| r[:messages].size }} forwards; complete bodies/rows and #{rows.sum { |r| r[:frames].size }} rendered frames"

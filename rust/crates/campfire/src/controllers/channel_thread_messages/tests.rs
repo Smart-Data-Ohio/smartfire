@@ -92,3 +92,23 @@ async fn nested_pages_show_actions_formats_and_locked_reads_match_rails_bytes() 
         }
     }
 }
+
+#[tokio::test]
+async fn thread_post_marks_all_joined_users_unread_independent_of_notification_preference() {
+    use campfire_db::{Room,ThreadMembership};
+    let (app,_,thread,_)=fixture().await;
+    app.db().write(move|tx| {
+        Room::find(tx.conn(),ALL_TALK)?.grant_to(tx,&[KEVIN])?;
+        for (user,involvement) in [(JASON,"everything"),(KEVIN,"nothing")] {
+            ThreadMembership::join(tx,thread,user)?;
+            tx.conn().execute("UPDATE thread_memberships SET involvement=?,unread_at=NULL WHERE thread_id=? AND user_id=?",(involvement,thread,user))?;
+        }
+        Ok(())
+    }).await.unwrap();
+    let response=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/threads/{thread}/messages.json")).form(&[("message[markdown_source]","Unread all"),("message[client_message_id]","unread-all")])).await;
+    assert_eq!(response.status,StatusCode::CREATED,"{}",response.text());
+    app.db().read(move|conn| {
+        for user in [JASON,KEVIN] {assert!(ThreadMembership::find_by_thread_and_user(conn,thread,user)?.unwrap().unread());}
+        Ok(())
+    }).await.unwrap();
+}

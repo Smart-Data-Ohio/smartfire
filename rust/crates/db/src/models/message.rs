@@ -1071,7 +1071,7 @@ impl Message {
             };
         }
         if text.trim().is_empty() {
-            text = self.attachment(conn)?.map(|(_, blob)| blob.filename).unwrap_or_default();
+            text = self.attachment(conn)?.map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string()).unwrap_or_default();
         }
         Ok(match self.forward_note.as_deref().filter(|note| !note.trim().is_empty()) {
             Some(note) if text.trim().is_empty() => note.to_string(),

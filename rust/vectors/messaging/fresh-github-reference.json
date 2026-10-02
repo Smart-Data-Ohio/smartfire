@@ -1,0 +1,15 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "name": "new_reference",
+      "stale": false,
+      "fetches": 1
+    },
+    {
+      "name": "existing_reference",
+      "stale": false,
+      "fetches": 1
+    }
+  ]
+}
