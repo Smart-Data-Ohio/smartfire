@@ -207,6 +207,15 @@ impl TestApp {
         .await
     }
 
+    /// WS16 fixture seam: real Google/Slack HTTP with a shared frozen clock/config.
+    pub async fn boot_with_network_clock_and_env(
+        network: crate::integrations::net::Network,
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_clients("default", clock, network, extra, None).await
+    }
+
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
         Self::boot_with_clients("default", seed_clock(), network, &[], None).await
     }
