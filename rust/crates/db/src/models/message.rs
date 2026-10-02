@@ -7,7 +7,9 @@ use rusqlite::{Connection, Row, params};
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
 use crate::events::Event;
-use crate::models::{Attachment, Blob, Boost, ChannelThread, RichTextRecord, Room, RoomType, Sound, User};
+use crate::models::{
+    Attachment, Blob, Boost, ChannelThread, RichTextRecord, Room, RoomType, Sound, User,
+};
 use crate::rich_text::{RichText, mention_token_names};
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
@@ -230,7 +232,12 @@ impl Message {
 
     /// `ordered`
     pub fn ordered(conn: &Connection) -> Result<Vec<Self>> {
-        query_all(conn, &format!(r#"SELECT "messages".* FROM "messages" {ORDERED}"#), [], Self::from_row)
+        query_all(
+            conn,
+            &format!(r#"SELECT "messages".* FROM "messages" {ORDERED}"#),
+            [],
+            Self::from_row,
+        )
     }
 
     /// `room.messages`
@@ -246,7 +253,11 @@ impl Message {
 
     /// `room.root_messages.count` (bot API pagination excludes replies).
     pub fn count_roots_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
-        sql::count(conn, r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ? AND "thread_id" IS NULL"#, [room_id])
+        sql::count(
+            conn,
+            r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ? AND "thread_id" IS NULL"#,
+            [room_id],
+        )
     }
 
     /// `room.messages.count`
@@ -271,7 +282,9 @@ impl Message {
     /// `root_messages.find(id)` / `thread.messages.find(id)`
     pub fn find_in(conn: &Connection, timeline: Timeline, id: i64) -> Result<Self> {
         let (condition, value) = timeline.condition();
-        let sql = format!(r#"SELECT "messages".* FROM "messages" WHERE {condition} AND "messages"."id" = ? LIMIT 1"#);
+        let sql = format!(
+            r#"SELECT "messages".* FROM "messages" WHERE {condition} AND "messages"."id" = ? LIMIT 1"#
+        );
         query_one(conn, &sql, [value, id], Self::from_row)?.or_not_found("Message")
     }
 
@@ -290,7 +303,12 @@ impl Message {
             r#"SELECT "messages".* FROM "messages" WHERE {condition}{filter} {order} LIMIT {PAGE_SIZE}"#
         );
         let values = std::iter::once(rusqlite::types::Value::from(value)).chain(values);
-        let rows = query_all(conn, &sql, rusqlite::params_from_iter(values), Self::from_row)?;
+        let rows = query_all(
+            conn,
+            &sql,
+            rusqlite::params_from_iter(values),
+            Self::from_row,
+        )?;
         Ok(if last { reversed(rows) } else { rows })
     }
 
@@ -309,17 +327,41 @@ impl Message {
     }
 
     /// `page_before(message)`: `before(message).last_page`
-    pub fn page_before(conn: &Connection, timeline: Timeline, message: &Message) -> Result<Vec<Self>> {
-        Self::page(conn, timeline, &format!(" AND ({BEFORE})"), Self::cursor(message), true)
+    pub fn page_before(
+        conn: &Connection,
+        timeline: Timeline,
+        message: &Message,
+    ) -> Result<Vec<Self>> {
+        Self::page(
+            conn,
+            timeline,
+            &format!(" AND ({BEFORE})"),
+            Self::cursor(message),
+            true,
+        )
     }
 
     /// `page_after(message)`: `after(message).first_page`
-    pub fn page_after(conn: &Connection, timeline: Timeline, message: &Message) -> Result<Vec<Self>> {
-        Self::page(conn, timeline, &format!(" AND ({AFTER})"), Self::cursor(message), false)
+    pub fn page_after(
+        conn: &Connection,
+        timeline: Timeline,
+        message: &Message,
+    ) -> Result<Vec<Self>> {
+        Self::page(
+            conn,
+            timeline,
+            &format!(" AND ({AFTER})"),
+            Self::cursor(message),
+            false,
+        )
     }
 
     /// `page_around(message)`: up to 40 before, the message, up to 40 after.
-    pub fn page_around(conn: &Connection, timeline: Timeline, message: &Message) -> Result<Vec<Self>> {
+    pub fn page_around(
+        conn: &Connection,
+        timeline: Timeline,
+        message: &Message,
+    ) -> Result<Vec<Self>> {
         let mut page = Self::page_before(conn, timeline, message)?;
         page.push(message.clone());
         page.extend(Self::page_after(conn, timeline, message)?);
@@ -327,8 +369,18 @@ impl Message {
     }
 
     /// `page_created_since(time)`: `where("created_at > ?", time).first_page`
-    pub fn page_created_since(conn: &Connection, timeline: Timeline, time: Timestamp) -> Result<Vec<Self>> {
-        Self::page(conn, timeline, " AND (created_at > ?)", vec![time.to_db().into()], false)
+    pub fn page_created_since(
+        conn: &Connection,
+        timeline: Timeline,
+        time: Timestamp,
+    ) -> Result<Vec<Self>> {
+        Self::page(
+            conn,
+            timeline,
+            " AND (created_at > ?)",
+            vec![time.to_db().into()],
+            false,
+        )
     }
 
     /// `without(excluding).page_updated_since(time)`: `where("updated_at > ?", time).last_page`
@@ -341,7 +393,10 @@ impl Message {
         let mut filter = String::new();
         let mut values: Vec<rusqlite::types::Value> = Vec::new();
         if !excluding.is_empty() {
-            filter = format!(r#" AND "messages"."id" NOT IN ({})"#, placeholders(excluding.len()));
+            filter = format!(
+                r#" AND "messages"."id" NOT IN ({})"#,
+                placeholders(excluding.len())
+            );
             values.extend(excluding.iter().map(|id| rusqlite::types::Value::from(*id)));
         }
         filter.push_str(" AND (updated_at > ?)");
@@ -359,9 +414,16 @@ impl Message {
         Self::exists_in(conn, timeline, AFTER, message)
     }
 
-    fn exists_in(conn: &Connection, timeline: Timeline, comparison: &str, message: &Message) -> Result<bool> {
+    fn exists_in(
+        conn: &Connection,
+        timeline: Timeline,
+        comparison: &str,
+        message: &Message,
+    ) -> Result<bool> {
         let (condition, value) = timeline.condition();
-        let sql = format!(r#"SELECT 1 AS one FROM "messages" WHERE {condition} AND ({comparison}) LIMIT 1"#);
+        let sql = format!(
+            r#"SELECT 1 AS one FROM "messages" WHERE {condition} AND ({comparison}) LIMIT 1"#
+        );
         sql::exists(conn, &sql, params![value, message.created_at, message.id])
     }
 
@@ -369,7 +431,8 @@ impl Message {
     /// first page rather than counting the whole timeline, which grows without bound.
     pub fn paged(conn: &Connection, timeline: Timeline) -> Result<bool> {
         let (condition, value) = timeline.condition();
-        let sql = format!(r#"SELECT 1 FROM "messages" WHERE {condition} LIMIT 1 OFFSET {PAGE_SIZE}"#);
+        let sql =
+            format!(r#"SELECT 1 FROM "messages" WHERE {condition} LIMIT 1 OFFSET {PAGE_SIZE}"#);
         sql::exists(conn, &sql, [value])
     }
 
@@ -384,7 +447,8 @@ impl Message {
     /// `SearchQuery::messages_for_user` with an accessible message cursor.
     pub fn search_reachable(conn: &Connection, user_id: i64, query: &str) -> Result<Vec<Self>> {
         Ok(super::search_query::SearchQuery::parse(query)
-            .messages_for_user(conn, user_id, jiff::tz::TimeZone::UTC, None)?.messages)
+            .messages_for_user(conn, user_id, jiff::tz::TimeZone::UTC, None)?
+            .messages)
     }
 
     // Creating, updating, destroying
@@ -402,7 +466,7 @@ impl Message {
     /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
     /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
-        Self::create_with_agent_delivery(tx, attributes, false)
+        Self::create_with_options(tx, attributes, None, false)
     }
 
     /// Board creation records its assignment before invoking the real WS11 opener fanout.
@@ -412,10 +476,34 @@ impl Message {
         attributes: NewMessage,
         defer_agent_delivery: bool,
     ) -> Result<Self> {
+        Self::create_with_options(tx, attributes, None, defer_agent_delivery)
+    }
+
+    /// Slack's `importing: true` plus `ActiveRecord::Base.no_touching`: keep validation,
+    /// rendering, mention resolution, search and DB references; suppress delivery and touches.
+    pub fn create_imported(
+        tx: &mut Tx<'_>,
+        attributes: NewMessage,
+        created_at: Timestamp,
+        edited_at: Option<Timestamp>,
+    ) -> Result<Self> {
+        Self::create_with_options(tx, attributes, Some((created_at, edited_at)), false)
+    }
+
+    fn create_with_options(
+        tx: &mut Tx<'_>,
+        attributes: NewMessage,
+        imported_time: Option<(Timestamp, Option<Timestamp>)>,
+        defer_agent_delivery: bool,
+    ) -> Result<Self> {
+        let importing = imported_time.is_some();
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate(tx.conn(), &attributes)?.into_result()?;
         let now = tx.now();
-        let client_message_id = attributes.client_message_id.clone().unwrap_or_else(sql::uuid);
+        let client_message_id = attributes
+            .client_message_id
+            .clone()
+            .unwrap_or_else(|| tx.env().message_uuid());
         // `before_save :touch_streaming_activity, if: :streaming?`
         let streaming_updated_at = attributes.streaming.then_some(now);
         let id: i64 = tx.conn().query_row_cached(
@@ -424,7 +512,7 @@ impl Message {
                 attributes.action,
                 attributes.board_post_opener,
                 client_message_id,
-                now,
+                imported_time.map_or(now, |(created, _)| created),
                 attributes.creator_id,
                 attributes.embeds_suppressed,
                 attributes.forward_note,
@@ -444,8 +532,18 @@ impl Message {
             |r| r.get(0),
         )?;
         let mut message = Self::find(tx.conn(), id)?;
+        if let Some((_, edited_at)) = imported_time {
+            tx.conn().execute_cached(
+                "UPDATE messages SET edited_at = ? WHERE id = ?",
+                params![edited_at, id],
+            )?;
+            message.edited_at = edited_at;
+        }
         let mut indicator_threads = Vec::new();
-        if let Some(thread_id) = message.thread_id.filter(|_| message.thread_reply()) {
+        if let Some(thread_id) = message
+            .thread_id
+            .filter(|_| message.thread_reply() && !importing)
+        {
             ChannelThread::refresh_messages_count(tx, thread_id)?;
             indicator_threads.push(thread_id);
         }
@@ -469,27 +567,45 @@ impl Message {
         if touched {
             message.updated_at = Self::touch_row(tx, id)?;
         }
-        Room::touch(tx, message.room_id)?;
+        if !importing {
+            Room::touch(tx, message.room_id)?;
+        }
 
         if !message.streaming {
             // Bookkeeping commits with the message (lead decision, round 2). Receive only
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
-            message.receive_in_conversation(tx)?;
-            if !message.system_note { crate::ActivityItem::record_message(tx, &message)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
-            message.sync_all_references(tx)?;
-            message.push_later_in_conversation(tx);
+            if !importing {
+                message.receive_in_conversation(tx)?;
+                if !message.system_note {
+                    crate::ActivityItem::record_message(tx, &message)?;
+                    tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?;
+                }
+            }
+            if importing {
+                crate::models::message_reference::sync(tx, &message)?;
+                message.sync_external_references(tx, false)?;
+            } else {
+                message.sync_all_references(tx)?;
+            }
+            if !importing {
+                message.push_later_in_conversation(tx);
+            }
         }
-        if message.thread_id.is_some() {
+        if message.thread_id.is_some() && !importing {
             // `close_stale_sibling_threads`: with no scheduled sweep, thread writes persist the
             // room's archive state.
             ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
-        if !defer_agent_delivery {
-            crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
+        if !importing {
+            if !defer_agent_delivery {
+                crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
+            }
+            // Read the final counter after commit. Rails sends unread, push, then indicator.
+            tx.after_commit(move |tx| {
+                ChannelThread::broadcast_thread_indicators(tx, &indicator_threads)
+            });
         }
-        // Read the final counter after commit. Rails sends unread, push, then indicator.
-        tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
     }
 
@@ -509,7 +625,11 @@ impl Message {
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
-    pub fn create_markdown(tx: &mut Tx<'_>, mut attributes: NewMessage, source: &str) -> Result<Self> {
+    pub fn create_markdown(
+        tx: &mut Tx<'_>,
+        mut attributes: NewMessage,
+        source: &str,
+    ) -> Result<Self> {
         attributes.markdown_source = Some(source.to_owned());
         Self::create(tx, attributes)
     }
@@ -527,22 +647,36 @@ impl Message {
                 Ok(Some(Self::prepare_body(tx, &rendered, true)?))
             }
             Some(_) => Ok(None),
-            None => attributes.body.as_deref().map(|body| Self::prepare_body(tx, body, false)).transpose(),
+            None => attributes
+                .body
+                .as_deref()
+                .map(|body| Self::prepare_body(tx, body, false))
+                .transpose(),
         }
     }
 
     fn prepare_body(tx: &Tx<'_>, body: &str, markdown: bool) -> Result<String> {
         let text = tx.rich_text();
-        let body = text.try_canonicalize_html(tx.conn(), body).map_err(crate::Error::Other)?;
+        let body = text
+            .try_canonicalize_html(tx.conn(), body)
+            .map_err(crate::Error::Other)?;
         // Resolve before committing: index/receive callbacks must not hide renderer failures
         // after the originating row has already committed.
-        let names = |id| User::find_by_id(tx.conn(), id).ok().flatten().map(|u| u.name);
+        let names = |id| {
+            User::find_by_id(tx.conn(), id)
+                .ok()
+                .flatten()
+                .map(|u| u.name)
+        };
         if markdown {
-            text.try_markdown_plain_text(tx.conn(), &body, &names).map_err(crate::Error::Other)?;
+            text.try_markdown_plain_text(tx.conn(), &body, &names)
+                .map_err(crate::Error::Other)?;
         } else {
-            text.try_to_plain_text(tx.conn(), &body, &names).map_err(crate::Error::Other)?;
+            text.try_to_plain_text(tx.conn(), &body, &names)
+                .map_err(crate::Error::Other)?;
         }
-        text.try_mentioned_user_ids(tx.conn(), &body).map_err(crate::Error::Other)?;
+        text.try_mentioned_user_ids(tx.conn(), &body)
+            .map_err(crate::Error::Other)?;
         Ok(body)
     }
 
@@ -553,7 +687,11 @@ impl Message {
 
     /// The validations, for a new record or (`new_record` false) a saved one being updated to
     /// `attributes`.
-    fn validate_attributes(conn: &Connection, attributes: &NewMessage, new_record: bool) -> Result<Errors> {
+    fn validate_attributes(
+        conn: &Connection,
+        attributes: &NewMessage,
+        new_record: bool,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
         // `belongs_to :room` and `:creator` (required)
         if Room::find_by_id(conn, attributes.room_id)?.is_none() {
@@ -577,7 +715,10 @@ impl Message {
         if let Some(source) = &attributes.markdown_source
             && source.chars().count() > SOURCE_LIMIT
         {
-            errors.add("markdown_source", format!("is too long (maximum is {SOURCE_LIMIT} characters)"));
+            errors.add(
+                "markdown_source",
+                format!("is too long (maximum is {SOURCE_LIMIT} characters)"),
+            );
         }
         // `markdown_source_or_attachment`, if `requires_body?` (Markdown, not streaming)
         if let Some(source) = &attributes.markdown_source
@@ -590,7 +731,10 @@ impl Message {
         }
         // `drive_attachments_within_limit`
         if attributes.drive_file_ids.len() > DRIVE_ATTACHMENTS_PER_MESSAGE {
-            errors.add("drive_attachments", format!("are limited to {DRIVE_ATTACHMENTS_PER_MESSAGE} per message"));
+            errors.add(
+                "drive_attachments",
+                format!("are limited to {DRIVE_ATTACHMENTS_PER_MESSAGE} per message"),
+            );
         }
         // `validate_conversation_links`
         let thread = match attributes.thread_id {
@@ -600,16 +744,25 @@ impl Message {
         if let Some(thread) = &thread {
             let direct = Room::find_by_id(conn, thread.room_id)?.is_some_and(|room| room.direct());
             if thread.room_id != attributes.room_id || direct {
-                errors.add("thread", "must belong to the message room and cannot be a direct room thread");
+                errors.add(
+                    "thread",
+                    "must belong to the message room and cannot be a direct room thread",
+                );
             }
         }
-        if let Some(source) = attributes.reply_to_message_id.map(|id| Self::find_by_id(conn, id)).transpose()?.flatten() {
+        if let Some(source) = attributes
+            .reply_to_message_id
+            .map(|id| Self::find_by_id(conn, id))
+            .transpose()?
+            .flatten()
+        {
             let same_stream = match attributes.thread_id {
                 None => source.thread_id.is_none(),
                 Some(thread_id) => {
                     source.thread_id == Some(thread_id)
                         || thread.as_ref().is_some_and(|thread| {
-                            thread.parent_message_id == Some(source.id) && source.thread_id.is_none()
+                            thread.parent_message_id == Some(source.id)
+                                && source.thread_id.is_none()
                         })
                 }
             };
@@ -619,11 +772,17 @@ impl Message {
         }
         // `validate_forward_metadata` (new records only: deleting the source nullifies the link
         // and leaves `forwarded_at`)
-        match (attributes.forwarded_from_message_id, attributes.forwarded_at) {
-            (Some(_), None) if new_record => errors.add("forwarded_at", "must be present for a forwarded message"),
-            (None, Some(_)) if new_record => {
-                errors.add("forwarded_from_message", "must be present for a forwarded message")
+        match (
+            attributes.forwarded_from_message_id,
+            attributes.forwarded_at,
+        ) {
+            (Some(_), None) if new_record => {
+                errors.add("forwarded_at", "must be present for a forwarded message")
             }
+            (None, Some(_)) if new_record => errors.add(
+                "forwarded_from_message",
+                "must be present for a forwarded message",
+            ),
             _ => {}
         }
         // `no_root_messages_in_boards`: quiet system notes (the stale-work digest) may sit at a
@@ -643,7 +802,10 @@ impl Message {
         if let Some(note) = &attributes.forward_note
             && note.chars().count() > SOURCE_LIMIT
         {
-            errors.add("forward_note", format!("is too long (maximum is {SOURCE_LIMIT} characters)"));
+            errors.add(
+                "forward_note",
+                format!("is too long (maximum is {SOURCE_LIMIT} characters)"),
+            );
         }
         Ok(errors)
     }
@@ -700,7 +862,9 @@ impl Message {
             }
         }
         self.touch(tx)?;
-        if !self.streaming { self.sync_external_references(tx, true)?; }
+        if !self.streaming {
+            self.sync_external_references(tx, true)?;
+        }
         Ok(())
     }
 
@@ -724,29 +888,50 @@ impl Message {
         if self.embeds_suppressed {
             return Ok(());
         }
-        self.update(tx, MessageChanges { embeds_suppressed: Some(true), ..Default::default() })
+        self.update(
+            tx,
+            MessageChanges {
+                embeds_suppressed: Some(true),
+                ..Default::default()
+            },
+        )
     }
 
     /// `body_content_will_change?`: a new Markdown source, or a body whose HTML changes when
     /// either side has any text (a blank body assigned to an attachment-only message isn't a
     /// text change).
-    pub fn body_content_will_change(&self, conn: &Connection, rich_text: &dyn RichText, changes: &MessageChanges) -> Result<bool> {
+    pub fn body_content_will_change(
+        &self,
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        changes: &MessageChanges,
+    ) -> Result<bool> {
         if self.markdown_source_will_change(changes) {
             return Ok(true);
         }
-        let Some(body) = &changes.body else { return Ok(false) };
+        let Some(body) = &changes.body else {
+            return Ok(false);
+        };
         let previous = self.body_html(conn)?.unwrap_or_default();
         if *body == previous {
             return Ok(false);
         }
         let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
-        let has_text = |html: &str| rich_text.try_to_plain_text(conn, html, &names).map(|s| !s.trim().is_empty()).map_err(crate::Error::Other);
+        let has_text = |html: &str| {
+            rich_text
+                .try_to_plain_text(conn, html, &names)
+                .map(|s| !s.trim().is_empty())
+                .map_err(crate::Error::Other)
+        };
         Ok(has_text(body)? || has_text(&previous)?)
     }
 
     fn markdown_source_will_change(&self, changes: &MessageChanges) -> bool {
         (changes.clear_markdown_source && self.markdown_source.is_some())
-            || changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
+            || changes
+                .markdown_source
+                .as_ref()
+                .is_some_and(|source| self.markdown_source.as_ref() != Some(source))
     }
 
     /// `save!` of assigned changes. A changed Markdown source re-renders the body
@@ -754,7 +939,12 @@ impl Message {
     /// are touched when anything changed (or always while streaming); the search index follows
     /// in this transaction (Rails' `after_update_commit :update_in_index` is moved here so a
     /// failed renderer cannot leave a partially processed write).
-    fn save_changes(&mut self, tx: &mut Tx<'_>, changes: MessageChanges, stamp_edited: bool) -> Result<()> {
+    fn save_changes(
+        &mut self,
+        tx: &mut Tx<'_>,
+        changes: MessageChanges,
+        stamp_edited: bool,
+    ) -> Result<()> {
         self.validate_streaming_state(tx.conn())?;
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
@@ -773,13 +963,23 @@ impl Message {
             }
             _ => changes.body.clone(),
         };
-        let body = body.as_deref().map(|body| Self::prepare_body(tx, body, markdown_source.is_some())).transpose()?;
+        let body = body
+            .as_deref()
+            .map(|body| Self::prepare_body(tx, body, markdown_source.is_some()))
+            .transpose()?;
         let current_body = self.body_html(conn)?;
         let body = body.filter(|body| current_body.as_deref() != Some(body.as_str()));
-        let references_changed = !self.streaming && (markdown_source != self.markdown_source || body.is_some());
+        let references_changed =
+            !self.streaming && (markdown_source != self.markdown_source || body.is_some());
         let current_drive_ids = drive_file_ids(conn, self.id)?;
-        let drive_file_ids = changes.drive_file_ids.clone().unwrap_or_else(|| current_drive_ids.clone());
-        let forward_note = changes.forward_note.clone().unwrap_or_else(|| self.forward_note.clone());
+        let drive_file_ids = changes
+            .drive_file_ids
+            .clone()
+            .unwrap_or_else(|| current_drive_ids.clone());
+        let forward_note = changes
+            .forward_note
+            .clone()
+            .unwrap_or_else(|| self.forward_note.clone());
         let embeds_suppressed = changes.embeds_suppressed.unwrap_or(self.embeds_suppressed);
         let client_message_id = changes.client_message_id.clone().unwrap_or_else(|| Some(self.client_message_id.clone()));
         let reply_to_message_id = changes.reply_to_message_id.unwrap_or(self.reply_to_message_id);
@@ -790,7 +990,8 @@ impl Message {
             creator_id: self.creator_id,
             client_message_id: client_message_id.clone(),
             body: body.clone(),
-            attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?.map(|a| a.blob_id),
+            attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?
+                .map(|a| a.blob_id),
             thread_id: self.thread_id,
             system_note: self.system_note,
             streaming: self.streaming,
@@ -809,7 +1010,11 @@ impl Message {
         Self::validate_attributes(conn, &attributes, false)?.into_result()?;
 
         let now = tx.now();
-        let edited_at = if content_changes { Some(now) } else { self.edited_at };
+        let edited_at = if content_changes {
+            Some(now)
+        } else {
+            self.edited_at
+        };
         let columns_changed = markdown_source != self.markdown_source
             || client_message_id.as_deref() != Some(self.client_message_id.as_str())
             || reply_to_message_id != self.reply_to_message_id
@@ -821,7 +1026,11 @@ impl Message {
         if !(columns_changed || body.is_some() || drive_changed || self.streaming) {
             return Ok(());
         }
-        let streaming_updated_at = if self.streaming { Some(now) } else { self.streaming_updated_at };
+        let streaming_updated_at = if self.streaming {
+            Some(now)
+        } else {
+            self.streaming_updated_at
+        };
         tx.conn().execute_cached(
             r#"UPDATE "messages" SET "markdown_source" = ?, "client_message_id" = ?, "reply_to_message_id" = ?, "reply_notify_author" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
             params![markdown_source, client_message_id, reply_to_message_id, reply_notify_author, forward_note, embeds_suppressed, edited_at, streaming_updated_at, now, self.id],
@@ -835,13 +1044,19 @@ impl Message {
             }
         }
         if drive_changed {
-            for file_id in current_drive_ids.iter().filter(|id| !drive_file_ids.contains(id)) {
+            for file_id in current_drive_ids
+                .iter()
+                .filter(|id| !drive_file_ids.contains(id))
+            {
                 tx.conn().execute_cached(
                     r#"DELETE FROM "drive_attachments" WHERE "drive_attachments"."message_id" = ? AND "drive_attachments"."file_id" = ?"#,
                     params![self.id, file_id],
                 )?;
             }
-            for file_id in drive_file_ids.iter().filter(|id| !current_drive_ids.contains(id)) {
+            for file_id in drive_file_ids
+                .iter()
+                .filter(|id| !current_drive_ids.contains(id))
+            {
                 tx.conn().execute_cached(
                     r#"INSERT INTO "drive_attachments" ("created_at", "file_id", "message_id") VALUES (?, ?, ?)"#,
                     params![now, file_id, self.id],
@@ -851,7 +1066,11 @@ impl Message {
         Room::touch(tx, self.room_id)?;
         self.reload(tx.conn())?;
         if references_changed {
-            tx.emit_after_commit(Event::job(&crate::models::message_reference::QuoteCardsRefreshJob { source_message_id: self.id }));
+            tx.emit_after_commit(Event::job(
+                &crate::models::message_reference::QuoteCardsRefreshJob {
+                    source_message_id: self.id,
+                },
+            ));
         }
         if !self.streaming {
             self.update_in_index(tx)?;
@@ -861,7 +1080,11 @@ impl Message {
     }
 
     /// Compatibility entry point for import callers; both owners use the real save hook.
-    pub fn sync_integration_references(&self, tx: &mut Tx<'_>, enqueue_fetches: bool) -> Result<()> {
+    pub fn sync_integration_references(
+        &self,
+        tx: &mut Tx<'_>,
+        enqueue_fetches: bool,
+    ) -> Result<()> {
         self.sync_external_references(tx, enqueue_fetches)
     }
 
@@ -874,7 +1097,9 @@ impl Message {
     pub fn touch(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.updated_at = Self::touch_row(tx, self.id)?;
         Room::touch(tx, self.room_id)?;
-        if !self.streaming { self.update_in_index(tx)?; }
+        if !self.streaming {
+            self.update_in_index(tx)?;
+        }
         Ok(())
     }
 
@@ -925,16 +1150,32 @@ impl Message {
     /// commit their quote cards are replaced and the thread indicator is re-broadcast.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         let with_conversation = Room::find(tx.conn(), self.room_id)?.deleted();
-        self.destroy_inner(tx, with_conversation)
+        self.destroy_inner(tx, with_conversation, false)
     }
 
     /// `destroy` from the thread's `dependent: :destroy`: the thread's counter row goes with it,
     /// so no recount.
     pub(crate) fn destroy_with_conversation(&self, tx: &mut Tx<'_>) -> Result<()> {
-        self.destroy_inner(tx, true)
+        self.destroy_inner(tx, true, false)
     }
 
-    fn destroy_inner(&self, tx: &mut Tx<'_>, with_conversation: bool) -> Result<()> {
+    /// `message.importing = true; message.destroy!`: retain dependency cleanup,
+    /// tombstones, the counter and search removal, without quote or thread broadcasts.
+    pub fn destroy_imported(&self, tx: &mut Tx<'_>) -> Result<()> {
+        let with_conversation = Room::find(tx.conn(), self.room_id)?.deleted();
+        self.destroy_inner(tx, with_conversation, true)
+    }
+
+    pub(crate) fn destroy_imported_with_conversation(&self, tx: &mut Tx<'_>) -> Result<()> {
+        self.destroy_inner(tx, true, true)
+    }
+
+    fn destroy_inner(
+        &self,
+        tx: &mut Tx<'_>,
+        with_conversation: bool,
+        importing: bool,
+    ) -> Result<()> {
         let quoting_ids = crate::models::message_reference::incoming_ids(tx.conn(), self.id)?;
         let now = tx.now();
         tx.conn().execute_cached(
@@ -986,14 +1227,21 @@ impl Message {
             [self.id],
         )?;
         let mut indicator_threads = Vec::new();
-        if let Some(thread_id) = self.thread_id.filter(|_| self.thread_reply() && !with_conversation) {
+        if let Some(thread_id) = self
+            .thread_id
+            .filter(|_| self.thread_reply() && !with_conversation)
+        {
             ChannelThread::refresh_messages_count(tx, thread_id)?;
             indicator_threads.push(thread_id);
         }
         Room::touch(tx, self.room_id)?;
         remove_from_index(tx, self.id)?;
-        crate::models::message_reference::removed_source(tx, quoting_ids)?;
-        tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
+        if !importing {
+            crate::models::message_reference::removed_source(tx, quoting_ids)?;
+            tx.after_commit(move |tx| {
+                ChannelThread::broadcast_thread_indicators(tx, &indicator_threads)
+            });
+        }
         Ok(())
     }
 
@@ -1077,19 +1325,32 @@ impl Message {
         if let Some(html) = self.body_html(conn)? {
             let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
             text = if self.markdown() {
-                rich_text.try_markdown_plain_text(conn, &html, &names).map_err(crate::Error::Other)?
+                rich_text
+                    .try_markdown_plain_text(conn, &html, &names)
+                    .map_err(crate::Error::Other)?
             } else {
-                rich_text.try_to_plain_text(conn, &html, &names).map_err(crate::Error::Other)?
+                rich_text
+                    .try_to_plain_text(conn, &html, &names)
+                    .map_err(crate::Error::Other)?
             };
         }
         if text.trim().is_empty() {
-            text = self.attachment(conn)?.map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string()).unwrap_or_default();
+            text = self
+                .attachment(conn)?
+                .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
+                .unwrap_or_default();
         }
-        Ok(match self.forward_note.as_deref().filter(|note| !note.trim().is_empty()) {
-            Some(note) if text.trim().is_empty() => note.to_string(),
-            Some(note) => format!("{note}\n\n{text}"),
-            None => text,
-        })
+        Ok(
+            match self
+                .forward_note
+                .as_deref()
+                .filter(|note| !note.trim().is_empty())
+            {
+                Some(note) if text.trim().is_empty() => note.to_string(),
+                Some(note) => format!("{note}\n\n{text}"),
+                None => text,
+            },
+        )
     }
 
     /// `markdown?`
@@ -1137,10 +1398,16 @@ impl Message {
     /// naming exactly one active member of the destination room (`forward_note_mentionees`).
     pub fn mentionees(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<Vec<User>> {
         if self.forwarded() {
-            return forward_note_mentionees(conn, self.room_id, self.forward_note.as_deref().unwrap_or(""));
+            return forward_note_mentionees(
+                conn,
+                self.room_id,
+                self.forward_note.as_deref().unwrap_or(""),
+            );
         }
         let ids = match self.body_html(conn)? {
-            Some(html) => rich_text.try_mentioned_user_ids(conn, &html).map_err(crate::Error::Other)?,
+            Some(html) => rich_text
+                .try_mentioned_user_ids(conn, &html)
+                .map_err(crate::Error::Other)?,
             None => Vec::new(),
         };
         mentionees_in_room(conn, self.room_id, &ids)
@@ -1149,7 +1416,12 @@ impl Message {
     /// `Message.find_duplicate(room:, creator:, client_message_id:)`: the message this user
     /// already posted in the room with that client id, so a retried create returns it rather
     /// than posting twice. (No unique index backs it: production holds duplicates.)
-    pub fn find_duplicate(conn: &Connection, room_id: i64, creator_id: i64, client_message_id: &str) -> Result<Option<Self>> {
+    pub fn find_duplicate(
+        conn: &Connection,
+        room_id: i64,
+        creator_id: i64,
+        client_message_id: &str,
+    ) -> Result<Option<Self>> {
         if client_message_id.trim().is_empty() {
             return Ok(None);
         }
@@ -1165,7 +1437,9 @@ impl Message {
     pub fn in_thread(conn: &Connection, thread_id: i64) -> Result<Vec<Self>> {
         query_all(
             conn,
-            &format!(r#"SELECT "messages".* FROM "messages" WHERE "messages"."thread_id" = ? {ORDERED}"#),
+            &format!(
+                r#"SELECT "messages".* FROM "messages" WHERE "messages"."thread_id" = ? {ORDERED}"#
+            ),
             [thread_id],
             Self::from_row,
         )
@@ -1306,7 +1580,12 @@ pub fn forward_note_mentionees(conn: &Connection, room_id: i64, note: &str) -> R
     );
     let mut values: Vec<rusqlite::types::Value> = vec![room_id.into(), room_id.into()];
     values.extend(unique.into_iter().map(rusqlite::types::Value::from));
-    query_all(conn, &sql, rusqlite::params_from_iter(values), User::from_row)
+    query_all(
+        conn,
+        &sql,
+        rusqlite::params_from_iter(values),
+        User::from_row,
+    )
 }
 
 /// `room.users.where(id: ids)`
@@ -1331,7 +1610,10 @@ pub fn mentionees_in_room(conn: &Connection, room_id: i64, user_ids: &[i64]) -> 
 
 /// `Google::DriveLink.valid_id?`: `/\A[A-Za-z0-9_-]{10,}\z/`
 pub fn valid_drive_file_id(id: &str) -> bool {
-    id.len() >= 10 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    id.len() >= 10
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
 /// `plain_text_body.match(/\A\/play (?<name>\w+)\z/)` then `Sound.find_by_name`.

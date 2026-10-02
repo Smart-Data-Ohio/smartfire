@@ -869,6 +869,15 @@ impl ChannelThread {
     }
 
     pub fn destroy_by(&self, tx: &mut Tx<'_>, deleted_by_id: Option<i64>) -> Result<()> {
+        self.destroy_inner(tx, false, deleted_by_id)
+    }
+
+    /// Slack undo propagates `importing` to dependent messages, suppressing delivery callbacks.
+    pub fn destroy_imported(&self, tx: &mut Tx<'_>) -> Result<()> {
+        self.destroy_inner(tx, true, None)
+    }
+
+    fn destroy_inner(&self, tx: &mut Tx<'_>, importing: bool, deleted_by_id: Option<i64>) -> Result<()> {
         let fresh = Self::find(tx.conn(), self.id)?;
         tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
@@ -879,7 +888,11 @@ impl ChannelThread {
             [self.id],
         )?;
         for message in Message::in_thread(tx.conn(), self.id)? {
-            message.destroy_with_conversation(tx)?;
+            if importing {
+                message.destroy_imported_with_conversation(tx)?;
+            } else {
+                message.destroy_with_conversation(tx)?;
+            }
         }
         // WorkThreadEvent's dependent inbox rows must be destroyed before its FK cascade.
         tx.conn().execute_cached(
@@ -905,19 +918,21 @@ impl ChannelThread {
             r#"DELETE FROM "channel_threads" WHERE "channel_threads"."id" = ?"#,
             [self.id],
         )?;
-        if let Some(parent_id) = self.parent_message_id {
+        if let Some(parent_id) = self.parent_message_id.filter(|_| !importing) {
             tx.conn().execute_cached(
                 r#"UPDATE "messages" SET "updated_at" = ? WHERE "messages"."id" = ?"#,
                 params![tx.now(), parent_id],
             )?;
         }
         fresh.register_board_destruction(tx)?;
-        let parent_message_id = self.parent_message_id;
-        // Rails registers the indicator before emit_deleted_work_unassigned.
-        // A ledger failure must not suppress the already-committed deletion's UI update.
-        tx.after_commit_record("channel_threads", self.id, move |tx| {
-            Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
-        });
+        if !importing {
+            let parent_message_id = self.parent_message_id;
+            // Rails registers the indicator before emit_deleted_work_unassigned.
+            // Slack undo suppresses the indicator along with dependent delivery.
+            tx.after_commit_record("channel_threads", self.id, move |tx| {
+                Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
+            });
+        }
         super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         Ok(())
     }

@@ -29,6 +29,7 @@ pub mod huddle_stage;
 pub mod messages;
 pub mod channel_threads;
 pub mod github;
+pub mod slack;
 pub mod integration_health;
 pub mod searches;
 pub mod pins;

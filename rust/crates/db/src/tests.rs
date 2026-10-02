@@ -3,6 +3,8 @@
 mod agent_work_test;
 mod board_tag_assignment_test;
 mod account_test;
+mod slack_import_test;
+mod slack_test;
 mod activity_item_test;
 mod agent_posting_test;
 mod agent_budget_cases_test;
