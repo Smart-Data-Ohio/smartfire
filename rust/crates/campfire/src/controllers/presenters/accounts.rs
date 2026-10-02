@@ -20,7 +20,7 @@ use rails_compat::global_id::{self, GlobalId};
 use rails_compat::unicode;
 use rusqlite::{params, OptionalExtension};
 
-use super::{attachments, epoch_string, to_fs_number, user_summary};
+use super::{attachments, epoch_string, user_summary};
 
 /// `User::Transferable::TRANSFER_LINK_EXPIRY_DURATION`
 pub const TRANSFER_LINK_EXPIRY: jiff::SignedDuration = jiff::SignedDuration::from_hours(4);
@@ -47,7 +47,16 @@ pub fn attachable_sgid(secrets: &Secrets, user_id: i64) -> String {
 
 /// `fresh_account_logo_path(size:)`: `v` is `Current.account&.updated_at&.to_fs(:number)`.
 pub fn fresh_account_logo_path(account: Option<&Account>, size: Option<&str>) -> String {
-    let v = account.map(|account| to_fs_number(account.updated_at.jiff()));
+    fresh_account_logo_path_in_zone(account, size, &super::page::renderer_time_zone())
+}
+
+/// Rails loads timestamps in the request's `Time.zone`, including this cache version.
+pub(super) fn fresh_account_logo_path_in_zone(
+    account: Option<&Account>,
+    size: Option<&str>,
+    zone: &campfire_views::time::Zone,
+) -> String {
+    let v = account.map(|account| zone.to_fs(account.updated_at.jiff(), "number"));
     campfire_routes::fresh_account_logo(v.as_deref(), size)
 }
 
