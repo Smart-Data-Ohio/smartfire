@@ -137,6 +137,22 @@ impl AgentApproval {
             updated_at: r.get("updated_at")?,
         })
     }
+    /// The management history's bounded 50+1 window, with complete rows.
+    pub fn history_page(
+        conn: &Connection,
+        agent_id: i64,
+        status: Option<&str>,
+        now: Timestamp,
+        offset: i64,
+    ) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM agent_approvals WHERE agent_id=?1 AND (?2 IS NULL OR (?2='pending' AND status='pending' AND expires_at>?3) OR (?2='expired' AND (status='expired' OR (status='pending' AND expires_at<=?3))) OR (?2 NOT IN ('pending','expired') AND status=?2)) ORDER BY id DESC LIMIT 51 OFFSET ?4",
+            params![agent_id, status, now, offset],
+            Self::from_row,
+        )
+    }
+
     pub fn find(conn: &Connection, id: i64) -> Result<Option<Self>> {
         query_one(
             conn,

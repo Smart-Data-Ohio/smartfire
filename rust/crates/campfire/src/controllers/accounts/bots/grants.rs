@@ -172,6 +172,7 @@ async fn render_index(
         .await
         .map_err(Error::internal)?;
     let bot_name = bot.name.clone();
+    presenters::view_context::omit_unused_room_back_link(c);
     framed_page!(c, status, |ctx| {
         campfire_views::accounts::bot_access::Grants {
             ctx,

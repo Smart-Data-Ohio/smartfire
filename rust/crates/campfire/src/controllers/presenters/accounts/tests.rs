@@ -44,6 +44,10 @@ mod navigation_inbox;
 mod member_panel;
 #[path = "tests/member_polling.rs"]
 mod member_polling;
+#[path = "tests/page_reads.rs"]
+mod page_reads;
+#[path = "tests/page_read_boundaries.rs"]
+mod page_read_boundaries;
 
 #[test]
 fn unicode_parity_sidebar_direct_names_use_ruby_sort_order() {
