@@ -1,11 +1,11 @@
 //! Rails wire bytes for room/history/board/work reads through the production router.
 use super::agent_http_tests::{AGENT, SECRET, setup};
-use super::presenters::test_support::Req;
+use super::presenters::test_support::{Req, TestApp};
 use campfire_db::{Message, NewMessage};
 use campfire_kit::Method;
 use serde_json::Value;
 
-pub(super) async fn check(case: &Value) {
+pub(super) async fn prepare(case: &Value) -> TestApp {
     let app = setup().await.without_job_runner().await;
     let config = case["setup"].clone();
     app.db().write(move |tx| {
@@ -70,7 +70,9 @@ pub(super) async fn check(case: &Value) {
         if config["work_write"]==true {super::agent_work_writes_tests::fixture(tx,&config)?;}
         Ok(())
     }).await.unwrap();
-    let request = || {
+    app
+}
+pub(super) fn request(case: &Value) -> Req {
         let mut req = Req::new(
             Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
             case["path"].as_str().unwrap(),
@@ -79,6 +81,7 @@ pub(super) async fn check(case: &Value) {
         .header("user-agent", "ws11api-work-contract")
         .header("content-type",case["setup"]["content_type"].as_str().unwrap_or("application/json"))
         ;
+        if case["setup"]["work_write"]==true {req=req.header("x-forwarded-for","203.0.113.31");}
         if case["setup"]["bot_key"]!=true {req=req.header("authorization", &["Bearer", SECRET].join(" "));}
         if let Some(body) = case["body"].as_str() {
             req = req.body(body);
@@ -96,7 +99,10 @@ pub(super) async fn check(case: &Value) {
             req=req.body(body);
         }
         req
-    };
+}
+pub(super) async fn check(case: &Value) {
+    let app=prepare(case).await;
+    let request=||request(case);
     for _ in 0..case["setup"]["repeat"].as_u64().unwrap_or(0) {
         let warm = app.anonymous().send(request()).await;
         if case["setup"]["transition"].is_string() {

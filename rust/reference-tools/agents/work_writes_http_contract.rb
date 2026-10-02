@@ -134,7 +134,7 @@ travel_to Time.utc(2026,3,2,16) do
       ApplicationJob.queue_adapter.enqueued_jobs.clear
       Rails.cache=ActiveSupport::Cache::MemoryStore.new
       session=ActionDispatch::Integration::Session.new(Rails.application);session.host! "campfire.test"
-      headers={"Accept"=>"application/json","Content-Type"=>"application/json","User-Agent"=>"ws11api-work-contract","Authorization"=>["Bearer",secret].join(" ")}
+      headers={"Accept"=>"application/json","Content-Type"=>"application/json","User-Agent"=>"ws11api-work-contract","X-Forwarded-For"=>"203.0.113.31","Authorization"=>["Bearer",secret].join(" ")}
       body=item[:body].to_json
       queries=[]
       callback=->(*args){payload=args.last;queries<<payload[:sql] if !payload[:cached] && payload[:sql].match?(/\ASELECT\b/i)}
