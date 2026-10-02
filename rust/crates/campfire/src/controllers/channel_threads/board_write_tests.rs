@@ -248,3 +248,44 @@ async fn opening_message_notifies_room_followers_and_assignee_with_notifications
         ]
     );
 }
+
+#[tokio::test]
+async fn null_title_rejects_result_without_persisting_any_write() {
+    let app = TestApp::boot_frozen()
+        .await
+        .expect("default seed required")
+        .without_job_runner()
+        .await;
+    let before = counts(&app).await;
+    let original = app
+        .db()
+        .read(|conn| campfire_db::ChannelThread::find(conn, 4))
+        .await
+        .unwrap();
+    let mut browser = app.sign_in(DAVID).await;
+    let response = browser
+        .write(
+            Req::new(Method::PATCH, &format!("/rooms/{BOARD}/threads/4.json"))
+                .header("content-type", "application/json")
+                .body(
+                    serde_json::json!({"thread":{"name":null,"result_markdown":"x"}}).to_string(),
+                ),
+        )
+        .await;
+    assert_eq!(
+        response.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        response.text()
+    );
+    assert_eq!(response.text(), "{\"error\":\"Name can't be blank\"}");
+    assert_eq!(counts(&app).await, before);
+    let persisted = app
+        .db()
+        .read(|conn| campfire_db::ChannelThread::find(conn, 4))
+        .await
+        .unwrap();
+    assert_eq!(persisted.name, original.name);
+    assert_eq!(persisted.result_markdown, original.result_markdown);
+    assert_eq!(persisted.updated_at, original.updated_at);
+}

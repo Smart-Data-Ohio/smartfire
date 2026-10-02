@@ -1,9 +1,9 @@
 //! app/models/work_thread_event.rb: immutable work history and after-create inbox fanout.
-use crate::models::activity_item::ActivitySource;
 use crate::sql::{query_all, query_one};
 use crate::{ActivityItem, ChannelThread, Errors, Result, Timestamp, Tx, User};
 use rusqlite::{Connection, Row, params};
 use serde_json::{Value, json};
+use std::collections::{HashMap, HashSet};
 
 pub const EVENT_TYPES: [&str; 4] = [
     "work_update",
@@ -167,15 +167,35 @@ impl WorkThreadEvent {
         Self::find_by_id(tx.conn(), id)?.ok_or(crate::Error::RecordNotFound("WorkThreadEvent"))
     }
     pub fn recipient_user_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
+        Ok(self
+            .recipient_users(conn)?
+            .into_iter()
+            .map(|user| user.id)
+            .collect())
+    }
+
+    // app/models/work_thread_event.rb memoizes the authorized roster for one fanout and
+    // preloads users. Keep this snapshot local to the event; standalone recorder calls
+    // still check the current source permissions.
+    fn recipient_users(&self, conn: &Connection) -> Result<Vec<User>> {
         let thread = ChannelThread::find(conn, self.channel_thread_id)?;
         let memberships = crate::Membership::for_room(conn, thread.room_id)?;
         let followers = crate::ThreadMembership::for_thread(conn, thread.id)?;
+        let memberships = memberships
+            .iter()
+            .map(|m| (m.user_id, m))
+            .collect::<HashMap<_, _>>();
+        let follower_involvements = followers
+            .iter()
+            .map(|m| (m.user_id, m.involvement))
+            .collect::<HashMap<_, _>>();
         let mut candidates = vec![
             Some(thread.creator_id),
             self.from_owner_id,
             self.to_owner_id,
         ];
         if self.event_type != "result_updated" {
+            // Preserve the Rails candidate order from ThreadMembership::for_thread.
             candidates.extend(
                 followers
                     .iter()
@@ -183,32 +203,34 @@ impl WorkThreadEvent {
                     .map(|m| Some(m.user_id)),
             );
         }
-        let mut recipients = Vec::new();
-        for id in candidates.into_iter().flatten() {
-            if Some(id) == self.actor_id || recipients.contains(&id) {
-                continue;
-            }
-            let Some(membership) = memberships.iter().find(|m| m.user_id == id) else {
-                continue;
-            };
-            if matches!(
-                membership.involvement,
-                Some(crate::Involvement::Invisible | crate::Involvement::Nothing)
-            ) {
-                continue;
-            }
-            let user = User::find(conn, id)?;
-            if !user.is_active()
-                || user.is_bot()
-                || followers
-                    .iter()
-                    .any(|m| m.user_id == id && m.involvement == crate::ThreadInvolvement::Nothing)
-            {
-                continue;
-            }
-            recipients.push(id);
+        let mut seen = HashSet::new();
+        let ids = candidates
+            .into_iter()
+            .flatten()
+            .filter(|id| {
+                Some(*id) != self.actor_id
+                    && seen.insert(*id)
+                    && memberships.get(id).is_some_and(|membership| {
+                        !matches!(
+                            membership.involvement,
+                            Some(crate::Involvement::Invisible | crate::Involvement::Nothing)
+                        )
+                    })
+                    && follower_involvements.get(id) != Some(&crate::ThreadInvolvement::Nothing)
+            })
+            .collect::<Vec<_>>();
+        if ids.is_empty() {
+            return Ok(Vec::new());
         }
-        Ok(recipients)
+        let mut users = User::where_ids(conn, &ids)?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect::<HashMap<_, _>>();
+        Ok(ids
+            .into_iter()
+            .filter_map(|id| users.remove(&id))
+            .filter(|user| user.is_active() && !user.is_bot())
+            .collect())
     }
     fn record_activity_items(&self, tx: &mut Tx<'_>) -> Result<()> {
         let kind = match self.event_type.as_str() {
@@ -222,11 +244,11 @@ impl WorkThreadEvent {
                 "SELECT 1 FROM agents WHERE user_id=?",
                 [self.actor_id],
             )?;
-        for user in self.recipient_user_ids(tx.conn())? {
+        for user in self.recipient_users(tx.conn())? {
             if agent_assignment {
                 let raw: Option<Value> = tx.conn().query_row(
                     "SELECT inbox_preferences FROM users WHERE id=?",
-                    [user],
+                    [user.id],
                     |r| r.get(0),
                 )?;
                 if raw
@@ -244,13 +266,7 @@ impl WorkThreadEvent {
             }
             // Rails commits each recipient separately after committing the work change.
             crate::database::run_write(tx.conn(), tx.env(), |tx| {
-                ActivityItem::record(
-                    tx,
-                    user,
-                    ActivitySource::WorkThreadEvent(self.id),
-                    kind,
-                    false,
-                )?;
+                ActivityItem::record_authorized_work_event(tx, &user, self, kind)?;
                 Ok(())
             })?;
         }

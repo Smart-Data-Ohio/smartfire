@@ -65,6 +65,42 @@ impl ActivityItem {
         if !allowed {
             return Ok(None);
         }
+        Self::record_authorized(tx, user_id, source_type, source_id, thread_id, event_type)
+    }
+
+    /// WorkThreadEvent's fanout has already authorized and preloaded this recipient.
+    pub(crate) fn record_authorized_work_event(
+        tx: &mut Tx<'_>,
+        user: &User,
+        event: &WorkThreadEvent,
+        event_type: &str,
+    ) -> Result<Option<Self>> {
+        if !super::EVENT_TYPES.contains(&event_type) {
+            return Err(Error::Other(format!(
+                "Unknown activity event type: {event_type}"
+            )));
+        }
+        if !user.is_active() || user.is_bot() {
+            return Ok(None);
+        }
+        Self::record_authorized(
+            tx,
+            user.id,
+            "WorkThreadEvent",
+            event.id,
+            Some(event.channel_thread_id),
+            event_type,
+        )
+    }
+
+    fn record_authorized(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source_type: &str,
+        source_id: i64,
+        thread_id: Option<i64>,
+        event_type: &str,
+    ) -> Result<Option<Self>> {
         if let Some(thread_id) =
             thread_id.filter(|_| matches!(event_type, "thread_activity" | "work_update"))
         {
@@ -81,7 +117,10 @@ impl ActivityItem {
                     || before.updated_at != tx.now()
                 {
                     tx.conn().execute("UPDATE activity_items SET source_type=?,source_id=?,read_at=NULL,updated_at=? WHERE id=?",params![source_type,source_id,tx.now(),before.id])?;
-                    Self::broadcast_change(tx, user_id, before.id)?;
+                    // app/models/activity_item.rb: source/updated_at changes alone do not broadcast.
+                    if before.read_at.is_some() {
+                        Self::broadcast_change(tx, user_id, before.id)?;
+                    }
                 }
                 return Self::find(tx.conn(), before.id).map(Some);
             }

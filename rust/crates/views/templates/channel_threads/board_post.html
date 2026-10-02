@@ -11,7 +11,7 @@
 {% endif %}
   <header class="board-post__header">
     <p class="board-post__eyebrow">Post in {{ self.room_link() }}</p>
-    <h1 id="post-title">{{ post.name }}</h1>
+    <h1 id="post-title">{{ post.name.as_deref().unwrap_or_default() }}</h1>
     <p class="board-post__meta">
       {{ post.lifecycle }} · {{ self.message_count() }}
 {% if post.lifecycle != "active" %}        · <strong>{% if post.lifecycle == "locked" %}Locked{% else %}Closed{% endif %}</strong>
@@ -22,7 +22,7 @@
 {% if post.can_manage %}      <details class="board-post__edit">
         <summary class="btn">Rename</summary>
         {% let form = self.form() %}{% filter form_with(form) %}
-          {{ form.text_field("thread[name]", Some(post.name.as_str()), h::attrs().attr("value", &post.name).required(true).maxlength(100).attr("autocomplete","off").aria("label","Post title")) }}
+          {{ form.text_field("thread[name]", post.name.as_deref(), h::attrs().attr_opt("value", post.name.as_deref()).required(true).maxlength(100).attr("autocomplete","off").aria("label","Post title")) }}
           <input type="submit" name="commit" value="Save title" class="btn btn--reversed" data-disable-with="Save title" />
 {% endfilter %}      </details>
 {% endif %}  </header>

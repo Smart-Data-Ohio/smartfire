@@ -1,0 +1,25 @@
+{
+  "reference": "d7c7de92 plus approved board drift",
+  "fanout": [
+    {
+      "followers": 1,
+      "membership_selects": 3,
+      "user_selects": 3,
+      "total": 30
+    },
+    {
+      "followers": 10,
+      "membership_selects": 3,
+      "user_selects": 12,
+      "total": 76
+    },
+    {
+      "followers": 20,
+      "membership_selects": 3,
+      "user_selects": 22,
+      "total": 136
+    }
+  ],
+  "unread_repoint_activity_frames": 0,
+  "read_repoint_activity_frames": 1
+}
