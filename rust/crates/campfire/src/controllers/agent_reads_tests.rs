@@ -67,6 +67,7 @@ pub(super) async fn check(case: &Value) {
                 event_type:"mention".into(), outcome:Some("delivered".into()), metadata:serde_json::json!({"hop":0}), ..Default::default()
             })?;
         }
+        if config["work_write"]==true {super::agent_work_writes_tests::fixture(tx,&config)?;}
         Ok(())
     }).await.unwrap();
     let request = || {
@@ -75,6 +76,7 @@ pub(super) async fn check(case: &Value) {
             case["path"].as_str().unwrap(),
         )
         .header("accept", "application/json")
+        .header("user-agent", "ws11api-work-contract")
         .header("content-type",case["setup"]["content_type"].as_str().unwrap_or("application/json"))
         ;
         if case["setup"]["bot_key"]!=true {req=req.header("authorization", &["Bearer", SECRET].join(" "));}
@@ -135,6 +137,9 @@ pub(super) async fn check(case: &Value) {
     );
     for (key, expected) in case["response_headers"].as_object().unwrap() {
         assert_eq!(reply.header(key), expected.as_str(), "{name}: {key}");
+    }
+    if let Some(expected)=case.get("state") {
+        super::agent_work_writes_tests::assert_state(&app,expected,name).await;
     }
     if let Some(expected)=case.get("attachment_state") {
         let actual=app.db().read(|conn| {
