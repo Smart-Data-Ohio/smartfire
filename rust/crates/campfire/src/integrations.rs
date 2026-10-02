@@ -61,3 +61,5 @@ pub fn sync_message_reference_phase(tx: &mut campfire_db::Tx<'_>, message: &camp
         _ => Ok(()), // Event references remain the flagged WS14 adapter in the registry.
     }
 }
+
+pub(crate) mod message_batches;

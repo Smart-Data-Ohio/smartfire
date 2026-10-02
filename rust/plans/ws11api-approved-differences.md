@@ -66,7 +66,7 @@ failures remove staged preview/variant files and roll back every domain/media/jo
 row. These narrow approvals authorize neither other missing files nor other
 response/state differences.
 
-## Committed file ownership and missing-file serving (PR #192 fourth review)
+## Committed file ownership and missing-file serving (PR #192 fourth and fifth reviews)
 
 Staged original/preview/variant files are retained immediately when COMMIT
 succeeds, before fallible model callbacks. A callback exception still propagates
@@ -77,12 +77,26 @@ files. The callback experiment and its committed receipt live in
 `reference-tools/agents/review192r4_commit_callbacks.rb` and
 `review-192-r4-callbacks.json`.
 
-An existing variant or preview whose file is absent fails representation lookup
-cleanly; no dangling blob or signed redirect is returned for that transformation.
+This file-retention guarantee is a deliberate state difference. A Rails
+after-commit callback that raises before Active Storage's deferred upload leaves
+the image blob, attachment and variant rows committed without the image file;
+later callbacks, including the upload, are skipped. Rust retains the staged file
+whenever COMMIT succeeds, independently of those fallible callbacks. Both return
+500 for the callback exception and skip later ordinary callbacks. The maintainer
+approved preserving committed file ownership instead of reproducing Rails'
+missing-file state. The fresh-JPEG discard exception above remains explicit.
+
+Representation requests preserve Rails' handled missing-file responses. Processed
+records are reused without regenerating files: an existing WebP can be served
+without its intermediate JPEG preview. When the final variant file is absent,
+the redirect still returns 302 to the signed disk URL, whose follow-up is an empty
+404; the representation proxy returns an empty 404 with the image content type,
+disposition and no-cache header. Rows, files and jobs stay unchanged. These are
+ordinary handled responses, not an approved crash difference. The three scenarios
+and their exact bodies/headers are recorded in
+`agent_review192r5_representations.json`.
 The approved JPEG posting exception remains a metadata exception: Rails permits
 subsequent posting to reuse its committed variant record even without its file.
-Message attachment preparation preserves that behavior without serving a blob;
-actual representation requests remain subject to the file check. The committed
-legacy JPEG oracle and the new agent JPEG reuse/serving regression cover both
-boundaries. The video oracle now retains every attachment's record_id and
+Message attachment preparation preserves that behavior; missing-file serving
+uses the handled responses above. The video oracle retains every attachment's record_id and
 record_type, with exact foreign keys and generated row-count checks.

@@ -172,7 +172,7 @@ impl TestApp {
     }
 
     pub async fn boot_with_fizzy(clock: campfire_kit::SharedClock, fizzy: crate::integrations::fizzy::State) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy("default", clock, crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(), None, Some(fizzy)).await
+        Self::boot_seed_with_fizzy("default", clock, crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(), (None, None), Some(fizzy)).await
     }
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
@@ -262,6 +262,17 @@ impl TestApp {
         Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
     }
 
+    /// Real durable GitHub fetch jobs with the owner's HTTP client over a caller-owned network.
+    pub async fn boot_with_github_reader(
+        reader: crate::integrations::github::client::ReadClient,
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services(
+            "default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+            crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(),
+            Some(crate::integrations::github::client::AppClient::new(None, None)), Some(reader),
+        ).await
+    }
+
     pub async fn boot_with_github_app(
         github_app: crate::integrations::github::client::AppClient,
     ) -> Option<TestApp> {
@@ -314,6 +325,7 @@ impl TestApp {
             extra,
             crate::huddle::Config::default(),
             github_app,
+            None,
         )
         .await
     }
@@ -324,7 +336,7 @@ impl TestApp {
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None).await
+        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None, None).await
     }
 
     async fn boot_seed_with_huddle_services(
@@ -334,8 +346,9 @@ impl TestApp {
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
         github_app: Option<crate::integrations::github::client::AppClient>,
+        github_read: Option<crate::integrations::github::client::ReadClient>,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(name, clock, network, extra, huddle, github_app, None).await
+        Self::boot_seed_with_fizzy(name, clock, network, extra, huddle, (github_app, github_read), None).await
     }
 
     async fn boot_seed_with_fizzy(
@@ -344,7 +357,10 @@ impl TestApp {
         network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
-        github_app: Option<crate::integrations::github::client::AppClient>,
+        (github_app, github_read): (
+            Option<crate::integrations::github::client::AppClient>,
+            Option<crate::integrations::github::client::ReadClient>,
+        ),
         fizzy: Option<crate::integrations::fizzy::State>,
     ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
@@ -380,7 +396,7 @@ impl TestApp {
             Some(client) => crate::app::boot_with_all_services(
                 config,
                 clock,
-                crate::integrations::github::client::ReadClient::from_env(),
+                github_read.unwrap_or_else(crate::integrations::github::client::ReadClient::from_env),
                 client,
                 network.clone(),
                 network,

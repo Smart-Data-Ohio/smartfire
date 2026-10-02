@@ -40,3 +40,5 @@ for script, filename in [
         ], cwd=root, env=env, stdout=stdout, stderr=stderr)
     assert result.returncode == 0, (script, result.returncode)
     print('WS11-api captured ' + filename, flush=True)
+
+subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-r5-representations.py"), str(output)], cwd=root, env=env, check=True)

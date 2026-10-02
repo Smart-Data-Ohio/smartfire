@@ -55,6 +55,16 @@ class VerifierInjections(unittest.TestCase):
         with self.assertRaises(AssertionError):
             source_api['check_source'](self.expected, digest, self.expected + b'\n', 'checkout drift')
 
+    def test_representation_response_differences_are_rejected(self):
+        root = Path(__file__).resolve().parents[2]
+        vector = json.loads((root / 'vectors/agent_review192r5_representations.json').read_bytes())
+        expected = json.dumps(vector).encode()
+        for response, field, value in [('redirect', 'status', 500), ('proxy', 'body_base64', 'eA=='), ('disk', 'headers', {})]:
+            changed = deepcopy(vector)
+            changed['cases'][0][response][field] = value
+            with self.assertRaises(AssertionError):
+                api['compare_vectors'](json.dumps(changed).encode(), expected, 'missing representation drift')
+
     def test_approved_difference_is_narrow(self):
         root = Path(__file__).resolve().parents[2]
         vector = json.loads((root / 'vectors/agent_review192r2_attachment.json').read_bytes())
