@@ -1,0 +1,37 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "method": "get",
+      "path": "/google/drive/files",
+      "status": 404,
+      "body": "",
+      "credential_used": false,
+      "agent_seen": false
+    },
+    {
+      "method": "get",
+      "path": "/google/drive/files/1AbcDefGhIjKlMnOpQrSt",
+      "status": 403,
+      "body": "",
+      "credential_used": true,
+      "agent_seen": true
+    },
+    {
+      "method": "get",
+      "path": "/rooms/486777696/drive_recipients",
+      "status": 403,
+      "body": "",
+      "credential_used": true,
+      "agent_seen": true
+    },
+    {
+      "method": "post",
+      "path": "/rooms/486777696/drive_recipients/validate",
+      "status": 403,
+      "body": "",
+      "credential_used": true,
+      "agent_seen": true
+    }
+  ]
+}

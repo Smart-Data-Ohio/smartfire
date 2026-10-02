@@ -44,6 +44,8 @@ pub struct AppState {
     pub work_link_drive_titles: crate::controllers::work_threads::links::DriveTitles,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
+    pub google: crate::integrations::google::State,
+    pub errors: crate::errors::Reporter,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     pub github_accounts: crate::integrations::github::accounts::Accounts,
@@ -197,6 +199,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
     let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
         db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app.clone(), github_network,
     );
+    let google = crate::integrations::google::State::from_config(&config);
     let agent_repositories = crate::integrations::agent_repositories::State::live(
         db.clone(), ar_encryption.clone(),
     );
@@ -217,6 +220,8 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         work_link_drive_titles: Default::default(),
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
+        google,
+        errors: crate::errors::Reporter::default(),
         web_push,
         github_read,
         github_app,
@@ -225,6 +230,9 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         subscription_network,
         fragment_cache,
     });
+
+    app.sudo.install_google(Arc::new(app.google.clone()));
+    app.two_factor.install_google(Arc::new(app.google.clone()));
 
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
@@ -267,13 +275,38 @@ fn router(app: &App, kit: Kit) -> Router {
     };
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
-        .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
-        // API actions authenticate/rate-limit before interpreting their own raw uploads.
-        // Unmatched webhook verbs use Rails' 404 response rather than Axum's default 405.
+        .merge(
+            app.cable
+                .router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH),
+        )
+        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController
+        // routes, which reads its own body after its rate limit.
+        .route(
+            "/csp_reports",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::csp_reports::create,
+            )),
+        )
+        .route(
+            "/csp_reports.{format}",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::csp_reports::create,
+            )),
+        )
+        .route(
+            "/google/calendar/notifications",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::google_calendar::notifications,
+            )),
+        )
+        .route(
+            "/google/calendar/notifications.{format}",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::google_calendar::notifications,
+            )),
+        )
         .route("/github/webhooks", github_webhook())
         .route("/github/webhooks.{format}", github_webhook())
-        .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
-        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -544,13 +577,54 @@ mod full_page_tests;
 #[cfg(test)]
 mod profile_security_tests;
 #[cfg(test)]
-mod round_three_security_tests;
-#[cfg(test)]
 mod round_four_security_tests;
+#[cfg(test)]
+mod round_three_security_tests;
 
 #[cfg(test)]
 mod tests;
 
 #[cfg(test)]
+mod google_tests;
+
+#[cfg(test)]
+mod google_webhook_tests;
+
+#[cfg(test)]
+mod google_api_tests;
+
+#[cfg(test)]
+mod google_connection_tests;
+
+#[cfg(test)]
+mod google_drive_tests;
+
+#[cfg(test)]
+mod google_calendar_job_tests;
+
+#[cfg(test)]
+mod google_test_support;
+
+#[cfg(test)]
 #[path = "../../../test-support/asset_goldens.rs"]
 pub(crate) mod asset_goldens;
+
+#[cfg(test)]
+mod google_review_tests;
+#[cfg(test)]
+mod google_consumer_tests;
+
+#[cfg(test)]
+mod google_lifecycle_tests;
+
+#[cfg(test)]
+mod google_admin_tests;
+
+#[cfg(test)]
+mod google_page_tests;
+
+#[cfg(test)]
+mod google_reporting_tests;
+
+#[cfg(test)]
+mod google_message_tests;

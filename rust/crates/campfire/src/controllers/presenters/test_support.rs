@@ -234,6 +234,15 @@ impl TestApp {
         .await
     }
 
+    /// All seeded service fixtures omit periodic sweeps; durable workers keep their normal concurrency.
+    pub async fn boot_without_periodic() -> Option<TestApp> {
+        Self::boot().await
+    }
+
+    pub async fn boot_without_periodic_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_clock(clock).await
+    }
+
     pub async fn boot_with_github_network(network: crate::integrations::net::Network) -> Option<TestApp> {
         Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
     }

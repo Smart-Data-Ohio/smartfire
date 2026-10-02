@@ -12,6 +12,8 @@ fn vectors() -> Value {
 }
 fn with_pool(original: &App, pool: Pool) -> App {
     Arc::new(AppState {
+        google: original.google.clone(),
+        errors: original.errors.clone(),
         ar_encryption: original.ar_encryption.clone(),
         agent_message_payload: Default::default(),
         agent_repositories: Default::default(),

@@ -43,6 +43,7 @@ pub mod periodic;
 mod kind;
 mod queue;
 mod registry;
+mod retry;
 mod runner;
 mod store;
 

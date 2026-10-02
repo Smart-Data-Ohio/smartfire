@@ -1,0 +1,563 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "class": "Calendar::InboundSyncJob",
+      "name": "mixed_google_exhaustion",
+      "steps": [
+        {
+          "kind": "inherited",
+          "executions": 1,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 2,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 3,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 4,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 5,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 6,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 7,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 8,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 9,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 5
+          },
+          "retry": true,
+          "wait": 627.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 10,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 6
+          },
+          "retry": true,
+          "wait": 1298.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 11,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 7
+          },
+          "retry": true,
+          "wait": 2403.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 12,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 8
+          },
+          "retry": false,
+          "wait": null,
+          "raised": "Google::Client::Unavailable"
+        }
+      ]
+    },
+    {
+      "class": "Calendar::InboundSyncJob",
+      "name": "mixed_inherited_exhaustion",
+      "steps": [
+        {
+          "kind": "google",
+          "executions": 1,
+          "counts": {
+            "[Google::Client::Unavailable]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 2,
+          "counts": {
+            "[Google::Client::Unavailable]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 3,
+          "counts": {
+            "[Google::Client::Unavailable]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 4,
+          "counts": {
+            "[Google::Client::Unavailable]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 5,
+          "counts": {
+            "[Google::Client::Unavailable]": 5
+          },
+          "retry": true,
+          "wait": 627.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 6,
+          "counts": {
+            "[Google::Client::Unavailable]": 6
+          },
+          "retry": true,
+          "wait": 1298.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 7,
+          "counts": {
+            "[Google::Client::Unavailable]": 7
+          },
+          "retry": true,
+          "wait": 2403.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 8,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 9,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 10,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 11,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 12,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 5
+          },
+          "retry": false,
+          "wait": null,
+          "raised": "ActiveRecord::StatementTimeout"
+        }
+      ]
+    },
+    {
+      "class": "Calendar::InboundSyncJob",
+      "name": "permanent",
+      "steps": [
+        {
+          "kind": "permanent",
+          "executions": 1,
+          "counts": {},
+          "retry": false,
+          "wait": null,
+          "raised": "RuntimeError"
+        }
+      ]
+    },
+    {
+      "class": "Calendar::MeetLinkJob",
+      "name": "mixed_google_exhaustion",
+      "steps": [
+        {
+          "kind": "inherited",
+          "executions": 1,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 2,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 3,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 4,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 5,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 6,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 7,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 8,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 9,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 5
+          },
+          "retry": true,
+          "wait": 627.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 10,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 6
+          },
+          "retry": true,
+          "wait": 1298.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 11,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 7
+          },
+          "retry": true,
+          "wait": 2403.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 12,
+          "counts": {
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4,
+            "[Google::Client::Unavailable]": 8
+          },
+          "retry": false,
+          "wait": null,
+          "raised": "Google::Client::Unavailable"
+        }
+      ]
+    },
+    {
+      "class": "Calendar::MeetLinkJob",
+      "name": "mixed_inherited_exhaustion",
+      "steps": [
+        {
+          "kind": "google",
+          "executions": 1,
+          "counts": {
+            "[Google::Client::Unavailable]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 2,
+          "counts": {
+            "[Google::Client::Unavailable]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 3,
+          "counts": {
+            "[Google::Client::Unavailable]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 4,
+          "counts": {
+            "[Google::Client::Unavailable]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 5,
+          "counts": {
+            "[Google::Client::Unavailable]": 5
+          },
+          "retry": true,
+          "wait": 627.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 6,
+          "counts": {
+            "[Google::Client::Unavailable]": 6
+          },
+          "retry": true,
+          "wait": 1298.0,
+          "raised": null
+        },
+        {
+          "kind": "google",
+          "executions": 7,
+          "counts": {
+            "[Google::Client::Unavailable]": 7
+          },
+          "retry": true,
+          "wait": 2403.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 8,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 1
+          },
+          "retry": true,
+          "wait": 3.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 9,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 2
+          },
+          "retry": true,
+          "wait": 18.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 10,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 3
+          },
+          "retry": true,
+          "wait": 83.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 11,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 4
+          },
+          "retry": true,
+          "wait": 258.0,
+          "raised": null
+        },
+        {
+          "kind": "inherited",
+          "executions": 12,
+          "counts": {
+            "[Google::Client::Unavailable]": 7,
+            "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]": 5
+          },
+          "retry": false,
+          "wait": null,
+          "raised": "ActiveRecord::StatementTimeout"
+        }
+      ]
+    },
+    {
+      "class": "Calendar::MeetLinkJob",
+      "name": "permanent",
+      "steps": [
+        {
+          "kind": "permanent",
+          "executions": 1,
+          "counts": {},
+          "retry": false,
+          "wait": null,
+          "raised": "RuntimeError"
+        }
+      ]
+    }
+  ]
+}

@@ -2,6 +2,9 @@ use std::fmt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// `Google::SignIn::Rejected`: safe stable reason, never raw claims or credentials.
+    #[error("Google sign-in rejected ({0})")]
+    GoogleSignInRejected(&'static str),
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
 

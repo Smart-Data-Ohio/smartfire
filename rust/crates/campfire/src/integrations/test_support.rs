@@ -173,6 +173,29 @@ impl FakeServer {
         (server, roots)
     }
 
+    pub async fn start_tls_with_ports(routes: Vec<Route>, cert: &[u8], key: &[u8], ports: Option<std::ops::RangeInclusive<u16>>) -> Self {
+        use rustls::pki_types::pem::PemObject;
+        use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+        let config = rustls::ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions().unwrap().with_no_client_auth()
+            .with_single_cert(vec![CertificateDer::from_pem_slice(cert).unwrap()], PrivateKeyDer::from_pem_slice(key).unwrap()).unwrap();
+        let listener = match ports {
+            None => TcpListener::bind("127.0.0.1:0").await.unwrap(),
+            Some(ports) => {
+                let mut listener = None;
+                for port in ports {
+                    match TcpListener::bind(("127.0.0.1", port)).await {
+                        Ok(bound) => { listener = Some(bound); break; }
+                        Err(error) if error.kind() == io::ErrorKind::AddrInUse => {}
+                        Err(error) => panic!("fake listener bind: {error}"),
+                    }
+                }
+                listener.expect("a free port in the worker's assigned range")
+            }
+        };
+        Self::on_listener(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), listener).await
+    }
+
     async fn start_tls_on(routes: Vec<Route>, ws15e: bool) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};

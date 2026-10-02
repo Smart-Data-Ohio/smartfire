@@ -44,6 +44,10 @@ pub mod channel_threads;
 pub mod csp_reports;
 pub mod embeds;
 pub mod first_runs;
+pub mod google_sign_in;
+pub mod google_calendar;
+pub mod google_connections;
+pub mod google_drive;
 pub mod fizzy_cards;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
@@ -195,6 +199,18 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "first_runs#create" => arc(first_runs::create),
         "sessions/transfers#show" => arc(sessions::transfers::show),
         "sessions/transfers#update" => arc(sessions::transfers::update),
+        "google/drive_files#index" => arc(google_drive::index),
+        "google/drive_files#show" => arc(google_drive::show),
+        "rooms/drive_recipients#index" => arc(google_drive::recipients),
+        "rooms/drive_recipients#validate" => arc(google_drive::validate_recipients),
+        "google/connections#connect" => arc(google_connections::connect),
+        "google/connections#callback" => arc(google_connections::callback),
+        "google/connections#destroy" => arc(google_connections::destroy),
+        "sessions/google#create" => arc(google_sign_in::create),
+        "sessions/google#callback" => arc(google_sign_in::callback),
+        "users/google_sign_in_links#create" => arc(google_sign_in::link),
+        "accounts/users/google_links#create" => arc(google_sign_in::admin_allow),
+        "accounts/users/google_links#destroy" => arc(google_sign_in::admin_unlink),
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
