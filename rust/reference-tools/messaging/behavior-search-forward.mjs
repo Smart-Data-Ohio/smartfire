@@ -35,8 +35,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     }
   } else if(caseName==='editing to add a URL renders its card live and the edited marker on load') {
     const message=page.locator(`.message[data-message-id="${fixture.edit_card_id}"]`);
-    await waitForVisibility(message.getByText('nothing linked yet',{exact:true}),{timeout:10000});await openEdit(page,message);
-    await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}),{timeout:10000});
+    await waitForVisibility(message.getByText('nothing linked yet',{exact:true}),{timeout:10000});await openEdit(page,message,{contextTimeout:10000});
     // Rails :74-78 clicks Send, then immediately asserts Loading post on the
     // author. Waiting for message text first, or for a second viewer's transient
     // card afterward, can miss a loading state the original assertion observes.

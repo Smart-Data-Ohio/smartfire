@@ -102,8 +102,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
       await message.click({button:'right'});
       await assertMenuOpen(page);
       await page.getByRole('menuitem',{name:'Edit message',exact:true}).click();
-      if(!REVIEW_GROUPS.has(file)) await waitForVisibility(page.locator('#composer').filter({hasText:'Editing Message'}));
-      else if(contextTimeout) await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}),{timeout:contextTimeout});
+      if(contextTimeout) await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}),{timeout:contextTimeout});
+      else if(!REVIEW_GROUPS.has(file)) await waitForVisibility(page.locator('#composer').filter({hasText:'Editing Message'}));
     }
     async function field(page,value,options={}) {
       await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value',value,options);
