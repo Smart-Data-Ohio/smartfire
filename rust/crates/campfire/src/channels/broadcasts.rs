@@ -18,7 +18,9 @@
 //! (`campfire_cable::turbo::session_bound`).
 use campfire_cable::turbo::{Action, Target};
 use campfire_db::rich_text::RichText;
-use campfire_db::{Boost, Connection, Involvement, Membership, Message, Room};
+use campfire_db::{Connection, Involvement, Membership, Message, Room};
+#[cfg(test)]
+use campfire_db::Boost;
 use rails_compat::global_id::GlobalId;
 use serde::Serialize;
 
@@ -31,7 +33,8 @@ pub trait Partials: Send + Sync {
     fn message(&self, message: &Message) -> String;
     /// `messages/_presentation` with `message:`.
     fn message_presentation(&self, message: &Message) -> String;
-    /// `messages/boosts/_boost` with `boost:`.
+    /// Legacy append-frame primitive, retained for the cable wire tests.
+    #[cfg(test)]
     fn boost(&self, boost: &Boost) -> String;
     /// `users/sidebars/rooms/_shared` with `room:`.
     fn shared_room(&self, room: &Room) -> String;
@@ -325,7 +328,8 @@ impl Broadcasts {
 
     // Messages::BoostsController's `broadcast_create`/`broadcast_remove`
 
-    /// Append the boost to `boosts_message_<client_message_id>` on the conversation.
+    /// Legacy append frame, retained for the cable wire tests.
+    #[cfg(test)]
     pub fn boost_create(
         &self,
         room: &Room,
