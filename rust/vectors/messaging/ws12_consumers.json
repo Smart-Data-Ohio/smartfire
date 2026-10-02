@@ -1,0 +1,743 @@
+{
+  "reference": "d7c7de92",
+  "setup": [
+    "DELETE FROM activity_items",
+    "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (9,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,1,'Consumer <post>',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'planned','2026-03-02 16:00:00')",
+    "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (7,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',9,NULL,'2026-03-02 16:00:00',127326141)",
+    "INSERT INTO messages (\"id\",\"action\",\"board_post_opener\",\"client_message_id\",\"created_at\",\"creator_id\",\"edited_at\",\"embeds_suppressed\",\"forward_note\",\"forwarded_at\",\"forwarded_from_message_id\",\"forwarded_markdown\",\"markdown_source\",\"reply_notify_author\",\"reply_target_deleted_at\",\"reply_to_message_id\",\"room_id\",\"stream_broadcast_at\",\"streaming\",\"streaming_updated_at\",\"system_note\",\"thread_id\",\"updated_at\") VALUES (935962058,0,1,'ws12-consumer-opener','2026-03-02 16:00:00',127326141,NULL,0,NULL,NULL,NULL,0,'Board opener <&>',1,NULL,NULL,699448332,NULL,0,NULL,0,9,'2026-03-02 16:00:00')",
+    "INSERT INTO action_text_rich_texts (\"id\",\"body\",\"created_at\",\"name\",\"record_id\",\"record_type\",\"updated_at\") VALUES (935962058,'<p>Board opener &lt;&amp;&gt;</p>','2026-03-02 16:00:00','body',935962058,'Message','2026-03-02 16:00:00')"
+  ],
+  "thread_id": 9,
+  "message_id": 935962058,
+  "steps": [
+    {
+      "label": "board save",
+      "method": "post",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "remind_at": "2026-03-02T16:01:00Z"
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "id": 3,
+        "message_id": 935962058,
+        "status": "in_progress",
+        "remind_at": "2026-03-02T16:01:00.000Z",
+        "reminded_at": null,
+        "url": "http://campfire.test/saved/3.json"
+      }
+    },
+    {
+      "label": "dispatch reminder",
+      "operation": "remind",
+      "at": "2026-03-02T16:01:01Z"
+    },
+    {
+      "label": "board reminder inbox",
+      "method": "get",
+      "path": "/activity?type=reminders",
+      "params": {},
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "activity_items": [
+          {
+            "id": 7,
+            "event_type": "message_reminder",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "SavedItem",
+              "id": 3,
+              "room_id": 699448332,
+              "thread_id": 9,
+              "creator_id": 127326141,
+              "body": "You asked to be reminded about this message: Board opener <&>",
+              "path": "/rooms/699448332?message_id=935962058&thread=9"
+            }
+          }
+        ],
+        "filter": "unread",
+        "type_filter": "reminders",
+        "unread_count": 1,
+        "next_cursor": null
+      }
+    },
+    {
+      "label": "open reminder",
+      "method": "post",
+      "path": "/activity/7/open",
+      "params": {},
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "id": 7,
+        "event_type": "message_reminder",
+        "state": "read",
+        "read_at": "2026-03-02T16:00:00.000Z",
+        "handled_at": null,
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "source": {
+          "type": "SavedItem",
+          "id": 3,
+          "room_id": 699448332,
+          "thread_id": 9,
+          "creator_id": 127326141,
+          "body": "You asked to be reminded about this message: Board opener <&>",
+          "path": "/rooms/699448332?message_id=935962058&thread=9"
+        }
+      }
+    },
+    {
+      "label": "handle reminder",
+      "method": "patch",
+      "path": "/activity/7/handled",
+      "params": {},
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "id": 7,
+        "event_type": "message_reminder",
+        "state": "handled",
+        "read_at": "2026-03-02T16:00:00.000Z",
+        "handled_at": "2026-03-02T16:00:00.000Z",
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "source": {
+          "type": "SavedItem",
+          "id": 3,
+          "room_id": 699448332,
+          "thread_id": 9,
+          "creator_id": 127326141,
+          "body": "You asked to be reminded about this message: Board opener <&>",
+          "path": "/rooms/699448332?message_id=935962058&thread=9"
+        }
+      }
+    },
+    {
+      "label": "re-arm reminder",
+      "method": "post",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "remind_at": "2026-03-02T16:02:00Z"
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "id": 3,
+        "message_id": 935962058,
+        "status": "in_progress",
+        "remind_at": "2026-03-02T16:02:00.000Z",
+        "reminded_at": null,
+        "url": "http://campfire.test/saved/3.json"
+      }
+    },
+    {
+      "label": "refire reminder",
+      "operation": "remind",
+      "at": "2026-03-02T16:02:01Z"
+    },
+    {
+      "label": "refired same item",
+      "method": "get",
+      "path": "/activity?type=reminders",
+      "params": {},
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "activity_items": [
+          {
+            "id": 7,
+            "event_type": "message_reminder",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "SavedItem",
+              "id": 3,
+              "room_id": 699448332,
+              "thread_id": 9,
+              "creator_id": 127326141,
+              "body": "You asked to be reminded about this message: Board opener <&>",
+              "path": "/rooms/699448332?message_id=935962058&thread=9"
+            }
+          }
+        ],
+        "filter": "unread",
+        "type_filter": "reminders",
+        "unread_count": 1,
+        "next_cursor": null
+      }
+    },
+    {
+      "label": "pin board reply",
+      "method": "post",
+      "path": "/messages/935962058/pin",
+      "params": {},
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "pinned": true,
+        "pin_count": 1
+      }
+    },
+    {
+      "label": "schedule board reply",
+      "method": "post",
+      "path": "/rooms/699448332/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "markdown_source": "Scheduled **board** reply",
+          "thread_id": 9,
+          "reply_to_message_id": 935962058,
+          "send_at": "2026-03-02T17:00:00Z"
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "id": 3,
+        "room_id": 699448332,
+        "thread_id": 9,
+        "markdown_source": "Scheduled **board** reply",
+        "send_at": "2026-03-02T17:00:00.000Z",
+        "sent_at": null,
+        "dropped_at": null
+      }
+    },
+    {
+      "label": "send board reply",
+      "method": "post",
+      "path": "/scheduled_messages/3/send_now",
+      "params": {},
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "id": 3,
+        "room_id": 699448332,
+        "thread_id": 9,
+        "markdown_source": "Scheduled **board** reply",
+        "send_at": "2026-03-02T17:00:00.000Z",
+        "sent_at": "2026-03-02T16:00:00.000Z",
+        "dropped_at": null
+      }
+    },
+    {
+      "label": "board thread slash",
+      "method": "post",
+      "path": "/rooms/699448332/slash_commands",
+      "params": {
+        "text": "/me reviews the board",
+        "thread_id": 9
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "status": "posted",
+        "message_id": 935962061
+      }
+    },
+    {
+      "label": "wrong-stream reply",
+      "method": "post",
+      "path": "/rooms/699448332/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "markdown_source": "Wrong stream",
+          "reply_to_message_id": 935962058,
+          "send_at": "2026-03-02T17:00:00Z"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "error": "Reply target is not in this conversation"
+      }
+    },
+    {
+      "label": "delete save",
+      "method": "delete",
+      "path": "/saved/3",
+      "params": {},
+      "status": 204,
+      "content_type": null,
+      "body": null
+    },
+    {
+      "label": "inbox after save deletion",
+      "method": "get",
+      "path": "/activity?type=reminders",
+      "params": {},
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": {
+        "activity_items": [],
+        "filter": "unread",
+        "type_filter": "reminders",
+        "unread_count": 0,
+        "next_cursor": null
+      }
+    }
+  ],
+  "pages": [
+    {
+      "size": 4,
+      "sql": [
+        "DELETE FROM activity_items",
+        "DELETE FROM work_thread_events",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (10,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 4-0',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (11,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 4-1',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (12,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 4-2',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (13,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 4-3',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (8,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',10,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (9,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',11,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (10,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',12,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (11,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',13,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (1,149087659,10,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (2,149087659,11,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (3,149087659,12,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (4,149087659,13,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (8,'2026-03-02 16:00:00','work_update',NULL,NULL,1,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (9,'2026-03-02 16:00:00','work_update',NULL,NULL,2,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (10,'2026-03-02 16:00:00','work_update',NULL,NULL,3,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (11,'2026-03-02 16:00:00','work_update',NULL,NULL,4,'WorkThreadEvent','2026-03-02 16:00:00',127326141)"
+      ],
+      "body": {
+        "activity_items": [
+          {
+            "id": 11,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 4,
+              "room_id": 699448332,
+              "thread_id": 13,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=13"
+            }
+          },
+          {
+            "id": 10,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 3,
+              "room_id": 699448332,
+              "thread_id": 12,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=12"
+            }
+          },
+          {
+            "id": 9,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 2,
+              "room_id": 699448332,
+              "thread_id": 11,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=11"
+            }
+          },
+          {
+            "id": 8,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 1,
+              "room_id": 699448332,
+              "thread_id": 10,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=10"
+            }
+          }
+        ],
+        "filter": "unread",
+        "type_filter": "threads",
+        "unread_count": 4,
+        "next_cursor": null
+      },
+      "reads": 12,
+      "work_reads": 1
+    },
+    {
+      "size": 16,
+      "sql": [
+        "DELETE FROM activity_items",
+        "DELETE FROM work_thread_events",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (14,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-0',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (15,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-1',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (16,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-2',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (17,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-3',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (18,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-4',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (19,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-5',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (20,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-6',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (21,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-7',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (22,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-8',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (23,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-9',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (24,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-10',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (25,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-11',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (26,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-12',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (27,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-13',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (28,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-14',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (29,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,0,'Inbox post 16-15',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (12,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',14,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (13,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',15,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (14,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',16,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (15,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',17,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (16,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',18,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (17,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',19,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (18,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',20,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (19,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',21,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (20,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',22,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (21,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',23,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (22,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',24,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (23,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',25,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (24,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',26,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (25,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',27,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (26,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',28,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO thread_memberships (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (27,'2026-03-02 16:00:00','mentions','2026-03-02 16:00:00',29,NULL,'2026-03-02 16:00:00',127326141)",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (5,149087659,14,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (6,149087659,15,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (7,149087659,16,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (8,149087659,17,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (9,149087659,18,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (10,149087659,19,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (11,149087659,20,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (12,149087659,21,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (13,149087659,22,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (14,149087659,23,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (15,149087659,24,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (16,149087659,25,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (17,149087659,26,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (18,149087659,27,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (19,149087659,28,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO work_thread_events (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (20,149087659,29,'2026-03-02 16:00:00','work_update',NULL,NULL,'planned','{\"before\":{\"status\":\"planned\",\"owner\":null},\"after\":{\"status\":\"in_progress\",\"owner\":null},\"actor\":{\"id\":149087659,\"name\":\"Jason\",\"status\":\"active\",\"role\":\"administrator\"},\"note\":null}',NULL,NULL,'in_progress','2026-03-02 16:00:00')",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (12,'2026-03-02 16:00:00','work_update',NULL,NULL,5,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (13,'2026-03-02 16:00:00','work_update',NULL,NULL,6,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (14,'2026-03-02 16:00:00','work_update',NULL,NULL,7,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (15,'2026-03-02 16:00:00','work_update',NULL,NULL,8,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (16,'2026-03-02 16:00:00','work_update',NULL,NULL,9,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (17,'2026-03-02 16:00:00','work_update',NULL,NULL,10,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (18,'2026-03-02 16:00:00','work_update',NULL,NULL,11,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (19,'2026-03-02 16:00:00','work_update',NULL,NULL,12,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (20,'2026-03-02 16:00:00','work_update',NULL,NULL,13,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (21,'2026-03-02 16:00:00','work_update',NULL,NULL,14,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (22,'2026-03-02 16:00:00','work_update',NULL,NULL,15,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (23,'2026-03-02 16:00:00','work_update',NULL,NULL,16,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (24,'2026-03-02 16:00:00','work_update',NULL,NULL,17,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (25,'2026-03-02 16:00:00','work_update',NULL,NULL,18,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (26,'2026-03-02 16:00:00','work_update',NULL,NULL,19,'WorkThreadEvent','2026-03-02 16:00:00',127326141)",
+        "INSERT INTO activity_items (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (27,'2026-03-02 16:00:00','work_update',NULL,NULL,20,'WorkThreadEvent','2026-03-02 16:00:00',127326141)"
+      ],
+      "body": {
+        "activity_items": [
+          {
+            "id": 27,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 20,
+              "room_id": 699448332,
+              "thread_id": 29,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=29"
+            }
+          },
+          {
+            "id": 26,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 19,
+              "room_id": 699448332,
+              "thread_id": 28,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=28"
+            }
+          },
+          {
+            "id": 25,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 18,
+              "room_id": 699448332,
+              "thread_id": 27,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=27"
+            }
+          },
+          {
+            "id": 24,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 17,
+              "room_id": 699448332,
+              "thread_id": 26,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=26"
+            }
+          },
+          {
+            "id": 23,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 16,
+              "room_id": 699448332,
+              "thread_id": 25,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=25"
+            }
+          },
+          {
+            "id": 22,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 15,
+              "room_id": 699448332,
+              "thread_id": 24,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=24"
+            }
+          },
+          {
+            "id": 21,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 14,
+              "room_id": 699448332,
+              "thread_id": 23,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=23"
+            }
+          },
+          {
+            "id": 20,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 13,
+              "room_id": 699448332,
+              "thread_id": 22,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=22"
+            }
+          },
+          {
+            "id": 19,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 12,
+              "room_id": 699448332,
+              "thread_id": 21,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=21"
+            }
+          },
+          {
+            "id": 18,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 11,
+              "room_id": 699448332,
+              "thread_id": 20,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=20"
+            }
+          },
+          {
+            "id": 17,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 10,
+              "room_id": 699448332,
+              "thread_id": 19,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=19"
+            }
+          },
+          {
+            "id": 16,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 9,
+              "room_id": 699448332,
+              "thread_id": 18,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=18"
+            }
+          },
+          {
+            "id": 15,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 8,
+              "room_id": 699448332,
+              "thread_id": 17,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=17"
+            }
+          },
+          {
+            "id": 14,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 7,
+              "room_id": 699448332,
+              "thread_id": 16,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=16"
+            }
+          },
+          {
+            "id": 13,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 6,
+              "room_id": 699448332,
+              "thread_id": 15,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=15"
+            }
+          },
+          {
+            "id": 12,
+            "event_type": "work_update",
+            "state": "unread",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "source": {
+              "type": "WorkThreadEvent",
+              "id": 5,
+              "room_id": 699448332,
+              "thread_id": 14,
+              "creator_id": 149087659,
+              "body": "Status: Planned → In progress",
+              "path": "/rooms/699448332?thread=14"
+            }
+          }
+        ],
+        "filter": "unread",
+        "type_filter": "threads",
+        "unread_count": 16,
+        "next_cursor": null
+      },
+      "reads": 24,
+      "work_reads": 1
+    }
+  ]
+}

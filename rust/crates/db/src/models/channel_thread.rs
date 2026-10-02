@@ -187,6 +187,22 @@ impl ChannelThread {
         )
     }
 
+    /// Preload the conversations of a bounded, authorized inbox page.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM channel_threads WHERE id IN ({})",
+                placeholders(ids.len())
+            ),
+            rusqlite::params_from_iter(ids),
+            Self::from_row,
+        )
+    }
+
     /// `message.channel_thread`: the thread started from a message.
     pub fn find_by_parent_message(conn: &Connection, message_id: i64) -> Result<Option<Self>> {
         query_one(
