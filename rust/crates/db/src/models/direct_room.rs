@@ -3,6 +3,7 @@ use crate::broadcasts::{Broadcast, Partial, Streamable, TurboAction, room_dom_id
 use crate::sql::{exists, query_all};
 use crate::{Connection, Errors, Event, Membership, Message, NewMessage, Result, Room, Tx, User};
 use campfire_richtext::ruby::{is_blank, strip};
+use rails_compat::unicode;
 use rusqlite::params;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LeaveOutcome {
@@ -22,7 +23,7 @@ pub fn display_name(
         .iter()
         .filter(|u| for_user.is_none_or(|f| f.id != u.id))
         .collect();
-    list.sort_by_key(|u| u.name.to_lowercase());
+    list.sort_by_key(|u| unicode::downcase(&u.name));
     display_ordered_members(for_user, &list)
 }
 fn display_ordered_members(for_user: Option<&User>, list: &[&User]) -> Option<String> {

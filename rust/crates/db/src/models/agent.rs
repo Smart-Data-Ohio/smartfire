@@ -2,6 +2,7 @@
 //! adapters own the two status replacements described by `AgentStatusChange`.
 use crate::sql::{exists, query_all, query_one};
 use crate::{AgentGrant, Connection, Errors, Event, Result, Timestamp, Tx, User};
+use rails_compat::unicode;
 use rusqlite::{Row, params};
 use serde::{Deserialize, Serialize};
 
@@ -588,7 +589,7 @@ impl Agent {
         )?;
         // Ruby sorts Unicode-downcased names, rather than SQLite's ASCII LOWER.
         for (agent, _, name) in &mut rows {
-            *name = User::find(conn, agent.user_id)?.name.to_lowercase();
+            *name = unicode::downcase(&User::find(conn, agent.user_id)?.name);
         }
         rows.sort_by(|a, b| (!a.1, &a.2).cmp(&(!b.1, &b.2)));
         Ok(rows.into_iter().map(|(agent, _, _)| agent).collect())

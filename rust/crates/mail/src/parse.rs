@@ -2,6 +2,7 @@
 use crate::ruby::{blank, regex_space, strip};
 use campfire_richtext::dom::{Dom, NodeData, NodeId};
 use mailparse::{MailAddr, MailHeaderMap, ParsedMail};
+use rails_compat::unicode;
 use regex::Regex;
 use std::sync::LazyLock;
 
@@ -15,14 +16,14 @@ pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, addre
     let Some(authserv_id) = authserv_id.filter(|s| !blank(s)) else {
         return false;
     };
-    let domain = address.rsplit('@').next().unwrap_or("").to_lowercase();
+    let authserv_id = unicode::fold(authserv_id);
+    let domain = unicode::downcase(address.rsplit('@').next().unwrap_or(""));
     if blank(&domain) {
         return false;
     }
-    let Some(header) = headers
-        .iter()
-        .find(|h| strip(h.split(';').next().unwrap_or("")).eq_ignore_ascii_case(authserv_id))
-    else {
+    let Some(header) = headers.iter().find(|h| {
+        unicode::fold(strip(h.split(';').next().unwrap_or(""))) == authserv_id
+    }) else {
         return false;
     };
     static PROPERTIES: LazyLock<Regex> = LazyLock::new(|| {
@@ -52,7 +53,7 @@ pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, addre
                     .trim_start_matches('@')
                     .rsplit('@')
                     .next()
-                    .is_some_and(|d| d.eq_ignore_ascii_case(&domain))
+                    .is_some_and(|d| unicode::downcase(d) == domain)
         })
     })
 }
