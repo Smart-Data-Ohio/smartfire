@@ -32,7 +32,7 @@ caseless.workspace = true
 
 [features]
 # `campfire_db::fixtures`: the reference's test fixtures, loaded into a database for tests.
-test-support = ["dep:serde_yaml", "rusqlite/trace"]
+test-support = ["dep:serde_yaml", "rusqlite/trace", "rusqlite/limits"]
 
 [dev-dependencies]
 rusqlite = { workspace = true, features = ["trace"] }

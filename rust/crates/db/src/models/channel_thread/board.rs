@@ -315,17 +315,9 @@ impl ChannelThread {
                     .iter()
                     .map(|membership| membership.id)
                     .collect::<Vec<_>>();
-                let mut values = vec![
-                    rusqlite::types::Value::Text(tx.now().to_db()),
-                    rusqlite::types::Value::Text(tx.now().to_db()),
-                ];
-                values.extend(ids.into_iter().map(rusqlite::types::Value::Integer));
                 tx.conn().execute(
-                    &format!(
-                        "UPDATE memberships SET unread_at=?, updated_at=? WHERE id IN ({})",
-                        placeholders(recipients.len())
-                    ),
-                    rusqlite::params_from_iter(values),
+                    "UPDATE memberships SET unread_at=?, updated_at=? WHERE id IN (SELECT value FROM json_each(?))",
+                    params![tx.now(), tx.now(), serde_json::json!(ids).to_string()],
                 )?;
             }
             for membership in recipients {
@@ -420,10 +412,9 @@ fn board_counts(
     Ok(query_all(
         conn,
         &format!(
-            "SELECT {key}, COUNT(*) FROM {table} WHERE {key} IN ({}) GROUP BY {key}",
-            placeholders(ids.len())
+            "SELECT {key}, COUNT(*) FROM {table} WHERE {key} IN (SELECT value FROM json_each(?)) GROUP BY {key}"
         ),
-        rusqlite::params_from_iter(ids),
+        [serde_json::json!(ids).to_string()],
         |row| Ok((row.get(0)?, row.get(1)?)),
     )?
     .into_iter()

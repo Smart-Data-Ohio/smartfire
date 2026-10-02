@@ -218,8 +218,8 @@ impl Agent {
     pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
         if user_ids.is_empty() { return Ok(Vec::new()); }
         crate::sql::query_all(conn,
-            &format!("SELECT * FROM agents WHERE user_id IN ({})", crate::sql::placeholders(user_ids.len())),
-            rusqlite::params_from_iter(user_ids), Self::from_row)
+            "SELECT * FROM agents WHERE user_id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(user_ids).to_string()], Self::from_row)
     }
     pub fn validate(conn: &Connection, a: &NewAgent, exclude: Option<i64>) -> Result<Errors> {
         let mut errors = Errors::default();
@@ -589,23 +589,38 @@ impl Agent {
         ))
     }
     pub fn for_directory(conn: &Connection) -> Result<Vec<Self>> {
-        let mut rows = query_all(
-            conn,
-            "SELECT a.*,LOWER(u.name) AS user_sort,(a.suspended_at IS NULL AND u.status=0) AS active_sort FROM agents a JOIN users u ON u.id=a.user_id WHERE u.status!=1",
-            [],
-            |r| {
-                Ok((
-                    Self::from_row(r)?,
-                    r.get::<_, bool>("active_sort")?,
-                    r.get::<_, String>("user_sort")?,
-                ))
-            },
-        )?;
-        // Ruby sorts Unicode-downcased names, rather than SQLite's ASCII LOWER.
-        for (agent, _, name) in &mut rows {
-            *name = unicode::downcase(&User::find(conn, agent.user_id)?.name);
-        }
-        rows.sort_by(|a, b| (!a.1, &a.2).cmp(&(!b.1, &b.2)));
-        Ok(rows.into_iter().map(|(agent, _, _)| agent).collect())
+        Ok(Self::directory_rows(conn)?
+            .into_iter()
+            .map(|(agent, _, _)| agent)
+            .collect())
+    }
+
+    /// Rails' eager-loaded directory: complete bot and owner facts travel with each agent.
+    pub(crate) fn directory_rows(conn: &Connection) -> Result<Vec<(Self, User, Option<User>)>> {
+        let sql = format!(
+            "SELECT a.*,{},{},(a.suspended_at IS NULL AND u.status=0) AS active_sort FROM agents a JOIN users u ON u.id=a.user_id LEFT JOIN users owner ON owner.id=a.owner_id WHERE u.status!=1",
+            User::projection("u", "directory_user_"),
+            User::projection("owner", "directory_owner_")
+        );
+        let mut rows = query_all(conn, &sql, [], |r| {
+            let user = User::from_prefixed_row(r, "directory_user_")?;
+            let owner = r
+                .get::<_, Option<i64>>("directory_owner_id")?
+                .map(|_| User::from_prefixed_row(r, "directory_owner_"))
+                .transpose()?;
+            let name = unicode::downcase(&user.name);
+            Ok((
+                Self::from_row(r)?,
+                user,
+                owner,
+                r.get::<_, bool>("active_sort")?,
+                name,
+            ))
+        })?;
+        rows.sort_by(|a, b| (!a.3, &a.4).cmp(&(!b.3, &b.4)));
+        Ok(rows
+            .into_iter()
+            .map(|(agent, user, owner, _, _)| (agent, user, owner))
+            .collect())
     }
 }
