@@ -1,7 +1,7 @@
 # WS11 API remaining scope before cutover
 
 Updated on `rust/ws11api-next`, stacked on #202 and merged with main
-`34b3cd40c7043150cd659397f513626b2729253f`, which includes #192 and #202.
+`15c9426be7de9826922f0f3e4198172e8896750c`, which includes #192, #202 and #199.
 The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
