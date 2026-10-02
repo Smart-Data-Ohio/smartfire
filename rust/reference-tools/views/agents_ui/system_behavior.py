@@ -8,10 +8,14 @@ root = pathlib.Path(__file__).resolve().parents[4]
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
 p.add_argument('--scenario', choices=['all','pages','budget','work'], default='all')
+p.add_argument('--inject-work-status', action='store_true', help='Discrimination probe: make the candidate writer retain planned status')
+p.add_argument('--inject-stream-finalize', action='store_true', help='Discrimination probe: make the candidate writer retain streaming state')
 args = p.parse_args()
+if args.inject_stream_finalize and args.scenario != 'pages': p.error('--inject-stream-finalize requires --scenario pages')
+if args.inject_work_status and args.scenario != 'work': p.error('--inject-work-status requires --scenario work')
 if args.scenario == 'all':
     codes = [subprocess.run(['python3', str(pathlib.Path(__file__).resolve()), '--binary', str(args.binary.resolve()), '--scenario', scenario], cwd=root).returncode for scenario in ['pages', 'budget', 'work']]
-    print(f'Agent behavior scenarios: {len(codes) - sum(bool(c) for c in codes)} completed; {sum(bool(c) for c in codes)} failed; 2 deferred', flush=True)
+    print(f'Agent behavior scenarios: {len(codes) - sum(bool(c) for c in codes)} completed; {sum(bool(c) for c in codes)} failed; 0 deferred', flush=True)
     raise SystemExit(1 if any(codes) else 0)
 frozen_time = '2026-03-03T16:00:00Z' if args.scenario == 'budget' else '2026-03-02T16:00:00Z'
 seed = root / 'rust/parity/.seed/agents_ui'
@@ -44,6 +48,14 @@ try:
     labels.update(json.loads(fixture)); labels_file.write_text(json.dumps(labels))
     source_db = work/'seeds/.instances/52798/db/production.sqlite3'
     with sqlite3.connect(source_db) as source, sqlite3.connect(candidate/'db/production.sqlite3') as target: source.backup(target)
+    if args.inject_work_status:
+        # Exercise the real UI, endpoint and writer. A deliberately broken SQLite
+        # writer loses the status update, while still returning its real response.
+        with sqlite3.connect(candidate/'db/production.sqlite3') as target:
+            target.execute("CREATE TRIGGER ws11ui_broken_work_status AFTER UPDATE OF work_status ON channel_threads WHEN NEW.work_status='in_progress' BEGIN UPDATE channel_threads SET work_status='planned' WHERE id=NEW.id; END")
+    if args.inject_stream_finalize:
+        with sqlite3.connect(candidate/'db/production.sqlite3') as target:
+            target.execute("CREATE TRIGGER ws11ui_broken_stream_finalize AFTER UPDATE OF streaming ON messages WHEN NEW.streaming=0 AND OLD.streaming=1 BEGIN UPDATE messages SET streaming=1 WHERE id=NEW.id; END")
     candidate_env = dict(os.environ)
     for line in (root/'rust/parity/.env.reference').read_text().splitlines():
         if line and not line.startswith('#') and '=' in line:

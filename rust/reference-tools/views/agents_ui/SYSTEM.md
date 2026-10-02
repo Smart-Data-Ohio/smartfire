@@ -1,4 +1,4 @@
-`system_behavior.py --binary /absolute/path/to/campfire` runs seven ported Rails
+`system_behavior.py --binary /absolute/path/to/campfire` runs nine ported Rails
 system assertions on separate private copies of the committed `agents_ui`
 seed. Build that seed with the pinned image, build the normal Rust binary and
 run `npm ci --prefix rust/parity` first. Ports 52797–52799 belong to WS11-ui.
@@ -21,5 +21,13 @@ requests call the owner budget checker, reproducing the original test’s two
 checks without a synthetic database write or callback bypass. Its inbox
 contains exactly one notice, and its owner suspends the agent with the kill
 switch. `--scenario pages` and `--scenario budget` select the individual groups.
-Live draft mutation and work assignment remain two explicitly inventoried
-cases because their runtime mutation producers are not ported here.
+The live draft scenario calls the real Bearer streaming APIs and observes the update
+and finalization through the subscribed browser. The work scenario creates, tracks
+and assigns work through the human UI, then calls the real Bearer work API and
+checks the refreshed status and history. Both use the merged owner producers.
+
+`--scenario work --inject-work-status` and
+`--scenario pages --inject-stream-finalize` deliberately corrupt the candidate
+SQLite writer while retaining the real UI, endpoint, validations and callbacks.
+They must fail the corresponding behavior assertion and return nonzero. These
+probes compare no pixels and change no waits or concurrency.

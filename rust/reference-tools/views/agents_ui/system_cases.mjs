@@ -31,13 +31,18 @@ async function run(file, name, user, check) {
   await context.addCookies([{name: 'session_token', value: labels[`session_cookies.${user}`], url: base, httpOnly: true}]);
   await context.addInitScript(ms => {const Real = Date; globalThis.Date = class extends Real {constructor(...args) {super(...(args.length ? args : [ms]));} static now() {return ms;}};}, frozen);
   const page = await context.newPage(); page.setDefaultTimeout(2000);
+  page.on('console', msg => {if (msg.type()==='error') console.log('BROWSER ERROR '+msg.text());});
+  page.on('pageerror', error => console.log('PAGE ERROR '+error.message));
   try { await check(page); passed++; counts[0]++; console.log(`PASS ${file}: ${name}`); }
   catch (error) { failed++; counts[1]++; console.log(`FAIL ${file}: ${name}: ${`${new URL(page.url()).pathname}: ${String(error.message).split('\n').slice(0,6).join(' | ')}`}`); }
-  finally { await context.close(); }
+  finally {
+    if (failed) console.log('STREAM DIAGNOSTICS '+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('turbo-cable-stream-source')].map(node=>({channel:node.getAttribute('channel'),signed:!!node.getAttribute('signed-stream-name'),connected:node.hasAttribute('connected')})))));
+    await context.close();
+  }
 }
 try {
   if (scenario === 'work') {
-    await run('agent_work_assignment_test.rb (UI prefix)', 'creates a thread, tracks work and assigns an agent through the real UI', 'jz', async page => {
+    await run('agent_work_assignment_test.rb', 'assigns an agent and renders its API status change after refresh', 'jz', async page => {
       await joinRoom(page, labels['rooms.designers']);
       if (!await page.locator("#thread-panel[aria-hidden='false']").isVisible()) await page.getByRole('button',{name:'Show threads',exact:true}).click();
       await page.locator("#thread-panel[aria-hidden='false']").waitFor({state:'visible',timeout:10000});
@@ -55,13 +60,26 @@ try {
       await owner.locator("optgroup[label='Agents'] option").filter({hasText:'Work Agent'}).waitFor({state:'attached',timeout:10000});
       await owner.selectOption({label:'Work Agent'});
       await contains(page.locator("#thread-panel [data-thread-panel-target='workOwnerLabel'] .agent-badge"),'agent',10000);
-      // Read persisted state and the assignment producer's ledger; do not write
-      // SQL or substitute a human request for the missing agent work mutation.
       const {spawnSync}=await import('node:child_process');
       const result=spawnSync('python3',['-c',`import sqlite3,json,sys
 c=sqlite3.connect(sys.argv[1]);bot=int(sys.argv[2]);thread=c.execute("SELECT id,work_status,work_owner_id FROM channel_threads WHERE name='Agent owned thread'").fetchone();assert thread and thread[1]=='planned' and thread[2]==bot
-rows=c.execute("SELECT metadata FROM agent_events WHERE event_type='work_assigned'").fetchall();assert any(json.loads(r[0]).get('thread_id')==thread[0] for r in rows)`,database,String(labels['system.work_bot'])]);
+rows=c.execute("SELECT metadata FROM agent_events WHERE event_type='work_assigned'").fetchall();assert any(json.loads(r[0]).get('thread_id')==thread[0] for r in rows)
+print(thread[0])`,database,String(labels['system.work_bot'])]);
       if(result.status!==0) throw new Error('work owner or assignment ledger did not persist');
+      const threadId=Number(result.stdout.toString().trim());
+      const reply=await page.evaluate(async ({threadId,token}) => {
+        const response=await fetch(`/agents/work/${threadId}`,{method:'PATCH',credentials:'omit',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({work_status:'in_progress',note:'Agent started the work'})});
+        return {status:response.status,body:await response.json()};
+      },{threadId,token:labels['system.work_secret']});
+      if(reply.status!==200) throw new Error(`agent work PATCH HTTP ${reply.status}`);
+      await visit(page,`${base}/rooms/${labels['rooms.designers']}?thread=${threadId}`);
+      await page.locator("#thread-panel [data-thread-panel-target='conversation']").waitFor({state:'visible',timeout:10000});
+      await contains(page.locator("#thread-panel [data-thread-panel-target='conversationTitle']"),'Agent owned thread',10000);
+      await contains(page.locator("#thread-panel [data-thread-panel-target='workStatusLabel']"),'In progress',10000);
+      await contains(page.locator("#thread-panel [data-thread-panel-target='workOwnerLabel'] .agent-badge"),'agent',10000);
+      await page.locator("#thread-panel [data-thread-panel-target='workHistory'] summary").click();
+      for (const text of ['Agent started the work','Planned → In progress']) await contains(page.locator("#thread-panel [data-thread-panel-target='workHistoryList']"),text,10000);
+
     });
   } else if (scenario === 'budget') {
     await run('agent_streaming_test.rb','owner sees budgets, one budget item, and hits the kill switch','kevin',async page => {
@@ -124,6 +142,22 @@ rows=c.execute("SELECT metadata FROM agent_events WHERE event_type='work_assigne
     await joinRoom(page, labels['rooms.watercooler']);
     await contains(page.locator(`#channel-members [data-member-id='${labels['users.bender']}']`),'Running tests…',20000);
   });
+  await run('agent_streaming_test.rb','streaming message renders, updates live, and finalizes','david',async page => {
+    const headers={Authorization:`Bearer ${labels['system.streaming_secret']}`,'Content-Type':'application/json'};
+    const start=await fetch(`${base}/rooms/${labels['system.room']}/agents/streaming_messages`,{method:'POST',headers,body:JSON.stringify({message:{markdown_source:'Drafting',client_message_id:'sys-stream-live'}})});
+    if (start.status!==201) throw new Error(`stream create HTTP ${start.status}`);
+    const record=await start.json(); if (!record.streaming) throw new Error('new stream is final');
+    await joinRoom(page, labels['system.room']);
+    const message=page.locator('.message').filter({hasText:'Drafting'});
+    await contains(message,'Drafting'); await contains(message.locator('.message__streaming'),'Working…');
+    const update=await fetch(`${base}/agents/streaming_messages/${record.id}`,{method:'PATCH',headers,body:JSON.stringify({markdown_source:'Drafting more'})});
+    if(update.status!==200) throw new Error(`stream update HTTP ${update.status}`);
+    await contains(message,'Drafting more'); await contains(message.locator('.message__streaming'),'Working…');
+    const finish=await fetch(`${base}/agents/streaming_messages/${record.id}/finalize`,{method:'POST',headers});
+    if(finish.status!==200 || (await finish.json()).streaming) throw new Error('stream did not finalize');
+    await message.locator('.message__streaming').waitFor({state:'detached'});
+    await contains(message,'Drafting more');
+  });
   await run('sudo_mode_test.rb','one prompt, then the action continues automatically','david',async page => {
     await visit(page,`${base}/account/edit`);
     const before = await page.locator('#invite_url').inputValue(); if (!before) throw new Error('empty invite URL');
@@ -142,8 +176,6 @@ rows=c.execute("SELECT metadata FROM agent_events WHERE event_type='work_assigne
   });
   }
   for (const [file,[ok,bad]] of groups) console.log(`${file}: ${ok} passed; ${bad} failed`);
-  console.log('agent_streaming_test.rb: 1 deferred (live message mutation API)');
-  console.log('agent_work_assignment_test.rb: 1 deferred (Bearer PATCH /agents/work/:id and subsequent status/note refresh; UI prefix is supplementary)');
-  console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 2 deferred`);
+  console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 0 deferred`);
 } finally {await browser.close();}
 process.exitCode = failed ? 1 : 0;

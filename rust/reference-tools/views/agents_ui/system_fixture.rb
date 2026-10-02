@@ -11,4 +11,10 @@ AgentStep.create!(agent:, message:, name: 'Run tests', status: 'done', output_su
 AgentStep.create!(agent:, message:, name: 'Deploy', status: 'running', input_summary: 'Ship it')
 approval = AgentApproval.create!(agent:, room:, action: 'deploy', summary: 'Ship the release')
 item = ActivityItem.find_by!(user: Current.user, source: approval)
-puts JSON.generate('system.message' => message.id, 'system.message_dom_id' => ActionView::RecordIdentifier.dom_id(message), 'system.room' => room.id, 'system.approval' => approval.id, 'system.activity_item' => item.id)
+%w[read_messages post_messages].each do |capability|
+  unless agent.agent_grants.where(room: room, capability: capability, revoked_at: nil).exists?
+    AgentGrant.create!(agent:, room:, capability:, granted_by: Current.user)
+  end
+end
+_, secret = AgentCredential.create_with_secret!(agent:, name: 'Live UI replay', created_by: Current.user)
+puts JSON.generate('system.streaming_secret' => secret, 'system.message' => message.id, 'system.message_dom_id' => ActionView::RecordIdentifier.dom_id(message), 'system.room' => room.id, 'system.approval' => approval.id, 'system.activity_item' => item.id)
