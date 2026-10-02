@@ -96,7 +96,7 @@ const reviewMutations=new Map([
 // also run diagnostically over the unchanged reviewed assertion modules.
 const opacity=css=>['messages-','.message__quick-reaction {',`${css}\n.message__quick-reaction {`];
 const editor='#composer textarea[name="message[markdown_source]"]';
-const restoredEditor=condition=>[composer,'this.#setMarkdownValue(content)',`this.#setMarkdownValue(content); if (${condition}) this.markdownTarget.style.setProperty("opacity", "0", "important")`];
+const restoredEditor=condition=>[composer,'this.#setMarkdownValue(content)',`this.#setMarkdownValue(content); if (${condition}) { this.markdownTarget.style.setProperty("transition", "none", "important"); this.markdownTarget.style.setProperty("opacity", "0", "important") }`];
 export const visibilityAssertionMutations=new Map([
   ['edits through the normal composer and restores the saved draft on cancel and success',new Map([
     ['transparent-edit-field',opacity(`${editor} { opacity: 0 !important; }`)],
@@ -104,7 +104,7 @@ export const visibilityAssertionMutations=new Map([
     ['transparent-saved-draft',restoredEditor('submittedContent !== undefined && current === submittedContent')],
   ])],
   ['a duplicate delivery does not replace the message while its actions are open',new Map([
-    ['transparent-redelivery-field',opacity(`html[data-duplicate-delivery-rendered] ${editor} { opacity: 0 !important; }`)],
+    ['transparent-redelivery-field',opacity(`html[data-duplicate-delivery-rendered] ${editor} { transition: none !important; opacity: 0 !important; }`)],
     ['transparent-redelivery-flag',opacity('html[data-duplicate-delivery-rendered] { opacity: 0 !important; }')],
   ])],
   ['keeps newer typing through an asynchronous edit and leaves failures in edit mode',new Map([
@@ -151,7 +151,7 @@ export const visibilityLookupMutations=new Map([
     ['transparent-picker-search',opacity('#emoji-picker-panel input[aria-label="Search emoji and icons"] { opacity: 0 !important; }')],
   ])],
   ['the picker shows category tabs and switches between them',new Map([
-    ['transparent-flags-lookup',opacity('#emoji-picker-panel:has(#emoji-picker-tab-people[aria-selected="true"]) #emoji-picker-tab-flags { opacity: 0 !important; }')],
+    ['transparent-flags-lookup',opacity('#emoji-picker-panel:has(#emoji-picker-tab-people[aria-selected="true"]) #emoji-picker-tab-flags { transition: none !important; opacity: 0 !important; }')],
   ])],
   ['quick-react creates a boost from the toolbar',new Map([
     ['transparent-hover-body',opacity('.message[data-message-id="607264868"] [data-reply-target="body"] { opacity: 0 !important; }')],
@@ -159,6 +159,14 @@ export const visibilityLookupMutations=new Map([
   ['message action menu is a bottom sheet with touch-sized targets on phones',new Map([
     ['transparent-room-header',opacity('.room-header__name { opacity: 0 !important; }')],
   ])],
+]);
+// Conditional opacity must become zero at the lookup, not fade through
+// positive opacity (which Selenium correctly considers visible).
+export const instantaneousOpacityMutations=new Map([
+  ['edits through the normal composer and restores the saved draft on cancel and success',new Map([...visibilityAssertionMutations.get('edits through the normal composer and restores the saved draft on cancel and success')].filter(([name])=>name!=='transparent-edit-field'))],
+  ['a duplicate delivery does not replace the message while its actions are open',new Map([['transparent-redelivery-field',visibilityAssertionMutations.get('a duplicate delivery does not replace the message while its actions are open').get('transparent-redelivery-field')]])],
+  ['keeps newer typing through an asynchronous edit and leaves failures in edit mode',visibilityAssertionMutations.get('keeps newer typing through an asynchronous edit and leaves failures in edit mode')],
+  ['the picker shows category tabs and switches between them',visibilityLookupMutations.get('the picker shows category tabs and switches between them')],
 ]);
 for(const [name,variants] of visibilityLookupMutations) {
   if(!visibilityAssertionMutations.has(name)) visibilityAssertionMutations.set(name,new Map());

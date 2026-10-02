@@ -157,13 +157,13 @@ parser.add_argument("--case", help="run one exact pinned declaration from the se
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 parser.add_argument("--mutant", help="select one served mutant variant; without --negative, diagnose its acceptance on both apps (not parity credit)")
-parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups"], help="diagnose all new visibility assertion mutants without parity credit")
+parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity"], help="diagnose all new visibility assertion mutants without parity credit")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
 if args.mutant_set:
     assert not args.mutant and not args.negative and not args.case, "mutant-set is a diagnostic escape run"
-    diagnostic_export = "visibilityLookupMutations" if args.mutant_set == "visible-lookups" else "visibilityAssertionMutations"
+    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
     diagnostic_variants = json.loads(subprocess.check_output([
         "node", "--input-type=module", "-e",
         f"import {{{diagnostic_export}}} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
