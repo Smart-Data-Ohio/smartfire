@@ -5,39 +5,69 @@ use campfire_db::{Connection, Result, Timestamp};
 use campfire_views::layouts::{NotificationSounds, UserPreferences};
 use rusqlite::OptionalExtension;
 
-pub(super) fn fill(
-    conn: &Connection,
-    user_id: i64,
-    now: jiff::Timestamp,
-    preferences: &mut UserPreferences,
-) -> Result<()> {
-    let (mut sounds, meetings, calendar_ooo) = conn.query_row(
-        "SELECT dnd_enabled,dnd_until,presence_setting,quiet_hours_enabled,quiet_hours_start_minute,quiet_hours_end_minute,meeting_status_enabled,meeting_dnd_enabled,ooo_until,ooo_calendar_enabled,ooo_notify_enabled FROM users WHERE id=?",
-        [user_id],
-        |row| {
-            let dnd: bool = row.get(0)?;
-            let dnd_until: Option<Timestamp> = row.get(1)?;
-            let presence: String = row.get(2)?;
-            let quiet: bool = row.get(3)?;
-            let start: Option<i64> = row.get(4)?;
-            let end: Option<i64> = row.get(5)?;
-            let ooo_until: Option<Timestamp> = row.get(8)?;
-            let keep_notifications: bool = row.get(10)?;
-            Ok((
-                NotificationSounds {
-                    muted: (dnd && dnd_until.is_none_or(|until| until.jiff() > now)) || presence == "dnd",
+/// Preferences carried by the authenticated row, for read-only page requests.
+#[derive(Clone)]
+pub(crate) struct LoadedPreferences {
+    pub user_id: i64,
+    preferences: UserPreferences,
+    meetings: bool,
+    calendar_ooo: bool,
+}
+impl LoadedPreferences {
+    pub(crate) fn from_row(
+        row: &rusqlite::Row<'_>,
+        now: jiff::Timestamp,
+    ) -> rusqlite::Result<Self> {
+        let dnd: bool = row.get("dnd_enabled")?;
+        let dnd_until: Option<Timestamp> = row.get("dnd_until")?;
+        let presence: String = row.get("presence_setting")?;
+        let quiet: bool = row.get("quiet_hours_enabled")?;
+        let start: Option<i64> = row.get("quiet_hours_start_minute")?;
+        let end: Option<i64> = row.get("quiet_hours_end_minute")?;
+        let ooo_until: Option<Timestamp> = row.get("ooo_until")?;
+        let keep_notifications: bool = row.get("ooo_notify_enabled")?;
+        Ok(Self {
+            user_id: row.get("id")?,
+            preferences: UserPreferences {
+                theme: row.get("theme")?,
+                text_size: row.get("text_size")?,
+                time_zone: row.get("time_zone")?,
+                time_zone_explicit: row.get("time_zone_explicit")?,
+                // Preserve the former `tour_completed_at IS NOT NULL` projection.
+                tour_completed: !matches!(
+                    row.get_ref("tour_completed_at")?,
+                    rusqlite::types::ValueRef::Null
+                ),
+                voice_mode: row.get("voice_mode")?,
+                push_to_talk_key: row.get("push_to_talk_key")?,
+                notification_sounds: NotificationSounds {
+                    muted: (dnd && dnd_until.is_none_or(|until| until.jiff() > now))
+                        || presence == "dnd",
                     quiet_hours: if quiet { start.zip(end) } else { None },
                     meeting_quiet: Vec::new(),
-                    ooo_quiet: if keep_notifications { Vec::new() } else {
-                        ooo_until.filter(|until| until.jiff() > now).map(|until| vec![(0, until.as_second())]).unwrap_or_default()
+                    ooo_quiet: if keep_notifications {
+                        Vec::new()
+                    } else {
+                        ooo_until
+                            .filter(|until| until.jiff() > now)
+                            .map(|until| vec![(0, until.as_second())])
+                            .unwrap_or_default()
                     },
                 },
-                row.get::<_, bool>(6)? && row.get::<_, bool>(7)?,
-                !keep_notifications && row.get::<_, bool>(9)?,
-            ))
-        },
-    )?;
-    if (meetings || calendar_ooo)
+                ..Default::default()
+            },
+            meetings: row.get::<_, bool>("meeting_status_enabled")?
+                && row.get::<_, bool>("meeting_dnd_enabled")?,
+            calendar_ooo: !keep_notifications && row.get::<_, bool>("ooo_calendar_enabled")?,
+        })
+    }
+
+    pub(crate) fn load(mut self, conn: &Connection) -> Result<UserPreferences> {
+        let user_id = self.user_id;
+        let meetings = self.meetings;
+        let calendar_ooo = self.calendar_ooo;
+        let sounds = &mut self.preferences.notification_sounds;
+        if (meetings || calendar_ooo)
         && let Some((busy, ooo)) = conn
             .query_row(
                 "SELECT busy_intervals,ooo_intervals FROM calendar_meeting_caches WHERE user_id=?",
@@ -53,23 +83,34 @@ pub(super) fn fill(
             sounds.ooo_quiet.extend(window_epochs(&ooo));
         }
     }
-    preferences.notification_sounds = sounds;
-    // GoogleAccount#drive? checks the exact scope, including disconnected accounts. It does
-    // not check workspace configuration, connected? or usable? and must never decrypt here.
-    let scopes: Option<String> = conn
-        .query_row(
-            "SELECT scopes FROM google_accounts WHERE user_id=?",
-            [user_id],
-            |row| row.get::<_, Option<String>>(0),
-        )
-        .optional()?
-        .flatten();
-    preferences.google_drive = scopes.as_deref().is_some_and(|scopes| {
-        scopes
-            .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
-            .any(|scope| scope == "https://www.googleapis.com/auth/drive.file")
-    });
-    Ok(())
+        // GoogleAccount#drive? checks the exact scope, including disconnected accounts. It does
+        // not check workspace configuration, connected? or usable? and must never decrypt here.
+        let scopes: Option<String> = conn
+            .query_row(
+                "SELECT scopes FROM google_accounts WHERE user_id=?",
+                [user_id],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .optional()?
+            .flatten();
+        self.preferences.google_drive = scopes.as_deref().is_some_and(|scopes| {
+            scopes
+                .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
+                .any(|scope| scope == "https://www.googleapis.com/auth/drive.file")
+        });
+        Ok(self.preferences)
+    }
+}
+
+pub(super) fn for_user(
+    conn: &Connection,
+    user_id: i64,
+    now: jiff::Timestamp,
+) -> Result<UserPreferences> {
+    let loaded = conn.query_row("SELECT * FROM users WHERE id=?", [user_id], |row| {
+        LoadedPreferences::from_row(row, now)
+    })?;
+    loaded.load(conn)
 }
 
 /// Calendar::MeetingCache#quiet_window_epochs / #ooo_window_epochs. The refresh producer

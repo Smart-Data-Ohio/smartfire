@@ -19,25 +19,19 @@ pub struct DirectoryRecord {
 
 /// The owner supplies Rails Unicode ordering and active/suspended grouping.
 pub fn for_directory(conn: &Connection) -> Result<Vec<DirectoryRecord>> {
-    crate::Agent::for_directory(conn)?
+    Ok(crate::Agent::directory_rows(conn)?
         .into_iter()
-        .map(|agent| {
-            Ok(DirectoryRecord {
-                id: agent.id,
-                user: crate::User::find(conn, agent.user_id)?,
-                owner: agent
-                    .owner_id
-                    .map(|id| crate::User::find_by_id(conn, id))
-                    .transpose()?
-                    .flatten(),
-                kind: agent.kind.name().into(),
-                status: agent.status,
-                status_note: agent.status_note,
-                suspended: agent.suspended_at.is_some(),
-                created_at: agent.created_at,
-                status_changed_at: agent.status_changed_at,
-                last_seen_at: agent.last_seen_at,
-            })
+        .map(|(agent, user, owner)| DirectoryRecord {
+            id: agent.id,
+            user,
+            owner,
+            kind: agent.kind.name().into(),
+            status: agent.status,
+            status_note: agent.status_note,
+            suspended: agent.suspended_at.is_some(),
+            created_at: agent.created_at,
+            status_changed_at: agent.status_changed_at,
+            last_seen_at: agent.last_seen_at,
         })
-        .collect()
+        .collect())
 }
