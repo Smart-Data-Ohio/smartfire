@@ -161,8 +161,8 @@ impl Room {
         }
         query_all(
             conn,
-            &format!(r#"SELECT * FROM "rooms" WHERE id IN ({})"#, placeholders(ids.len())),
-            rusqlite::params_from_iter(ids),
+            r#"SELECT * FROM "rooms" WHERE id IN (SELECT value FROM json_each(?))"#,
+            [serde_json::json!(ids).to_string()],
             Self::from_row,
         )
     }
