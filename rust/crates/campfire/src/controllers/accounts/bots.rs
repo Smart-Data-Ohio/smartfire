@@ -27,10 +27,7 @@ pub async fn index(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            User::active_bots_ordered(conn)?
-                .iter()
-                .map(|bot| presenters::accounts::bot(conn, &secrets, bot))
-                .collect()
+            presenters::accounts::bots(conn, &secrets, &User::active_bots_ordered(conn)?)
         })
         .await
         .map_err(Error::internal)?;

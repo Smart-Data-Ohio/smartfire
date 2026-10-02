@@ -99,6 +99,21 @@ impl AgentEvent {
             webhook_last_error: r.get("webhook_last_error")?,
         })
     }
+    /// The management history's bounded 50+1 window, with complete rows.
+    pub fn history_page(
+        conn: &Connection,
+        agent_id: i64,
+        outcome: Option<&str>,
+        offset: i64,
+    ) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM agent_events WHERE agent_id=? AND (? IS NULL OR outcome=?) ORDER BY id DESC LIMIT 51 OFFSET ?",
+            params![agent_id, outcome, outcome, offset],
+            Self::from_row,
+        )
+    }
+
     pub fn find(conn: &Connection, id: i64) -> Result<Option<Self>> {
         query_one(
             conn,
