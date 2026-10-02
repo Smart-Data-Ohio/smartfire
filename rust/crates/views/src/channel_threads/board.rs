@@ -138,7 +138,7 @@ pub struct Post {
     pub room_id: i64,
     pub room_name: String,
     pub room_updated_at: jiff::Timestamp,
-    pub name: String,
+    pub name: Option<String>,
     pub lifecycle: String,
     pub count: i64,
     pub status: String,
@@ -174,7 +174,7 @@ pub struct Show<'a> {
 }
 impl Page for Show<'_> {
     fn page_title(&self) -> Option<String> {
-        Some(self.post.name.clone())
+        self.post.name.clone()
     }
     fn body_class(&self) -> Option<&str> {
         Some("sidebar")

@@ -389,10 +389,8 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
     let result_markdown = attributes.get("result_markdown").cloned();
     let actor = require_current_user(c)?.clone();
-    // A submitted nil validates as blank; only an absent key omits the assignment.
-    let name = attributes
-        .get("name")
-        .map(|value| messages::string_column(value).unwrap_or_default());
+    // Keep omitted, nil, and string titles distinct for Rails' failed-form rendering.
+    let name = attributes.get("name").map(messages::string_column);
     let minutes = attributes
         .get("auto_archive_after_minutes")
         .map(archive_minutes)
@@ -412,6 +410,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let board = room.board();
     let attempted = std::sync::Arc::new(std::sync::Mutex::new((
         thread.clone(),
+        None::<Option<String>>,
         None::<Vec<String>>,
         None::<Vec<campfire_db::WorkThreadEvent>>,
     )));
@@ -421,6 +420,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let mut thread = ChannelThread::find(tx.conn(), thread_id)?;
+            let mut pending_name = None;
             let mut pending_tags = None;
             let outcome = (|| {
                 if Membership::find_by_room_and_user(tx.conn(), room_id, actor.id)?.is_none() {
@@ -472,7 +472,14 @@ pub async fn update(c: &mut Ctx) -> Result {
                 pending_tags = tags
                     .as_deref()
                     .map(campfire_db::models::channel_thread::normalize_tag_names);
-                thread.update_metadata(tx, name.as_deref(), minutes, tags.as_deref())?;
+                pending_name = name.clone();
+                // The persisted model's name is non-null; nil fails its blank validation.
+                thread.update_metadata(
+                    tx,
+                    name.as_ref().map(|name| name.as_deref().unwrap_or_default()),
+                    minutes,
+                    tags.as_deref(),
+                )?;
                 match status.as_deref() {
                     Some("closed") => thread.close(tx)?,
                     Some("locked") => thread.lock_conversation(tx)?,
@@ -518,11 +525,13 @@ pub async fn update(c: &mut Ctx) -> Result {
             } else {
                 None
             };
-            *capture.lock().expect("thread attempt") = (thread.clone(), pending_tags, history);
+            *capture.lock().expect("thread attempt") =
+                (thread.clone(), pending_name, pending_tags, history);
             outcome.map(|()| thread)
         })
         .await;
-    let (attempted, pending_tags, history) = attempted.lock().expect("thread attempt").clone();
+    let (attempted, pending_name, pending_tags, history) =
+        attempted.lock().expect("thread attempt").clone();
     let thread = match result {
         Ok(thread) => thread,
         Err(campfire_db::Error::RecordNotFound(_)) => return forbidden_update(c, &thread),
@@ -554,6 +563,9 @@ pub async fn update(c: &mut Ctx) -> Result {
                     Ok(post)
                 })
                 .await?;
+                if let Some(name) = pending_name {
+                    post.name = name;
+                }
                 if let Some(tags) = pending_tags {
                     post.tags = tags;
                 }

@@ -141,6 +141,14 @@ add.call('remove-board-work-html',admin,update,'patch',{thread:{work_status:'',w
  add.call(name,admin,path,method,{thread:{name:'Rejected tag',tags:'invalid!',first_message:'Retained brief'}},[],422)
  fixtures.last[:accept]=accept
 end
+[
+ ['update-null-title-html', 'text/html'],
+ ['update-null-title-turbo', 'text/vnd.turbo-stream.html, text/html']
+].each do |name,accept|
+ add.call(name,admin,update,'patch',{thread:{name:nil,result_markdown:'must not persist'}},[],422)
+ fixtures.last[:encoding]='json'
+ fixtures.last[:accept]=accept
+end
 fixtures.each do |row|
  ActiveRecord::Base.transaction do
   row[:setup].each { |sql| ActiveRecord::Base.connection.execute(sql) }

@@ -60,7 +60,7 @@ pub fn post(
         room_id: room.id,
         room_name: choices.room_name,
         room_updated_at: room.updated_at.jiff(),
-        name: thread.name.clone(),
+        name: Some(thread.name.clone()),
         lifecycle: row.lifecycle,
         count: row.replies,
         status: row.work_status,
