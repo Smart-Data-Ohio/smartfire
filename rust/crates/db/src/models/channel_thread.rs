@@ -35,6 +35,7 @@ mod work_listing;
 pub use agent_work::{AgentWorkChanges, tag_names_from_value};
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_page_number};
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
+pub use work_listing::{WorkReadFacts, WorkReadPermissions};
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
 pub const AUTO_ARCHIVE_OPTIONS: [i64; 4] = [60, 1_440, 4_320, 10_080];
@@ -230,11 +231,8 @@ impl ChannelThread {
         }
         query_all(
             conn,
-            &format!(
-                "SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC",
-                placeholders(room_ids.len())
-            ),
-            rusqlite::params_from_iter(room_ids),
+            "SELECT * FROM channel_threads WHERE room_id IN (SELECT value FROM json_each(?)) ORDER BY last_activity_at DESC, id DESC",
+            [serde_json::json!(room_ids).to_string()],
             Self::from_row,
         )
     }
