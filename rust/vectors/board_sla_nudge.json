@@ -1,0 +1,701 @@
+{
+  "reference": "d7c7de92 plus approved board drift",
+  "setup": [
+    "UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",
+    "DELETE FROM activity_items",
+    "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'SLA <&> post','in_progress','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+  ],
+  "models": [
+    {
+      "name": "valid",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 120,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "escalation",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "escalation",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 120,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "done-is-valid-claim",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "done",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 120,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "missing-room",
+      "input": {
+        "room_id": 0,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "room": [
+          "must exist"
+        ]
+      },
+      "full_messages": [
+        "Room must exist"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "missing-thread",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 0,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "channel_thread": [
+          "must exist"
+        ]
+      },
+      "full_messages": [
+        "Channel thread must exist"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "missing-recipient",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 0,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "recipient": [
+          "must exist"
+        ]
+      },
+      "full_messages": [
+        "Recipient must exist"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "missing-status",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": null,
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "can't be blank",
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Work status can't be blank",
+        "Work status is not included in the list"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "blank-status",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "can't be blank",
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Work status can't be blank",
+        "Work status is not included in the list"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "whitespace-status",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": " ",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "can't be blank",
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Work status can't be blank",
+        "Work status is not included in the list"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "unknown-status",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "shipped",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Work status is not included in the list"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "missing-stage",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": null,
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "stage": [
+          "can't be blank",
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Stage can't be blank",
+        "Stage is not included in the list"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "blank-stage",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "stage": [
+          "can't be blank",
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Stage can't be blank",
+        "Stage is not included in the list"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "unknown-stage",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "later",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "stage": [
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Stage is not included in the list"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "missing-entry",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": null
+      },
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "status_entered_at": [
+          "can't be blank"
+        ]
+      },
+      "full_messages": [
+        "Status entered at can't be blank"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "duplicate",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": true,
+      "valid": false,
+      "errors": {
+        "status_entered_at": [
+          "already fired for this status crossing"
+        ]
+      },
+      "full_messages": [
+        "Status entered at already fired for this status crossing"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
+      "name": "new-stage",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "escalation",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": true,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 120,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "new-status",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "blocked",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": true,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 120,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "new-crossing",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 13:59:59.999999"
+      },
+      "duplicate": true,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 120,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "future-entry",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 16:01:00"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 0,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "fraction-before-minute",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 15:59:00.000001"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 0,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "at-minute",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 15:59:00"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 1,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "before-hour",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 15:00:00.000001"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 59,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "at-hour",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 15:00:00"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 60,
+      "recipients": [
+        127326141
+      ],
+      "activity_delta": 0
+    },
+    {
+      "name": "bot-recipient-model-valid",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 394959859,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "waited": 120,
+      "recipients": [
+        394959859
+      ],
+      "activity_delta": 0
+    }
+  ],
+  "recorder": [
+    {
+      "name": "recipient",
+      "caller": 127326141,
+      "recipient": 127326141,
+      "status": "active",
+      "result": 7,
+      "count": 1,
+      "same_item": null,
+      "state": "unread",
+      "remaining_items": 0,
+      "remaining_nudges": 0
+    },
+    {
+      "name": "wrong-recipient",
+      "caller": 149087659,
+      "recipient": 127326141,
+      "status": "active",
+      "result": null,
+      "count": 0,
+      "same_item": null,
+      "state": null,
+      "remaining_items": 0,
+      "remaining_nudges": 0
+    },
+    {
+      "name": "bot",
+      "caller": 394959859,
+      "recipient": 394959859,
+      "status": "active",
+      "result": null,
+      "count": 0,
+      "same_item": null,
+      "state": null,
+      "remaining_items": 0,
+      "remaining_nudges": 0
+    },
+    {
+      "name": "inactive",
+      "caller": 127326141,
+      "recipient": 127326141,
+      "status": "deactivated",
+      "result": null,
+      "count": 0,
+      "same_item": null,
+      "state": null,
+      "remaining_items": 0,
+      "remaining_nudges": 0
+    },
+    {
+      "name": "repeated",
+      "caller": 127326141,
+      "recipient": 127326141,
+      "status": "active",
+      "result": 7,
+      "count": 1,
+      "same_item": true,
+      "state": "unread",
+      "remaining_items": 0,
+      "remaining_nudges": 0
+    },
+    {
+      "name": "handled-repeated",
+      "caller": 127326141,
+      "recipient": 127326141,
+      "status": "active",
+      "result": 7,
+      "count": 1,
+      "same_item": true,
+      "state": "handled",
+      "remaining_items": 0,
+      "remaining_nudges": 0
+    }
+  ],
+  "http": [
+    {
+      "fragment": "  <article id=\"activity_item_970000003\" class=\"activity-item activity-item--unread\">\n  <div class=\"activity-item__meta\">\n    <span class=\"activity-item__kind\">SLA breach</span>\n    <time class=\"activity-item__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"activity-item__content\">\n    <h2 class=\"activity-item__title\">All Talk · SLA &lt;&amp;&gt; post</h2>\n      <p class=\"activity-item__author\"></p>\n      <p class=\"activity-item__body\">Sitting in In progress for 2.0 hours</p>\n  </div>\n\n  <div class=\"activity-item__actions\">\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/open\"><button class=\"btn btn--primary\" type=\"submit\">Open</button></form>\n\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/read\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark read</button><input type=\"hidden\" name=\"state\" value=\"read\" /><input type=\"hidden\" name=\"status\" value=\"unread\" /><input type=\"hidden\" name=\"type\" value=\"threads\" /></form>\n\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/handled\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark handled</button><input type=\"hidden\" name=\"state\" value=\"handled\" /><input type=\"hidden\" name=\"status\" value=\"unread\" /><input type=\"hidden\" name=\"type\" value=\"threads\" /></form>\n  </div>\n</article>\n\n",
+      "name": "nudge-application/json",
+      "setup": [
+        "UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",
+        "DELETE FROM activity_items",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'SLA <&> post','in_progress','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_nudges(id,room_id,channel_thread_id,recipient_id,work_status,stage,status_entered_at,created_at,updated_at) VALUES(970000002,486777696,970000001,127326141,'in_progress','nudge','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO activity_items(id,user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(970000003,127326141,'BoardSlaNudge',970000002,'work_sla','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "path": "/activity?type=threads",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[{\"id\":970000003,\"event_type\":\"work_sla\",\"state\":\"unread\",\"read_at\":null,\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":null}],\"filter\":\"unread\",\"type_filter\":\"threads\",\"unread_count\":1,\"next_cursor\":null}"
+    },
+    {
+      "fragment": "  <article id=\"activity_item_970000003\" class=\"activity-item activity-item--unread\">\n  <div class=\"activity-item__meta\">\n    <span class=\"activity-item__kind\">SLA breach</span>\n    <time class=\"activity-item__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"activity-item__content\">\n    <h2 class=\"activity-item__title\">All Talk · SLA &lt;&amp;&gt; post</h2>\n      <p class=\"activity-item__author\"></p>\n      <p class=\"activity-item__body\">Escalated: sitting in In progress for 2.0 hours</p>\n  </div>\n\n  <div class=\"activity-item__actions\">\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/open\"><button class=\"btn btn--primary\" type=\"submit\">Open</button></form>\n\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/read\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark read</button><input type=\"hidden\" name=\"state\" value=\"read\" /><input type=\"hidden\" name=\"status\" value=\"unread\" /><input type=\"hidden\" name=\"type\" value=\"threads\" /></form>\n\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/handled\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark handled</button><input type=\"hidden\" name=\"state\" value=\"handled\" /><input type=\"hidden\" name=\"status\" value=\"unread\" /><input type=\"hidden\" name=\"type\" value=\"threads\" /></form>\n  </div>\n</article>\n\n",
+      "name": "escalation-application/json",
+      "setup": [
+        "UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",
+        "DELETE FROM activity_items",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'SLA <&> post','in_progress','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_nudges(id,room_id,channel_thread_id,recipient_id,work_status,stage,status_entered_at,created_at,updated_at) VALUES(970000002,486777696,970000001,127326141,'in_progress','escalation','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO activity_items(id,user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(970000003,127326141,'BoardSlaNudge',970000002,'work_sla','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "path": "/activity?type=threads",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[{\"id\":970000003,\"event_type\":\"work_sla\",\"state\":\"unread\",\"read_at\":null,\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":null}],\"filter\":\"unread\",\"type_filter\":\"threads\",\"unread_count\":1,\"next_cursor\":null}"
+    },
+    {
+      "fragment": "  <article id=\"activity_item_970000003\" class=\"activity-item activity-item--unread\">\n  <div class=\"activity-item__meta\">\n    <span class=\"activity-item__kind\">SLA breach</span>\n    <time class=\"activity-item__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n\n  <div class=\"activity-item__content\">\n    <h2 class=\"activity-item__title\">All Talk · SLA &lt;&amp;&gt; post</h2>\n      <p class=\"activity-item__author\"></p>\n      <p class=\"activity-item__body\">Sitting in In progress for 0 minutes</p>\n  </div>\n\n  <div class=\"activity-item__actions\">\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/open\"><button class=\"btn btn--primary\" type=\"submit\">Open</button></form>\n\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/read\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark read</button><input type=\"hidden\" name=\"state\" value=\"read\" /><input type=\"hidden\" name=\"status\" value=\"unread\" /><input type=\"hidden\" name=\"type\" value=\"threads\" /></form>\n\n      <form class=\"activity-item__action-form\" method=\"post\" action=\"/activity/970000003/handled\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><button class=\"btn btn--plain\" type=\"submit\">Mark handled</button><input type=\"hidden\" name=\"state\" value=\"handled\" /><input type=\"hidden\" name=\"status\" value=\"unread\" /><input type=\"hidden\" name=\"type\" value=\"threads\" /></form>\n  </div>\n</article>\n\n",
+      "name": "fractional-application/json",
+      "setup": [
+        "UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",
+        "DELETE FROM activity_items",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'SLA <&> post','in_progress','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_nudges(id,room_id,channel_thread_id,recipient_id,work_status,stage,status_entered_at,created_at,updated_at) VALUES(970000002,486777696,970000001,127326141,'in_progress','nudge','2026-03-02 15:59:00.000001','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO activity_items(id,user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(970000003,127326141,'BoardSlaNudge',970000002,'work_sla','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "path": "/activity?type=threads",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[{\"id\":970000003,\"event_type\":\"work_sla\",\"state\":\"unread\",\"read_at\":null,\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":null}],\"filter\":\"unread\",\"type_filter\":\"threads\",\"unread_count\":1,\"next_cursor\":null}"
+    },
+    {
+      "fragment": "  <div class=\"activity-inbox__empty\">\n    <p class=\"activity-inbox__empty-title\">No unread activity</p>\n    <p>New mentions and replies will show up here when they arrive.</p>\n  </div>\n",
+      "name": "revoked-application/json",
+      "setup": [
+        "UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",
+        "DELETE FROM activity_items",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'SLA <&> post','in_progress','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_nudges(id,room_id,channel_thread_id,recipient_id,work_status,stage,status_entered_at,created_at,updated_at) VALUES(970000002,486777696,970000001,127326141,'in_progress','nudge','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO activity_items(id,user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(970000003,127326141,'BoardSlaNudge',970000002,'work_sla','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM memberships WHERE room_id=486777696 AND user_id=127326141"
+      ],
+      "path": "/activity?type=threads",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[],\"filter\":\"unread\",\"type_filter\":\"threads\",\"unread_count\":0,\"next_cursor\":null}"
+    },
+    {
+      "fragment": "  <div class=\"activity-inbox__empty\">\n    <p class=\"activity-inbox__empty-title\">No unread activity</p>\n    <p>New mentions and replies will show up here when they arrive.</p>\n  </div>\n",
+      "name": "wrong-user-application/json",
+      "setup": [
+        "UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",
+        "DELETE FROM activity_items",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'SLA <&> post','in_progress','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_nudges(id,room_id,channel_thread_id,recipient_id,work_status,stage,status_entered_at,created_at,updated_at) VALUES(970000002,486777696,970000001,127326141,'in_progress','nudge','2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO activity_items(id,user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(970000003,127326141,'BoardSlaNudge',970000002,'work_sla','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE activity_items SET user_id=149087659 WHERE id=970000003"
+      ],
+      "path": "/activity?type=threads",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[],\"filter\":\"unread\",\"type_filter\":\"threads\",\"unread_count\":0,\"next_cursor\":null}"
+    }
+  ]
+}

@@ -30,6 +30,8 @@ pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;
 pub mod board_tag_assignment;
+pub mod board_sla_nudge;
+pub use board_sla_nudge::{BoardSlaNudge, NewBoardSlaNudge};
 pub use board_tag_assignment::{BoardTagAssignment, NewBoardTagAssignment};
 pub mod work_handoff;
 pub use work_handoff::{HandoffPackage, NewWorkHandoff, WorkHandoff};
