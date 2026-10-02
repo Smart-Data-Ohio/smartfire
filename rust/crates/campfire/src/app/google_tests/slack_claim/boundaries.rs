@@ -8,10 +8,19 @@ const BOUNDARIES: &str =
     include_str!("../../../../../../vectors/slack/google_enrollment_boundaries.json");
 thread_local! {
     static STATEMENTS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    static EXECUTING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 fn record(event: rusqlite::trace::TraceEvent<'_>) {
-    if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
-        STATEMENTS.with(|rows| rows.borrow_mut().push(sql.into()));
+    match event {
+        rusqlite::trace::TraceEvent::Stmt(_, sql) => {
+            // Rails instruments one client SQL call. SQLite can repeat its STMT
+            // event for foreign-key subprograms and triggers during that call.
+            if !EXECUTING.with(|active| active.replace(true)) {
+                STATEMENTS.with(|rows| rows.borrow_mut().push(sql.into()));
+            }
+        }
+        rusqlite::trace::TraceEvent::Profile(_, _) => EXECUTING.with(|active| active.set(false)),
+        _ => {}
     }
 }
 fn transactions(statements: Vec<String>) -> Vec<Value> {
@@ -154,8 +163,10 @@ async fn boundary(name: &'static str) {
                 )?;
             }
             STATEMENTS.with(|rows| rows.borrow_mut().clear());
+            EXECUTING.with(|active| active.set(false));
             tx.conn().trace_v2(
-                rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
+                rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT
+                    | rusqlite::trace::TraceEventCodes::SQLITE_TRACE_PROFILE,
                 Some(record),
             );
             Ok(())
