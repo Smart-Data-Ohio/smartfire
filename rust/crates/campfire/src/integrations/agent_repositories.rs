@@ -4,7 +4,7 @@ use super::net::BoxFuture;
 use campfire_db::models::agent_payloads::{RepositoryAccess, RepositoryEntry};
 use campfire_db::{Agent, Connection, Database, Result};
 use rusqlite::{OptionalExtension, params};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::sync::{Arc, RwLock};
 
 /// The account belongs to the Agent's owner, never to its bot or the triggering actor.
@@ -251,46 +251,31 @@ fn requests(
     if !current(conn, agent, user, account)? {
         return Ok(vec![]);
     }
-    let mut result = vec![];
-    let mut seen = HashSet::new();
+    if threads.is_empty() {return Ok(vec![])}
+    let slots=std::iter::repeat_n("?",threads.len()).collect::<Vec<_>>().join(",");
+    let mut work:HashMap<i64,Vec<(i64,String,String)>>=HashMap::new();
+    if matches!(surface,Surface::Work|Surface::Both) {
+        let mut query=conn.prepare(&format!("SELECT w.channel_thread_id,w.id,p.owner,p.repo FROM work_thread_links w JOIN github_pull_requests p ON p.id=w.github_pull_request_id WHERE w.channel_thread_id IN ({slots}) AND w.kind='pull_request' AND (p.private IS NULL OR p.private!=0) ORDER BY w.id"))?;
+        for row in query.query_map(rusqlite::params_from_iter(threads),|r|Ok((r.get::<_,i64>(0)?,r.get::<_,i64>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?)))? {
+            let (thread,id,owner,repo)=row?;work.entry(thread).or_default().push((id,owner,repo));
+        }
+    }
+    let mut messages:HashMap<i64,(String,String)>=HashMap::new();
+    if matches!(surface,Surface::Messages|Surface::Both) {
+        let mut query=conn.prepare(&format!("SELECT t.channel_thread_id,p.owner,p.repo FROM github_pull_request_threads t JOIN github_pull_requests p ON p.id=t.github_pull_request_id WHERE t.channel_thread_id IN ({slots}) AND (p.private IS NULL OR p.private!=0) ORDER BY t.id"))?;
+        for row in query.query_map(rusqlite::params_from_iter(threads),|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?)))? {
+            let (thread,owner,repo)=row?;messages.entry(thread).or_insert((owner,repo));
+        }
+    }
+    let mut result=vec![];
+    let mut seen=HashSet::new();
     for &thread in threads {
-        if !seen.insert(thread) {
-            continue;
+        if !seen.insert(thread){continue}
+        for (id,owner,repo) in work.remove(&thread).unwrap_or_default() {
+            result.push((RepositoryEntry::WorkLink(id),RepositoryRequest{account_id:account,user_id:user,owner:owner.to_lowercase(),repo:repo.to_lowercase()}));
         }
-        if matches!(surface, Surface::Work | Surface::Both) {
-            let mut query=conn.prepare("SELECT w.id,p.owner,p.repo FROM work_thread_links w JOIN github_pull_requests p ON p.id=w.github_pull_request_id WHERE w.channel_thread_id=? AND w.kind='pull_request' AND (p.private IS NULL OR p.private!=0) ORDER BY w.id")?;
-            for row in query.query_map([thread], |r| {
-                Ok((
-                    r.get::<_, i64>(0)?,
-                    r.get::<_, String>(1)?,
-                    r.get::<_, String>(2)?,
-                ))
-            })? {
-                let (link, owner, repo) = row?;
-                result.push((
-                    RepositoryEntry::WorkLink(link),
-                    RepositoryRequest {
-                        account_id: account,
-                        user_id: user,
-                        owner: owner.to_lowercase(),
-                        repo: repo.to_lowercase(),
-                    },
-                ));
-            }
-        }
-        if matches!(surface, Surface::Messages | Surface::Both) {
-            let pr=conn.query_row("SELECT p.owner,p.repo FROM github_pull_request_threads t JOIN github_pull_requests p ON p.id=t.github_pull_request_id WHERE t.channel_thread_id=? AND (p.private IS NULL OR p.private!=0) ORDER BY t.id LIMIT 1",[thread],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?))).optional()?;
-            if let Some((owner, repo)) = pr {
-                result.push((
-                    RepositoryEntry::Thread(thread),
-                    RepositoryRequest {
-                        account_id: account,
-                        user_id: user,
-                        owner: owner.to_lowercase(),
-                        repo: repo.to_lowercase(),
-                    },
-                ));
-            }
+        if let Some((owner,repo))=messages.remove(&thread) {
+            result.push((RepositoryEntry::Thread(thread),RepositoryRequest{account_id:account,user_id:user,owner:owner.to_lowercase(),repo:repo.to_lowercase()}));
         }
     }
     Ok(result)

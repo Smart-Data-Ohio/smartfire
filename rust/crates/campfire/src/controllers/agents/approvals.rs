@@ -50,6 +50,7 @@ pub async fn create(c:&mut Ctx)->Result {
     render_result(c,result)
 }
 pub async fn create_operation(c:&Ctx, identity:CurrentAgent, fields:Value)->Result<ServiceResult> {
+    let zone = crate::controllers::message_features::user_zone(c).await?;
     c.app().db.write(move |tx| {
         let expires_in=fields.get("expires_in").filter(|v|!super::mcp::blank(v));
         let expires_at=fields.get("expires_at").filter(|v|!super::mcp::blank(v));
@@ -62,7 +63,7 @@ pub async fn create_operation(c:&Ctx, identity:CurrentAgent, fields:Value)->Resu
             seconds.and_then(|s|tx.now().jiff().checked_add(jiff::SignedDuration::from_secs(s)).ok()).map(campfire_db::Timestamp::from_jiff).or_else(||{input_error=Some("Invalid expires_in".into());None})
         } else if let Some(value)=expires_at {
             let string=text(Some(value)).unwrap_or_default();
-            string.parse::<jiff::Timestamp>().ok().map(campfire_db::Timestamp::from_jiff).or_else(||campfire_db::Timestamp::parse_db(&string)).or_else(||{input_error=Some("Invalid expires_at".into());None})
+            campfire_db::slash_commands::time_parser::parse_calendar_time(&string, zone.name(), zone.name(), tx.now()).or_else(||{input_error=Some("Invalid expires_at".into());None})
         } else {None};
         let payload=fields.get("payload").filter(|v|!v.is_null()).map(|v|if v.is_object()||v.is_array(){v.to_string()}else{text(Some(v)).unwrap_or_default()});
         agent_approvals::create_with_input_error(tx,identity.agent_id,agent_approvals::ApprovalRequest {

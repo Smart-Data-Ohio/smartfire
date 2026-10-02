@@ -277,6 +277,71 @@ fn storage_db_error(error: campfire_storage::Error) -> campfire_db::Error {
     campfire_db::Error::Other(error.to_string())
 }
 
+/// Thread posting wraps Message#process_attachment in its posting transaction. The writer
+/// already runs on a blocking thread; keep metadata, variants, touches and jobs in that Tx.
+pub(crate) fn process_attachment_in(
+    tx: &mut campfire_db::Tx<'_>,
+    storage: &Storage,
+    mut blob: Blob,
+) -> campfire_db::Result<()> {
+    let mut source = blob.clone();
+    source.metadata = Json::object();
+    let metadata = storage
+        .analyzed_metadata(&source)
+        .map_err(storage_db_error)?;
+    blob.metadata.merge(&metadata);
+    blob.update_metadata(tx.conn(), blob.metadata.clone())
+        .map_err(storage_db_error)?;
+    touch_attachment_records(tx, blob.id)?;
+    let variation = if blob.is_video() {
+        Variation::format_only("webp")
+    } else if blob.is_representable() {
+        Variation::resize_to_limit(1200, 800, None)
+    } else {
+        return Ok(());
+    };
+    if blob.is_previewable() {
+        blob = match storage
+            .existing_preview_image(tx.conn(), &blob)
+            .map_err(storage_db_error)?
+        {
+            Some(image) => image,
+            None => {
+                let staged = storage
+                    .draw_preview_image(&blob)
+                    .map_err(storage_db_error)?;
+                let recorded = storage
+                    .record_preview_image(tx.conn(), &blob, &staged, tx.now().jiff())
+                    .map_err(storage_db_error)?
+                    .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+                keep_after_commit(tx, staged);
+                recorded
+            }
+        };
+    }
+    let variation = storage
+        .variation_for(&blob, &variation)
+        .map_err(storage_db_error)?;
+    if storage
+        .existing_variant(tx.conn(), &blob, &variation)
+        .map_err(storage_db_error)?
+        .is_none()
+    {
+        let staged = storage
+            .transform_variant(&blob, &variation)
+            .map_err(storage_db_error)?
+            .defer_analysis();
+        if let Some(recorded) = storage
+            .record_variant(tx.conn(), &blob, &variation, &staged, tx.now().jiff())
+            .map_err(storage_db_error)?
+        {
+            crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
+            keep_after_commit(tx, staged);
+        }
+    }
+    Ok(())
+}
+
 /// Uploads a file to storage for a blob whose row the caller saves next (see [`keep_after_commit`]).
 pub async fn stage_file(app: &App, path: std::path::PathBuf, filename: Filename, content_type: Option<String>) -> Result<Staged> {
     let storage = app.storage.clone();

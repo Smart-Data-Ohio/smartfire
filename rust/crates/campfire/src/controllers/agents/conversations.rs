@@ -20,14 +20,44 @@ fn present_id(args: &Value, key: &str) -> Option<i64> {
 pub async fn context(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
     messages::present(c, move |presenter| {
-        agent_context::build(
+        let message_id = args
+            .get("message_id")
+            .filter(|v| !super::mcp::blank(v))
+            .map(|v| {
+                campfire_db::models::agent_reading::message_by_ids(
+                    presenter.conn,
+                    &super::reads::lookup_ids(v),
+                )
+                .map(|m| m.map_or(0, |m| m.id))
+            })
+            .transpose()?;
+        let thread_id = if message_id.is_some() {
+            present_id(&args, "thread_id")
+        } else {
+            args.get("thread_id")
+                .filter(|v| !super::mcp::blank(v))
+                .map(|v| {
+                    campfire_db::models::agent_reading::thread_by_ids(
+                        presenter.conn,
+                        &super::reads::lookup_ids(v),
+                    )
+                    .map(|t| t.map_or(0, |t| t.id))
+                })
+                .transpose()?
+        };
+        let invalid_constraint = args
+            .get("thread_id")
+            .filter(|v| !super::mcp::blank(v))
+            .is_some_and(|v| !v.is_string() && !v.is_number());
+        agent_context::build_batched(
             presenter.conn,
             agent_id,
-            present_id(&args, "message_id"),
-            present_id(&args, "thread_id"),
+            message_id,
+            thread_id,
+            invalid_constraint,
             args.get("limit"),
             now,
-            |m| presenter.agent_message_payload(m),
+            |records| presenter.agent_message_payloads(records),
         )
     })
     .await
@@ -175,6 +205,8 @@ async fn start(
             "Could not find or build blob: expected attachable"
         )));
     }
+    let storage = c.app().storage.clone();
+    let in_thread = a.thread_id.is_some();
     let (mut outcome, blob) = c
         .app()
         .db
@@ -197,12 +229,18 @@ async fn start(
                     Ok(())
                 })
             };
-            let result = match result {
+            let mut result = match result {
                 Err(campfire_db::Error::RecordNotFound(_)) => reply_not_found(),
                 result => result?,
             };
             if matches!(result, agent_posting::PostResult::Denied(_)) {
                 blob = None;
+            }
+            if in_thread && let Some(blob) = blob.take() {
+                crate::active_storage::process_attachment_in(tx, &storage, blob)?;
+                if let agent_posting::PostResult::Posted(message) = &mut result {
+                    **message = campfire_db::Message::find(tx.conn(), message.id)?;
+                }
             }
             Ok((result, blob))
         })

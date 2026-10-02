@@ -64,6 +64,10 @@ impl State {
     }
 }
 impl Presenter<'_> {
+    pub fn agent_message_payloads(&self, messages:&[Message]) -> Result<Vec<Value>> {
+        let p=self.preload_payload(messages)?;
+        messages.iter().map(|m|p.agent_message_payload(m)).collect()
+    }
     /// Matches WS11-api's seam. Its Current.user is the authenticated bot.
     pub fn agent_message_payload(&self, message: &Message) -> Result<Value> {
         self.agent_payload.message(self, message)

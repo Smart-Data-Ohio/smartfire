@@ -217,3 +217,104 @@ impl RenderingRecords {
             .collect()
     }
 }
+
+/// Request-scoped thread facts for Message.with_payload_details. All associations are
+/// batched before serialization; permissions still use the shared ChannelThread policy.
+#[derive(Default)]
+pub struct ThreadRenderingRecords {
+    pub threads: HashMap<i64, crate::ChannelThread>,
+    pub by_parent: HashMap<i64, i64>,
+    pub members: HashMap<i64, crate::ThreadMembership>,
+    pub member_counts: HashMap<i64, i64>,
+    pub message_counts: HashMap<i64, i64>,
+    pub room_members: HashSet<(i64, i64)>,
+    pub posting: HashSet<(i64, i64)>,
+}
+impl ThreadRenderingRecords {
+    pub fn load(conn: &Connection, messages: &[Message], viewer: i64) -> Result<Self> {
+        let mut data = Self::default();
+        if messages.is_empty() {
+            return Ok(data);
+        }
+        let message_ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
+        let thread_ids = messages
+            .iter()
+            .filter_map(|m| m.thread_id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let threads = rows(
+            conn,
+            "SELECT * FROM channel_threads WHERE parent_message_id IN ($ids)",
+            &message_ids,
+            crate::ChannelThread::from_row,
+        )?;
+        let contexts = rows(
+            conn,
+            "SELECT * FROM channel_threads WHERE id IN ($ids)",
+            &thread_ids,
+            crate::ChannelThread::from_row,
+        )?;
+        for thread in threads.into_iter().chain(contexts) {
+            if let Some(parent) = thread.parent_message_id {
+                data.by_parent.insert(parent, thread.id);
+            }
+            data.threads.insert(thread.id, thread);
+        }
+        let ids = data.threads.keys().copied().collect::<Vec<_>>();
+        let rooms = data
+            .threads
+            .values()
+            .map(|t| t.room_id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        for member in rows(
+            conn,
+            "SELECT * FROM thread_memberships WHERE thread_id IN ($ids)",
+            &ids,
+            crate::ThreadMembership::from_row,
+        )? {
+            *data.member_counts.entry(member.thread_id).or_default() += 1;
+            if member.user_id == viewer {
+                data.members.insert(member.thread_id, member);
+            }
+        }
+        data.message_counts = rows(
+            conn,
+            "SELECT thread_id,count(*) FROM messages WHERE thread_id IN ($ids) GROUP BY thread_id",
+            &ids,
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?
+        .into_iter()
+        .collect();
+        data.room_members = rows(
+            conn,
+            "SELECT room_id,user_id FROM memberships WHERE room_id IN ($ids)",
+            &rooms,
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?
+        .into_iter()
+        .collect();
+        let owners = data
+            .threads
+            .values()
+            .filter_map(|t| t.work_owner_id)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        data.posting = super::agent_access::capabilities_for_users_in_rooms(
+            conn,
+            &owners,
+            &rooms,
+            "post_messages",
+        )?;
+        Ok(data)
+    }
+    pub fn user_ids(&self, viewer: i64) -> Vec<i64> {
+        std::iter::once(viewer)
+            .chain(self.threads.values().map(|t| t.creator_id))
+            .chain(self.threads.values().filter_map(|t| t.work_owner_id))
+            .collect()
+    }
+}

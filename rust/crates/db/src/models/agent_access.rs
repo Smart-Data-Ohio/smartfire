@@ -72,6 +72,76 @@ pub fn capability_for_agent(
     )
 }
 
+/// Bulk Agent#can? decisions for real rooms. Membership remains a caller check.
+/// No state escapes the current reader connection.
+pub fn capabilities_for_users_in_rooms(
+    conn: &Connection,
+    users: &[i64],
+    rooms: &[i64],
+    capability: &str,
+) -> Result<std::collections::HashSet<(i64, i64)>> {
+    use crate::sql::placeholders;
+    use crate::sql::query_all;
+    let mut allowed = std::collections::HashSet::new();
+    if users.is_empty() || rooms.is_empty() || !CAPABILITIES.contains(&capability) {
+        return Ok(allowed);
+    }
+    let agents = query_all(
+        conn,
+        &format!(
+            "SELECT a.id,a.user_id FROM agents a JOIN users u ON u.id=a.user_id WHERE a.user_id IN ({}) AND a.suspended_at IS NULL AND u.status=0",
+            placeholders(users.len())
+        ),
+        rusqlite::params_from_iter(users),
+        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
+    )?;
+    let ids = agents.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+    if ids.is_empty() {
+        return Ok(allowed);
+    }
+    let grants = query_all(
+        conn,
+        &format!(
+            "SELECT agent_id,capability,room_id,revoked_at IS NULL FROM agent_grants WHERE agent_id IN ({})",
+            placeholders(ids.len())
+        ),
+        rusqlite::params_from_iter(ids),
+        |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, Option<i64>>(2)?,
+                r.get::<_, bool>(3)?,
+            ))
+        },
+    )?;
+    let rooms = query_all(
+        conn,
+        &format!(
+            "SELECT id FROM rooms WHERE id IN ({}) AND deleted_at IS NULL",
+            placeholders(rooms.len())
+        ),
+        rusqlite::params_from_iter(rooms),
+        |r| r.get::<_, i64>(0),
+    )?;
+    for (agent, user) in agents {
+        let legacy = !grants.iter().any(|(id, _, _, _)| *id == agent);
+        for &room in &rooms {
+            if (legacy && LEGACY_CAPABILITIES.contains(&capability))
+                || grants.iter().any(|(id, cap, scope, active)| {
+                    *id == agent
+                        && cap == capability
+                        && *active
+                        && (scope.is_none() || *scope == Some(room))
+                })
+            {
+                allowed.insert((user, room));
+            }
+        }
+    }
+    Ok(allowed)
+}
+
 pub fn has_capability_anywhere(conn: &Connection, agent_id: i64, capability: &str) -> Result<bool> {
     let Some((_, legacy)) = active_agent(conn, agent_id)? else {
         return Ok(false);

@@ -273,7 +273,12 @@ impl<'a> Presenter<'a> {
         }
     }
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
-        let data = super::searches::preloads::Preloads::load(self, messages)?;
+        self.with_preloads(super::searches::preloads::Preloads::load(self,messages)?,messages)
+    }
+    pub(crate) fn preload_payload(&self,messages:&[Message]) -> Result<Self> {
+        self.with_preloads(super::searches::preloads::Preloads::load_payload(self,messages)?,messages)
+    }
+    fn with_preloads(&self,data:super::searches::preloads::Preloads,messages:&[Message]) -> Result<Self> {
         let ids = data.records.body_ids(messages);
         let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
         for id in &ids {
@@ -311,7 +316,7 @@ impl<'a> Presenter<'a> {
             github_refreshes: self.github_refreshes.clone(),
         })
     }
-    fn stored_body(&self, message: &Message) -> Result<Option<String>> {
+    pub(crate) fn stored_body(&self, message: &Message) -> Result<Option<String>> {
         if let Some(data) = &self.search_preloads {
             return Ok(data.records.bodies.get(&message.id).cloned().flatten());
         }

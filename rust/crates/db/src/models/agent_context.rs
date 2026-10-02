@@ -1,6 +1,6 @@
 //! Agents::ContextBuilder. Message presentation stays with the HTTP/UI adapter.
 use super::{agent_access, agent_delivery::ruby_i64, agent_service::ServiceResult};
-use crate::sql::{exists, query_all};
+use crate::sql::exists;
 use crate::{Agent, ChannelThread, Connection, Message, Result, Room, Timestamp, User};
 use rusqlite::params;
 use serde_json::{Value, json};
@@ -14,6 +14,29 @@ pub fn build(
     limit: Option<&Value>,
     now: Timestamp,
     mut presenter: impl FnMut(&Message) -> Result<Value>,
+) -> Result<ServiceResult> {
+    build_batched(
+        conn,
+        agent_id,
+        message_id,
+        thread_id,
+        false,
+        limit,
+        now,
+        |records| records.iter().map(&mut presenter).collect(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn build_batched(
+    conn: &Connection,
+    agent_id: i64,
+    message_id: Option<i64>,
+    thread_id: Option<i64>,
+    invalid_thread_constraint: bool,
+    limit: Option<&Value>,
+    now: Timestamp,
+    mut presenter: impl FnMut(&[Message]) -> Result<Vec<Value>>,
 ) -> Result<ServiceResult> {
     if message_id.is_none() && thread_id.is_none() {
         return Ok(ServiceResult::fail(
@@ -75,6 +98,11 @@ pub fn build(
             403,
         ));
     }
+    if message_id.is_some() && invalid_thread_constraint {
+        return Err(crate::Error::Other(
+            "thread_id does not support to_i".into(),
+        ));
+    }
     if let (Some(message), Some(thread_id)) = (&message, thread_id)
         && message.thread_id.unwrap_or(0) != thread_id
     {
@@ -83,68 +111,70 @@ pub fn build(
             422,
         ));
     }
-    let ids = query_all(
+    let window = super::agent_reading::message_window(
         conn,
-        "SELECT id FROM messages WHERE room_id=? AND ((? IS NULL AND thread_id IS NULL) OR thread_id=?) AND (? IS NULL OR id<=?) ORDER BY id DESC LIMIT ?",
-        params![
-            room.id,
-            thread.as_ref().map(|t| t.id),
-            thread.as_ref().map(|t| t.id),
-            message_id,
-            message_id,
-            limit
-        ],
-        |r| r.get::<_, i64>(0),
+        room.id,
+        thread.as_ref().map(|t| t.id),
+        message.as_ref().map(|m| m.id),
+        None,
+        true,
+        limit,
     )?;
-    let window = ids
-        .into_iter()
-        .rev()
-        .map(|id| Message::find(conn, id))
-        .collect::<Result<Vec<_>>>()?;
     let root = thread
         .as_ref()
         .and_then(|t| t.parent_message_id)
         .map(|id| Message::find_by_id(conn, id))
         .transpose()?
         .flatten();
+    let records = message
+        .iter()
+        .chain(root.iter())
+        .chain(window.iter())
+        .cloned()
+        .collect::<Vec<_>>();
+    let users = User::where_ids(
+        conn,
+        &records.iter().map(|m| m.creator_id).collect::<Vec<_>>(),
+    )?
+    .into_iter()
+    .map(|u| (u.id, u))
+    .collect::<HashMap<_, _>>();
     let mut authors = Vec::new();
-    let mut flags = HashMap::new();
+    let mut seen = std::collections::HashSet::new();
     for m in window.iter().chain(message.iter()).chain(root.iter()) {
-        if let std::collections::hash_map::Entry::Vacant(entry) = flags.entry(m.creator_id)
-            && let Some(user) = User::find_by_id(conn, m.creator_id)?
+        if seen.insert(m.creator_id)
+            && let Some(user) = users.get(&m.creator_id)
         {
-            let f = json!({"agent":user.is_bot(),"human":!user.is_bot()});
-            entry.insert(f);
             authors.push(
                 json!({"id":user.id,"name":user.name,"agent":user.is_bot(),"human":!user.is_bot()}),
             );
         }
     }
-    let mut present = |message: &Message| -> Result<Value> {
-        let mut value = presenter(message)?;
+    let mut values = presenter(&records)?;
+    for value in &mut values {
         if let Some(creator) = value.get_mut("creator").and_then(Value::as_object_mut)
-            && let Some(id) = creator.get("id").and_then(Value::as_i64)
-            && let Some(f) = flags.get(&id).and_then(Value::as_object)
+            && let Some(user) = creator
+                .get("id")
+                .and_then(Value::as_i64)
+                .and_then(|id| users.get(&id))
         {
-            creator.extend(f.clone());
+            creator.insert("agent".into(), user.is_bot().into());
+            creator.insert("human".into(), (!user.is_bot()).into());
         }
-        Ok(value)
+    }
+    let mut values = values.into_iter();
+    let trigger = if message.is_some() {
+        values.next().unwrap_or(Value::Null)
+    } else {
+        Value::Null
     };
-    let trigger = message
-        .as_ref()
-        .map(&mut present)
-        .transpose()?
-        .unwrap_or(Value::Null);
-    let root = root
-        .as_ref()
-        .map(&mut present)
-        .transpose()?
-        .unwrap_or(Value::Null);
-    let messages = window
-        .iter()
-        .map(&mut present)
-        .collect::<Result<Vec<_>>>()?;
-    let thread=thread.as_ref().map(|t|Ok::<_,crate::Error>(json!({"id":t.id,"name":t.name,"status":t.status(conn,now)?.name(),"room_id":t.room_id,"parent_message_id":t.parent_message_id}))).transpose()?;
+    let root = if root.is_some() {
+        values.next().unwrap_or(Value::Null)
+    } else {
+        Value::Null
+    };
+    let messages = values.collect::<Vec<_>>();
+    let thread=thread.as_ref().map(|t|Ok::<_,crate::Error>(json!({"id":t.id,"name":t.name,"status":t.status_in_room(&room,now).name(),"room_id":t.room_id,"parent_message_id":t.parent_message_id}))).transpose()?;
     Ok(ServiceResult::ok(
         json!({"message":trigger,"thread":thread,"root_message":root,"messages":messages,"authors":authors,"room":{"id":room.id,"name":room.name,"purpose":null}}),
         200,

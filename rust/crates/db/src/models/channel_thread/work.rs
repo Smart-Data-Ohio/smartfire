@@ -1,4 +1,5 @@
 //! Read-side work policy and owner choices, shared by posts and human work controls.
+use crate::Room;
 use super::ChannelThread;
 use crate::{
     Agent, Error, Errors, Membership, NewChannelThread, NewMessage, Result, Tx, User,
@@ -297,11 +298,20 @@ impl ChannelThread {
         Ok(())
     }
     pub fn work_viewable_by(&self, conn: &Connection, user: &User) -> Result<bool> {
-        Ok(user.is_active()
-            && !user.is_bot()
+        Ok(Self::work_viewable_with_membership(user, true)
             && Membership::find_by_room_and_user(conn, self.room_id, user.id)?.is_some())
     }
 
+    pub fn work_viewable_with_membership(user: &User, member: bool) -> bool {
+        user.is_active() && !user.is_bot() && member
+    }
+    pub fn work_manageable_in_room(&self, room: &Room, user: &User, member: bool) -> bool {
+        Self::work_viewable_with_membership(user, member)
+            && (self.settings_manageable_in_room(room, user) || self.work_owner_id == Some(user.id))
+    }
+    pub fn work_assignment_manageable_in_room(&self, room: &Room, user: &User, member: bool) -> bool {
+        Self::work_viewable_with_membership(user, member) && self.settings_manageable_in_room(room, user)
+    }
     pub fn work_manageable_by(&self, conn: &Connection, user: &User) -> Result<bool> {
         Ok(self.work_viewable_by(conn, user)?
             && (self.settings_manageable_by(conn, user)? || self.work_owner_id == Some(user.id)))

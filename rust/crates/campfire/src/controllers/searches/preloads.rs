@@ -16,6 +16,7 @@ pub(crate) struct GithubRendering {
 }
 
 pub(crate) struct Preloads {
+    pub threads: Option<campfire_db::models::message_rendering::ThreadRenderingRecords>,
     pub github: HashMap<i64, GithubRendering>,
     pub event_views: HashMap<i64, Vec<campfire_views::events::CardView>>,
     pub records: RenderingRecords,
@@ -29,13 +30,24 @@ pub(crate) struct Preloads {
 }
 impl Preloads {
     pub fn load(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
+        Self::load_for(p,messages,false)
+    }
+    pub fn load_payload(p:&Presenter<'_>, messages:&[Message]) -> Result<Self> {
+        Self::load_for(p,messages,true)
+    }
+    fn load_for(p:&Presenter<'_>, messages:&[Message], payload:bool) -> Result<Self> {
         let records = RenderingRecords::load(p.conn, messages)?;
-        let mentions = records
+        let mut mentions = records
             .bodies
             .values()
             .flatten()
             .flat_map(|body| mention_ids(body, 0))
             .collect::<Vec<_>>();
+        let threads = if payload {
+            let all=messages.iter().chain(records.sources.values()).cloned().collect::<Vec<_>>();
+            Some(campfire_db::models::message_rendering::ThreadRenderingRecords::load(p.conn,&all,p.current_user_id.unwrap_or(0))?)
+        } else {None};
+        if let Some(threads)=&threads {mentions.extend(threads.user_ids(p.current_user_id.unwrap_or(0)));}
         let users = records.users(p.conn, messages, &mentions)?;
         let attachments =
             campfire_storage::Blob::attached_messages(p.conn, &records.body_ids(messages))
@@ -61,7 +73,7 @@ impl Preloads {
             p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
                 .collect::<std::result::Result<Vec<_>, _>>()?
         };
-        for id in event_messages {
+        for id in event_messages.into_iter().filter(|_|!payload) {
             if let Some(message) = messages.iter().find(|m| m.id == id).or_else(|| records.sources.get(&id)) {
                 event_views.insert(id, crate::controllers::presenters::events::for_message(p.conn, message)?);
             }
@@ -75,7 +87,7 @@ impl Preloads {
             p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_,i64>(0))?
                 .collect::<std::result::Result<Vec<_>,_>>()?
         };
-        for id in &linked {
+        for id in linked.iter().filter(|_|!payload) {
             let message = messages.iter().find(|m| m.id == *id).or_else(|| records.sources.get(id));
             if let Some(message) = message {
                 let html = crate::controllers::presenters::github::message_cards_in_zone(p.conn, p.app(), message, &p.render_zone)?;
@@ -86,7 +98,7 @@ impl Preloads {
             }
         }
         Ok(Self {
-            github, event_views, fizzy_cards, link_references,
+            threads, github, event_views, fizzy_cards, link_references,
             records,
             users,
             attachments,

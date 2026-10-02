@@ -4,7 +4,7 @@ use crate::{
     app::AppCtx,
     controllers::{messages, presenters::page::db_error},
 };
-use campfire_db::models::{agent_access, agent_payloads, agent_service::ServiceResult};
+use campfire_db::models::{agent_access, agent_payloads, agent_reading, agent_service::ServiceResult};
 use campfire_db::{Agent, AgentGrant, ChannelThread, Message, Room};
 use campfire_kit::{Ctx, Result};
 use serde_json::{Value, json};
@@ -93,15 +93,14 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
             }
         }
         let [before,after]=anchors;
-        let mut statement=p.conn.prepare(&format!("SELECT id FROM messages WHERE {scope} AND (? IS NULL OR id<?) AND (? IS NULL OR id>?) ORDER BY id DESC LIMIT ?"))?;
-        let mut ids=statement.query_map(rusqlite::params![conversation,before,before,after,after,limit],|row|row.get::<_,i64>(0))?.collect::<std::result::Result<Vec<_>,_>>()?;
-        ids.reverse();
+        let records=agent_reading::message_window(p.conn,room.id,thread,before,after,false,limit)?;
+        let ids=records.iter().map(|m|m.id).collect::<Vec<_>>();
         let exists=|predicate:&str,cursor:Option<i64>|->campfire_db::Result<bool> {
             match cursor {Some(cursor)=>Ok(p.conn.query_row(&format!("SELECT EXISTS(SELECT 1 FROM messages WHERE {scope} AND id{predicate}?)"),[conversation,cursor],|row|row.get(0))?),None=>Ok(false)}
         };
         let first=ids.first().copied();let last=ids.last().copied();
         let before=exists("<",first)?;let after=exists(">",last)?;
-        let payloads=ids.into_iter().map(|id|p.agent_message_payload(&Message::find(p.conn,id)?)).collect::<campfire_db::Result<Vec<_>>>()?;
+        let payloads=p.agent_message_payloads(&records)?;
         Ok(ServiceResult::ok(json!({"messages":payloads,"before":first,"after":last,"has_more_before":before,"has_more_after":after}),200))
     }).await
 }
@@ -114,77 +113,24 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         .read(move |conn| {
             let agent =
                 Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-            let mut threads = if single {
-                ChannelThread::find_by_id(conn, args.get("work_id").map_or(0, ruby_i64))?
-                    .into_iter()
-                    .collect::<Vec<_>>()
+            let threads = if single {
+                let ids=args.get("work_id").map(lookup_ids).unwrap_or_default();
+                agent_reading::thread_by_ids(conn,&ids)?.into_iter().collect()
             } else if op == "list_board_posts" {
-                let mut threads =
-                    ChannelThread::for_room(conn, args.get("room_id").map_or(0, ruby_i64))?;
-                let status = text(args.get("status")).unwrap_or_default();
-                let status = campfire_richtext::ruby::strip(&status);
-                let status = if status.is_empty() { "open" } else { status };
-                let owner = text(args.get("owner")).unwrap_or_default();
-                let owner = campfire_richtext::ruby::strip(&owner);
-                let tag = text(args.get("tag")).unwrap_or_default();
-                let tag = campfire_richtext::ruby::strip(&tag).to_lowercase();
-                let mut filtered = Vec::new();
-                for thread in threads.drain(..) {
-                    let status_matches = match status {
-                        "all" => true,
-                        "open" => thread
-                            .work_status
-                            .as_deref()
-                            .is_some_and(|status| status != "done"),
-                        status => thread.work_status.as_deref() == Some(status),
-                    };
-                    let owner_matches = match owner {
-                        "" => true,
-                        "me" => thread.work_owner_id == Some(agent.user_id),
-                        "agents" => thread
-                            .work_owner_id
-                            .map(|id| Agent::for_user(conn, id))
-                            .transpose()?
-                            .flatten()
-                            .is_some(),
-                        owner => thread.work_owner_id == Some(super::ruby_i64(&json!(owner))),
-                    };
-                    if status_matches
-                        && owner_matches
-                        && (tag.is_empty() || thread.tag_names(conn)?.contains(&tag))
-                    {
-                        filtered.push(thread);
-                    }
-                }
-                filtered
+                let status=text(args.get("status")).unwrap_or_default();
+                let status=campfire_richtext::ruby::strip(&status);
+                let status=if status.is_empty(){"open"}else{status};
+                let owner=text(args.get("owner")).unwrap_or_default();
+                let owner=campfire_richtext::ruby::strip(&owner);
+                let tag=text(args.get("tag")).unwrap_or_default();
+                let tag=campfire_richtext::ruby::strip(&tag).to_lowercase();
+                agent_reading::board_posts(conn,args.get("room_id").map_or(0,ruby_i64),agent.user_id,status,owner,&tag)?
             } else {
-                let rooms = Room::for_user(conn, agent.user_id)?
-                    .into_iter()
-                    .map(|room| room.id)
-                    .collect::<Vec<_>>();
-                let mut threads = ChannelThread::for_rooms(conn, &rooms)?;
-                let mut filtered = Vec::new();
-                for thread in threads.drain(..) {
-                    if thread.work()
-                        && thread.work_owner_id == Some(agent.user_id)
-                        && agent_access::capability_for_agent(
-                            conn,
-                            agent_id,
-                            "read_messages",
-                            Some(thread.room_id),
-                        )?
-                    {
-                        filtered.push(thread);
-                    }
-                }
-                filtered.sort_by(|a, b| {
-                    b.updated_at
-                        .cmp(&a.updated_at)
-                        .then_with(|| b.id.cmp(&a.id))
-                });
-                filtered
+                let rooms=Room::for_user(conn,agent.user_id)?.into_iter().map(|r|r.id).collect::<Vec<_>>();
+                let allowed=agent_access::capabilities_for_users_in_rooms(conn,&[agent.user_id],&rooms,"read_messages")?;
+                let rooms=rooms.into_iter().filter(|room|allowed.contains(&(agent.user_id,*room))).collect::<Vec<_>>();
+                agent_reading::owned_work(conn,agent.user_id,&rooms)?
             };
-            threads.truncate(100);
             Ok(threads)
         })
         .await
@@ -201,10 +147,7 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         .db
         .read(move |conn| {
             let owner = Agent::find(conn, agent_id)?.and_then(|agent| agent.owner_id);
-            let values = records
-                .into_iter()
-                .map(|thread| agent_payloads::work_payload(conn, &thread, owner, &access))
-                .collect::<campfire_db::Result<Vec<_>>>()?;
+            let values = agent_payloads::work_payloads(conn,&records,owner,&access)?;
             Ok(if single {
                 values.into_iter().next().unwrap_or(Value::Null)
             } else {

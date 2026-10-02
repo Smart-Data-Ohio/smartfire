@@ -1,0 +1,870 @@
+{
+  "pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "approval_rest_0",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T17:00:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T17:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_0",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}}}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T17:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T17:00:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T17:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_1",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03\"}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T05:00:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T05:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_1",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03\"}}}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T05:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T05:00:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T05:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_2",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}",
+      "setup": {
+        "zone": "UTC",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T12:00:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T12:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_2",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}}}",
+      "setup": {
+        "zone": "UTC",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T12:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T12:00:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T12:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_3",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03\"}",
+      "setup": {
+        "zone": "UTC",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T00:00:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T00:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_3",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03\"}}}",
+      "setup": {
+        "zone": "UTC",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T00:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T00:00:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T00:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_4",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}",
+      "setup": {
+        "zone": "Asia/Kolkata",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T06:30:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T06:30:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_4",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}}}",
+      "setup": {
+        "zone": "Asia/Kolkata",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T06:30:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T06:30:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T06:30:00.000000Z"
+    },
+    {
+      "name": "approval_rest_5",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}",
+      "setup": {
+        "zone": "Eastern Time (US & Canada)",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T17:00:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T17:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_5",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\"}}}",
+      "setup": {
+        "zone": "Eastern Time (US & Canada)",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T17:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T17:00:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T17:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_6",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-08 02:30:00\"}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-08T07:30:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-08T07:30:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_6",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-08 02:30:00\"}}}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-08T07:30:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-08T07:30:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-08T07:30:00.000000Z"
+    },
+    {
+      "name": "approval_rest_7",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-11-01 01:30:00\"}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 422,
+      "response": "{\"error\":\"Expires at must be within 7 days from now\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T16:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_7",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-11-01 01:30:00\"}}}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Expires at must be within 7 days from now\"}],\"structuredContent\":{\"error\":\"Expires at must be within 7 days from now\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T16:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_8",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-10-04 02:15:00\"}",
+      "setup": {
+        "zone": "Australia/Lord_Howe",
+        "approval": true
+      },
+      "status": 422,
+      "response": "{\"error\":\"Expires at must be within 7 days from now\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T16:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_8",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-10-04 02:15:00\"}}}",
+      "setup": {
+        "zone": "Australia/Lord_Howe",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Expires at must be within 7 days from now\"}],\"structuredContent\":{\"error\":\"Expires at must be within 7 days from now\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T16:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_9",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03T12:00:00+03:00\"}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T09:00:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T09:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_9",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03T12:00:00+03:00\"}}}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T09:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-03T09:00:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T09:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_10",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"not a deadline\"}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 422,
+      "response": "{\"error\":\"Invalid expires_at\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T16:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_10",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"not a deadline\"}}}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Invalid expires_at\"}],\"structuredContent\":{\"error\":\"Invalid expires_at\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-03T16:00:00.000000Z"
+    },
+    {
+      "name": "approval_rest_11",
+      "method": "POST",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\",\"expires_in\":7200}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 201,
+      "response": "{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-02T18:00:00.000Z\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-02T18:00:00.000000Z"
+    },
+    {
+      "name": "approval_mcp_11",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Review deadline\",\"expires_at\":\"2026-03-03 12:00:00\",\"expires_in\":7200}}}",
+      "setup": {
+        "zone": "America/New_York",
+        "approval": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":2,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-02T18:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":2,\"status\":\"pending\",\"expires_at\":\"2026-03-02T18:00:00.000Z\"},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      },
+      "stored_deadline": "2026-03-02T18:00:00.000000Z"
+    },
+    {
+      "name": "context_rest_message_id_0",
+      "method": "GET",
+      "path": "/agents/context?message_id%5B%5D=935961918&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response": "{\"message\":{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"},\"thread\":null,\"root_message\":null,\"messages\":[{\"id\":935961917,\"client_message_id\":\"7416f40a-b3d1-5546-bd87-ab392ee0801c\",\"created_at\":\"2026-02-28T08:21:00.000Z\",\"updated_at\":\"2026-02-28T08:21:00.000Z\",\"body\":{\"plain_text\":\"003. New plants in the kitchen.\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>003. New plants in the kitchen.</p>\\n</div>\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961917\"},{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"}],\"authors\":[{\"id\":149087659,\"name\":\"Jason\",\"agent\":false,\"human\":true},{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true,\"human\":false}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_message_id_0",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":[935961918],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message\\\":{\\\"id\\\":935961918,\\\"client_message_id\\\":\\\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\\\",\\\"created_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"004. Who took my stapler?\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>004. Who took my stapler?</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":true,\\\"human\\\":false},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961918\\\"},\\\"thread\\\":null,\\\"root_message\\\":null,\\\"messages\\\":[{\\\"id\\\":935961917,\\\"client_message_id\\\":\\\"7416f40a-b3d1-5546-bd87-ab392ee0801c\\\",\\\"created_at\\\":\\\"2026-02-28T08:21:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:21:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"003. New plants in the kitchen.\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>003. New plants in the kitchen.</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":149087659,\\\"name\\\":\\\"Jason\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961917\\\"},{\\\"id\\\":935961918,\\\"client_message_id\\\":\\\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\\\",\\\"created_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"004. Who took my stapler?\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>004. Who took my stapler?</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":true,\\\"human\\\":false},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961918\\\"}],\\\"authors\\\":[{\\\"id\\\":149087659,\\\"name\\\":\\\"Jason\\\",\\\"agent\\\":false,\\\"human\\\":true},{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true,\\\"human\\\":false}],\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\",\\\"purpose\\\":null}}\"}],\"structuredContent\":{\"message\":{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"},\"thread\":null,\"root_message\":null,\"messages\":[{\"id\":935961917,\"client_message_id\":\"7416f40a-b3d1-5546-bd87-ab392ee0801c\",\"created_at\":\"2026-02-28T08:21:00.000Z\",\"updated_at\":\"2026-02-28T08:21:00.000Z\",\"body\":{\"plain_text\":\"003. New plants in the kitchen.\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>003. New plants in the kitchen.</p>\\n</div>\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961917\"},{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"}],\"authors\":[{\"id\":149087659,\"name\":\"Jason\",\"agent\":false,\"human\":true},{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true,\"human\":false}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_message_id_1",
+      "method": "GET",
+      "path": "/agents/context?message_id%5B%5D=0&message_id%5B%5D=935961918&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response": "{\"message\":{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"},\"thread\":null,\"root_message\":null,\"messages\":[{\"id\":935961917,\"client_message_id\":\"7416f40a-b3d1-5546-bd87-ab392ee0801c\",\"created_at\":\"2026-02-28T08:21:00.000Z\",\"updated_at\":\"2026-02-28T08:21:00.000Z\",\"body\":{\"plain_text\":\"003. New plants in the kitchen.\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>003. New plants in the kitchen.</p>\\n</div>\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961917\"},{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"}],\"authors\":[{\"id\":149087659,\"name\":\"Jason\",\"agent\":false,\"human\":true},{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true,\"human\":false}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_message_id_1",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":[0,935961918],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message\\\":{\\\"id\\\":935961918,\\\"client_message_id\\\":\\\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\\\",\\\"created_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"004. Who took my stapler?\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>004. Who took my stapler?</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":true,\\\"human\\\":false},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961918\\\"},\\\"thread\\\":null,\\\"root_message\\\":null,\\\"messages\\\":[{\\\"id\\\":935961917,\\\"client_message_id\\\":\\\"7416f40a-b3d1-5546-bd87-ab392ee0801c\\\",\\\"created_at\\\":\\\"2026-02-28T08:21:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:21:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"003. New plants in the kitchen.\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>003. New plants in the kitchen.</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":149087659,\\\"name\\\":\\\"Jason\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961917\\\"},{\\\"id\\\":935961918,\\\"client_message_id\\\":\\\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\\\",\\\"created_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"004. Who took my stapler?\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>004. Who took my stapler?</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":true,\\\"human\\\":false},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961918\\\"}],\\\"authors\\\":[{\\\"id\\\":149087659,\\\"name\\\":\\\"Jason\\\",\\\"agent\\\":false,\\\"human\\\":true},{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true,\\\"human\\\":false}],\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\",\\\"purpose\\\":null}}\"}],\"structuredContent\":{\"message\":{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"},\"thread\":null,\"root_message\":null,\"messages\":[{\"id\":935961917,\"client_message_id\":\"7416f40a-b3d1-5546-bd87-ab392ee0801c\",\"created_at\":\"2026-02-28T08:21:00.000Z\",\"updated_at\":\"2026-02-28T08:21:00.000Z\",\"body\":{\"plain_text\":\"003. New plants in the kitchen.\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>003. New plants in the kitchen.</p>\\n</div>\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961917\"},{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"}],\"authors\":[{\"id\":149087659,\"name\":\"Jason\",\"agent\":false,\"human\":true},{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true,\"human\":false}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_message_id_2",
+      "method": "GET",
+      "path": "/agents/context?message_id%5B%5D%5B%5D=935961918&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response": "{\"message\":{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"},\"thread\":null,\"root_message\":null,\"messages\":[{\"id\":935961917,\"client_message_id\":\"7416f40a-b3d1-5546-bd87-ab392ee0801c\",\"created_at\":\"2026-02-28T08:21:00.000Z\",\"updated_at\":\"2026-02-28T08:21:00.000Z\",\"body\":{\"plain_text\":\"003. New plants in the kitchen.\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>003. New plants in the kitchen.</p>\\n</div>\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961917\"},{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"}],\"authors\":[{\"id\":149087659,\"name\":\"Jason\",\"agent\":false,\"human\":true},{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true,\"human\":false}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_message_id_2",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":[[935961918]],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message\\\":{\\\"id\\\":935961918,\\\"client_message_id\\\":\\\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\\\",\\\"created_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"004. Who took my stapler?\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>004. Who took my stapler?</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":true,\\\"human\\\":false},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961918\\\"},\\\"thread\\\":null,\\\"root_message\\\":null,\\\"messages\\\":[{\\\"id\\\":935961917,\\\"client_message_id\\\":\\\"7416f40a-b3d1-5546-bd87-ab392ee0801c\\\",\\\"created_at\\\":\\\"2026-02-28T08:21:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:21:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"003. New plants in the kitchen.\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>003. New plants in the kitchen.</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":149087659,\\\"name\\\":\\\"Jason\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961917\\\"},{\\\"id\\\":935961918,\\\"client_message_id\\\":\\\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\\\",\\\"created_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"updated_at\\\":\\\"2026-02-28T08:28:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"004. Who took my stapler?\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  <p>004. Who took my stapler?</p>\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":true,\\\"human\\\":false},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@935961918\\\"}],\\\"authors\\\":[{\\\"id\\\":149087659,\\\"name\\\":\\\"Jason\\\",\\\"agent\\\":false,\\\"human\\\":true},{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true,\\\"human\\\":false}],\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\",\\\"purpose\\\":null}}\"}],\"structuredContent\":{\"message\":{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"},\"thread\":null,\"root_message\":null,\"messages\":[{\"id\":935961917,\"client_message_id\":\"7416f40a-b3d1-5546-bd87-ab392ee0801c\",\"created_at\":\"2026-02-28T08:21:00.000Z\",\"updated_at\":\"2026-02-28T08:21:00.000Z\",\"body\":{\"plain_text\":\"003. New plants in the kitchen.\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>003. New plants in the kitchen.</p>\\n</div>\\n\"},\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961917\"},{\"id\":935961918,\"client_message_id\":\"44eb9a9c-c72e-5ab8-b7d7-d9a815b97f60\",\"created_at\":\"2026-02-28T08:28:00.000Z\",\"updated_at\":\"2026-02-28T08:28:00.000Z\",\"body\":{\"plain_text\":\"004. Who took my stapler?\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <p>004. Who took my stapler?</p>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":true,\"human\":false},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935961918\"}],\"authors\":[{\"id\":149087659,\"name\":\"Jason\",\"agent\":false,\"human\":true},{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true,\"human\":false}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_message_id_3",
+      "method": "GET",
+      "path": "/agents/context?limit=2",
+      "body": null,
+      "setup": {},
+      "status": 422,
+      "response": "{\"error\":\"message_id or thread_id is required\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_message_id_3",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":[],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"message_id or thread_id is required\"}],\"structuredContent\":{\"error\":\"message_id or thread_id is required\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_message_id_4",
+      "method": "GET",
+      "path": "/agents/context?message_id%5B%5D=0&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 404,
+      "response": "",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      }
+    },
+    {
+      "name": "context_mcp_message_id_4",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":[0],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_message_id_5",
+      "method": "GET",
+      "path": "/agents/context?message_id%5Bid%5D=935961918&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 404,
+      "response": "",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      }
+    },
+    {
+      "name": "context_mcp_message_id_5",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":{\"id\":935961918},\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_thread_id_0",
+      "method": "GET",
+      "path": "/agents/context?thread_id%5B%5D=1996000000&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response": "{\"message\":null,\"thread\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null},\"root_message\":null,\"messages\":[{\"id\":1996002048,\"client_message_id\":\"pr192-read-1996002048\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\"},{\"id\":1996002049,\"client_message_id\":\"pr192-read-1996002049\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\"}],\"authors\":[{\"id\":127326141,\"name\":\"David\",\"agent\":false,\"human\":true}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_thread_id_0",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"thread_id\":[1996000000],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message\\\":null,\\\"thread\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null},\\\"root_message\\\":null,\\\"messages\\\":[{\\\"id\\\":1996002048,\\\"client_message_id\\\":\\\"pr192-read-1996002048\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\\\"},{\\\"id\\\":1996002049,\\\"client_message_id\\\":\\\"pr192-read-1996002049\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\\\"}],\\\"authors\\\":[{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"agent\\\":false,\\\"human\\\":true}],\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\",\\\"purpose\\\":null}}\"}],\"structuredContent\":{\"message\":null,\"thread\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null},\"root_message\":null,\"messages\":[{\"id\":1996002048,\"client_message_id\":\"pr192-read-1996002048\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\"},{\"id\":1996002049,\"client_message_id\":\"pr192-read-1996002049\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\"}],\"authors\":[{\"id\":127326141,\"name\":\"David\",\"agent\":false,\"human\":true}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_thread_id_1",
+      "method": "GET",
+      "path": "/agents/context?thread_id%5B%5D=0&thread_id%5B%5D=1996000000&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response": "{\"message\":null,\"thread\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null},\"root_message\":null,\"messages\":[{\"id\":1996002048,\"client_message_id\":\"pr192-read-1996002048\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\"},{\"id\":1996002049,\"client_message_id\":\"pr192-read-1996002049\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\"}],\"authors\":[{\"id\":127326141,\"name\":\"David\",\"agent\":false,\"human\":true}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_thread_id_1",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"thread_id\":[0,1996000000],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message\\\":null,\\\"thread\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null},\\\"root_message\\\":null,\\\"messages\\\":[{\\\"id\\\":1996002048,\\\"client_message_id\\\":\\\"pr192-read-1996002048\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\\\"},{\\\"id\\\":1996002049,\\\"client_message_id\\\":\\\"pr192-read-1996002049\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\\\"}],\\\"authors\\\":[{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"agent\\\":false,\\\"human\\\":true}],\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\",\\\"purpose\\\":null}}\"}],\"structuredContent\":{\"message\":null,\"thread\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null},\"root_message\":null,\"messages\":[{\"id\":1996002048,\"client_message_id\":\"pr192-read-1996002048\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\"},{\"id\":1996002049,\"client_message_id\":\"pr192-read-1996002049\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\"}],\"authors\":[{\"id\":127326141,\"name\":\"David\",\"agent\":false,\"human\":true}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_thread_id_2",
+      "method": "GET",
+      "path": "/agents/context?thread_id%5B%5D%5B%5D=1996000000&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 200,
+      "response": "{\"message\":null,\"thread\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null},\"root_message\":null,\"messages\":[{\"id\":1996002048,\"client_message_id\":\"pr192-read-1996002048\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\"},{\"id\":1996002049,\"client_message_id\":\"pr192-read-1996002049\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\"}],\"authors\":[{\"id\":127326141,\"name\":\"David\",\"agent\":false,\"human\":true}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_thread_id_2",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"thread_id\":[[1996000000]],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message\\\":null,\\\"thread\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null},\\\"root_message\\\":null,\\\"messages\\\":[{\\\"id\\\":1996002048,\\\"client_message_id\\\":\\\"pr192-read-1996002048\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\\\"},{\\\"id\\\":1996002049,\\\"client_message_id\\\":\\\"pr192-read-1996002049\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\\\"}],\\\"authors\\\":[{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"agent\\\":false,\\\"human\\\":true}],\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\",\\\"purpose\\\":null}}\"}],\"structuredContent\":{\"message\":null,\"thread\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null},\"root_message\":null,\"messages\":[{\"id\":1996002048,\"client_message_id\":\"pr192-read-1996002048\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002048&thread=1996000000\"},{\"id\":1996002049,\"client_message_id\":\"pr192-read-1996002049\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002049&thread=1996000000\"}],\"authors\":[{\"id\":127326141,\"name\":\"David\",\"agent\":false,\"human\":true}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_thread_id_3",
+      "method": "GET",
+      "path": "/agents/context?limit=2",
+      "body": null,
+      "setup": {},
+      "status": 422,
+      "response": "{\"error\":\"message_id or thread_id is required\"}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_thread_id_3",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"thread_id\":[],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"message_id or thread_id is required\"}],\"structuredContent\":{\"error\":\"message_id or thread_id is required\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_thread_id_4",
+      "method": "GET",
+      "path": "/agents/context?thread_id%5B%5D=0&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 404,
+      "response": "",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      }
+    },
+    {
+      "name": "context_mcp_thread_id_4",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"thread_id\":[0],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Thread not found\"}],\"structuredContent\":{\"error\":\"Thread not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_rest_thread_id_5",
+      "method": "GET",
+      "path": "/agents/context?thread_id%5Bid%5D=1996000000&limit=2",
+      "body": null,
+      "setup": {},
+      "status": 404,
+      "response": "",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      }
+    },
+    {
+      "name": "context_mcp_thread_id_5",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"thread_id\":{\"id\":1996000000},\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Thread not found\"}],\"structuredContent\":{\"error\":\"Thread not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_both_arrays",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":[1996002000],\"thread_id\":[1996000000]}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"error\":{\"code\":-32603,\"message\":\"Internal error\"}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "context_mcp_message_array_with_thread",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{\"message_id\":[1996002000],\"thread_id\":1996000000}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"message\\\":{\\\"id\\\":1996002000,\\\"client_message_id\\\":\\\"pr192-read-1996002000\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002000&thread=1996000000\\\"},\\\"thread\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null},\\\"root_message\\\":null,\\\"messages\\\":[{\\\"id\\\":1996002000,\\\"client_message_id\\\":\\\"pr192-read-1996002000\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"agent\\\":false,\\\"human\\\":true},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002000&thread=1996000000\\\"}],\\\"authors\\\":[{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"agent\\\":false,\\\"human\\\":true}],\\\"room\\\":{\\\"id\\\":486777696,\\\"name\\\":\\\"All Talk\\\",\\\"purpose\\\":null}}\"}],\"structuredContent\":{\"message\":{\"id\":1996002000,\"client_message_id\":\"pr192-read-1996002000\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002000&thread=1996000000\"},\"thread\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null},\"root_message\":null,\"messages\":[{\"id\":1996002000,\"client_message_id\":\"pr192-read-1996002000\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002000&thread=1996000000\"}],\"authors\":[{\"id\":127326141,\"name\":\"David\",\"agent\":false,\"human\":true}],\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"purpose\":null}},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "history_root_array_ids",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"read_messages\",\"arguments\":{\"room_id\":[486777696],\"before\":[1996001002],\"after\":[1996001000],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"messages\\\":[{\\\"id\\\":1996001001,\\\"client_message_id\\\":\\\"pr192-read-1996001001\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1996001001\\\"}],\\\"before\\\":1996001001,\\\"after\\\":1996001001,\\\"has_more_before\\\":true,\\\"has_more_after\\\":true}\"}],\"structuredContent\":{\"messages\":[{\"id\":1996001001,\"client_message_id\":\"pr192-read-1996001001\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1996001001\"}],\"before\":1996001001,\"after\":1996001001,\"has_more_before\":true,\"has_more_after\":true},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "history_thread_array_ids",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"read_messages\",\"arguments\":{\"thread_id\":[1996000000],\"before\":[1996002002],\"after\":[1996002000],\"limit\":2}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"messages\\\":[{\\\"id\\\":1996002001,\\\"client_message_id\\\":\\\"pr192-read-1996002001\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Query probe\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>Query probe</p></div>\\\",\\\"markdown_source\\\":\\\"Query probe\\\"},\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"thread_context\\\":{\\\"id\\\":1996000000,\\\"name\\\":\\\"Query probe\\\",\\\"status\\\":\\\"active\\\",\\\"room_id\\\":486777696,\\\"parent_message_id\\\":null,\\\"last_activity_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"locked_at\\\":null,\\\"auto_archive_after_minutes\\\":4320,\\\"work\\\":true,\\\"work_status\\\":\\\"in_progress\\\",\\\"work_owner_id\\\":394959859,\\\"work_owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null,\\\"active\\\":true,\\\"human\\\":false,\\\"agent\\\":true},\\\"work_owner_active\\\":true,\\\"work_history\\\":null,\\\"work_owner_options\\\":null,\\\"joined\\\":false,\\\"unread\\\":null,\\\"involvement\\\":null,\\\"message_count\\\":50,\\\"member_count\\\":0,\\\"creator\\\":{\\\"id\\\":127326141,\\\"name\\\":\\\"David\\\",\\\"role\\\":\\\"administrator\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"url\\\":\\\"http://campfire.test/rooms/486777696/threads/1996000000\\\",\\\"permalink_url\\\":\\\"http://campfire.test/rooms/486777696?thread=1996000000\\\",\\\"permissions\\\":{\\\"can_rename\\\":false,\\\"can_close\\\":false,\\\"can_reopen\\\":false,\\\"can_lock\\\":false,\\\"can_unlock\\\":false,\\\"can_delete\\\":false,\\\"can_convert_work\\\":false,\\\"can_manage_work\\\":false,\\\"can_update_work_status\\\":false,\\\"can_assign_work\\\":false,\\\"can_remove_work\\\":false}},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696?message_id=1996002001&thread=1996000000\\\"}],\\\"before\\\":1996002001,\\\"after\\\":1996002001,\\\"has_more_before\\\":true,\\\"has_more_after\\\":true}\"}],\"structuredContent\":{\"messages\":[{\"id\":1996002001,\"client_message_id\":\"pr192-read-1996002001\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Query probe\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Query probe</p></div>\",\"markdown_source\":\"Query probe\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":1996000000,\"name\":\"Query probe\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":50,\"member_count\":0,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1996000000\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1996000000\",\"permissions\":{\"can_rename\":false,\"can_close\":false,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=1996002001&thread=1996000000\"}],\"before\":1996002001,\"after\":1996002001,\"has_more_before\":true,\"has_more_after\":true},\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "work_array_ids_0",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_work\",\"arguments\":{\"work_id\":[1996000000]}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"error\":{\"code\":-32602,\"message\":\"Unknown tool: \\\"get_work\\\"\"}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "work_array_ids_1",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_work\",\"arguments\":{\"work_id\":[0,1996000000]}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"error\":{\"code\":-32602,\"message\":\"Unknown tool: \\\"get_work\\\"\"}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "work_array_ids_2",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_work\",\"arguments\":{\"work_id\":[[1996000000]]}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"error\":{\"code\":-32602,\"message\":\"Unknown tool: \\\"get_work\\\"\"}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "work_array_ids_3",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_work\",\"arguments\":{\"work_id\":[]}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"error\":{\"code\":-32602,\"message\":\"Unknown tool: \\\"get_work\\\"\"}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "work_array_ids_4",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_work\",\"arguments\":{\"work_id\":[0]}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"error\":{\"code\":-32602,\"message\":\"Unknown tool: \\\"get_work\\\"\"}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "work_array_ids_5",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"get_work\",\"arguments\":{\"work_id\":{\"id\":1996000000}}}}",
+      "setup": {},
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"error\":{\"code\":-32602,\"message\":\"Unknown tool: \\\"get_work\\\"\"}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    },
+    {
+      "name": "board_array_id",
+      "method": "POST",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":192,\"method\":\"tools/call\",\"params\":{\"name\":\"list_board_posts\",\"arguments\":{\"room_id\":[486777696]}}}",
+      "setup": {
+        "board": true
+      },
+      "status": 200,
+      "response": "{\"jsonrpc\":\"2.0\",\"id\":192,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"[{\\\"id\\\":1996000000,\\\"room_id\\\":486777696,\\\"board_id\\\":486777696,\\\"board_name\\\":\\\"All Talk\\\",\\\"title\\\":\\\"Query probe\\\",\\\"work_status\\\":\\\"in_progress\\\",\\\"owner\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"agent\\\":true},\\\"tags\\\":[],\\\"result\\\":null,\\\"result_updated_at\\\":null,\\\"run_url\\\":null,\\\"url\\\":\\\"/rooms/486777696?thread=1996000000\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"links\\\":[]}]\"}],\"structuredContent\":[{\"id\":1996000000,\"room_id\":486777696,\"board_id\":486777696,\"board_name\":\"All Talk\",\"title\":\"Query probe\",\"work_status\":\"in_progress\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1996000000\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[]}],\"isError\":false}}",
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json; charset=utf-8"
+      }
+    }
+  ]
+}
