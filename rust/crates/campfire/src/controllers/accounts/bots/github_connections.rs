@@ -160,13 +160,14 @@ pub(crate) fn json_body_params(
 ) -> std::result::Result<campfire_kit::ParamMap, campfire_kit::params::ParamError> {
     use campfire_kit::params::{self, ParamError};
     use campfire_kit::{Param, ParamMap};
-    let is_token = crate::controllers::recognize(method, path)
+    let is_token = crate::controllers::recognize(method, &crate::controllers::normalize_path(path))
         .ok()
         .flatten()
         .is_some_and(|(route, _)| route.endpoint == "accounts/bots/github_connections#create");
     if !is_token {
         return params::from_json_body(raw);
     }
+    params::validate_json_nesting(raw)?;
     let value: Box<serde_json::value::RawValue> =
         serde_json::from_slice(raw).map_err(|_| ParamError::Parse)?;
     if !value.get().starts_with('{') {
@@ -181,11 +182,48 @@ pub(crate) fn json_body_params(
                 super::input_casts::json_token_string(&value).map_err(|_| ParamError::Parse)?,
             )
         } else {
-            Param::from_json(serde_json::from_str(value.get()).map_err(|_| ParamError::Parse)?)
+            unused_json_param(&value)?
         };
         result.insert(key, param);
     }
     Ok(result)
+}
+
+/// This action reads only access_token. Keep ordinary types for its other fields,
+/// but don't reject the document for Ruby Integers/floats that Value can't hold.
+/// Extended numbers in unused fields retain their Ruby string representation;
+/// this fallback never participates in any other controller's number parsing.
+fn unused_json_param(
+    raw: &serde_json::value::RawValue,
+) -> std::result::Result<campfire_kit::Param, campfire_kit::params::ParamError> {
+    use campfire_kit::{Param, ParamMap, params::ParamError};
+    use serde_json::value::RawValue;
+    if let Ok(value) = serde_json::from_str(raw.get()) {
+        return Ok(Param::from_json(value));
+    }
+    Ok(match raw.get().as_bytes().first() {
+        Some(b'[') => {
+            let values: Vec<Box<RawValue>> =
+                serde_json::from_str(raw.get()).map_err(|_| ParamError::Parse)?;
+            Param::Array(
+                values
+                    .iter()
+                    .filter(|v| v.get() != "null")
+                    .map(|v| unused_json_param(v))
+                    .collect::<std::result::Result<_, _>>()?,
+            )
+        }
+        Some(b'{') => {
+            let values: indexmap::IndexMap<String, Box<RawValue>> =
+                serde_json::from_str(raw.get()).map_err(|_| ParamError::Parse)?;
+            let mut fields = ParamMap::new();
+            for (key, value) in values {
+                fields.insert(key, unused_json_param(&value)?);
+            }
+            Param::Hash(fields)
+        }
+        _ => Param::Str(super::input_casts::json_token_string(raw).map_err(|_| ParamError::Parse)?),
+    })
 }
 
 /// Other routes keep the already-parsed parameters without decoding them twice.
@@ -197,7 +235,7 @@ pub(crate) fn scoped_json_body_params(
     if *method != campfire_kit::Method::POST {
         return None;
     }
-    let is_token = crate::controllers::recognize(method, path)
+    let is_token = crate::controllers::recognize(method, &crate::controllers::normalize_path(path))
         .ok()
         .flatten()
         .is_some_and(|(route, _)| route.endpoint == "accounts/bots/github_connections#create");

@@ -95,8 +95,7 @@ async fn expiry_cases(oracle: Value, expected_count: usize) {
             let audits: i64 = conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.create'",[],|r|r.get(0))?;
             Ok(json!({"persisted":stored.is_some(),"stored":stored.flatten(),"audits":audits-before,"read_back":{"stored":read_back}}))
         }).await.unwrap();
-        let expected =
-            json!({"persisted":case["persisted"],"stored":case["stored"],"audits":case["audits"],"read_back":case.get("read_back").cloned().unwrap_or_else(||json!({"stored":case["stored"]}))});
+        let expected = json!({"persisted":case["persisted"],"stored":case["stored"],"audits":case["audits"],"read_back":case.get("read_back").cloned().unwrap_or_else(||json!({"stored":case["stored"]}))});
         if actual != expected || response.status.as_u16() != case["status"].as_u64().unwrap() as u16
         {
             failures.push(format!(
@@ -409,5 +408,12 @@ fn pr196_r2_parser_keeps_bounded_work_and_never_panics() {
 
 #[tokio::test]
 async fn pr196_r3_boundary_expiry_http_save_and_read() {
-    expiry_cases(serde_json::from_str(include_str!("../../../../../../vectors/bot-ui-boundary-expiry-http.json")).unwrap(),8).await;
+    expiry_cases(
+        serde_json::from_str(include_str!(
+            "../../../../../../vectors/bot-ui-boundary-expiry-http.json"
+        ))
+        .unwrap(),
+        8,
+    )
+    .await;
 }

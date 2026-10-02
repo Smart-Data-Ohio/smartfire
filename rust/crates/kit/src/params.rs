@@ -744,6 +744,7 @@ fn ruby_class(param: &Param) -> &'static str {
 /// `ParamBuilder.from_hash` for a JSON body: `Parameters::DEFAULT_PARSERS[:json]` wraps non-hash
 /// documents as `{ "_json" => data }`.
 pub fn from_json_body(body: &[u8]) -> Result<ParamMap, ParamError> {
+    validate_json_nesting(body)?;
     let value: serde_json::Value = serde_json::from_slice(body).map_err(|_| ParamError::Parse)?;
     Ok(match Param::from_json(value) {
         Param::Hash(map) => map,
@@ -753,6 +754,37 @@ pub fn from_json_body(body: &[u8]) -> Result<ParamMap, ParamError> {
             map
         }
     })
+}
+
+/// Pinned JSON::Ext::Parser uses max_nesting=100, counting the whole document.
+/// Check before either Value or a route-specific RawValue parser can recurse.
+/// Syntax validation remains the responsibility of the JSON parser.
+pub fn validate_json_nesting(body: &[u8]) -> Result<(), ParamError> {
+    let (mut depth, mut quoted, mut escaped) = (0_u16, false, false);
+    for &byte in body {
+        if quoted {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                quoted = false;
+            }
+        } else {
+            match byte {
+                b'"' => quoted = true,
+                b'[' | b'{' => {
+                    depth += 1;
+                    if depth > 100 {
+                        return Err(ParamError::Parse);
+                    }
+                }
+                b']' | b'}' => depth = depth.saturating_sub(1),
+                _ => (),
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

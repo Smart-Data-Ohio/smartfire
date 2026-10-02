@@ -175,7 +175,9 @@ impl Timestamp {
         }
         let num = |range: std::ops::Range<usize>| whole.get(range)?.parse::<i8>().ok();
         let proxy_year = if let Ok(year) = i16::try_from(year)
-            && (-9999..=9999).contains(&year)
+            // Jiff reserves room for timezone offsets at both timestamp ends.
+            // Its civil +/-9999 years therefore cannot all become UTC instants.
+            && (-9998..=9998).contains(&year)
         {
             year
         } else {

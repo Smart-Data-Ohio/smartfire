@@ -141,7 +141,7 @@ fn json_inspect(
 ) -> serde_json::Result<String> {
     use serde_json::value::RawValue;
     let text = raw.get();
-    if depth >= 128 {
+    if depth >= 100 {
         return Err(serde::de::Error::custom(
             "JSON nesting exceeds parameter limit",
         ));
@@ -189,7 +189,7 @@ fn json_inspect(
             }
         }
         _ => {
-            let value = text.parse::<f64>().map_err(serde::de::Error::custom)?;
+            let value = json_float(text)?;
             if value.is_infinite() {
                 if value.is_sign_negative() {
                     "-Infinity".into()
@@ -203,6 +203,35 @@ fn json_inspect(
             }
         }
     })
+}
+
+/// json-2.21.2's json_parse_number/json_decode_float checks the adjusted
+/// exponent before the mantissa, including zero and signed zero. Exponent
+/// digit counts and i64 saturation also precede decimal-point adjustment.
+fn json_float(text: &str) -> serde_json::Result<f64> {
+    let (mantissa, exponent) = text.split_once(['e', 'E']).unwrap_or((text, "0"));
+    let negative = exponent.starts_with('-');
+    let digits = exponent.trim_start_matches(['-', '+']);
+    let magnitude = digits.parse::<u64>().ok();
+    let exponent = if digits.len() >= 20 || magnitude.is_none_or(|n| n > i64::MAX as u64) {
+        if negative { i64::MIN } else { i64::MAX }
+    } else {
+        let n = magnitude.expect("bounded exponent") as i64;
+        if negative { -n } else { n }
+    };
+    let fractional_digits = mantissa
+        .split_once('.')
+        .map_or(0, |(_, fraction)| fraction.len() as i64);
+    // Saturation preserves the i32 threshold checks even at the i64 boundary.
+    let exponent = exponent.saturating_sub(fractional_digits);
+    let sign = if text.starts_with('-') { -1.0 } else { 1.0 };
+    if exponent > i64::from(i32::MAX) {
+        Ok(sign * f64::INFINITY)
+    } else if exponent < i64::from(i32::MIN) {
+        Ok(sign * 0.0)
+    } else {
+        text.parse::<f64>().map_err(serde::de::Error::custom)
+    }
 }
 
 fn inspect(input: &Param, parameters: bool) -> String {
