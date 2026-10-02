@@ -117,6 +117,32 @@ impl CalendarEvent {
         )?
         .or_not_found("Event")
     }
+
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM events WHERE id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
+    /// Upcoming, unlinked choices for the work pane; retain Rails' starts_at/id order.
+    pub fn work_link_candidates(
+        conn: &Connection,
+        room_id: i64,
+        thread_id: i64,
+        now: Timestamp,
+    ) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM events WHERE room_id=? AND cancelled_at IS NULL AND COALESCE(ends_at,starts_at)>=? AND id NOT IN (SELECT event_id FROM work_thread_links WHERE channel_thread_id=? AND event_id IS NOT NULL) ORDER BY starts_at,id",
+            params![room_id, now, thread_id],
+            Self::from_row,
+        )
+    }
     /// Message-card associations, ordered like Event.soonest_first and restricted
     /// to events in the referring message's room.
     pub fn for_message_ids(
