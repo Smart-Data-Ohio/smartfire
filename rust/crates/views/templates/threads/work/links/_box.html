@@ -1,4 +1,4 @@
-<div id="work-thread-links-header-{{ thread_id }}" class="work-links">
+{% if context != "row" || !links.items.is_empty() %}<div id="work-thread-links-{{ context }}-{{ thread_id }}" class="work-links">
   <div class="work-links__list">
     <span class="work-links__label">Linked</span>
 {% if !links.items.is_empty() %}      <ul class="work-links__items" data-controller="drive-link">
@@ -14,11 +14,11 @@
 {% endfor %}      </ul>
 {% else %}      <span class="work-links__empty">Nothing linked yet.</span>
 {% endif %}  </div>
-    <details class="work-links__add">
+{% if context != "row" %}    <details class="work-links__add">
       <summary class="btn">Link</summary>
       <div class="work-links__forms">
         <p class="work-links__status"
-   id="work-thread-links-header-status-{{ thread_id }}" role="status"></p>
+   id="work-thread-links-{{ context }}-status-{{ thread_id }}" role="status"></p>
 
 
         {% let form = h::form_with(self.path()).class("work-links__form") %}{% filter form_with(form) %}
@@ -41,4 +41,4 @@
           <input type="submit" name="commit" value="Link Drive file" data-disable-with="Link Drive file" />
 {% endfilter %}      </div>
     </details>
-</div>{{ "\n" }}
+{% endif %}</div>{{ "\n" }}{% endif %}

@@ -607,7 +607,7 @@ mod google_tests;
 mod google_webhook_tests;
 
 #[cfg(test)]
-mod google_api_tests;
+pub(crate) mod google_api_tests;
 
 #[cfg(test)]
 mod google_connection_tests;

@@ -83,3 +83,14 @@ impl QueueDrain {
         }
     }
 }
+
+/// Honor the running worker's allocation; retain WS14g's range as the local default.
+pub fn socket_ports() -> std::ops::RangeInclusive<u16> {
+    match std::env::var("CABLE_TEST_PORT_RANGE") {
+        Ok(range) => {
+            let (start,end) = range.split_once('-').expect("CABLE_TEST_PORT_RANGE=start-end");
+            start.parse().expect("test port")..=end.parse().expect("test port")
+        }
+        Err(_) => 53100..=53199,
+    }
+}

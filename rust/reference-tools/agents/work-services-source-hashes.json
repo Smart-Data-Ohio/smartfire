@@ -1,0 +1,10 @@
+{
+  "app/services/agents/board_posts.rb": "ea6d9456983318654f873d23b82431dd23a6a780224bff792ff3016533f9414c",
+  "app/services/agents/work_threads.rb": "ad11e9fbfba2db894015346b8f8bba7c034f918941077056ce831b9701b5e91f",
+  "app/services/agents/work_handoffs.rb": "27991bb9621bb44dfe81638eb74a423f26a0fd4ca86403fe14e84daa7322a079",
+  "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
+  "app/models/work_handoff.rb": "3fd8c5af4ef8dff0945d1b5a114ffd5788debf11c06c70fca3a8d15d39f35ab2",
+  "app/models/work_thread_event.rb": "d6b62b3f5bab3141a3284be84b5ad387a127430754b880fb7db0aa0a6b430c19",
+  "app/models/board_tag_assignment.rb": "5b5b1601c6601ae6b135e4ec8e592dda9448bdbfb4891839d46c8cf479a4d792",
+  "app/models/thread_tag.rb": "345cd7a0672e9c251c6875476e21bfd1cc5d9f025180b53315c8b9c265c4dc78"
+}

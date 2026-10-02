@@ -318,6 +318,7 @@ impl Show<'_> {
                 ctx: self.ctx,
                 thread_id: self.post.id,
                 links: &self.post.links,
+                context: "header",
             }
             .render()
             .expect("work links"),
@@ -347,6 +348,7 @@ pub struct LinksBox<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub thread_id: i64,
     pub links: &'a Links,
+    pub context: &'static str,
 }
 impl LinksBox<'_> {
     fn path(&self) -> String {

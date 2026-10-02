@@ -1,0 +1,30 @@
+      <p aria-label="Work status">
+        Work: {{ work.status_label }} · {{ work.owner_label }}{% if work.owner_agent %}<span class="agent-badge">agent</span>{% endif %}
+      </p>
+      {{ self.links() }}
+      <div id="agent_steps_channel_thread_{{ work.id }}">
+  {{ crate::messages::parts::steps(work.steps) }}
+</div>
+
+{% if work.can_manage %}        <p>{{ self.handoff() }}</p>
+{% endif %}{% if !work.history.is_empty() %}        <details>
+          <summary>Work history</summary>
+          <ol>
+{% for event in work.history %}              <li>
+{% if event.kind == "work_handoff" %}                  {{ event.actor }} handed off
+                  owner {{ event.from_owner }}
+                  → {{ event.to_owner }}
+{% if let Some(summary) = event.summary %}                    · {{ summary }}
+                    ({{ event.links }} {% if event.links == 1 %}link{% else %}links{% endif %},
+                    {{ event.questions }} open {% if event.questions == 1 %}question{% else %}questions{% endif %})
+{% endif %}{% else %}                  {{ event.actor }} ·
+{% if event.status_changed %}                    status {{ event.from_status }}
+                    → {{ event.to_status }}
+{% endif %}{% if event.owner_changed %}{% if event.status_changed %}                     · 
+{% endif %}                    owner {{ event.from_owner }}
+                    → {{ event.to_owner }}
+{% endif %}{% if let Some(note) = event.note %}                    · Note: {{ note }}
+{% endif %}{% endif %}              </li>
+{% endfor %}          </ol>
+        </details>
+{% endif %}{{ "" }}

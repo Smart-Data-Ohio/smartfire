@@ -36,7 +36,7 @@ async fn subscribe(
     thread: Option<i64>,
 ) -> (Socket, tokio::task::JoinHandle<()>, String) {
     let mut listener = None;
-    for port in 53100..=53199 {
+    for port in super::google_test_support::socket_ports() {
         match tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
             Ok(l) => {
                 listener = Some(l);

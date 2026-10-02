@@ -1,0 +1,75 @@
+{
+  "reference": "d7c7de92 plus approved board drift",
+  "rows": [
+    {
+      "surface": "legacy",
+      "size": 10,
+      "selects": 4
+    },
+    {
+      "surface": "legacy",
+      "size": 200,
+      "selects": 4
+    },
+    {
+      "surface": "explicit",
+      "size": 10,
+      "selects": 4
+    },
+    {
+      "surface": "explicit",
+      "size": 200,
+      "selects": 4
+    },
+    {
+      "surface": "humans",
+      "size": 10,
+      "selects": 3
+    },
+    {
+      "surface": "humans",
+      "size": 200,
+      "selects": 3
+    },
+    {
+      "surface": "opening",
+      "size": 10,
+      "selects": 17
+    },
+    {
+      "surface": "opening",
+      "size": 200,
+      "selects": 17
+    },
+    {
+      "surface": "unlinked",
+      "size": 10,
+      "selects": 2
+    },
+    {
+      "surface": "unlinked",
+      "size": 200,
+      "selects": 2
+    },
+    {
+      "surface": "event",
+      "size": 10,
+      "selects": 3
+    },
+    {
+      "surface": "event",
+      "size": 200,
+      "selects": 3
+    },
+    {
+      "surface": "pull_request",
+      "size": 10,
+      "selects": 3
+    },
+    {
+      "surface": "pull_request",
+      "size": 200,
+      "selects": 3
+    }
+  ]
+}
