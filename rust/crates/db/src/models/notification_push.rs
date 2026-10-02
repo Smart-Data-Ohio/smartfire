@@ -180,7 +180,7 @@ pub fn event_reminder_push(
     }))
 }
 
-/// Minimal live source reader until WS12's BoardSlaNudge model lands.
+/// Compatibility view for the existing WS17 pusher; facts come from WS12's typed model.
 #[derive(Debug)]
 pub struct BoardNudgeSource {
     pub id: i64,
@@ -192,7 +192,9 @@ pub struct BoardNudgeSource {
 }
 impl BoardNudgeSource {
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
-        query_one(conn,"SELECT id,room_id,channel_thread_id,recipient_id,work_status,stage FROM board_sla_nudges WHERE id=?",[id],|r|Ok(Self{id:r.get(0)?,room_id:r.get(1)?,thread_id:r.get(2)?,recipient_id:r.get(3)?,work_status:r.get(4)?,stage:r.get(5)?}))?.ok_or(crate::Error::RecordNotFound("BoardSlaNudge"))
+        let nudge = crate::BoardSlaNudge::find(conn, id)?;
+        Ok(Self { id: nudge.id, room_id: nudge.room_id, thread_id: nudge.channel_thread_id,
+            recipient_id: nudge.recipient_id, work_status: nudge.work_status, stage: nudge.stage })
     }
     pub fn payload(&self, conn: &Connection) -> Result<PushPayload> {
         let room = Room::find(conn, self.room_id)?;
