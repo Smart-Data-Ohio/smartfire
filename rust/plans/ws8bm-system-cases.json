@@ -40,27 +40,27 @@
         {
           "name": "language fences highlight common code without changing its text",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "unlabelled code is detected while text unknown languages and inline code stay literal",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "search results highlight code on initial load and after returning to the channel",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "code and copying remain available when the highlighter cannot load",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "editing a code block replaces its language colors and copied source",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py code_highlighting: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "thread code stays readable in both themes and scrolls within a narrow screen",
@@ -267,7 +267,7 @@
         {
           "name": "two typers with the same name do not merge",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone advanced to 9d963ed80eaacc06c470ff160769beebb73a6b97: paired typing-status check passes on both apps with Selenium visibility and the original ten-second waits; persisted rows pass. Raw result in ws8bm-report.md."
         },
         {
           "name": "composer drafts persist per room and clear on send",
@@ -339,52 +339,52 @@
         {
           "name": "opens message actions from context menu and keyboard, and cancels a moving long press",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "a release click landing on the just-opened menu does not activate it",
           "status": "deferred",
-          "evidence": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md."
+          "evidence": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md. Fresh clone 3296f5779 passes this case on both apps with the corrected Selenium atom. The earlier two reference failures remain recorded; status deliberately remains deferred without new declaration credit."
         },
         {
           "name": "shows the message action menu as a bottom sheet on phones",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "edits through the normal composer and restores the saved draft on cancel and success",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "a duplicate delivery does not replace the message while its actions are open",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels; browser injects mounted-row Turbo markup to test the render guard; does not verify server-originated redelivery (original calls message.broadcast_create)"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md. Browser-injected Turbo markup tests the mounted-row guard and object identity; server-originated redelivery is not verified."
         },
         {
           "name": "keeps newer typing through an asynchronous edit and leaves failures in edit mode",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "replies with notify off and renders a tombstone when the target is deleted",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "copies message text and link and forwards to a server-provided thread destination",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "forwarding twice in a row submits only once",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "groups emoji reactions, updates the live count, and highlights the current user",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         }
       ]
     },
@@ -395,12 +395,12 @@
         {
           "name": "message action menu is a bottom sheet with touch-sized targets on phones",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_actions_mobile: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "message action menu stays a floating popover on desktop",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_actions_mobile: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         }
       ]
     },
@@ -411,67 +411,67 @@
         {
           "name": "the toolbar stays hidden until hover or focus and labels every action",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "quick-react creates a boost from the toolbar",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "reply and thread buttons drive the composer and the thread panel",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "the more button opens the shared menu for its message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "keyboard users reach the toolbar from a focused message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "the emoji picker searches and reacts",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "the picker shows category tabs and switches between them",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "the picker loads its emoji data only on first open",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "the picker remembers recent reactions",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "the picker Custom tab reacts with a workspace icon",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "the picker reacts with a brand icon shortcode",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "picker arrows move through options, Enter selects, and Escape returns focus",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         },
         {
           "name": "picker tabs move with arrow keys and switch the grid",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_toolbar: scoped paired browser controls and saved rows passed from committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95; audited original Capybara/explicit deadlines in ws8bm-assertion-timeouts.md; every applicable served mutant rejected on both apps after readiness, actual application and no network failure; raw results and controlled boundaries in ws8bm-report.md; no pixels"
+          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
         }
       ]
     },
