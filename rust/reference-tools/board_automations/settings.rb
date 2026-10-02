@@ -56,10 +56,13 @@ cases=[
  ['write-nonmember','patch',base+'/sla_rules',{sla_rules:valid},kevin,[]],
  ['tag-create','post',base+'/tag_assignments',{tag:' BUG ',assignee_id:jason},david,[]],
  ['tag-duplicate','post',base+'/tag_assignments',{tag:'BUG',assignee_id:jason},david,[tag]],
+ ['tag-duplicate-id-zero','post',base+'/tag_assignments',{tag:'BUG',assignee_id:jason},david,[tag.sub('970000002','0')]],
  ['tag-invalid','post',base+'/tag_assignments',{tag:'bad tag',assignee_id:kevin},david,[]],
  ['tag-agent','post',base+'/tag_assignments',{tag:'agent',assignee_id:bot},david,[]],
  ['tag-remove','delete',base+'/tag_assignments/970000002',{},david,[tag]],
  ['tag-remove-missing','delete',base+'/tag_assignments/0',{},david,[tag]],
+ ['tag-remove-id-zero','delete',base+'/tag_assignments/0',{},david,[tag.sub('970000002','0')]],
+ ['tag-remove-invalid-id','delete',base+'/tag_assignments/bad-id',{},david,[tag.sub('970000002','0')]],
  ['tag-cross-board','delete',base+'/tag_assignments/970000002',{},david,[tag.sub(board.to_s,'486777696')]],
  ['tag-forbidden','post',base+'/tag_assignments',{tag:'bug',assignee_id:jason},jason,["UPDATE users SET role=0 WHERE id=#{jason}"]],
  ['tag-inactive','post',base+'/tag_assignments',{tag:'bug',assignee_id:jason},david,["UPDATE users SET status=1 WHERE id=#{jason}"]]

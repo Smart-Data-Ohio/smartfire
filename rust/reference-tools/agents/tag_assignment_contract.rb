@@ -13,6 +13,7 @@ rows=[]
  ["human","bug",773523953,[]], ["normalize","  Bug ",773523953,[]], ["agent","bug",agent.user_id,[]],
  ["blank"," ",773523953,[]], ["format","Not A Tag!",773523953,[]], ["cap","x"*31,773523953,[]],
  ["boundary","x"*30,773523953,[]], ["duplicate","BUG",773523953,["duplicate"]],
+ ["duplicate_id_zero","BUG",773523953,["duplicate","duplicate_zero"]],
  ["other_board","bug",773523953,["other_board"]], ["channel","bug",human.id,["channel"]],
  ["missing_room","bug",human.id,["missing_room"]], ["missing_assignee","bug",0,[]],
  ["missing_creator","bug",773523953,["missing_creator"]], ["outside","bug",712064548,[]],
@@ -23,6 +24,7 @@ rows=[]
     AgentGrant.delete_all
     %w[read_messages post_messages].each { |cap|AgentGrant.create!(agent:agent,room:board,capability:cap,granted_by:human) }
     BoardTagAssignment.create!(room:board,tag:"bug",assignee:User.find(773523953),created_by:human) if flags.include?("duplicate") || flags.include?("other_board")
+    board.board_tag_assignments.update_all(id:0) if flags.include?("duplicate_zero")
     User.find(773523953).update!(status: :deactivated) if flags.include?("deactivated")
     agent.update!(suspended_at:Time.current) if flags.include?("suspended")
     %w[no_post no_read].each do |flag|
