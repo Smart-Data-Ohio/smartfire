@@ -23,7 +23,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwiYWxwaGEtY2VudHVyaS53ZWJwXCI7IGZpbGVuYW1lKj1VVEYtOCcnYWxwaGEtY2VudHVyaS53ZWJwIiwiY29udGVudF90eXBlIjoiaW1hZ2Uvd2VicCIsInNlcnZpY2VfbmFtZSI6ImxvY2FsIn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MDU6MDAuMDAwWiIsInB1ciI6ImJsb2Jfa2V5In19--5fc60afac78e7e74efce78fec63fb330d34a5938/alpha-centuri.webp",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "baseline_disk": {
@@ -39,7 +40,8 @@
           "Location": null,
           "Last-Modified": "Mon, 02 Mar 2026 16:00:00 GMT",
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "baseline_proxy": {
@@ -55,7 +57,8 @@
           "Location": null,
           "Last-Modified": "Sat, 01 Jan 2011 00:00:00 GMT",
           "ETag": "W/\"a8d788d71e3bab97efbc474f1dc7359d\"",
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "redirect": {
@@ -71,7 +74,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwiYWxwaGEtY2VudHVyaS53ZWJwXCI7IGZpbGVuYW1lKj1VVEYtOCcnYWxwaGEtY2VudHVyaS53ZWJwIiwiY29udGVudF90eXBlIjoiaW1hZ2Uvd2VicCIsInNlcnZpY2VfbmFtZSI6ImxvY2FsIn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MDU6MDAuMDAwWiIsInB1ciI6ImJsb2Jfa2V5In19--5fc60afac78e7e74efce78fec63fb330d34a5938/alpha-centuri.webp",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "disk": {
@@ -87,7 +91,8 @@
           "Location": null,
           "Last-Modified": "Mon, 02 Mar 2026 16:00:00 GMT",
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "proxy": {
@@ -103,7 +108,8 @@
           "Location": null,
           "Last-Modified": "Sat, 01 Jan 2011 00:00:00 GMT",
           "ETag": "W/\"a8d788d71e3bab97efbc474f1dc7359d\"",
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "repeat_redirect": {
@@ -119,7 +125,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwiYWxwaGEtY2VudHVyaS53ZWJwXCI7IGZpbGVuYW1lKj1VVEYtOCcnYWxwaGEtY2VudHVyaS53ZWJwIiwiY29udGVudF90eXBlIjoiaW1hZ2Uvd2VicCIsInNlcnZpY2VfbmFtZSI6ImxvY2FsIn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MDU6MDAuMDAwWiIsInB1ciI6ImJsb2Jfa2V5In19--5fc60afac78e7e74efce78fec63fb330d34a5938/alpha-centuri.webp",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "rows_unchanged": true,
@@ -144,7 +151,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwiYWxwaGEtY2VudHVyaS53ZWJwXCI7IGZpbGVuYW1lKj1VVEYtOCcnYWxwaGEtY2VudHVyaS53ZWJwIiwiY29udGVudF90eXBlIjoiaW1hZ2Uvd2VicCIsInNlcnZpY2VfbmFtZSI6ImxvY2FsIn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MDU6MDAuMDAwWiIsInB1ciI6ImJsb2Jfa2V5In19--5fc60afac78e7e74efce78fec63fb330d34a5938/alpha-centuri.webp",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "baseline_disk": {
@@ -160,7 +168,8 @@
           "Location": null,
           "Last-Modified": "Mon, 02 Mar 2026 16:00:00 GMT",
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "baseline_proxy": {
@@ -176,7 +185,8 @@
           "Location": null,
           "Last-Modified": "Sat, 01 Jan 2011 00:00:00 GMT",
           "ETag": "W/\"a8d788d71e3bab97efbc474f1dc7359d\"",
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "redirect": {
@@ -192,7 +202,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwiYWxwaGEtY2VudHVyaS53ZWJwXCI7IGZpbGVuYW1lKj1VVEYtOCcnYWxwaGEtY2VudHVyaS53ZWJwIiwiY29udGVudF90eXBlIjoiaW1hZ2Uvd2VicCIsInNlcnZpY2VfbmFtZSI6ImxvY2FsIn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MDU6MDAuMDAwWiIsInB1ciI6ImJsb2Jfa2V5In19--5fc60afac78e7e74efce78fec63fb330d34a5938/alpha-centuri.webp",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "disk": {
@@ -208,7 +219,8 @@
           "Location": null,
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "proxy": {
@@ -224,7 +236,8 @@
           "Location": null,
           "Last-Modified": "Sat, 01 Jan 2011 00:00:00 GMT",
           "ETag": "W/\"a8d788d71e3bab97efbc474f1dc7359d\"",
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "repeat_redirect": {
@@ -240,7 +253,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwiYWxwaGEtY2VudHVyaS53ZWJwXCI7IGZpbGVuYW1lKj1VVEYtOCcnYWxwaGEtY2VudHVyaS53ZWJwIiwiY29udGVudF90eXBlIjoiaW1hZ2Uvd2VicCIsInNlcnZpY2VfbmFtZSI6ImxvY2FsIn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MDU6MDAuMDAwWiIsInB1ciI6ImJsb2Jfa2V5In19--5fc60afac78e7e74efce78fec63fb330d34a5938/alpha-centuri.webp",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "rows_unchanged": true,
@@ -265,7 +279,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwibW9vbi5qcGdcIjsgZmlsZW5hbWUqPVVURi04Jydtb29uLmpwZyIsImNvbnRlbnRfdHlwZSI6ImltYWdlL2pwZWciLCJzZXJ2aWNlX25hbWUiOiJsb2NhbCJ9LCJleHAiOiIyMDI2LTAzLTAyVDE2OjA1OjAwLjAwMFoiLCJwdXIiOiJibG9iX2tleSJ9fQ==--4a8142dedc16feb8190d729c4f0ca98114322f23/moon.jpg",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "baseline_disk": {
@@ -281,7 +296,8 @@
           "Location": null,
           "Last-Modified": "Mon, 02 Mar 2026 16:00:00 GMT",
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "baseline_proxy": {
@@ -297,7 +313,8 @@
           "Location": null,
           "Last-Modified": "Sat, 01 Jan 2011 00:00:00 GMT",
           "ETag": "W/\"4266fc8179bf12829326f3704acda1a0\"",
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "redirect": {
@@ -313,7 +330,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwibW9vbi5qcGdcIjsgZmlsZW5hbWUqPVVURi04Jydtb29uLmpwZyIsImNvbnRlbnRfdHlwZSI6ImltYWdlL2pwZWciLCJzZXJ2aWNlX25hbWUiOiJsb2NhbCJ9LCJleHAiOiIyMDI2LTAzLTAyVDE2OjA1OjAwLjAwMFoiLCJwdXIiOiJibG9iX2tleSJ9fQ==--4a8142dedc16feb8190d729c4f0ca98114322f23/moon.jpg",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "disk": {
@@ -329,7 +347,8 @@
           "Location": null,
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "proxy": {
@@ -345,7 +364,8 @@
           "Location": null,
           "Last-Modified": "Sat, 01 Jan 2011 00:00:00 GMT",
           "ETag": "W/\"4266fc8179bf12829326f3704acda1a0\"",
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "repeat_redirect": {
@@ -361,7 +381,8 @@
           "Location": "http://campfire.test/rails/active_storage/disk/eyJfcmFpbHMiOnsiZGF0YSI6eyJrZXkiOiJ3czExYXBpcjV2YXJpYW50IiwiZGlzcG9zaXRpb24iOiJpbmxpbmU7IGZpbGVuYW1lPVwibW9vbi5qcGdcIjsgZmlsZW5hbWUqPVVURi04Jydtb29uLmpwZyIsImNvbnRlbnRfdHlwZSI6ImltYWdlL2pwZWciLCJzZXJ2aWNlX25hbWUiOiJsb2NhbCJ9LCJleHAiOiIyMDI2LTAzLTAyVDE2OjA1OjAwLjAwMFoiLCJwdXIiOiJibG9iX2tleSJ9fQ==--4a8142dedc16feb8190d729c4f0ca98114322f23/moon.jpg",
           "Last-Modified": null,
           "ETag": null,
-          "Accept-Ranges": null
+          "Accept-Ranges": null,
+          "Content-Transfer-Encoding": null
         }
       },
       "rows_unchanged": true,

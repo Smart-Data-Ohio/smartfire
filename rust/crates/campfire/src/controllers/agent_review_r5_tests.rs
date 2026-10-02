@@ -42,6 +42,7 @@ fn request(path: &str) -> Req {
         .header("host", "campfire.test")
 }
 fn compare(reply: &Reply, expected: &Value, label: &str) {
+    compare_headers(reply, expected, label);
     assert_eq!(
         reply.status.as_u16(),
         expected["status"].as_u64().unwrap() as u16,
@@ -55,6 +56,8 @@ fn compare(reply: &Reply, expected: &Value, label: &str) {
             .unwrap(),
         "{label}: exact response bytes"
     );
+}
+fn compare_headers(reply: &Reply, expected: &Value, label: &str) {
     for (header, value) in expected["headers"].as_object().unwrap() {
         assert_eq!(reply.header(header), value.as_str(), "{label}: {header}");
     }
@@ -159,6 +162,8 @@ async fn missing(kind: &str, route: &str) {
         }))
         .await;
     // Assert the regression before comparing the positive-control media bytes.
+    compare_headers(&reply, &case[route], &format!("{kind} {route}"));
+    compare_headers(&positive_proxy, &case["baseline_proxy"], "positive proxy");
     compare(&reply, &case[route], &format!("{kind} {route}"));
     let redirected = app.anonymous().send(request(&redirect)).await;
     compare(&redirected, &case["repeat_redirect"], "repeat redirect");
