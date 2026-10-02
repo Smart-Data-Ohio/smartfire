@@ -65,6 +65,22 @@ class VerifierInjections(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 api['compare_vectors'](json.dumps(changed).encode(), expected, 'missing representation drift')
 
+    def test_proxy_transfer_encoding_drift_is_rejected(self):
+        root = Path(__file__).resolve().parents[2]
+        vector = json.loads((root / 'vectors/agent_review192r5_representations.json').read_bytes())
+        expected = json.dumps(vector).encode()
+        for case_index in range(len(vector['cases'])):
+            for response in ['baseline_proxy', 'proxy']:
+                self.assertIsNone(vector['cases'][case_index][response]['headers']['Content-Transfer-Encoding'])
+                changed = deepcopy(vector)
+                changed['cases'][case_index][response]['headers']['Content-Transfer-Encoding'] = 'binary'
+                with self.assertRaises(AssertionError):
+                    api['compare_vectors'](json.dumps(changed).encode(), expected, 'proxy transfer encoding drift')
+                changed = deepcopy(vector)
+                del changed['cases'][case_index][response]['headers']['Content-Transfer-Encoding']
+                with self.assertRaises(AssertionError):
+                    api['compare_vectors'](json.dumps(changed).encode(), expected, 'proxy header omitted from oracle')
+
     def test_approved_difference_is_narrow(self):
         root = Path(__file__).resolve().parents[2]
         vector = json.loads((root / 'vectors/agent_review192r2_attachment.json').read_bytes())

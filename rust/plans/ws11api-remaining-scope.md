@@ -1,7 +1,7 @@
 # WS11 API remaining scope before cutover
 
 Updated on `rust/ws11api-next`, stacked on #202 and merged with main
-`15c9426be7de9826922f0f3e4198172e8896750c`, which includes #192, #202 and #199.
+`b573dd24c3e0035d3b1c85c0a3b89b3cea32343d`, which includes #192, #202, #199 and #203.
 The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
@@ -13,9 +13,11 @@ are installed on main via #202. They use WS12's writer, handoff and tag services
 No pending work-write adapter remains. No other unported WS11 API implementation
 was found in the prior audit or this round. Broader named-case evidence remains partial.
 
-#203 (`rust/ws11api-proxy-headers`, `7ec7d26c`) is separately under review.
-Its representation proxy header correction and nine-header oracle are not duplicated
-on this branch. That reviewed follow-up remains owned by #203 until main includes it.
+#203 (`rust/ws11api-proxy-headers`, `7ec7d26c`) is now merged through main.
+Its reviewed representation/blob proxy header correction is retained for successful
+responses and handled empty 404s, including the nine-header oracle and six failing-first
+regressions. Disk downloads and byte-range send_data responses retain their Rails
+transfer-encoding headers. No proxy-header implementation gap remains.
 Both approved JPEG/video crash differences and unconditional committed-file retention
 remain explicitly documented; they are deliberate differences, not unported API paths.
 
@@ -37,6 +39,7 @@ explicit dispatch; all 38 call installed service/model adapters, including the f
 | Approvals | List/show/create/cancel, replay, budgets, zone-aware expiry/DST, permission-before-validation | agents/approvals.rs; agent_surface.json; agent_review192_http.json |
 | Conversations | Root/thread post, signed attachment, context, DMs, streaming start/append/finalize, idempotency | conversations.rs; agent_conversation_http.json; agent_attachments_http.json |
 | Message operations | Reactions, pin/unpin, create/read polls, steps, slash register/unregister | service adapters; reaction/pin/poll/HTTP vectors |
+| Media proxy headers | Representation/blob proxy success and empty-404 headers match Rails; disk/range headers preserved | active_storage.rs; nine-header representation oracle; six failing-first controls from #203 |
 | Work readers | List/show work and board posts, filters, preloads, array IDs, private link policy | reads.rs; agent_reads_http.json; agent_review192_http.json |
 | Fizzy | Four reads and approval-only card actions; all nine read/write MCP aliases, owner-only credential and no network on denied writes | integrations.rs; installed WS15e reads/requests/jobs; Fizzy HTTP vectors |
 | GitHub | REST approval-only PR actions, owner identity/account policy, grants/budgets/replay and no external write before approval | github/agent_actions.rs; WS15g approval_requests and Accounts; owner HTTP tests |
