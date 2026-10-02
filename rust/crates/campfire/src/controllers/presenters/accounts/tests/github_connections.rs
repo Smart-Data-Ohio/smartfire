@@ -676,3 +676,30 @@ async fn pr196_r2_exact_numeric_tokens_reach_real_transport_and_storage() {
     );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
+
+async fn normalized_token_http(kind: usize) {
+    let cases:serde_json::Value=serde_json::from_str(include_str!("../../../../../../../vectors/bot-ui-normalized-tokens-http.json")).unwrap();
+    let (test,server)=fixture(200,r#"{"login":"fixture-machine"}"#).await;
+    let mut browser=admin(&test).await;
+    let mut failures=Vec::new();
+    let mut checked=0;
+    for case in cases["github_tokens"].as_array().unwrap() {
+        let class = if case.get("body").is_some() { 1 } else if case["raw"].as_str().unwrap().contains("0e") { 2 } else { 0 };
+        if class != kind { continue; }
+        let before=server.received.lock().unwrap().len();
+        let raw=case["raw"].as_str().unwrap();
+        let request_path=case["path"].as_str().unwrap().replace("394959859",&bot(&test).to_string());
+        let response=browser.request(Method::POST,&request_path,&[("accept","text/html")],Some(("application/json",case.get("body").and_then(|v|v.as_str()).map(str::to_owned).unwrap_or_else(||format!("{{\"access_token\":{raw}}}"))))).await;
+        let token=case["token"].as_str().unwrap();
+        let expected=format!("Bearer {token}");
+        let reached={let requests=server.received.lock().unwrap();requests.len()==before+1 && requests.last().and_then(|r|r.header("authorization"))==Some(expected.as_str())};
+        let persisted=stored(&test).await.is_some_and(|account| account.2 == token);
+        if response.status.as_u16() as u64 != case["status"].as_u64().unwrap() || !reached || !persisted { failures.push(serde_json::json!({"path":request_path,"raw":raw,"status":response.status.as_u16(),"reached":reached,"persisted":persisted})); }
+        checked+=1;
+    }
+    println!("R3 token HTTP class={kind}: {checked} compared; {} mismatches",failures.len());
+    assert!(failures.is_empty(),"{failures:?}");
+}
+#[tokio::test] async fn pr196_r3_normalized_token_paths_reach_transport_and_storage() {normalized_token_http(0).await;}
+#[tokio::test] async fn pr196_r3_unused_overflow_fields_reach_transport_and_storage() {normalized_token_http(1).await;}
+#[tokio::test] async fn pr196_r3_zero_exponents_reach_transport_and_storage() {normalized_token_http(2).await;}

@@ -89,12 +89,14 @@ async fn expiry_cases(oracle: Value, expected_count: usize) {
             .await;
         let actual = t.db().read(move |conn| {
             use rusqlite::OptionalExtension;
+            let id: Option<i64> = conn.query_row("SELECT id FROM agent_credentials WHERE name=?", [&name], |r|r.get(0)).optional()?;
+            let read_back = id.and_then(|id|campfire_db::AgentCredential::find(conn,id).ok().flatten()).and_then(|c|c.expires_at).map(|ts|ts.to_db());
             let stored = conn.query_row("SELECT expires_at FROM agent_credentials WHERE name=?",[name],|row|row.get::<_,Option<String>>(0)).optional()?;
             let audits: i64 = conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.create'",[],|r|r.get(0))?;
-            Ok(json!({"persisted":stored.is_some(),"stored":stored.flatten(),"audits":audits-before}))
+            Ok(json!({"persisted":stored.is_some(),"stored":stored.flatten(),"audits":audits-before,"read_back":{"stored":read_back}}))
         }).await.unwrap();
         let expected =
-            json!({"persisted":case["persisted"],"stored":case["stored"],"audits":case["audits"]});
+            json!({"persisted":case["persisted"],"stored":case["stored"],"audits":case["audits"],"read_back":case.get("read_back").cloned().unwrap_or_else(||json!({"stored":case["stored"]}))});
         if actual != expected || response.status.as_u16() != case["status"].as_u64().unwrap() as u16
         {
             failures.push(format!(
@@ -403,4 +405,9 @@ fn pr196_r2_parser_keeps_bounded_work_and_never_panics() {
         "Extreme parser stress: {count} calls; {panics} panics; worst warm 50-call mean={worst:?}; over-128-byte worst mean={long_worst:?}"
     );
     assert_eq!(panics, 0);
+}
+
+#[tokio::test]
+async fn pr196_r3_boundary_expiry_http_save_and_read() {
+    expiry_cases(serde_json::from_str(include_str!("../../../../../../vectors/bot-ui-boundary-expiry-http.json")).unwrap(),8).await;
 }

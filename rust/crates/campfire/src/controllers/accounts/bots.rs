@@ -700,3 +700,6 @@ mod mutation_boundary_tests;
 
 #[cfg(test)]
 mod interleaving_tests;
+
+#[cfg(test)]
+mod normalized_tests;
