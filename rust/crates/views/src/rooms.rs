@@ -2,6 +2,12 @@
 //! the `MessagesHelper` tags the room screen uses.
 
 pub mod panels;
+pub mod calls;
+pub mod shell;
+pub mod composition;
+pub mod composition_page;
+pub mod navigation;
+pub mod edit_sections;
 pub mod boards;
 
 mod header;
@@ -92,7 +98,10 @@ impl RoomView {
         header_identity(ctx, header)
     }
     pub fn dom_id(&self, prefix: &str) -> String {
-        room_dom_id(self.kind, self.id, prefix)
+        self.header.as_ref().map_or_else(
+            || room_dom_id(self.kind, self.id, prefix),
+            |header| format!("{prefix}_{}_{}", header.param_key, self.id),
+        )
     }
 
     pub fn is_direct(&self) -> bool {
@@ -101,10 +110,15 @@ impl RoomView {
 
     /// `edit_polymorphic_path(room)`: `/rooms/opens/1/edit` and so on.
     pub fn edit_path(&self) -> String {
+        if self.is_board() {
+            return format!("/rooms/boards/{}/edit", self.id);
+        }
         match self.kind {
             RoomKind::Open => campfire_routes::edit_rooms_open(self.id),
             RoomKind::Closed => campfire_routes::edit_rooms_closed(self.id),
             RoomKind::Direct => campfire_routes::edit_rooms_direct(self.id),
+            RoomKind::Voice => campfire_routes::edit_rooms_voice(self.id),
+            RoomKind::Stage => campfire_routes::edit_rooms_stage(self.id),
             RoomKind::Board => campfire_routes::edit_rooms_board(self.id),
         }
     }
@@ -118,6 +132,8 @@ impl RoomView {
 /// What `rooms/show` shows.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct ShowView {
+    #[serde(default)]
+    pub navigation: Option<navigation::Navigation>,
     #[serde(default)]
     pub shell: ShellComponents,
     #[serde(default)]
@@ -306,7 +322,7 @@ impl RefreshShow<'_> {
 
 /// The room being created or edited by the open and closed room forms. `id` is `None` for a
 /// new record.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct FormRoom {
     pub id: Option<i64>,
     pub name: Option<String>,

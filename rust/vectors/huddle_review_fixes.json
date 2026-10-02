@@ -1,0 +1,58 @@
+{
+  "reference_pin": "d7c7de92",
+  "audit_failure": {
+    "status": 500,
+    "deleted": true,
+    "memberships": 0
+  },
+  "unconfigured_stage": {
+    "status": 200,
+    "show_stage": true,
+    "dialog": true,
+    "roster": true,
+    "media_launcher": false
+  },
+  "identities": [
+    {
+      "kind": "Rooms::Open",
+      "status": 200,
+      "label": "Channel",
+      "header_id": "header_rooms_open_:id"
+    },
+    {
+      "kind": "Rooms::Closed",
+      "status": 200,
+      "label": "Channel",
+      "header_id": "header_rooms_closed_:id"
+    },
+    {
+      "kind": "Rooms::Direct",
+      "status": 200,
+      "label": "Direct message",
+      "header_id": "header_rooms_direct_:id"
+    },
+    {
+      "kind": "Rooms::Voice",
+      "status": 200,
+      "label": "Voice channel",
+      "header_id": "header_rooms_voice_:id"
+    },
+    {
+      "kind": "Rooms::Stage",
+      "status": 200,
+      "label": "Stage channel",
+      "header_id": "header_rooms_stage_:id"
+    },
+    {
+      "kind": "Rooms::Board",
+      "status": 200,
+      "label": "Board",
+      "header_id": "header_rooms_board_:id"
+    }
+  ],
+  "quiet_sidebar": {
+    "status": 200,
+    "participant_queries": 1,
+    "stream_queries": 1
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "input": {
+        "reference_id": 2,
+        "room_id": 9600,
+        "source_room_id": 9600,
+        "client_message_id": "ws13-quoting-0-0",
+        "author": "David",
+        "room_label": "Quotes <&>",
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "plain_text": "< & > quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation",
+        "path": "/rooms/9600/@935962058"
+      },
+      "html": "<div id=\"message_link_cards_message_ws13-quoting-0-0\" class=\"message-link-cards\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">David</span>\n    <span class=\"message-quote__room\">in Quotes &lt;&amp;&gt;</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">&lt; &amp; &gt; quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation q...</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/9600/@935962058\">Jump to message</a>\n</blockquote>\n\n</div>\n"
+    },
+    {
+      "input": {
+        "reference_id": 3,
+        "room_id": 9600,
+        "source_room_id": 9600,
+        "client_message_id": "ws13-quoting-0-1",
+        "author": "David",
+        "room_label": "Quotes <&>",
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "plain_text": "< & > quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation",
+        "path": "/rooms/9600?message_id=935962060&thread=9"
+      },
+      "html": "<div id=\"message_link_cards_message_ws13-quoting-0-1\" class=\"message-link-cards\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">David</span>\n    <span class=\"message-quote__room\">in Quotes &lt;&amp;&gt;</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">&lt; &amp; &gt; quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation q...</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/9600?message_id=935962060&amp;thread=9\">Jump to message</a>\n</blockquote>\n\n</div>\n"
+    },
+    {
+      "input": {
+        "reference_id": 4,
+        "room_id": 9601,
+        "source_room_id": 9601,
+        "client_message_id": "ws13-quoting-1-0",
+        "author": "David",
+        "room_label": "a direct message",
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "plain_text": "< & > quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation",
+        "path": "/rooms/9601/@935962062"
+      },
+      "html": "<div id=\"message_link_cards_message_ws13-quoting-1-0\" class=\"message-link-cards\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">David</span>\n    <span class=\"message-quote__room\">in a direct message</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">&lt; &amp; &gt; quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation quotation q...</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/9601/@935962062\">Jump to message</a>\n</blockquote>\n\n</div>\n"
+    }
+  ]
+}

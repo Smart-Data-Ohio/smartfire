@@ -58,6 +58,18 @@ pub fn users_for(
 }
 
 fn users_query(workspace: i64, ids: &IndexSet<String>) -> (String, Vec<rusqlite::types::Value>) {
+    records_query(
+        workspace,
+        ids,
+        r#""slack_import_records"."slack_key", "slack_import_records"."record_id""#,
+    )
+}
+
+fn records_query(
+    workspace: i64,
+    ids: &IndexSet<String>,
+    columns: &str,
+) -> (String, Vec<rusqlite::types::Value>) {
     use rusqlite::types::Value as SqlValue;
 
     // UserMapper#records_for, with the pinned SQLite adapter's 999-bind limit.
@@ -92,9 +104,68 @@ fn users_query(workspace: i64, ids: &IndexSet<String>) -> (String, Vec<rusqlite:
         format!("IN ({})", values.join(", "))
     };
     let sql = format!(
-        r#"SELECT "slack_import_records"."slack_key", "slack_import_records"."record_id" FROM "slack_import_records" WHERE "slack_import_records"."slack_workspace_id" = {workspace} AND "slack_import_records"."slack_kind" = {kind} AND "slack_import_records"."slack_key" {predicate}"#
+        r#"SELECT {columns} FROM "slack_import_records" WHERE "slack_import_records"."slack_workspace_id" = {workspace} AND "slack_import_records"."slack_kind" = {kind} AND "slack_import_records"."slack_key" {predicate}"#
     );
     (sql, bindings)
+}
+
+fn existing_keys(conn: &Connection, workspace: i64, members: &[Value]) -> Result<HashSet<String>> {
+    let ids: IndexSet<_> = members
+        .iter()
+        .filter(|member| truthy(&member["id"]))
+        .map(|member| string(&member["id"]))
+        .collect();
+    if ids.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let (sql, bindings) = records_query(workspace, &ids, r#""slack_import_records"."slack_key""#);
+    Ok(conn
+        .prepare(&sql)?
+        .query_map(rusqlite::params_from_iter(bindings), |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?)
+}
+
+fn matchable_users(conn: &Connection, members: &[&Value]) -> Result<HashMap<String, User>> {
+    // Rails deduplicates the original emails before String#downcase, and indexes
+    // users in id order so the last matching user wins, including deactivated rows.
+    let emails: IndexSet<_> = members
+        .iter()
+        .filter(|member| !placeholder_only(member))
+        .filter_map(|member| email(member))
+        .collect();
+    let mut users = HashMap::new();
+    if emails.is_empty() {
+        return Ok(users);
+    }
+    let emails: Vec<_> = emails
+        .iter()
+        .map(|email| super::payload::downcase(email))
+        .collect();
+    let bound = emails.len() <= 999;
+    let values = if bound {
+        vec!["?".to_owned(); emails.len()]
+    } else {
+        emails
+            .iter()
+            .map(|email| format!("'{}'", email.replace('\'', "''")))
+            .collect()
+    };
+    let sql = format!(
+        r#"SELECT "users".* FROM "users" WHERE (LOWER(email_address) IN ({})) ORDER BY "users"."id" ASC"#,
+        values.join(", ")
+    );
+    let bindings = if bound { emails } else { Vec::new() };
+    for user in conn
+        .prepare(&sql)?
+        .query_map(rusqlite::params_from_iter(bindings), User::from_row)?
+    {
+        let user = user?;
+        users.insert(
+            super::payload::downcase(user.email_address.as_deref().unwrap_or_default()),
+            user,
+        );
+    }
+    Ok(users)
 }
 pub fn ensure_author(tx: &mut Tx<'_>, run: &SlackImport, key: &str) -> Result<User> {
     if let Some(id) = mapped_id(tx.conn(), run.slack_workspace_id, "user", key)?
@@ -187,18 +258,15 @@ pub fn map_page(
 ) -> Result<Value> {
     let mut delta = json!({"matched":0,"placeholders":0,"deactivated":0,"bots":0,"total":0});
     let members = super::payload::array(members);
+    if members.is_empty() {
+        return Ok(delta);
+    }
     for member in &members {
         super::payload::at(member, "id")?;
     }
     // Rails preloads known keys and email matches once, before creating any new placeholder.
     // Duplicate fresh Slack ids/emails therefore remain genuine uniqueness failures.
-    let mut known = HashSet::new();
-    for member in &members {
-        let id = string(&member["id"]);
-        if mapped_id(tx.conn(), run.slack_workspace_id, "user", &id)?.is_some() {
-            known.insert(id);
-        }
-    }
+    let known = existing_keys(tx.conn(), run.slack_workspace_id, &members)?;
     // Rails excludes already mapped identities before looking up profile emails. Dry
     // previews also inspect blank-id rows while building their email index; real imports
     // discard those rows first.
@@ -239,23 +307,13 @@ pub fn map_page(
         .iter()
         .filter(|m| present(&m["id"]).is_some() && !known.contains(&string(&m["id"])))
         .collect();
-    let mut email_index = HashMap::new();
-    for member in &fresh {
-        if !placeholder_only(member)
-            && let Some(email) = email(member)
-        {
-            let mut stmt = tx
-                .conn()
-                .prepare("SELECT * FROM users WHERE LOWER(email_address)=? ORDER BY id")?;
-            for user in stmt.query_map([super::payload::downcase(&email)], User::from_row)? {
-                let user = user?;
-                email_index.insert(
-                    super::payload::downcase(user.email_address.as_deref().unwrap_or_default()),
-                    user,
-                );
-            }
-        }
-    }
+    let candidates: Vec<_> = members
+        .iter()
+        .filter(|member| {
+            !known.contains(&string(&member["id"])) && (dry || present(&member["id"]).is_some())
+        })
+        .collect();
+    let email_index = matchable_users(tx.conn(), &candidates)?;
     let connection = run
         .slack_connection_id
         .map(|id| SlackConnection::find(tx.conn(), id))

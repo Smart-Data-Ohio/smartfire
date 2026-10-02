@@ -1,0 +1,134 @@
+WS13 PR #185 mutation evidence, 2026-10-01
+Final source: 0ebb2e9b005c98000a529a79a8ef90b8be0ab818
+
+The default sweep reported 100/102 compiled rejections. Two unproven entries
+were a type-invalid sidebar mutation and a deleted-room mutation that removed
+only one of two guards. Both definitions were corrected and compiled/rejected
+in the two-entry rerun. One reported rejection was a false positive: a stale
+prototype-page adapter comparison failed before the mutated rendering path.
+After correcting that comparison, its baseline passed and the mutation
+survived. The mutation was retargeted to the native HTTP page golden; that
+baseline passes and the mutation fails all four unchanged Rails responses.
+
+This is a 99+2+1 proof, not one clean default run. Each final counted entry
+compiled and panicked in its regression; the one prototype false-positive
+summary has been replaced by its real native-page failure below. Compiler
+errors, missing anchors, failing/empty baselines and passing mutations are not
+counted as rejections. The runner now verifies every selected baseline before
+editing any source. Its baseline guard fails against the prior runner.
+
+Commands:
+  python3 rust/reference-tools/huddle_discrimination.py
+  python3 rust/reference-tools/huddle_discrimination.py --only '^(full-sidebar-request-composition-bypassed|public-deleted-room-exposed)$'
+  python3 rust/reference-tools/huddle_discrimination.py --only '^room-populated-collection-rendering-bypassed$'
+
+Environment: CI=1, CARGO_BUILD_JOBS=2, CARGO_PROFILE_DEV_DEBUG=0,
+CARGO_PROFILE_TEST_DEBUG=0, CARGO_INCREMENTAL=1; mise Rust 1.98.1;
+CABLE_TEST_PORT_RANGE=52300-52349, MAIL_TEST_PORT_RANGE=52350-52399;
+TMPDIR=<worktree>/.scratch. Each selected Rust regression uses --test-threads=8.
+Sources were restored after each entry; final workspace gates run unmutated
+from a fresh clone. Individual raw failure summaries follow.
+
+quote-renderer-origin-binding-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.18s
+quote-source-cache-dependencies-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 3.06s
+cross-room-quote-cache-leaks-private-source: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.21s
+room-populated-collection-rendering-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.19s
+room-row-callback-rendering-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.76s
+room-shell-invisible-notice-leaks: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.68s
+room-shell-scroll-threshold-corrupted: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.31s
+full-sidebar-request-composition-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.05s
+full-sidebar-menu-viewer-flags-corrupted: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.67s
+room-composition-room-binding-corrupted: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.71s
+room-composition-request-panels-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.37s
+runtime-chrome-request-adapter-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.04s
+remaining-stage-type-isolation-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.32s
+remaining-internal-steady-check-writes: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.06s
+remaining-personal-roster-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.17s
+remaining-header-presence-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.25s
+call-channel-creator-update-guard-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.34s
+internal-first-sighting-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.15s
+internal-authorization-payload-corrupted: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.23s
+public-huddle-returned-grant-id-corrupted: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.52s
+public-huddle-leave-effects-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.41s
+composed-sidebar-call-sections-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.55s
+composed-stage-publish-hint-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.25s
+composed-edit-github-section-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.93s
+stream-controller-id-header-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.87s
+call-channel-update-policy-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.46s
+call-channel-sole-host-check-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.46s
+call-channel-broadcast-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 4.23s
+call-channel-removal-header-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.91s
+call-channel-deletion-seam-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.55s
+public-auth-overrides-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.11s
+public-cache-prepend-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.20s
+public-deleted-room-exposed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 17.92s
+public-session-leave-scope-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 53.68s
+public-in-call-boundary-included: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 78.45s
+stage-note-delivery-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 4.37s
+role-rank-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 2.39s
+role-demotion-without-grant-left-live: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.10s
+role-personal-panel-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.63s
+role-unnecessary-rejoin: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.96s
+hand-repeat-roster-noisy: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 3.10s
+hand-rate-limit-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.06s
+moderation-enqueue-failure-swallowed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 0.22s
+stream-start-seen-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.23s
+stream-stale-stop-protection-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.30s
+stream-quality-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.15s
+stream-committed-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 4.65s
+stream-explicit-stopped-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 2.16s
+stage-admin-successor-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 2.98s
+stage-succession-note-noisy: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 2.88s
+stream-user-without-grant-left-live: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 3.14s
+stage-forms-visible-to-listeners: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 47 filtered out; finished in 0.01s
+moderation-administrator-rank-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.89s
+issuance-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 0.15s
+issuance-banned-caller: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 8.64s
+issuance-bot-caller: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 7.83s
+issuance-off-hidden-recipient: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.90s
+issuance-inbox-suppression-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 3.00s
+issuance-reused-grant-dedupe-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 6.10s
+issuance-owned-priority-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 4.00s
+issuance-sound-policy-ignored: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 2.91s
+resolver-wait-shortened: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 0.25s
+resolver-revoked-join-evidence-ignored: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 3.31s
+stale-exact-thirty-kept: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 0.76s
+stale-other-presenter-kept: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 2.37s
+reconciler-admin-gate-skips-invitations: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 5.69s
+reconciler-stale-pass-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.66s
+hand-speaker-permission-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.26s
+hand-repeat-idempotence-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 0.74s
+push-connection-scope-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.19s
+push-throttle-shortened: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 8.47s
+push-policy-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.68s
+push-denied-burns-throttle: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.66s
+notice-revoked-and-stale-joiner: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 1.93s
+notice-inactive-humans: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 5.99s
+notice-second-device-leave: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 6.83s
+notice-rejoin-window: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 3.38s
+notice-call-ended-while-others-remain: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 17.54s
+notice-join-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 31.00s
+notice-invitation-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 30.83s
+notice-push-request-dropped: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.88s
+notice-revocation-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 9.74s
+notice-leave-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 10.12s
+presence-before-commit: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.13s
+presence-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 3.89s
+presence-sink-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 3.74s
+presence-recovery-disabled: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 1.00s
+gateway-secret-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.94s
+revoked-grant-authorized: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.90s
+removed-member-authorized: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.96s
+grant-revocation-bypassed: test result: FAILED. 11 passed; 9 failed; 0 ignored; 0 measured; 1127 filtered out; finished in 1.28s
+disconnect-floor-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 0.11s
+broadcast-config-port-truncation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.00s
+twirp-placeholder: test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 1864 filtered out; finished in 0.04s
+endpoint-separation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.00s
+listener-publishing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.00s
+server-muted-publishing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.00s
+forbidden-token-permissions: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.00s
+expired-token: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 0.00s
+cleanup-placeholder: test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 1142 filtered out; finished in 0.23s
+cleanup-backoff: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1146 filtered out; finished in 0.08s
+cleanup-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1868 filtered out; finished in 10.67s
+Compiled mutation aggregate: 102/102 rejected; sources restored

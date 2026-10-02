@@ -7,6 +7,7 @@ pub mod fragment_cache;
 pub mod helpers;
 pub mod layouts;
 pub mod link_embeds;
+pub mod message_links;
 pub mod twitter;
 pub mod linkedin_cards;
 pub mod fizzy_cards;
@@ -182,7 +183,6 @@ pub struct Platform {
 
 pub mod room_files;
 pub mod work_threads;
-pub mod message_links;
 
 #[cfg(test)]
 mod card_html_audit;

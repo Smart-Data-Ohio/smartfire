@@ -47,9 +47,14 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::huddle_effects::Presence::KIND => decode::<campfire_db::models::huddle_effects::Presence>(request).and_then(|effect| {
             app.map_or(Ok(()), |app| super::huddle_effects::presence(app, effect.room_id))
         }),
-        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
-            if let Some(app) = app && super::message_features::deliver(cable, app, &broadcast)? { return Ok(()); }
+            if let Some(app) = app
+                && (super::message_features::deliver(cable, app, &broadcast)?
+                    || super::room_composition::deliver(app, &broadcast)?)
+            {
+                return Ok(());
+            }
             messaging(cable, app, &broadcast)
         }),
         campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND =>

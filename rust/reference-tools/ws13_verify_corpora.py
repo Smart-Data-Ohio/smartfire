@@ -10,6 +10,12 @@ scratch=root/'.scratch'/'ws13-corpora'
 scratch.mkdir(parents=True,exist_ok=True)
 env=dict(os.environ,PARITY_NAMESPACE='ws13',PARITY_IMAGE='ws13-reference:d7c7de92',PARITY_OWNER='ws13',PARITY_CPUS='2')
 outputs={
+ 'quote_children':'rust/crates/campfire/src/controllers/presenters/quote_child_vectors.json',
+ 'row_broadcasts':'rust/crates/campfire/src/controllers/rooms/row_broadcast_vectors.json',
+ 'full_rooms':'rust/crates/campfire/src/controllers/rooms/full_room_vectors.json',
+ 'room_shell':'rust/crates/campfire/src/controllers/rooms/room_shell_vectors.json',
+ 'room_composition':'rust/crates/campfire/src/controllers/rooms/room_composition_vectors.json',
+ 'chrome':'rust/crates/campfire/src/controllers/presenters/chrome_vectors.json',
  'protocol':'rust/crates/campfire/src/huddle/protocol_vectors.json',
  'cleanup':'rust/crates/db/src/models/huddle_cleanup_vectors.json',
  'grants':'rust/crates/db/src/models/huddle_grant_vectors.json',
@@ -26,11 +32,19 @@ outputs={
  'stage_views':'rust/crates/views/src/huddle_stage_vectors.json',
  'participation':'rust/crates/db/src/models/huddle_participation_vectors.json',
  'stage_note':'rust/crates/campfire/src/channels/huddle_stage_note_vectors.json',
+ 'call_channels':'rust/crates/campfire/src/controllers/rooms/call_channel_vectors.json',
+ 'call_views':'rust/crates/campfire/src/controllers/rooms/call_view_vectors.json',
+ 'form_pages':'rust/crates/campfire/src/controllers/rooms/form_page_vectors.json',
+ 'sidebar_views':'rust/crates/campfire/src/controllers/rooms/sidebar_view_vectors.json',
+ 'page_views':'rust/crates/campfire/src/controllers/rooms/page_view_vectors.json',
+ 'public':'rust/crates/campfire/src/controllers/rooms/public_huddle_vectors.json',
 }
+subprocess.run(['python3',str(root/'rust/reference-tools/huddle_sidebar_reference.py')],cwd=root,check=True)
+outputs['full_sidebar']='rust/crates/campfire/src/controllers/users/full_sidebar_vectors.json'
 for name,path in outputs.items():
  output_path=scratch/f'{name}.json'
  with output_path.open('wb') as output,(scratch/f'{name}.log').open('wb') as error:
-  subprocess.run([str(root/'rust/parity/bin/reference'),'runner','-e','RAILS_LOG_LEVEL=fatal',f'rust/reference-tools/huddle_{name}.rb'],cwd=root,env=env,stdout=output,stderr=error,check=True)
+  subprocess.run([str(root/'rust/parity/bin/reference'),'runner',*(['--seed','default','--time','2026-03-02T16:00:00Z','--freeze'] if name in ('quote_children','call_channels','call_views','page_views','form_pages','sidebar_views','chrome','room_composition','room_shell','full_rooms','row_broadcasts','full_sidebar') else []),'-e','RAILS_LOG_LEVEL=fatal',f'rust/reference-tools/huddle_{name}.rb'],cwd=root,env=(dict(env,PARITY_IMAGE='ws13-reference:sidebar-2e20b24c') if name in ('full_sidebar','form_pages','full_rooms') else env),stdout=output,stderr=error,check=True)
  assert output_path.read_bytes()==(root/path).read_bytes(),f'{name}: golden differs; inspect {output_path}'
  data=json.loads(output_path.read_bytes())
  count=len(data['cases']) if 'cases' in data else None

@@ -8,7 +8,8 @@ use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
 pub mod google;
-mod sidebar;
+pub mod sidebar;
+pub mod sidebar_composition;
 pub use sidebar::*;
 mod summary;
 pub use summary::*;
@@ -305,6 +306,14 @@ pub use profile_sections::*;
 
 mod status_popup;
 pub use status_popup::*;
+
+#[derive(Template)]
+#[template(path = "users/sidebars/_call_sections.html")]
+pub struct SidebarCalls<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub rows: &'a [crate::rooms::calls::CallRow],
+    pub can_create: bool,
+}
 
 #[derive(Template)]
 #[template(path = "users/sidebars/_workspace_destinations.html")]
