@@ -58,6 +58,15 @@ fn compare(reply: &Reply, expected: &Value, label: &str) {
     );
 }
 fn compare_headers(reply: &Reply, expected: &Value, label: &str) {
+    let transfer = expected["headers"]
+        .get("Content-Transfer-Encoding")
+        .expect("the Rails oracle must compare transfer encoding");
+    // Check this independent drift before media-derived Content-Length values.
+    assert_eq!(
+        reply.header("Content-Transfer-Encoding"),
+        transfer.as_str(),
+        "{label}: Content-Transfer-Encoding"
+    );
     for (header, value) in expected["headers"].as_object().unwrap() {
         assert_eq!(reply.header(header), value.as_str(), "{label}: {header}");
     }
