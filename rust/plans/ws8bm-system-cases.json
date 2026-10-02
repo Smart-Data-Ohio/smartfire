@@ -40,27 +40,27 @@
         {
           "name": "language fences highlight common code without changing its text",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "unlabelled code is detected while text unknown languages and inline code stay literal",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "search results highlight code on initial load and after returning to the channel",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "code and copying remain available when the highlighter cannot load",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "editing a code block replaces its language colors and copied source",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "thread code stays readable in both themes and scrolls within a narrow screen",
@@ -179,7 +179,7 @@
         {
           "name": "Markdown messages reach other users and editing preserves the original source",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone ce56adb99: paired check and saved-row projections pass; both served mutants rejected on both apps, zero invalid or escaped. Project-notes-link opacity escaped unchanged 042d8e86 assertions and now fails the joint visible-link/href assertion from Rails line 336. This assertion implementation/mutation entry is unchanged in c5c5d2253; audit and raw results in ws8bm-report.md."
         },
         {
           "name": "desktop keyboard composition keeps line breaks and sends once after composition ends",
@@ -339,52 +339,52 @@
         {
           "name": "opens message actions from context menu and keyboard, and cancels a moving long press",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "a release click landing on the just-opened menu does not activate it",
           "status": "deferred",
-          "evidence": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md. Fresh clone 3296f5779 passes this case on both apps with the corrected Selenium atom. The earlier two reference failures remain recorded; status deliberately remains deferred without new declaration credit."
+          "evidence": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md. Fresh clone 3296f5779 passes this case on both apps with the corrected Selenium atom. The earlier two reference failures remain recorded; status deliberately remains deferred without new declaration credit. The c5c5d2253 fresh run passed and rejected its served mutant, but the received reliability deferral remains; no new credit."
         },
         {
           "name": "shows the message action menu as a bottom sheet on phones",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "edits through the normal composer and restores the saved draft on cancel and success",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "a duplicate delivery does not replace the message while its actions are open",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md. Browser-injected Turbo markup tests the mounted-row guard and object identity; server-originated redelivery is not verified."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md. Browser-injected Turbo only; does not verify server-originated redelivery."
         },
         {
           "name": "keeps newer typing through an asynchronous edit and leaves failures in edit mode",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "replies with notify off and renders a tombstone when the target is deleted",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "copies message text and link and forwards to a server-provided thread destination",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "forwarding twice in a row submits only once",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "groups emoji reactions, updates the live count, and highlights the current user",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         }
       ]
     },
@@ -395,12 +395,12 @@
         {
           "name": "message action menu is a bottom sheet with touch-sized targets on phones",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "message action menu stays a floating popover on desktop",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         }
       ]
     },
@@ -411,67 +411,67 @@
         {
           "name": "the toolbar stays hidden until hover or focus and labels every action",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "quick-react creates a boost from the toolbar",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "reply and thread buttons drive the composer and the thread panel",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "the more button opens the shared menu for its message",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "keyboard users reach the toolbar from a focused message",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "the emoji picker searches and reacts",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "the picker shows category tabs and switches between them",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "the picker loads its emoji data only on first open",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "the picker remembers recent reactions",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "the picker Custom tab reacts with a workspace icon",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "the picker reacts with a brand icon shortcode",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "picker arrows move through options, Enter selects, and Escape returns focus",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         },
         {
           "name": "picker tabs move with arrow keys and switch the grid",
           "status": "passed",
-          "evidence": "Fresh source clone 3296f5779938351a51dcc890f872556ccc2e8c50: all 30 paired checks pass with the pinned Selenium visibility atom and unchanged Rails deadlines; 37 served mutants rejected on both apps, zero invalid or escaped. Includes element and ancestor opacity. Raw results and limitations in ws8bm-report.md."
+          "evidence": "Fresh source clone c5c5d22538a6f152749e90b78e2285d388004919: all 30 paired checks pass with the pinned Selenium atom and original Rails deadlines; 56 served mutants rejected on both apps, zero invalid or escaped. Every assertion audited against pinned source; 23 new opacity probes escaped unchanged 042d8e86 assertions and are now rejected across reviewed and supplementary checks. Raw results and exact original lines in ws8bm-report.md and ws8bm-visibility-audit.md."
         }
       ]
     },
@@ -686,17 +686,17 @@
         {
           "name": "search tolerates operators, shows an empty state and pages older results",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone ce56adb99: both changed search/forward checks passed on Rails/Rust with saved-row projections; all five served mutants rejected on both apps, zero invalid or escaped. Includes the exact Ruby-code opacity probe, a forwarded-only Ruby probe and search-field opacity; all escaped unchanged 042d8e86 assertions. These assertion implementations/mutation entries are unchanged in c5c5d2253. Full audit and raw results in ws8bm-report.md."
         },
         {
           "name": "forwarded Markdown keeps tables and code blocks",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone ce56adb99: both changed search/forward checks passed on Rails/Rust with saved-row projections; all five served mutants rejected on both apps, zero invalid or escaped. Includes the exact Ruby-code opacity probe, a forwarded-only Ruby probe and search-field opacity; all escaped unchanged 042d8e86 assertions. These assertion implementations/mutation entries are unchanged in c5c5d2253. Full audit and raw results in ws8bm-report.md."
         },
         {
           "name": "editing to add a URL renders its card live and the edited marker on load",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md Unmodified supplementary ce56adb99 recheck timed out on Rails at the original 15-second Loading post wait; received prior pass retained, not a current successful recheck. See ws8bm-report.md."
         }
       ]
     },

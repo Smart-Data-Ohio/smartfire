@@ -47,9 +47,13 @@ V1 also reproduces Astra's exact composer CSS. V11 reproduces its exact
 `pre code.language-ruby { opacity: 0 !important; }` CSS; V12 hides only
 forwarded code so the initial-source visibility assertion cannot reject it.
 V2/V3/V5 modify the served composer restore implementation to make the field
-transparent only after the corresponding restore. V4/V10 apply only after
-Turbo sets the delivery flag. None replaces an oracle value or write response. V16–V23 check the explicit
-Capybara element lookups, since Playwright actionability also omits opacity.
+transparent only after the corresponding restore. Conditional field/tab
+probes disable the target's transition in the served mutant so opacity is zero
+at the assertion, rather than fading through Selenium-visible positive
+opacity. App transitions and assertion deadlines are unchanged. V4/V10 apply
+only after Turbo sets the delivery flag. None replaces an oracle value or
+write response. V16–V23 check the explicit Capybara element lookups, since
+Playwright actionability also omits opacity.
 Each lookup and its subsequent action share the original timeout budget.
 
 ## Every assertion in the thirty reviewed declarations

@@ -1,85 +1,125 @@
-# WS8bm PR #189 opacity correction — review-ready partial slice
+# WS8bm PR #189 visible-assertion correction — review-ready partial slice
 
 Worker: GPT-6.1 Sol. Branch: `rust/ws8bm-messages-http`.
-Reference: Rails `d7c7de9264c63015be398001d7a1094e7695a6db`, plus the approved drift in wave4/_common.md. Behaviour and response parity only; no pixel checks.
+Reference: Rails `d7c7de9264c63015be398001d7a1094e7695a6db`, plus approved drift in wave4/_common.md. Behaviour and response parity only; no pixel checks.
 
-The remaining P2 is corrected: all messaging visibility states and counts use the **unmodified pinned Selenium 4.35.0 visibility atom**, including effective opacity through ancestors. This is a reference-tools-only correction; no production Rust or Rails code changed. Full system sign-off remains partial. The received inventory remains **102 passed / 27 deferred / 6 owner-blocked** out of 135 exact system declarations, and **146/156 controller declarations**, with the ten controller deferrals owned by WS12. This correction adds no declaration credit. The release-click case passed in this fresh run, but its received deferral remains explicit because of the two earlier reference failures.
+Audited every assertion in all thirty reviewed checks against the pinned originals. Fixed the reported forwarded Ruby/composer gaps and the additional field, menu-owner, delivery-flag, link and explicit visible-lookup gaps. The shared helper now requires visibility and an expected value/attribute on the same node in one polling observation. Explicit visible lookups and their actions share the original deadline. The pinned Selenium 4.35.0 atom is unchanged, including ancestor opacity. **No Rust product or Rails changes.** No deadline, native concurrency setting or queue-observation race was changed.
 
-**Duplicate-delivery limitation:** the check injects Turbo markup in the browser using the actual mounted row and render queue. It verifies the browser render guard and object identity. It **does not verify server-originated redelivery**; the original Rails case calls `message.broadcast_create`.
+The received inventory remains **102 passed / 27 deferred / 6 WS12-blocked** out of 135 exact system declarations, and **146/156 controller declarations**, with ten WS12 deferrals. This correction earns no declaration credit; full system sign-off remains partial. The release-click declaration remains honestly deferred despite any later passing diagnostic.
 
-## Correction and failing-first evidence
+**Duplicate-delivery limitation:** the check injects Turbo markup in the browser on the actual mounted row/render queue and verifies the browser guard and object identity. It **does not verify server-originated redelivery**; the original Rails test calls `message.broadcast_create`.
 
-`behavior-visibility.mjs` installs the pinned gem's `isDisplayed.js` atom and calls it with `ignoreOpacity=false`. The source is vendored verbatim with the gem's LICENSE and NOTICE and its provenance in `selenium/UPSTREAM.md`. Each paired run compares the vendored bytes with the atom inside the pinned reference image before running checks. Its SHA256 is `ae26018c01cd27448b250f8e55a094cbfcd2e2cbbe171c78aaa906e1b5c3ed7c`.
+## Audit table
 
-All messaging assertion modules share the helper for visible/hidden waits, visible counts and visible element selection. The helper retains the original deadlines for the thirty reviewed cases: default two seconds, delivery ten seconds and highlighting twenty seconds. The 700 ms hold is unchanged. Explicit DOM-presence checks and security assertions originally using `visible: :all` retain their DOM semantics; JavaScript geometry probes retain the original Ruby tests' own rectangle filters. Tests cover ancestor opacity, partial opacity, clipping, closed details, shadow DOM, navigation and visible/hidden/attached/detached states.
+Each row lists a changed assertion/lookup, its pinned Rails line and its own served opacity probe. The [complete audit](ws8bm-visibility-audit.md) separately inventories every assertion in all thirty checks, including unchanged raw reads already guarded on the same element, JavaScript geometry/focus/clipboard/identity observations, link attributes and explicit `visible: false`/`:all` exceptions. It also describes the supplementary search/forward and Markdown checks.
 
-Astra's read-only probe at `/home/riels/.cache/rust-port/ws8bmbr/smartfire/.scratch/rereview-cb211f02/opacity-escape.log` reports DOM 8 / pinned Selenium visible 7 / old predicate visible 8 / Playwright visible 8 for transparent Clapping. Before changing `cb211f02`'s assertion modules, added and ran two served CSS variants over those unchanged checks. Both escaped on both applications:
+| ID | Assertion changed | Original Rails line and reason | Served mutant |
+| --- | --- | --- | --- |
+| V1 | Editing source field value | message_interactions:122, default-visible `assert_field` | transparent-edit-field |
+| V2 | Draft restored after cancel | message_interactions:125, default-visible `assert_field` | transparent-cancelled-draft |
+| V3 | Draft restored after successful save | message_interactions:137, default-visible `assert_field` | transparent-saved-draft |
+| V4 | Editing source after duplicate delivery | message_interactions:169, default-visible `assert_field` | transparent-redelivery-field |
+| V5 | Newer draft after asynchronous save | message_interactions:197, default-visible `assert_field`, wait 10 | transparent-newer-draft |
+| V6 | Empty field after failed highlighter load | code_highlighting:123, default-visible `assert_field` | transparent-cleared-code-field |
+| V7 | Checked Notify author field | message_interactions:234, default-visible `assert_field(checked: true)` | transparent-notify-field |
+| V8 | Message owning the open shared menu | helper:134, default-visible `assert_selector`; used by menu-open calls | transparent-menu-owner |
+| V9 | Open message row after More | message_toolbar:48, default-visible `assert_selector`; preserves the prior empty-value check | transparent-more-owner |
+| V10 | Duplicate-delivery rendered HTML flag | message_interactions:166, default-visible `assert_selector`, replaces attached-only wait | transparent-redelivery-flag |
+| V11 | Initial Ruby source before forwarding | search_forward_edit:46, visible text assertion; a visible row alone does not show its code | transparent-ruby-code |
+| V12 | Forwarded Ruby source bytes | search_forward_edit:60, default-visible `assert_selector`; table visibility does not show the code | transparent-forwarded-code |
+| V13 | Back to Designers link lookup | code_highlighting:95, default-visible `click_link` query; opacity is omitted by Playwright actionability | transparent-search-back-link |
+| V14 | Project notes href | workspace_markdown:336, default-visible `assert_link` must match both visible link and href | transparent-project-link |
+| V15 | Empty-search query field value | search_forward_edit:26, default-visible `assert_field` | transparent-search-field |
+| V16 | Forward destination lookup | message_interactions:279, default-visible `find`, wait 10 | transparent-forward-destination |
+| V17 | First forward checkbox lookup | message_interactions:298, default-visible `find`, wait 10 | transparent-forward-checkbox |
+| V18 | Quick Thumb reaction lookup | message_interactions:318/331, default-visible `find` | transparent-quick-thumb |
+| V19 | Emoji search field keyboard lookup | message_toolbar:177/191, default-visible `find_field` | transparent-picker-search |
+| V20 | Flags tab lookup after selecting People | message_toolbar:99, default-visible `find`; the earlier 11-tab count no longer guards this later state | transparent-flags-lookup |
+| V21 | Context-menu message body lookup | helper:129, default-visible `find` used by the reviewed menu-opening helper | transparent-context-body |
+| V22 | Toolbar-hover message body lookup | message_toolbar:220, default-visible `find`; a visible toolbar does not show a separately transparent body | transparent-hover-body |
+| V23 | Room-header dismissal lookup | message_actions_mobile:44, default-visible `find` | transparent-room-header |
+
+## Failing-first evidence
+
+Before changing any assertion module or the helper at `042d8e86253ed5938c81bb5b9a5830fbea244637`, added only served mutations and diagnostic runner scaffolding. Verified those six modules/helper were byte-identical to `git show 042d8e86:<file>`. All 23 probes escaped on **both** applications, with valid startup, applied served mutations and no actual network failures. Scaffolding is committed in `ddda6039f`; the correction is `ce56adb99`, with the empty-anchor value preserved in `1b11dc60b` and conditional probes made instantaneous in `c5c5d2253`.
+
+First ran the fifteen assertion probes, then added and ran the eight explicit-lookup probes. Logs: `.scratch/ws8bm-visible-assertions-review/before.log` and `before-lookups.log`. The diagnostic mode does not earn parity credit. The final registry/runner can reproduce all 23 together against unchanged reviewed assertion source using `--mutant-set visible-assertions`. A separate baseline clone at `ddda6039f` overlaid only those two scaffolding files, again verified all assertion modules/helper against `042d8e86`, and reran the five instantaneous conditional probes.
 
 ```sh
-python3 rust/reference-tools/messaging/behavior-check.py message_interactions --case 'opens message actions from context menu and keyboard, and cancels a moving long press' --mutant transparent-clapping
-python3 rust/reference-tools/messaging/behavior-check.py message_interactions --case 'opens message actions from context menu and keyboard, and cancels a moving long press' --mutant transparent-reaction-ancestor
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar message_interactions code_highlighting search_forward_edit workspace_markdown --mutant-set visible-assertions --keep-going
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar message_actions_mobile message_interactions --mutant-set visible-lookups --keep-going
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar message_interactions --mutant-set instantaneous-opacity --keep-going
 ```
 
 ```text
-WS8bm review escape: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-clapping: Rails ACCEPTED
-WS8bm review escape: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-clapping: Rust ACCEPTED
-WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
-WS8bm review escape: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-reaction-ancestor: Rails ACCEPTED
-WS8bm review escape: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-reaction-ancestor: Rust ACCEPTED
-WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+WS8bm review escape check: 15 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+WS8bm review escape check: 8 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+WS8bm failing-first: 23 served opacity mutants ACCEPTED on Rails and Rust at 042d8e86; assertion modules/helper byte-identical; 0 failed probes
+WS8bm corrected-probe baseline: all assertion modules/helper are byte-identical to 042d8e86
+WS8bm review escape check: 5 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
 ```
 
-The Clapping variant injects `.message__quick-reaction[title="Clapping"] { opacity: 0 !important; }`. The ancestor variant injects `.message__quick-reactions { opacity: 0 !important; }`. Neither removes any reaction DOM element. The full corrected discrimination run includes these plus all thirty original mutants and all five earlier review variants. Valid startup, an applied served mutation, no network failure and an assertion rejection on both apps are still required.
+V1 reproduces Astra's exact textarea CSS; V11 reproduces its exact Ruby-code CSS. V12 hides only forwarded Ruby so the source visibility assertion cannot mask the forwarded-code defect. Draft probes target cancel, successful save and preserving newer typing separately. All mutations alter served app assets/implementations; none changes an oracle value. The five conditional probes disable the mutated target's transition, so opacity is zero at lookup time instead of fading through Selenium-visible positive opacity. This affects served mutants only; product transitions and assertion deadlines are unchanged. The repeat before/after evidence uses these corrected probes.
 
-## Current verification
+## Fresh-source verification
 
-Fresh source clone: `.scratch/ws8bm-opacity-fresh`, at `3296f5779938351a51dcc890f872556ccc2e8c50` for the requested thirty checks and full discrimination set. It started without seeds, node_modules or a target directory. The harness generated its own seeds, installed the declared Node/browser dependencies, verified the pinned oracle image and atom, and built its own app binary. Shared-helper changes are commits `7e804405a` and `3296f5779`; the additional typing-selector change is recorded below. Rust workspace tests and clippy were not rerun for this reference-tools-only correction, as the latest request permits. The configured machine-wide rustc wrapper remains in use; no concurrency or native timing thresholds changed. No queue-observation race was repaired.
+Fresh clone: `.scratch/ws8bm-visible-assertions-fresh`, initially at `ce56adb99`, then advanced to `c5c5d22538a6f152749e90b78e2285d388004919` for the final thirty-check and full discrimination runs; it started with no target, seeds or node_modules. The harness builds its own seeds/binary, installs declared Node/browser inputs, verifies the pinned Rails image and exact atom, and checks real HTTP/Cable and successful saved-row projections. Its own `rust/target` is the only added scratch Cargo target. The configured machine-wide rustc throttle and `-j2` remain in use. Rust workspace tests/clippy are not rerun for this reference-tools-only request, as authorized in the preceding request. Historical native results are retained in the [received report at 042d8e86](https://github.com/Smart-Data-Ohio/smartfire/blob/042d8e86253ed5938c81bb5b9a5830fbea244637/rust/plans/ws8bm-report.md); they are not claimed as rerun results.
 
-Ran from that fresh source root, with `CARGO_TARGET_DIR` set to its own `rust/target` for the paired commands:
+Commands below ran in that fresh clone with `CARGO_TARGET_DIR="$PWD/rust/target"`. The supplementary two search/forward positives passed in the broader run recorded below; the separate Markdown positive and all seven supplementary mutants passed. Those supplementary assertion implementations and mutation entries are unchanged between `ce56adb99` and the final source revision.
 
 ```sh
-node --test rust/reference-tools/messaging/behavior-visibility.test.mjs
 python3 rust/reference-tools/messaging/behavior-check.py message_toolbar message_actions_mobile message_interactions code_highlighting --keep-going
 python3 rust/reference-tools/messaging/behavior-check.py message_toolbar message_actions_mobile message_interactions code_highlighting --negative --keep-going
+python3 rust/reference-tools/messaging/behavior-check.py search_forward_edit --exclude-case 'editing to add a URL renders its card live and the edited marker on load' --negative --keep-going
+python3 rust/reference-tools/messaging/behavior-check.py workspace_markdown --case 'Markdown messages reach other users and editing preserves the original source' --keep-going
+python3 rust/reference-tools/messaging/behavior-check.py workspace_markdown --case 'Markdown messages reach other users and editing preserves the original source' --negative --keep-going
+node --test rust/reference-tools/messaging/behavior-visibility.test.mjs
 ```
 
+Raw summary lines (logs: `final-paired.log`, `final-mutants.log`, `fresh-search-mutants.log`, `fresh-markdown-paired.log`, `fresh-markdown-mutants.log` and `final-helper-tests.log` in `.scratch/ws8bm-visible-assertions-review/`):
+
 ```text
-ℹ tests 2
+seed: default -> parity/.seed/default (6.1M)
+seed: first_run -> parity/.seed/first_run (1.5M)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 19s
+WS8bm behaviour check: 30 named cases passed on Rails and Rust; 0 failed; no pixel checks
+WS8bm discrimination check: 56 served mutants rejected on Rails and Rust across 30 named checks; 0 invalid or escaped
+WS8bm discrimination check: 5 served mutants rejected on Rails and Rust across 2 named checks; 0 invalid or escaped
+WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
+WS8bm discrimination check: 2 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+ℹ tests 3
 ℹ suites 0
-ℹ pass 2
+ℹ pass 3
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 1117.637684
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 13s
-WS8bm visibility atom: pinned Selenium SHA256 ae26018c01cd27448b250f8e55a094cbfcd2e2cbbe171c78aaa906e1b5c3ed7c verified
-WS8bm behaviour check: 30 named cases passed on Rails and Rust; 0 failed; no pixel checks
-WS8bm delayed-write probe: Rails: 10037 ms observed; actual write completed: false
-WS8bm delayed-write probe: Rust: 10021 ms observed; actual write completed: false
-WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-clapping: Rails served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-clapping: Rust served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-reaction-ancestor: Rails served mutant REJECTED (TimeoutError)
-WS8bm discrimination: message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press: transparent-reaction-ancestor: Rust served mutant REJECTED (TimeoutError)
-WS8bm discrimination check: 37 served mutants rejected on Rails and Rust across 30 named checks; 0 invalid or escaped
-```
-
-The additional legacy typing selector update in `9d963ed80eaacc06c470ff160769beebb73a6b97` uses the same visibility helper and the original ten-second waits. The fresh clone was advanced to that commit, and its affected case was rerun:
-
-```sh
-python3 rust/reference-tools/messaging/behavior-check.py composer --case 'two typers with the same name do not merge'
-```
-
-```text
-WS8bm browser flow: composer: two typers with the same name do not merge: Rails PASS; Rust PASS
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-Independent inventory verification re-read all pinned declaration names and source hashes and required evidence for every credited pass. Deferred diagnostics remain diagnostics, not declaration credit. Earlier full workspace results and all received attribution are retained in the [received report at cb211f022](https://github.com/Smart-Data-Ohio/smartfire/blob/cb211f022eae9eece7c944920701fe14eb19446b/rust/plans/ws8bm-report.md); those historical commands are not presented as rerun results here.
-
-```text
+ℹ duration_ms 1933.626687
+WS8bm opacity proof: 23 served mutants accepted at 042d8e86 and rejected after the fix on Rails and Rust; 0 missing probes
+WS8bm full discrimination total: 63 served mutants rejected on Rails and Rust across 33 named checks; 0 invalid or escaped
 WS8bm pinned system inventory: 102 passed / 27 remaining / 6 owner-blocked; 135 exact names and source hashes verified
+```
+
+Reconciled every V1–V23 variant by exact case/variant/application lines across the baseline and corrected logs. The five instantaneous conditional probes were repeated against the unchanged baseline; the full baseline clone's six assertion modules/helper are still byte-identical to `042d8e86`. All 23 unique new probes escaped that source and are rejected after the correction on both apps. The 63-variant total is 56 in the reviewed thirty, five in the two changed search/forward checks and two in the changed Markdown check. Inventory names and SHA256 hashes were separately rechecked against pinned Git source; statuses are unchanged. The helper tests additionally prove that a hidden correct-value/attribute node and a visible wrong-value sibling cannot jointly satisfy an assertion.
+
+Removed only the owned fresh clone's 4.4G Cargo target after checking that no process was running a target executable, all three assigned ports were free and no WS8bm-owned container remained. Preserved source clones, baseline/probe logs and browser inputs. No scratch Cargo targets remain.
+
+```text
 WS8bm cleanup: zero scratch Cargo targets remain; assigned 52020/52021/52022 listeners and parity-owner containers absent
+```
+
+The requested reference-tool correction is complete and PR-ready. Stopping here as requested; the remaining original port scope is listed below.
+
+## Supplementary failures retained
+
+The initial broader run also tried the unchanged third search/forward declaration, `editing to add a URL renders its card live and the edited marker on load`. It failed on **Rails** at the original 15-second Loading post wait (`behavior-search-forward.mjs:42`); the thirty reviewed declarations and the two changed search/forward declarations all passed. No product fix, timing relaxation, expectation change or new declaration credit was made for this supplementary failure. The subsequent requested thirty-check gate runs every one of those thirty; the separate search-mutant command selects only its two changed declarations and explicitly omits this unmodified extra. Log: `fresh-paired.log`.
+
+The first discrimination attempt exposed four conditional-opacity probes that still faded through visible positive opacity, and one `net::ERR_NETWORK_CHANGED` startup failure. The gate classified all five as invalid/escaped, never as successful rejections. The conditional probes were corrected and rerun against unchanged reviewed source before the final full gate. No network-error allowlist, concurrency override or retry was added to the harness. Log: `fresh-reviewed-mutants.log`.
+
+```text
+WS8bm behaviour check: 32 named cases passed on Rails and Rust; 1 failed; no pixel checks
+WS8bm failed application: http://127.0.0.1:52020 editing to add a URL renders its card live and the edited marker on load
+WS8bm discrimination check: 51 served mutants rejected on Rails and Rust across 30 named checks; 5 invalid or escaped
 ```
 
 ## Stable integration contract

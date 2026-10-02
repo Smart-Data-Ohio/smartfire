@@ -23,9 +23,9 @@ which calls the unmodified Selenium 4.35.0 `isDisplayed` atom installed in the
 pinned reference image with `ignoreOpacity=false`. The harness verifies that
 the committed atom is byte-identical to that image's gem before running cases.
 This includes effective opacity through ancestors, unlike Playwright's
-visibility predicate. Selector waits/counts across messaging behaviour modules use the helper;
-field, link and remaining raw-property scopes are audited separately in
-[ws8bm-visibility-audit.md](ws8bm-visibility-audit.md). explicit DOM-presence and `visible: :all` security
+visibility predicate. Selector waits/counts across messaging behaviour modules use the helper.
+Field, link and remaining raw-property scopes are audited separately in
+[ws8bm-visibility-audit.md](ws8bm-visibility-audit.md). Explicit DOM-presence and `visible: :all` security
 assertions retain their original semantics. Geometry probes retain the
 original Ruby tests' JavaScript rectangle filters. Assertion deadlines are
 unchanged, including the two-second visible-reaction count.
