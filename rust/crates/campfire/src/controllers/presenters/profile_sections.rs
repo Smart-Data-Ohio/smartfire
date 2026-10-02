@@ -26,34 +26,16 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
         let reason:Option<String>=r.get(1)?;Ok(if reason.as_deref().is_some_and(|s|!is_blank(s)){ConnectionPanel::Rejected{reason}}else{ConnectionPanel::Connected{name:r.get(0)?,workspace:None,app_token:r.get::<_,String>(2)?=="app"}})
     }).optional()?.unwrap_or_default();
     fields.github_verified = fields.github.connected();
-    // WS14g replaces this public metadata adapter with GoogleAccount display facts.
-    // The Rails template uses connected?/scopes, never usable?/decrypted credentials.
-    if let Some((email, scopes, reason)) = c
-        .query_row(
-            "SELECT email,scopes,disconnected_reason FROM google_accounts WHERE user_id=?",
-            [id],
-            |r| {
-                Ok((
-                    r.get::<_, String>(0)?,
-                    r.get::<_, Option<String>>(1)?,
-                    r.get::<_, Option<String>>(2)?,
-                ))
-            },
-        )
-        .optional()?
-    {
-        let scopes = scopes.as_deref().unwrap_or("");
+    // Rails profile rendering only reads metadata; it never decrypts or refreshes tokens.
+    if let Some(account) = campfire_db::models::google_account::GoogleAccount::for_user(c, id)? {
         fields.google.account_exists = true;
-        fields.google.email = email;
-        fields.google.connected = reason.as_deref().is_none_or(is_blank);
-        fields.google.calendar = is_blank(scopes)
-            || scopes
-                .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
-                .any(|s| s == "https://www.googleapis.com/auth/calendar.events");
-        fields.google.drive = scopes
-            .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
-            .any(|s| s == "https://www.googleapis.com/auth/drive.file");
+        fields.google.connected = account.connected();
+        fields.google.calendar = account.calendar();
+        fields.google.drive = account.drive();
+        fields.google.email = account.email;
     }
+    fields.google.identity_email = campfire_db::models::google_identity::GoogleIdentity::for_user(c, id)?
+        .map(|identity| identity.email);
     let user = campfire_db::UserStatusSettings::find(c, id)?;
     fields.status = status_fields(&user, &campfire_db::Errors::default(), campfire_db::Timestamp::from_jiff(now));
     fields.status.fetch_error = c.query_row("SELECT fetch_error FROM calendar_meeting_caches WHERE user_id=?", [id], |r| r.get::<_, Option<String>>(0)).optional()?.flatten().filter(|s| !is_blank(s));

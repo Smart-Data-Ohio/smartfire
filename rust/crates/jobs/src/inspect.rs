@@ -32,7 +32,7 @@ fn from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<JobRow> {
         id: row.get(0)?,
         queue: row.get(1)?,
         class: row.get(2)?,
-        arguments: serde_json::from_str(&arguments).unwrap_or(serde_json::Value::String(arguments)),
+        arguments: crate::retry::arguments(serde_json::from_str(&arguments).unwrap_or(serde_json::Value::String(arguments))),
         payload_version: row.get(4)?,
         status: row.get(5)?,
         attempts: row.get(6)?,
@@ -74,10 +74,11 @@ pub fn counts(conn: &Connection) -> Result<Vec<(String, String, i64)>> {
 /// failed.
 pub fn retry_failed(tx: &Tx<'_>, id: i64) -> Result<bool> {
     let now = tx.now();
+    let Some(job) = find(tx.conn(), id)?.filter(|job| job.status == crate::FAILED) else { return Ok(false) };
     Ok(tx.conn().execute_cached(
-        r#"UPDATE "background_jobs" SET "status" = 'ready', "attempts" = 0, "run_at" = ?2, "failed_at" = NULL, "updated_at" = ?2
+        r#"UPDATE "background_jobs" SET "status" = 'ready', "attempts" = 0, "run_at" = ?2, "failed_at" = NULL, "updated_at" = ?2, "arguments" = ?3
             WHERE "id" = ?1 AND "status" = 'failed'"#,
-        params![id, now],
+        params![id, now, job.arguments.to_string()],
     )? == 1)
 }
 

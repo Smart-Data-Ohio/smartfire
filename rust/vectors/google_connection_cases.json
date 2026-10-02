@@ -1,0 +1,402 @@
+{
+  "reference": "d7c7de92",
+  "now": 1772467200,
+  "rows": [
+    {
+      "name": "callback",
+      "event_ids": [
+        390339825,
+        411254270
+      ],
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google Calendar connected."
+        },
+        "jobs": [
+          {
+            "class": "Calendar::SyncEntryJob",
+            "args": [
+              390339825,
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::SyncEntryJob",
+            "args": [
+              411254270,
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::WatchChannelJob",
+            "args": [
+              127326141
+            ]
+          }
+        ],
+        "accounts": [
+          127326141
+        ],
+        "identity": [],
+        "entries": [],
+        "links": [
+          {
+            "id": 390339825,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          },
+          {
+            "id": 411254270,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          }
+        ],
+        "account": {
+          "email": "david@gmail.test",
+          "scopes": "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file",
+          "access_token": "new-access-token",
+          "refresh_token": "new-refresh-token",
+          "calendar": true,
+          "drive": true
+        },
+        "audits": [
+          "google.account.connect"
+        ]
+      }
+    },
+    {
+      "name": "callback_meeting",
+      "event_ids": [
+        390339825,
+        411254270
+      ],
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google Calendar connected."
+        },
+        "jobs": [
+          {
+            "class": "Calendar::MeetingRefreshJob",
+            "args": [
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::SyncEntryJob",
+            "args": [
+              390339825,
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::SyncEntryJob",
+            "args": [
+              411254270,
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::WatchChannelJob",
+            "args": [
+              127326141
+            ]
+          }
+        ],
+        "accounts": [
+          127326141
+        ],
+        "identity": [],
+        "entries": [],
+        "links": [
+          {
+            "id": 390339825,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          },
+          {
+            "id": 411254270,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          }
+        ],
+        "account": {
+          "email": "david@gmail.test",
+          "scopes": "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file",
+          "access_token": "new-access-token",
+          "refresh_token": "new-refresh-token",
+          "calendar": true,
+          "drive": true
+        },
+        "audits": [
+          "google.account.connect"
+        ]
+      }
+    },
+    {
+      "name": "callback_ooo",
+      "event_ids": [
+        390339825,
+        411254270
+      ],
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google Calendar connected."
+        },
+        "jobs": [
+          {
+            "class": "Calendar::MeetingRefreshJob",
+            "args": [
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::SyncEntryJob",
+            "args": [
+              390339825,
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::SyncEntryJob",
+            "args": [
+              411254270,
+              127326141
+            ]
+          },
+          {
+            "class": "Calendar::WatchChannelJob",
+            "args": [
+              127326141
+            ]
+          }
+        ],
+        "accounts": [
+          127326141
+        ],
+        "identity": [],
+        "entries": [],
+        "links": [
+          {
+            "id": 390339825,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          },
+          {
+            "id": 411254270,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          }
+        ],
+        "account": {
+          "email": "david@gmail.test",
+          "scopes": "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file",
+          "access_token": "new-access-token",
+          "refresh_token": "new-refresh-token",
+          "calendar": true,
+          "drive": true
+        },
+        "audits": [
+          "google.account.connect"
+        ]
+      }
+    },
+    {
+      "name": "disconnect_links",
+      "event_ids": [
+        390339825,
+        411254270
+      ],
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google Calendar disconnected."
+        },
+        "jobs": [
+          {
+            "class": "Calendar::DisconnectCleanupJob",
+            "args": [
+              []
+            ]
+          }
+        ],
+        "accounts": [],
+        "identity": [],
+        "entries": [],
+        "links": [
+          {
+            "id": 390339825,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": true
+          },
+          {
+            "id": 411254270,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": true
+          }
+        ],
+        "account": null,
+        "audits": [
+          "google.account.disconnect"
+        ]
+      }
+    },
+    {
+      "name": "disconnect_other",
+      "event_ids": [
+        390339825,
+        411254270
+      ],
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google Calendar disconnected."
+        },
+        "jobs": [
+          {
+            "class": "Calendar::DisconnectCleanupJob",
+            "args": [
+              []
+            ]
+          }
+        ],
+        "accounts": [],
+        "identity": [],
+        "entries": [],
+        "links": [
+          {
+            "id": 390339825,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": true
+          },
+          {
+            "id": 411254270,
+            "organizer_id": 149087659,
+            "meet_link": "https://meet.google.com/abc-defg-hij",
+            "meet_link_requested": true
+          }
+        ],
+        "account": null,
+        "audits": [
+          "google.account.disconnect"
+        ]
+      }
+    },
+    {
+      "name": "disconnect_entries",
+      "event_ids": [
+        390339825,
+        411254270
+      ],
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google Calendar disconnected."
+        },
+        "jobs": [
+          {
+            "class": "Calendar::DisconnectCleanupJob",
+            "args": [
+              [
+                "mine-fixture"
+              ]
+            ]
+          }
+        ],
+        "accounts": [
+          149087659
+        ],
+        "identity": [],
+        "entries": [
+          [
+            149087659,
+            "theirs-fixture"
+          ]
+        ],
+        "links": [
+          {
+            "id": 390339825,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          },
+          {
+            "id": 411254270,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          }
+        ],
+        "account": null,
+        "audits": [
+          "google.account.disconnect"
+        ]
+      }
+    },
+    {
+      "name": "disconnect_identity",
+      "event_ids": [
+        390339825,
+        411254270
+      ],
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google Calendar disconnected."
+        },
+        "jobs": [
+          {
+            "class": "Calendar::DisconnectCleanupJob",
+            "args": [
+              []
+            ]
+          }
+        ],
+        "accounts": [],
+        "identity": [
+          [
+            127326141,
+            "connection-member"
+          ]
+        ],
+        "entries": [],
+        "links": [
+          {
+            "id": 390339825,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          },
+          {
+            "id": 411254270,
+            "organizer_id": 127326141,
+            "meet_link": null,
+            "meet_link_requested": false
+          }
+        ],
+        "account": null,
+        "audits": [
+          "google.account.disconnect"
+        ]
+      }
+    }
+  ]
+}

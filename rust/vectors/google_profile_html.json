@@ -1,0 +1,109 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "calendar": [
+    {
+      "name": "unconfigured",
+      "configured": false,
+      "account": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Google Calendar is not configured for this workspace</p>\n</section>\n"
+    },
+    {
+      "name": "new",
+      "configured": true,
+      "account": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Publish events you are going or maybe to to your Google Calendar.</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /></form>\n</section>\n"
+    },
+    {
+      "name": "calendar",
+      "configured": true,
+      "account": {
+        "email": "david<&>@smartdata.net",
+        "connected": true,
+        "calendar": true,
+        "drive": false
+      },
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Connected as david&lt;&amp;&gt;@smartdata.net</p>\n      <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Enable Drive previews</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n    <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
+      "name": "drive",
+      "configured": true,
+      "account": {
+        "email": "david<&>@smartdata.net",
+        "connected": true,
+        "calendar": true,
+        "drive": true
+      },
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Connected as david&lt;&amp;&gt;@smartdata.net</p>\n      <p>Drive previews enabled</p>\n    <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
+      "name": "missing-calendar",
+      "configured": true,
+      "account": {
+        "email": "david<&>@smartdata.net",
+        "connected": true,
+        "calendar": false,
+        "drive": true
+      },
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Calendar permission needed, reconnect to publish events</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n      <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
+      "name": "disconnected",
+      "configured": true,
+      "account": {
+        "email": "david<&>@smartdata.net",
+        "connected": false,
+        "calendar": true,
+        "drive": false
+      },
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Google rejected the connection, reconnect</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /></form>\n</section>\n"
+    },
+    {
+      "name": "disconnected-drive",
+      "configured": true,
+      "account": {
+        "email": "david<&>@smartdata.net",
+        "connected": false,
+        "calendar": true,
+        "drive": true
+      },
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Google rejected the connection, reconnect</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n</section>\n"
+    }
+  ],
+  "signin": [
+    {
+      "name": "unconfigured",
+      "configured": false,
+      "email": null,
+      "html": ""
+    },
+    {
+      "name": "not-linked",
+      "configured": true,
+      "email": null,
+      "html": "  <section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-sign-in-title\">\n    <h2 id=\"google-sign-in-title\" class=\"txt-large\">Google sign-in</h2>\n\n      <p>Link your Workspace Google account so you can sign in with Google. You will confirm it with Google.</p>\n      <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/user/profile/google_sign_in_link\"><button class=\"btn\" type=\"submit\">Link Google sign-in</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/user/profile/google_sign_in_link\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "linked",
+      "configured": true,
+      "email": "david<&>@smartdata.net",
+      "html": "  <section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-sign-in-title\">\n    <h2 id=\"google-sign-in-title\" class=\"txt-large\">Google sign-in</h2>\n\n      <p>Linked to david&lt;&amp;&gt;@smartdata.net. You can sign in with Google.</p>\n  </section>\n"
+    }
+  ],
+  "drive": [
+    {
+      "id": 136976342,
+      "client_message_id": "0013",
+      "urls": [],
+      "html": "  <div id=\"drive_attachments_message_0013\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n"
+    },
+    {
+      "id": 136976342,
+      "client_message_id": "0013",
+      "urls": [
+        "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt",
+        "https://drive.google.com/open?id=2BcDefGhIjKlMnOpQrStU"
+      ],
+      "html": "  <div id=\"drive_attachments_message_0013\" class=\"drive-attachments\" data-controller=\"drive-link\">\n      <a class=\"drive-attachment\" target=\"_blank\" rel=\"noopener\" href=\"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\">\n        <span class=\"drive-attachment__icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\"/><path d=\"M9.5 1.5V5H13\"/></svg></span>\n        <span class=\"drive-attachment__text\">\n          <span class=\"drive-attachment__name\">Google Drive file</span>\n          <span class=\"drive-attachment__meta\">Open in Drive</span>\n        </span>\n</a>      <a class=\"drive-attachment\" target=\"_blank\" rel=\"noopener\" href=\"https://drive.google.com/open?id=2BcDefGhIjKlMnOpQrStU\">\n        <span class=\"drive-attachment__icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\"/><path d=\"M9.5 1.5V5H13\"/></svg></span>\n        <span class=\"drive-attachment__text\">\n          <span class=\"drive-attachment__name\">Google Drive file</span>\n          <span class=\"drive-attachment__meta\">Open in Drive</span>\n        </span>\n</a>  </div>\n"
+    }
+  ]
+}

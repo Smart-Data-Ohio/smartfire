@@ -1,0 +1,74 @@
+{
+  "reference": "d7c7de92",
+  "now": 1790769600,
+  "cases": [
+    {
+      "name": "expiry_only",
+      "original": "access-token",
+      "responses": [
+        {
+          "access_token": "newer-access",
+          "expires_in": 3600
+        },
+        {
+          "access_token": "access-token",
+          "expires_in": 7200
+        }
+      ],
+      "final_token": "newer-access",
+      "final_expiry": "2026-09-30T14:00:00Z",
+      "refresh_token": "refresh-token"
+    },
+    {
+      "name": "access_only",
+      "original": "access-token",
+      "responses": [
+        {
+          "access_token": "newer-access",
+          "expires_in": 3600
+        },
+        {
+          "access_token": "latest-access",
+          "expires_in": -3600
+        }
+      ],
+      "final_token": "latest-access",
+      "final_expiry": "2026-09-30T13:00:00Z",
+      "refresh_token": "refresh-token"
+    },
+    {
+      "name": "nil_access_unchanged",
+      "original": null,
+      "responses": [
+        {
+          "access_token": "newer-access",
+          "expires_in": 3600
+        },
+        {
+          "access_token": null,
+          "expires_in": 7200
+        }
+      ],
+      "final_token": "newer-access",
+      "final_expiry": "2026-09-30T14:00:00Z",
+      "refresh_token": "refresh-token"
+    },
+    {
+      "name": "both_changed",
+      "original": "access-token",
+      "responses": [
+        {
+          "access_token": "newer-access",
+          "expires_in": 3600
+        },
+        {
+          "access_token": "latest-access",
+          "expires_in": 7200
+        }
+      ],
+      "final_token": "latest-access",
+      "final_expiry": "2026-09-30T14:00:00Z",
+      "refresh_token": "refresh-token"
+    }
+  ]
+}
