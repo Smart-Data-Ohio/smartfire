@@ -112,7 +112,7 @@ cases.each do |row|
   thread&.reload
   fields = if thread
     {title:thread.name,creator_id:thread.creator_id,work_status:thread.work_status,owner:thread.work_owner_id,tags:thread.tag_names,
-     run_url:thread.run_url,result:thread.result_markdown&.first(200),result_length:thread.result_markdown&.length,
+     run_url:thread.run_url,result:thread.result_markdown,result_length:thread.result_markdown&.length,
      result_updated_by:thread.result_updated_by_id,result_updated_at:stamp.call(thread.result_updated_at),
      updated_at:stamp.call(thread.updated_at),work_status_changed_at:stamp.call(thread.work_status_changed_at),
      messages:thread.messages.order(:id).map { |m|{creator_id:m.creator_id,markdown:m.markdown_source,opener:m.board_post_opener} }}

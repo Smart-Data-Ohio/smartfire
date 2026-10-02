@@ -161,7 +161,7 @@ fn thread_fields(conn: &Connection, thread: &ChannelThread) -> Result<Value> {
     )?;
     Ok(
         json!({"title":thread.name,"creator_id":thread.creator_id,"work_status":thread.work_status,"owner":thread.work_owner_id,"tags":thread.tag_names(conn)?,
-        "run_url":thread.run_url,"result":thread.result_markdown.as_ref().map(|s|s.chars().take(200).collect::<String>()),"result_length":thread.result_markdown.as_ref().map(|s|s.chars().count()),
+        "run_url":thread.run_url,"result":thread.result_markdown,"result_length":thread.result_markdown.as_ref().map(|s|s.chars().count()),
         "result_updated_by":thread.result_updated_by_id,"result_updated_at":thread.result_updated_at.map(crate::models::agent_payloads::json_time),"updated_at":crate::models::agent_payloads::json_time(thread.updated_at),
         "work_status_changed_at":thread.work_status_changed_at.map(crate::models::agent_payloads::json_time),"messages":messages}),
     )
@@ -552,7 +552,7 @@ fn result_unchanged_value_writes_nothing_and_handoff_audit_and_ledger_keep_snaps
 #[test]
 fn work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit() {
     let t = setup();
-    t.write(|tx| grants(tx));
+    t.write(grants);
     let ids = t.write(|tx| {
         let mut ids = Vec::new();
         for index in 0..104 {
