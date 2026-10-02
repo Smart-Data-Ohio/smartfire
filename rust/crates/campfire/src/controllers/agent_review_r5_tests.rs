@@ -42,6 +42,7 @@ fn request(path: &str) -> Req {
         .header("host", "campfire.test")
 }
 fn compare(reply: &Reply, expected: &Value, label: &str) {
+    compare_headers(reply, expected, label);
     assert_eq!(
         reply.status.as_u16(),
         expected["status"].as_u64().unwrap() as u16,
@@ -54,6 +55,17 @@ fn compare(reply: &Reply, expected: &Value, label: &str) {
             .decode(expected["body_base64"].as_str().unwrap())
             .unwrap(),
         "{label}: exact response bytes"
+    );
+}
+fn compare_headers(reply: &Reply, expected: &Value, label: &str) {
+    let transfer = expected["headers"]
+        .get("Content-Transfer-Encoding")
+        .expect("the Rails oracle must compare transfer encoding");
+    // Check this independent drift before media-derived Content-Length values.
+    assert_eq!(
+        reply.header("Content-Transfer-Encoding"),
+        transfer.as_str(),
+        "{label}: Content-Transfer-Encoding"
     );
     for (header, value) in expected["headers"].as_object().unwrap() {
         assert_eq!(reply.header(header), value.as_str(), "{label}: {header}");
@@ -159,6 +171,8 @@ async fn missing(kind: &str, route: &str) {
         }))
         .await;
     // Assert the regression before comparing the positive-control media bytes.
+    compare_headers(&reply, &case[route], &format!("{kind} {route}"));
+    compare_headers(&positive_proxy, &case["baseline_proxy"], "positive proxy");
     compare(&reply, &case[route], &format!("{kind} {route}"));
     let redirected = app.anonymous().send(request(&redirect)).await;
     compare(&redirected, &case["repeat_redirect"], "repeat redirect");
