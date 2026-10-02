@@ -3,6 +3,7 @@
 
 pub mod avatars;
 pub mod cards;
+pub mod stars;
 pub mod bans;
 pub mod dnd_allowances;
 pub mod notification_settings;
@@ -203,3 +204,6 @@ mod agent_profile_tests;
 
 #[cfg(test)]
 mod fizzy_profile_tests;
+
+#[cfg(test)]
+mod stars_tests;

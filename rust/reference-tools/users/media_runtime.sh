@@ -4,8 +4,10 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=${WS8BR2_MEDIA_DIR:-$ROOT/../.scratch/rails-media}
 IMAGE=${PARITY_IMAGE:-ws8br2-reference:d7c7de92}
+NAMESPACE=${PARITY_NAMESPACE:-ws8br2}
+OWNER=${PARITY_OWNER:-ws8br2}
 mkdir -p "$OUT"
-docker run --rm --label parity.owner=ws8br2 --label parity.namespace=ws8br2-media --entrypoint sh "$IMAGE" -c '
+docker run --rm --name "$NAMESPACE-media-runtime" --label "parity.owner=$OWNER" --label "parity.namespace=$NAMESPACE-media" --entrypoint sh "$IMAGE" -c '
   for input in /usr/lib/x86_64-linux-gnu/libvips.so.42 /usr/bin/ffmpeg /usr/bin/ffprobe; do
     ldd "$input" | awk '\''/=> \// { if ($1 !~ /^lib(c|m|pthread|dl|rt|gcc_s|stdc\+\+)\.so/) print $3 }'\''
     printf "%s\n" "$input"
@@ -29,6 +31,6 @@ while IFS= read -r input; do
       ;;
   esac
 done < <(tar -tf "$OUT/libraries.tar")
-printf 'WS8br2 pinned media runtime: image %s; libvips, FFmpeg tools and libraries extracted; no host libraries changed\n' "$IMAGE"
+printf '%s pinned media runtime: image %s; libvips, FFmpeg tools and libraries extracted; no host libraries changed\n' "$OWNER" "$IMAGE"
 printf 'LD_LIBRARY_PATH=%s/native-libs\n' "$OUT"
 printf 'PATH=%s/usr/bin:$PATH\n' "$OUT"

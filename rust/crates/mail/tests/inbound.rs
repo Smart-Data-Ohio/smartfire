@@ -26,6 +26,42 @@ fn busy(_: &campfire_db::Connection, _: &Room, _: &str) -> campfire_db::Result<S
 }
 
 #[tokio::test]
+async fn unicode_parity_inbound_author_lookup_uses_ruby_downcase() {
+    let h = Harness::new().await;
+    let oracle: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/unicode_casing_parity.json")).unwrap();
+    let case = oracle["casing"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["input"] == "ΟΣ@example.com")
+        .unwrap();
+    let email = case["downcase"].as_str().unwrap().to_owned();
+    let author = fixtures::identify("david");
+    h.db.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE users SET email_address=? WHERE id=?",
+            rusqlite::params![email, author],
+        )?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let message = h
+        .message(
+            h.deliver(h.raw(
+                case["input"].as_str().unwrap(),
+                &["mx.mail.test; dkim=pass header.d=example.com"],
+                "Casing",
+                "Hello",
+            ))
+            .await,
+        )
+        .await;
+    assert_eq!(message.creator_id, author);
+}
+
+#[tokio::test]
 async fn review_transient_failure_remains_retryable() {
     let h = Harness::new().await;
     let raw = review_fixture("retry_raw").replace(

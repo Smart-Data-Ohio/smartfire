@@ -5,6 +5,27 @@ use campfire_views::fragment_cache::keys::{self, MessageKey};
 use rusqlite::OptionalExtension;
 
 impl Presenter<'_> {
+    pub fn message_fragment_cache_key(&self, message: &Message, base: &str) -> Result<String> {
+        // Rails' initial room list is uncached. Keep both original Rails key
+        // compositions, then expand the rendered records' individual Rails versions.
+        // Include the preview's source so its author's updates are covered too;
+        // reply edits and creator updates do not touch the reply itself.
+        let collection = self.message_collection_cache_key(message)?;
+        let mut dependencies = vec![message.clone()];
+        if let Some(source) = message.reply_to_message_id
+            .map(|id| Message::find_by_id(self.conn, id)).transpose()?.flatten()
+        {
+            dependencies.push(source);
+        }
+        let validator = crate::controllers::messages::freshness::etag(
+            self.conn, &dependencies,
+        )?;
+        let rendered = self.message_rendered_cache_key(message)?;
+        Ok(campfire_views::messages::collection_fragment_key(
+            &format!("{collection}/{validator}/{rendered}"), base,
+        ))
+    }
+
     pub fn message_collection_cache_key(&self, message: &Message) -> Result<String> {
         let stamp = |sql: &str| -> Result<Option<jiff::Timestamp>> {
             Ok(self

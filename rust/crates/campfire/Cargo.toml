@@ -29,6 +29,7 @@ jiff.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
 regex.workspace = true
+indexmap.workspace = true
 askama.workspace = true
 futures-util.workspace = true
 rusqlite = { workspace = true, features = ["backup"] }
@@ -67,4 +68,4 @@ tower = { workspace = true, features = ["util"] }
 tokio-tungstenite.workspace = true
 futures-util.workspace = true
 tempfile.workspace = true
-rusqlite = { workspace = true, features = ["limits"] }
+rusqlite = { workspace = true, features = ["limits", "trace"] }

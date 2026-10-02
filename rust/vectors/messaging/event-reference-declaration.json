@@ -1,0 +1,13 @@
+{
+  "reference": "d7c7de92",
+  "message_id": 935962058,
+  "input": {
+    "body": "<div>see https://github.com/rails/rails/pull/512 and https://x.com/jack/status/424242 and /rooms/654632876/events/390339825</div>"
+  },
+  "path": "/rooms/654632876/messages/935962058",
+  "status": 302,
+  "location": "http://campfire.test/rooms/654632876/messages/935962058",
+  "events": [
+    390339825
+  ]
+}

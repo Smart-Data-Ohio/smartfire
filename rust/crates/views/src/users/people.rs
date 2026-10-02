@@ -36,10 +36,15 @@ impl Person {
         h::turbo_stream_from_streamables(ctx, &[&h::gid_param("User", self.user.id), "status"])
     }
     pub fn status_badge(&self) -> askama::Result<h::Html> {
-        Ok(h::raw(super::statuses::StatusBadge { presence: &self.presence, status_text: self.custom_status.as_deref() }.render()?))
+        Ok(h::raw(
+            super::statuses::StatusBadge {
+                presence: &self.presence,
+                status_text: self.custom_status.as_deref(),
+            }
+            .render()?,
+        ))
     }
 }
-
 
 #[derive(Template)]
 #[template(path = "users/cards/show.html")]
@@ -84,26 +89,45 @@ impl Card<'_> {
         h::raw(button.0.strip_suffix("</form>").unwrap().to_owned() + &fields + "</form>")
     }
     fn star_button(&self) -> h::Html {
-        h::button_to_form(
-            &h::routes::user_star(self.person.user.id),
-            h::attrs()
-                .attr(
-                    "method",
-                    if self.person.starred {
-                        "delete"
-                    } else {
-                        "post"
-                    },
-                )
-                .class("btn full-width"),
-            h::attrs().data("action", "turbo:submit-end->profile-card#starToggled"),
-            if self.person.starred {
-                "★ Unstar"
-            } else {
-                "☆ Star"
-            },
-        )
+        star_button(self.person.user.id, self.person.starred)
     }
+}
+
+fn star_button(user_id: i64, starred: bool) -> h::Html {
+    h::button_to_form(
+        &h::routes::user_star(user_id),
+        h::attrs()
+            .attr("method", if starred { "delete" } else { "post" })
+            .class("btn full-width"),
+        h::attrs().data("action", "turbo:submit-end->profile-card#starToggled"),
+        if starred { "★ Unstar" } else { "☆ Star" },
+    )
+}
+
+#[derive(Template)]
+#[template(path = "users/stars/_toggle.html")]
+pub struct StarToggle {
+    pub user_id: i64,
+    pub starred: bool,
+}
+
+impl StarToggle {
+    fn button(&self) -> h::Html {
+        star_button(self.user_id, self.starred)
+    }
+}
+
+/// The controller response is session-bound and is never a cable broadcast.
+pub fn star_stream(user_id: i64, starred: bool) -> askama::Result<String> {
+    let html = StarToggle { user_id, starred }.render()?;
+    Ok(h::content_tag(
+        "turbo-stream",
+        h::attrs()
+            .attr("action", "replace")
+            .attr("target", format!("star_user_{user_id}")),
+        &h::content_tag("template", h::attrs(), &html).0,
+    )
+    .0)
 }
 
 #[derive(Template)]

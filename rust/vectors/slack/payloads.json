@@ -1,0 +1,903 @@
+{
+  "client": [
+    {
+      "input": null,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for nil"
+      }
+    },
+    {
+      "input": false,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      }
+    },
+    {
+      "input": true,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for true"
+      }
+    },
+    {
+      "input": 0,
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": 1.5,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for an instance of Float"
+      }
+    },
+    {
+      "input": [],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": [
+        {}
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": "",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack error for users.list: unknown"
+      }
+    },
+    {
+      "input": "ok",
+      "expected": {
+        "result": "ok"
+      }
+    },
+    {
+      "input": "error",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack error for users.list: error"
+      }
+    },
+    {
+      "input": "okerror",
+      "expected": {
+        "result": "okerror"
+      }
+    },
+    {
+      "input": {
+        "ok": true
+      },
+      "expected": {
+        "result": {
+          "ok": true
+        }
+      }
+    }
+  ],
+  "markdown": [
+    {
+      "input": null,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for nil"
+      }
+    },
+    {
+      "input": false,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      }
+    },
+    {
+      "input": true,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for true"
+      }
+    },
+    {
+      "input": 0,
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": 1.5,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for an instance of Float"
+      }
+    },
+    {
+      "input": [],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": [
+        {}
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": "",
+      "expected": {
+        "result": {
+          "markdown": "",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": "ok",
+      "expected": {
+        "result": {
+          "markdown": "",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": "error",
+      "expected": {
+        "result": {
+          "markdown": "",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": "okerror",
+      "expected": {
+        "result": {
+          "markdown": "",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "ok": true
+      },
+      "expected": {
+        "result": {
+          "markdown": "",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "text": [
+          1,
+          "x"
+        ]
+      },
+      "expected": {
+        "result": {
+          "markdown": "[1, \"x\"]",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "text": {
+          "a": 1
+        }
+      },
+      "expected": {
+        "result": {
+          "markdown": "{\"a\" => 1}",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "attachments": {}
+      },
+      "expected": {
+        "result": {
+          "markdown": "",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "attachments": {
+          "text": "hi"
+        }
+      },
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": {
+        "attachments": [
+          null
+        ]
+      },
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for nil"
+      }
+    },
+    {
+      "input": {
+        "attachments": [
+          false
+        ]
+      },
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      }
+    },
+    {
+      "input": {
+        "attachments": [
+          "pretext text fallback"
+        ]
+      },
+      "expected": {
+        "result": {
+          "markdown": "> pretext\n> text\n> fallback",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "files": {
+          "name": "x",
+          "permalink": "https://example.org"
+        }
+      },
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": {
+        "files": [
+          1
+        ]
+      },
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": {
+        "files": [
+          "permalink"
+        ]
+      },
+      "expected": {
+        "result": {
+          "markdown": "📎 [file](permalink)",
+          "truncated": false,
+          "files_linked": 1
+        }
+      }
+    },
+    {
+      "input": {
+        "bot_id": false,
+        "attachments": [
+          {
+            "text": "x"
+          }
+        ]
+      },
+      "expected": {
+        "result": {
+          "markdown": "> x",
+          "truncated": false,
+          "files_linked": 0
+        }
+      }
+    }
+  ],
+  "mapper": [
+    {
+      "input": null,
+      "expected": {
+        "result": {
+          "matched": 0,
+          "placeholders": 0,
+          "deactivated": 0,
+          "bots": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "input": false,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      }
+    },
+    {
+      "input": true,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for true"
+      }
+    },
+    {
+      "input": 1,
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": 1.5,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for an instance of Float"
+      }
+    },
+    {
+      "input": "",
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method 'dig' for an instance of String"
+      }
+    },
+    {
+      "input": "id",
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method 'dig' for an instance of String"
+      }
+    },
+    {
+      "input": {},
+      "expected": {
+        "result": {
+          "matched": 0,
+          "placeholders": 0,
+          "deactivated": 0,
+          "bots": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "input": {
+        "id": "UFIXTURE",
+        "profile": false
+      },
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": [
+        null
+      ],
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for nil"
+      }
+    },
+    {
+      "input": [
+        false
+      ],
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      }
+    },
+    {
+      "input": [
+        1
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFIXTURE",
+          "profile": []
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFIXTURE",
+          "profile": {
+            "real_name": false
+          }
+        }
+      ],
+      "expected": {
+        "result": {
+          "matched": 0,
+          "placeholders": 0,
+          "deactivated": 1,
+          "bots": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFRESH",
+          "profile": false
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "FalseClass does not have #dig method"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFRESH",
+          "profile": true
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "TrueClass does not have #dig method"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFRESH",
+          "profile": 0
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "Integer does not have #dig method"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFRESH",
+          "profile": 1.5
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "Float does not have #dig method"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFRESH",
+          "profile": ""
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "String does not have #dig method"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UFRESH",
+          "profile": []
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UKNOWN",
+          "profile": []
+        }
+      ],
+      "expected": {
+        "result": {
+          "matched": 0,
+          "placeholders": 0,
+          "deactivated": 0,
+          "bots": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "",
+          "profile": false
+        }
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "FalseClass does not have #dig method"
+      }
+    },
+    {
+      "input": [
+        {
+          "id": "UBOT",
+          "is_bot": true,
+          "profile": []
+        }
+      ],
+      "expected": {
+        "result": {
+          "matched": 0,
+          "placeholders": 0,
+          "deactivated": 0,
+          "bots": 1,
+          "total": 1
+        }
+      }
+    }
+  ],
+  "conversation": [
+    {
+      "input": null,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for nil"
+      }
+    },
+    {
+      "input": false,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      }
+    },
+    {
+      "input": true,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for true"
+      }
+    },
+    {
+      "input": 0,
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": 1.5,
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for an instance of Float"
+      }
+    },
+    {
+      "input": [],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": [
+        {}
+      ],
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "input": "",
+      "expected": {
+        "result": {
+          "action": "create",
+          "room_id": null,
+          "reason": null
+        }
+      }
+    },
+    {
+      "input": "ok",
+      "expected": {
+        "result": {
+          "action": "create",
+          "room_id": null,
+          "reason": null
+        }
+      }
+    },
+    {
+      "input": "error",
+      "expected": {
+        "result": {
+          "action": "create",
+          "room_id": null,
+          "reason": null
+        }
+      }
+    },
+    {
+      "input": "okerror",
+      "expected": {
+        "result": {
+          "action": "create",
+          "room_id": null,
+          "reason": null
+        }
+      }
+    },
+    {
+      "input": {
+        "ok": true
+      },
+      "expected": {
+        "result": {
+          "action": "create",
+          "room_id": null,
+          "reason": null
+        }
+      }
+    }
+  ],
+  "transport": [
+    {
+      "input_class": "IOError",
+      "input_message": "fixture io",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: IOError: fixture io"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "EOFError",
+      "input_message": "fixture eof",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: EOFError: fixture eof"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "SocketError",
+      "input_message": "fixture lookup",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: SocketError: fixture lookup"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "Net::OpenTimeout",
+      "input_message": "execution expired",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: Net::OpenTimeout: execution expired"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "Net::ReadTimeout",
+      "input_message": "Net::ReadTimeout",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: Net::ReadTimeout: Net::ReadTimeout"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "Net::WriteTimeout",
+      "input_message": "Net::WriteTimeout",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: Net::WriteTimeout: Net::WriteTimeout"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "Timeout::Error",
+      "input_message": "fixture timeout",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: Timeout::Error: fixture timeout"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "Errno::ECONNRESET",
+      "input_message": "Connection reset by peer - fixture reset",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: Errno::ECONNRESET: Connection reset by peer - fixture reset"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "Errno::ECONNREFUSED",
+      "input_message": "Connection refused - fixture refused",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: Errno::ECONNREFUSED: Connection refused - fixture refused"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "Errno::EPIPE",
+      "input_message": "Broken pipe - fixture pipe",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack network error for users.list: Errno::EPIPE: Broken pipe - fixture pipe"
+      },
+      "attempts": 4
+    },
+    {
+      "input_class": "OpenSSL::SSL::SSLError",
+      "input_message": "fixture tls",
+      "expected": {
+        "class": "OpenSSL::SSL::SSLError",
+        "message": "fixture tls"
+      },
+      "attempts": 1
+    }
+  ],
+  "http": [
+    {
+      "status": 200,
+      "body": "null",
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for nil"
+      },
+      "attempts": 1
+    },
+    {
+      "status": 400,
+      "body": "null",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack HTTP 400 for users.list"
+      },
+      "attempts": 1
+    },
+    {
+      "status": 400,
+      "body": "false",
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      },
+      "attempts": 1
+    },
+    {
+      "status": 200,
+      "body": "false",
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for false"
+      },
+      "attempts": 1
+    },
+    {
+      "status": 200,
+      "body": "1.5",
+      "expected": {
+        "class": "NoMethodError",
+        "message": "undefined method '[]' for an instance of Float"
+      },
+      "attempts": 1
+    },
+    {
+      "status": 400,
+      "body": "[]",
+      "expected": {
+        "class": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      },
+      "attempts": 1
+    },
+    {
+      "status": 200,
+      "body": "not json",
+      "expected": {
+        "class": "Slack::Client::HttpError",
+        "message": "Slack returned invalid JSON for users.list"
+      },
+      "attempts": 4
+    },
+    {
+      "status": 400,
+      "body": "not json",
+      "expected": {
+        "class": "Slack::Client::RequestError",
+        "message": "Slack HTTP 400 for users.list"
+      },
+      "attempts": 1
+    },
+    {
+      "status": 503,
+      "body": "{\"ok\":false,\"error\":\"invalid_auth\"}",
+      "expected": {
+        "class": "Slack::Client::HttpError",
+        "message": "Slack HTTP 503 for users.list"
+      },
+      "attempts": 4
+    },
+    {
+      "status": 200,
+      "body": "{/* fixture */\"ok\":true}",
+      "expected": {
+        "result": {
+          "ok": true
+        }
+      },
+      "attempts": 1
+    },
+    {
+      "status": 200,
+      "body": "{\"ok\":true,// fixture\n\"name\":\"Fixture\"}",
+      "expected": {
+        "result": {
+          "ok": true,
+          "name": "Fixture"
+        }
+      },
+      "attempts": 1
+    }
+  ]
+}

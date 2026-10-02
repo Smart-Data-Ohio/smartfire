@@ -1,0 +1,4 @@
+{% filter turbo_frame_tag("star_user_" ~ user_id,h::attrs()) %}
+{% if starred %}    {{ self.button() }}
+{% else %}    {{ self.button() }}
+{% endif %}{% endfilter %}

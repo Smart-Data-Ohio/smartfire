@@ -641,10 +641,11 @@ fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str, stamp: &
 /// Collection fragments carry the domain's full presentation key. The Index/MessageItem API
 /// stays unchanged; presenters return its existing Fragment variant on both misses and hits.
 pub fn collection_fragment_key(presentation_key: &str, base_url: &str) -> String {
-    format!("views/messages/_message:{}/{presentation_key}/{base_url}", message_digest())
+    format!("views/messages/_message:{}/{presentation_key}/{base_url}", include_str!("messages/rails-template-digest.txt").trim_end())
 }
 
-/// `messages/boosts/_boost`, whose body is `cache boost`.
+/// Retained record-version API for existing view consumers. Rails' HTML partial
+/// has no inner `cache boost`; the mounted message tree uses [`uncached_boost`].
 pub fn boost(ctx: &ViewContext, boost: &BoostView) -> String {
     fragment_cache::fetch(
         || {
@@ -660,6 +661,11 @@ pub fn boost(ctx: &ViewContext, boost: &BoostView) -> String {
                 .expect("messages/boosts/_boost renders")
         },
     )
+}
+
+/// Rails renders HTML boosts without a nested cache (only its JSON Jbuilder caches).
+pub fn uncached_boost(ctx: &ViewContext, boost: &BoostView) -> crate::helpers::Html {
+    askama::filters::Safe(BoostPartial { ctx, boost }.render().expect("messages/boosts/_boost renders"))
 }
 
 /// [`boost`] where a template renders the partial.
@@ -844,6 +850,14 @@ pub struct DestroyStream<'a> {
 #[derive(Template)]
 #[template(path = "messages/boosts/_boosts.html")]
 pub struct BoostsPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
+/// The complete replacement fragment used by the modern reaction toggle and delete actions.
+#[derive(Template)]
+#[template(path = "messages/boosts/_reactions.html")]
+pub struct ReactionsPartial<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub message: &'a MessageView,
 }

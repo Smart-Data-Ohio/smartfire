@@ -256,3 +256,6 @@ pub fn storage_error(error: campfire_storage::Error) -> campfire_db::Error {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod avatar_logo_tests;

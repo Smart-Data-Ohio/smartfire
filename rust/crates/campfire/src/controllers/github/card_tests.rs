@@ -266,10 +266,46 @@ async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
         }
     }));requests.await;
     fresh.app.db.read(|conn|{assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
-    // The real HTTP update renders through broadcast_replace even with unchanged reference text.
-    fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL")?;Ok(())}).await.unwrap();
-    let (status,_,_)=super::test_support::request(&fresh,"PATCH","/rooms/815/messages/818",json!({"message":{"embeds_suppressed":true}}),json!({})).await;
-    assert_eq!(status,302);
-    fresh.app.db.read(|conn|{assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
+    // Rails accepts bodyless legacy edits and ignores embeds_suppressed here.
+    // Keep the original case, add unchanged rich-text root/thread bodies, and
+    // require the render itself to collect refresh intent in every case.
+    let oracle:Value=serde_json::from_str(include_str!("../../../../../vectors/messaging/github-edit-refresh.json")).unwrap();
+    for row in oracle["rows"].as_array().unwrap() {
+        let id=row["id"].as_i64().unwrap();
+        let body=row["body_before"].as_str().map(str::to_owned);
+        fresh.app.db.write(move|tx| {
+            if id==819 {
+                tx.conn().execute("INSERT INTO messages (id,room_id,thread_id,creator_id,client_message_id,created_at,updated_at) VALUES (819,815,817,811,'card-thread',?,?)",params![tx.now(),tx.now()])?;
+                tx.conn().execute("INSERT INTO github_pull_request_references (github_pull_request_id,message_id,created_at,updated_at) VALUES (816,819,?,?)",params![tx.now(),tx.now()])?;
+            }
+            if let Some(body)=body {campfire_db::RichTextRecord::create(tx,"Message",id,"body",&body)?;}
+            tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL")?;
+            Ok(())
+        }).await.unwrap();
+        let (status,headers,body)=super::test_support::request(&fresh,"PATCH",row["path"].as_str().unwrap(),json!({"message":{"embeds_suppressed":true}}),json!({})).await;
+        assert_eq!(status,row["status"].as_u64().unwrap() as u16,"{}",row["name"]);
+        assert_eq!(body,row["body"].as_str().unwrap(),"{}",row["name"]);
+        for (header,key) in [("location","location"),("content-type","content_type")] {
+            assert_eq!(headers.get(header).map(|v|v.to_str().unwrap()),row[key].as_str(),"{}/{header}",row["name"]);
+        }
+        let row=row.clone();
+        fresh.app.db.read(move|conn| {
+            let message=campfire_db::Message::find(conn,id)?;
+            assert_eq!(message.body_html(conn)?.as_deref(),row["saved_body"].as_str(),"{}/body",row["name"]);
+            assert_eq!(message.embeds_suppressed,row["suppressed"].as_bool().unwrap());
+            assert_eq!(message.edited_at.map(|t|campfire_views::messages::support::json_time(t.jiff())),row["edited_at"].as_str().map(str::to_owned));
+            let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;
+            assert_eq!(claim.is_some(),row["claimed"].as_bool().unwrap(),"{}/claim",row["name"]);
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,row["fetch_jobs"].as_i64().unwrap(),"{}/jobs",row["name"]);
+            Ok(())
+        }).await.unwrap();
+    }
+    // Render refresh failure remains best effort; its durable job and claim roll back.
+    fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL; CREATE TRIGGER reject_edit_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;Ok(())}).await.unwrap();
+    for path in ["/rooms/815/messages/818","/rooms/815/threads/817/messages/819"] {
+        let (status,_,_)=super::test_support::request(&fresh,"PATCH",path,json!({"message":{"embeds_suppressed":true}}),json!({})).await;
+        assert_eq!(status,302,"{path}");
+        fresh.app.db.read(|conn|{let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;assert!(claim.is_none());assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
+    }
     assert!(fresh.server.received().is_empty());
 }

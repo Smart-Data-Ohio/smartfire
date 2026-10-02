@@ -1,6 +1,7 @@
 //! Authorization and liveness from `app/models/huddle_grant.rb`.
 //! Presence, invitations and leave/call-ended effects are described after commit.
 use jiff::SignedDuration;
+use rails_compat::unicode;
 use rusqlite::{OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
 
@@ -388,7 +389,7 @@ impl HuddleGrant {
         room_id: i64,
         now: Timestamp,
     ) -> Result<Vec<crate::User>> {
-        query_all(conn, "SELECT DISTINCT u.* FROM users u JOIN huddle_grants g ON g.user_id=u.id WHERE g.room_id=? AND g.revoked_at IS NULL AND g.last_seen_at>?", params![room_id, now.ago(SignedDuration::from_secs(IN_CALL_WINDOW))], crate::models::user::User::from_row).map(|mut users| { users.sort_by_key(|u| u.name.to_lowercase()); users })
+        query_all(conn, "SELECT DISTINCT u.* FROM users u JOIN huddle_grants g ON g.user_id=u.id WHERE g.room_id=? AND g.revoked_at IS NULL AND g.last_seen_at>?", params![room_id, now.ago(SignedDuration::from_secs(IN_CALL_WINDOW))], crate::models::user::User::from_row).map(|mut users| { users.sort_by_key(|u| unicode::downcase(&u.name)); users })
     }
     pub fn participant_identities_for(
         conn: &Connection,

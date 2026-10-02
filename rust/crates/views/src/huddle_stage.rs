@@ -1,6 +1,7 @@
 //! Stage fragments from app/views/rooms/stage and rooms/events/venue_live_dot.
 use crate::helpers as h;
 use askama::Template;
+use rails_compat::unicode;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -58,7 +59,7 @@ impl Stage {
                 } else {
                     0
                 },
-                m.name.to_lowercase(),
+                unicode::downcase(&m.name),
             )
         });
         members
@@ -342,6 +343,49 @@ pub fn role_event(room_id: i64, role: &str, muted: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unicode_parity_stage_roster_uses_ruby_sort_order_with_hand_priority() {
+        let oracle: serde_json::Value =
+            serde_json::from_str(include_str!("../../../vectors/unicode_casing_parity.json"))
+                .unwrap();
+        for role in ["host", "speaker", "listener"] {
+            let mut stage = Stage {
+                room_id: 73,
+                viewer_id: 1,
+                live: None,
+                members: ["ΟΣ", "οςa"]
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, name)| Member {
+                        id: i as i64 + 1,
+                        user_id: i as i64 + 1,
+                        name: name.into(),
+                        avatar_path: "/avatar".into(),
+                        administrator: false,
+                        role: role.into(),
+                        hand: None,
+                        muted: false,
+                    })
+                    .collect(),
+            };
+            assert_eq!(
+                serde_json::json!(
+                    stage
+                        .group(role)
+                        .iter()
+                        .map(|m| &m.name)
+                        .collect::<Vec<_>>()
+                ),
+                oracle["sigma_names"]
+            );
+            if role == "listener" {
+                stage.members[0].hand = Some(10);
+                assert_eq!(stage.group(role)[0].name, "ΟΣ");
+                stage.members[1].hand = Some(5);
+                assert_eq!(stage.group(role)[0].name, "οςa");
+            }
+        }
+    }
     #[test]
     fn stage_fragments_match_four_hundred_rails_renders() {
         let vectors: serde_json::Value =
