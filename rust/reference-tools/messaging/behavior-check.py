@@ -186,6 +186,13 @@ subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "i
 browser_image = "ws8bm-browser-reference-d7c7de92"
 subprocess.run(["docker", "build", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/rooms/browser.Dockerfile"), "-t", browser_image, str(RUST / "parity/docker")], cwd=ROOT, check=True)
 env["PARITY_IMAGE"] = browser_image
+visibility_atom = subprocess.check_output([
+    "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
+    "exec", "ruby", "-rselenium-webdriver", "-e",
+    'print File.binread(File.join(Gem::Specification.find_by_name("selenium-webdriver").full_gem_path, "lib/selenium/webdriver/atoms/isDisplayed.js"))'
+], cwd=ROOT)
+assert visibility_atom == (RUST / "reference-tools/messaging/selenium/isDisplayed.js").read_bytes(), "visibility helper must use the unmodified pinned Selenium atom"
+print(f"WS8bm visibility atom: pinned Selenium SHA256 {hashlib.sha256(visibility_atom).hexdigest()} verified", flush=True)
 for line in (RUST / "parity/.env.reference").read_text().splitlines():
     if line and not line.startswith("#"):
         key, value = line.split("=", 1)

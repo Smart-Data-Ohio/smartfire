@@ -2,11 +2,12 @@
 // Synthetic streams/fetch gates below are the original deterministic regressions;
 // delivery/edit/pagination also exercise the actual server on each application.
 import assert from 'node:assert/strict';
+import {waitForVisibility,waitForVisibleCount} from './behavior-visibility.mjs';
 export async function messageList({author:page,recipient,caseName,send,text,openEdit,field}) {
   const list=page.locator('.messages[role="log"]').first();
   const editor=page.getByRole('combobox',{name:'Write a message',exact:true});
   await page.waitForFunction(()=>document.activeElement?.id==='message_markdown_source');
-  await list.locator(':scope > .message[tabindex="0"]').first().waitFor();
+  await waitForVisibility(list.locator(':scope > .message[tabindex="0"]').first());
   const ids=await list.locator(':scope > .message').evaluateAll(rows=>rows.map(row=>row.id));
   const [first,second]=ids,third=ids.at(-1);
   assert.ok(ids.length>=3);
@@ -26,8 +27,8 @@ export async function messageList({author:page,recipient,caseName,send,text,open
   }
   async function menu(id) {
     await row(id).locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
-    await page.locator('#message-actions-menu:not([hidden])').waitFor();
-    await row(id).locator(':scope[data-message-actions-open]').waitFor();
+    await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'));
+    await waitForVisibility(row(id).locator(':scope[data-message-actions-open]'));
   }
   async function replace(id,direct=false) {
     await page.evaluate(({id,direct})=>{
@@ -36,11 +37,11 @@ export async function messageList({author:page,recipient,caseName,send,text,open
       if(direct) node.replaceWith(clone);
       else Turbo.renderStreamMessage(`<turbo-stream action="replace" target="${id}"><template>${clone.outerHTML}</template></turbo-stream>`);
     },{id,direct});
-    await page.locator(`[id="${id}"][data-replaced="true"]`).waitFor();
+    await waitForVisibility(page.locator(`[id="${id}"][data-replaced="true"]`));
   }
   async function remove(id) {
     await page.evaluate(id=>Turbo.renderStreamMessage(`<turbo-stream action="remove" target="${id}"></turbo-stream>`),id);
-    await row(id).waitFor({state:'detached'});
+    await waitForVisibility(row(id),{state:'detached'});
   }
   async function gate() {
     await page.evaluate(()=>{
@@ -57,7 +58,7 @@ export async function messageList({author:page,recipient,caseName,send,text,open
   }
   async function release() {await page.evaluate(()=>{window.__actionGates.forEach(release=>release());window.__actionGates=[];});}
   async function liveObserver() {
-    await list.locator(':scope[aria-live="polite"]').waitFor();
+    await waitForVisibility(list.locator(':scope[aria-live="polite"]'));
     await page.evaluate(()=>{
       window.__liveValues=[];
       new MutationObserver(mutations=>{
@@ -106,8 +107,8 @@ export async function messageList({author:page,recipient,caseName,send,text,open
   } else if(caseName==='the ContextMenu key opens the shared menu and Escape returns focus') {
     await focus(third);
     await row(third).evaluate(node=>node.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'ContextMenu'})));
-    await page.locator('#message-actions-menu:not([hidden])').waitFor();
-    await page.keyboard.press('Escape');await page.locator('.message[data-message-actions-open]').waitFor({state:'detached'});await focused(third);
+    await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'));
+    await page.keyboard.press('Escape');await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'detached'});await focused(third);
   } else if(caseName==='a late composer autofocus does not steal focus from a message') {
     await focus(third);
     await page.evaluate(()=>{
@@ -118,7 +119,7 @@ export async function messageList({author:page,recipient,caseName,send,text,open
     assert.notEqual(await page.evaluate(()=>document.activeElement.id),'message_markdown_source');
   } else if(caseName==='up arrow from an empty composer still edits my last message') {
     await editor.click();await editor.press('ArrowUp');
-    await page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}).waitFor();
+    await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}));
     await field(page,"Third time's a charm.");
   } else if(caseName==='up-arrow-to-edit shows an error when the actions endpoint fails') {
     await page.evaluate(()=>{
@@ -127,11 +128,11 @@ export async function messageList({author:page,recipient,caseName,send,text,open
         Promise.resolve(new Response('{}',{status:500})):originalFetch(input,init);
     });
     await editor.click();await editor.press('ArrowUp');
-    await page.locator('.flash--client[role="alert"]').filter({hasText:'temporarily unavailable'}).waitFor();
+    await waitForVisibility(page.locator('.flash--client[role="alert"]').filter({hasText:'temporarily unavailable'}));
   } else if(caseName==='forward reuses the menu-open metadata request instead of fetching again') {
     await gate();await menu(third);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
     assert.equal(await page.evaluate(()=>window.__actionFetches),1);
-    await release();await page.locator('dialog[open]').waitFor();
+    await release();await waitForVisibility(page.locator('dialog[open]'));
   } else if(caseName==='a menu opened while an action waits does not redirect the pending action') {
     await gate();await menu(second);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
     await menu(third);await release();
@@ -139,16 +140,16 @@ export async function messageList({author:page,recipient,caseName,send,text,open
     // the pending action had a chance to consume the released response.
     await page.waitForFunction(()=>window.__actionSettled===window.__actionFetches);
     await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
-    assert.equal(await page.locator('dialog[open]').count(),0);
+    await waitForVisibleCount(page.locator('dialog[open]'),0);
     assert.equal(await row(third).getAttribute('data-message-actions-open'),'');
   } else if(caseName==='the menu closes before Turbo caches the page') {
     await menu(third);await page.evaluate(()=>document.dispatchEvent(new Event('turbo:before-cache')));
-    await page.locator('.message[data-message-actions-open]').waitFor({state:'detached'});
+    await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'detached'});
     assert.equal(await row(third).getAttribute('aria-expanded'),'false');
   } else if(caseName==='the main message list is a live log') {
-    await list.locator(':scope[aria-live="polite"][aria-relevant="additions"]').waitFor();
+    await waitForVisibility(list.locator(':scope[aria-live="polite"][aria-relevant="additions"]'));
   } else if(caseName==='paginated history stays quiet past the insert, then the live region comes back') {
-    assert.equal(await list.locator('.message').filter({hasText:/^History post 0$/}).count(),0);
+    await waitForVisibleCount(list.locator('.message').filter({hasText:/^History post 0$/}),0);
     await page.evaluate(()=>{
       window.__liveTimeline=[];window.__liveT0=performance.now();
       const list=document.querySelector('.messages[role="log"]');
@@ -174,11 +175,11 @@ export async function messageList({author:page,recipient,caseName,send,text,open
     assert.equal(new Set(history).size,history.length,'pagination never duplicates delivered rows');
   } else if(caseName==='an edit replacement is not announced as an addition') {
     await liveObserver();await openEdit(page,row(third));await send(page,'Edited quietly');await text(recipient,'Edited quietly');
-    await list.locator(':scope[aria-live="polite"]:not([aria-busy])').waitFor();
+    await waitForVisibility(list.locator(':scope[aria-live="polite"]:not([aria-busy])'));
     assert.ok((await page.evaluate(()=>window.__liveValues)).includes('off'));
   } else if(caseName==='an own message is not re-announced when its broadcast replaces the pending copy') {
     await liveObserver();await send(page,'Announce me once');await text(recipient,'Announce me once');
-    await list.locator(':scope[aria-live="polite"]:not([aria-busy])').waitFor();
+    await waitForVisibility(list.locator(':scope[aria-live="polite"]:not([aria-busy])'));
     assert.ok((await page.evaluate(()=>window.__liveValues)).includes('off'));
   } else throw new Error(`unimplemented message-list case ${caseName}`);
 }

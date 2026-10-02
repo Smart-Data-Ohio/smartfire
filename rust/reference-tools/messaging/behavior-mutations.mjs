@@ -84,7 +84,11 @@ const missingKeyword=keyword=>['models/code_highlighter-','span.className = "cod
 const reviewMutations=new Map([
   ['search results highlight code on initial load and after returning to the channel',new Map([['missing-const',missingKeyword('const')]])],
   ['editing a code block replaces its language colors and copied source',new Map([['missing-const',missingKeyword('const')],['missing-def',missingKeyword('def')]])],
-  ['opens message actions from context menu and keyboard, and cancels a moving long press',new Map([['hidden-clapping',['messages-','.message__quick-reaction {','.message__quick-reaction[title="Clapping"] { display: none !important; }\n.message__quick-reaction {']]])],
+  ['opens message actions from context menu and keyboard, and cancels a moving long press',new Map([
+    ['hidden-clapping',['messages-','.message__quick-reaction {','.message__quick-reaction[title="Clapping"] { display: none !important; }\n.message__quick-reaction {']],
+    ['transparent-clapping',['messages-','.message__quick-reaction {','.message__quick-reaction[title="Clapping"] { opacity: 0 !important; }\n.message__quick-reaction {']],
+    ['transparent-reaction-ancestor',['messages-','.message__quick-reaction {','.message__quick-reactions { opacity: 0 !important; }\n.message__quick-reaction {']],
+  ])],
   ['quick-react creates a boost from the toolbar',new Map([['delayed-boost-write',['boost-delay-write']]])],
 ]);
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {

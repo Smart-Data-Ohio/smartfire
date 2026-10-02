@@ -18,6 +18,17 @@ the corresponding original delivery/highlight budget; they do not defer the
 author's active-reaction assertion. Geometry settling is bounded by the 2-second
 default, never an unbounded animation promise.
 
+Visibility waits and counts use the shared `behavior-visibility.mjs` helper,
+which calls the unmodified Selenium 4.35.0 `isDisplayed` atom installed in the
+pinned reference image with `ignoreOpacity=false`. The harness verifies that
+the committed atom is byte-identical to that image's gem before running cases.
+This includes effective opacity through ancestors, unlike Playwright's
+visibility predicate. Selector assertions across every messaging behaviour
+module use the helper; explicit DOM-presence and `visible: :all` security
+assertions retain their original semantics. Geometry probes retain the
+original Ruby tests' JavaScript rectangle filters. Assertion deadlines are
+unchanged, including the two-second visible-reaction count.
+
 | Pinned file / exact declaration | Explicit waits; all other assertions use 2 seconds or are immediate |
 | --- | --- |
 | message_interactions: opens message actions from context menu and keyboard, and cancels a moving long press | Menu 10 s; eight **visible** reactions 2 s; focus return 2 s; hold 700 ms. |
@@ -52,8 +63,10 @@ default, never an unbounded animation promise.
 | code_highlighting: editing a code block replaces its language colors and copied source | Highlighted **const** before edit and **def** after edit, each one 20 s wait; menu 10 s; source/copy/old language 2 s. |
 
 The served review mutants remove only const/def token classes, hide only the
-Clapping quick reaction, or defer the actual boost POST for 11 seconds before
-forwarding it. The original 30 mutants remain. Discrimination runs require
+Clapping quick reaction, set Clapping's opacity to zero, set its reaction
+container's opacity to zero, or defer the actual boost POST for 11 seconds
+before forwarding it. The original 30 mutants remain, with seven additional
+review variants. Discrimination runs require
 valid startup, an applied mutation, no actual network failures, and an assertion
 failure on **both** applications. The diagnostic `--mutant` without `--negative`
 records escape probes and cannot earn parity credit.

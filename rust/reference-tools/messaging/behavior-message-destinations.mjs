@@ -1,6 +1,7 @@
 // Mapped navigation/notification assertions from message_list_a11y_test.rb,
 // pinned d7c7de92. Geometry and animation timing are behaviour, never pixels.
 import assert from 'node:assert/strict';
+import {waitForVisibility,waitForVisibleCount} from './behavior-visibility.mjs';
 export const destinationCases=[
   'search results keep their menus and focusability',
   'the message-list top padding does not apply to search results',
@@ -14,14 +15,14 @@ export const destinationCases=[
 export async function messageDestinations({author:page,recipient,base,caseName,fixture}) {
   async function visit(path) {assert.equal((await page.goto(base+path)).status(),200);}
   async function menu(message) {
-    await message.locator(':scope[aria-haspopup="menu"]').waitFor();
+    await waitForVisibility(message.locator(':scope[aria-haspopup="menu"]'));
     await message.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
-    await page.locator('#message-actions-menu:not([hidden])').waitFor();
+    await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'));
     assert.equal(await message.getAttribute('data-message-actions-open'),'');
   }
   async function close() {
     await page.keyboard.press('Escape');
-    await page.locator('.message[data-message-actions-open]').waitFor({state:'detached'});
+    await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'detached'});
   }
   async function longPress(message) {
     // Actual browser touch input, with the pinned Rails helper's 700ms hold.
@@ -32,14 +33,14 @@ export async function messageDestinations({author:page,recipient,base,caseName,f
     await page.waitForTimeout(700);
     await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     await touch.detach();
-    await page.locator('#message-actions-menu:not([hidden])').waitFor();
+    await waitForVisibility(page.locator('#message-actions-menu:not([hidden])'));
     assert.equal(await message.getAttribute('data-message-actions-open'),'');
   }
   if(caseName===destinationCases[0]) {
     await visit('/searches?q=searchable');
     const result=page.locator('#search-results .message').filter({hasText:'A searchable menu result'});
-    await result.waitFor();
-    await page.locator('#search-results .message[tabindex="0"][aria-haspopup="menu"]').waitFor();
+    await waitForVisibility(result);
+    await waitForVisibility(page.locator('#search-results .message[tabindex="0"][aria-haspopup="menu"]'));
     await menu(result);await close();await longPress(result);
   } else if(caseName===destinationCases[1]) {
     const rules=await page.evaluate(()=>{
@@ -56,25 +57,25 @@ export async function messageDestinations({author:page,recipient,base,caseName,f
     assert.ok(rules.some(([selector])=>selector.includes(':not(.searches__results)')));
   } else if(caseName===destinationCases[2]) {
     await visit(`/rooms/654632876/threads/${fixture.menu_thread_id}`);
-    await page.waitForFunction(()=>document.querySelectorAll('main.thread .message').length===2);
-    await page.locator('main.thread .message[tabindex="0"][aria-haspopup="menu"]').waitFor();
+    await waitForVisibleCount(page.locator('main.thread .message'),2);
+    await waitForVisibility(page.locator('main.thread .message[tabindex="0"][aria-haspopup="menu"]'));
     await menu(page.locator('.message[data-message-id="607264868"]'));await close();
     const reply=page.locator(`.message[data-message-id="${fixture.menu_reply_id}"]`);
     await menu(reply);await close();await longPress(reply);
   } else if(caseName===destinationCases[3]) {
     await visit('/rooms/654632876/messages/607264868');
     const message=page.locator('.message').filter({hasText:"Third time's a charm."});
-    await message.waitFor();
-    await message.locator(':scope[tabindex="0"][aria-haspopup="menu"]').waitFor();
+    await waitForVisibility(message);
+    await waitForVisibility(message.locator(':scope[tabindex="0"][aria-haspopup="menu"]'));
     await menu(message);
   } else if(caseName===destinationCases[4]) {
     assert.equal(await page.locator('meta[name="viewport"]').getAttribute('content'),'width=device-width, initial-scale=1, interactive-widget=resizes-content');
   } else if(caseName===destinationCases[5]) {
     for(const browser of [page,recipient]) {
       assert.equal((await browser.goto(base+'/users/712064548')).status(),200);
-      await browser.locator('button[aria-label="Message Kevin"]').waitFor();
-      assert.equal(await browser.locator('img[aria-label]').count(),0);
-      if(browser!==page) await browser.getByRole('button',{name:'Ban Kevin',exact:true}).waitFor();
+      await waitForVisibility(browser.locator('button[aria-label="Message Kevin"]'));
+      await waitForVisibleCount(browser.locator('img[aria-label]'),0);
+      if(browser!==page) await waitForVisibility(browser.getByRole('button',{name:'Ban Kevin',exact:true}));
     }
   } else if(caseName===destinationCases[6]||caseName===destinationCases[7]) {
     await page.emulateMedia({reducedMotion:'reduce'});
@@ -82,13 +83,13 @@ export async function messageDestinations({author:page,recipient,base,caseName,f
     const bio=page.locator('#user_bio');
     await bio.fill(caseName===destinationCases[6]?'Reduced motion flash check':'Reduced motion dismiss check');
     await bio.locator('xpath=ancestor::form').getByRole('button',{name:'Save changes',exact:true}).click();
-    await page.locator('.flash').waitFor();
+    await waitForVisibility(page.locator('.flash'));
     if(caseName===destinationCases[6]) {
       assert.deepEqual(await page.locator('.flash__inner').evaluate(node=>node.getAnimations().map(animation=>animation.effect.getTiming().duration)),[5000]);
       await page.locator('.flash__inner').evaluate(node=>node.getAnimations()[0].currentTime=4000);
-      await page.waitForTimeout(300);assert.equal(await page.locator('.flash').count(),1);
+      await page.waitForTimeout(300);await waitForVisibleCount(page.locator('.flash'),1);
       await page.locator('.flash__inner').evaluate(node=>node.getAnimations()[0].currentTime=5100);
     } else await page.locator('.flash__dismiss').click();
-    await page.locator('.flash').waitFor({state:'detached'});
+    await waitForVisibility(page.locator('.flash'),{state:'detached'});
   } else throw new Error(`unimplemented message destination ${caseName}`);
 }
