@@ -27,7 +27,9 @@ export async function attachMenu({author,recipient,caseName}) {
   } else if(caseName==='+ opens the file picker directly without Drive') {
     await recorder();await waitForVisibleCount(menu,0);await actOnVisible(button,'click',{});assert.equal(await page.evaluate(()=>window.filePickerClicks),1);
   } else if(caseName==='arrow keys move between items and Escape closes back onto +') {
-    await actOnVisible(button,'focus',{});await actOnVisible(button,'press',{},['ArrowDown']);await expanded(true);
+    await button.evaluate(node=>node.focus());
+    await page.waitForFunction(()=>document.activeElement===document.querySelector('button.composer__attachment-btn'));
+    await page.keyboard.press('ArrowDown');await expanded(true);
     await page.waitForFunction(()=>document.activeElement===document.querySelector('.attach-menu [role="menuitem"]:nth-child(1)'));
     await page.keyboard.press('ArrowDown');await page.waitForFunction(()=>document.activeElement===document.querySelector('.attach-menu [role="menuitem"]:nth-child(2)'));
     await page.keyboard.press('ArrowUp');await page.waitForFunction(()=>document.activeElement===document.querySelector('.attach-menu [role="menuitem"]:nth-child(1)'));

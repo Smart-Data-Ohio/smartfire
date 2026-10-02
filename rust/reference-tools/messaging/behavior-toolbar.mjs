@@ -25,7 +25,7 @@ export async function toolbar({author:page,recipient,caseName}) {
     await waitForVisibleCount(page.locator('.message__toolbar'),0);
     await hover();
     for(const name of ['React with thumbs up','Add reaction','Reply to message','Open thread','More message actions']) await waitForVisibility(row.getByRole('button',{name,exact:true}));
-    assert.equal(await row.getByRole('button',{name:'More message actions',exact:true}).getAttribute('aria-haspopup'),'menu');
+    await waitForVisibleAttribute(row.getByRole('button',{name:'More message actions',exact:true}),'aria-haspopup','menu');
   } else if(caseName.startsWith('quick-react')) {
     await hover();await actOnVisible(row.getByRole('button',{name:'React with thumbs up',exact:true}),'click',{});await reacted('👍');
   } else if(caseName.startsWith('reply and thread')) {
@@ -48,7 +48,7 @@ export async function toolbar({author:page,recipient,caseName}) {
     await actOnVisible(search,'fill',{},['fire']);await waitForVisibility(option('Fire'),{timeout:DELIVERY_WAIT});await actOnVisible(option('Fire'),'click',{});await waitForVisibility(panel,{state:'hidden'});await reacted('🔥');
   } else if(caseName.startsWith('the picker shows category')) {
     await picker();await waitForVisibleCount(panel.getByRole('tab'),11);
-    assert.notEqual(await page.locator('#emoji-picker-tab-recent').getAttribute('aria-selected'),'true');
+    await waitForVisibility(page.locator('#emoji-picker-tab-recent[aria-selected="true"]'),{state:'hidden'});
     await actOnVisible(page.locator('#emoji-picker-tab-people'),'click',{});await tab('people');await waitForVisibility(option('Waving hand'));
     await waitForVisibleCount(option('Grinning face'),0);await actOnVisible(page.locator('#emoji-picker-tab-flags'),'click');await tab('flags');await waitForVisibility(option('Chequered flag'),{timeout:DELIVERY_WAIT});
   } else if(caseName.startsWith('the picker loads')) {

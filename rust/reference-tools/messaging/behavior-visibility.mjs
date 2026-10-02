@@ -45,8 +45,8 @@ async function waitForMatches(locator,accept,options,description,condition=null)
     const indices=await visibleIndices(locator,condition);count=indices.length;
     if(accept(count)&&(timeout===0||Date.now()-started<=timeout)) return indices;
     const remaining=timeout-(Date.now()-started);
-    if(timeout!==0&&remaining<=0) break;
-    await new Promise(resolve=>setTimeout(resolve,timeout===0?10:Math.min(10,remaining)));
+    if(remaining<=0) break;
+    await new Promise(resolve=>setTimeout(resolve,Math.min(10,remaining)));
   } while(true);
   throw new errors.TimeoutError(`Selenium visibility ${description} timed out after ${timeout}ms: ${locator}; last visible count: ${count}`);
 }

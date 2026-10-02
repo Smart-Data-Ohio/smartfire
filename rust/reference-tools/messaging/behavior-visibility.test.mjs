@@ -173,3 +173,15 @@ test('all element actions require Selenium visibility, including opacity through
     assert.equal(await page.locator('input').isChecked(),true);
   } finally {await browser.close();}
 });
+
+test('wait zero is one snapshot, not an unbounded assertion',async()=>{
+  const browser=await chromium.launch({headless:true});
+  try {
+    const context=await browser.newContext();await installVisibility(context);
+    const page=await context.newPage();await page.goto('data:text/html,<button style="opacity:0">hidden</button>');
+    const pending=waitForVisibility(page.locator('button'),{timeout:0});pending.catch(()=>{});
+    await assert.rejects(Promise.race([pending,new Promise((_,reject)=>setTimeout(()=>reject(new Error('zero wait did not return a snapshot')),250))]),{name:'TimeoutError'});
+    await waitForVisibleCount(page.locator('button'),0,{timeout:0});
+    await waitForVisibility(page.locator('button'),{state:'attached',timeout:100});
+  } finally {await browser.close();}
+});

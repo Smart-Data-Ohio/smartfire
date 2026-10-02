@@ -2,7 +2,7 @@
 // Synthetic streams/fetch gates below are the original deterministic regressions;
 // delivery/edit/pagination also exercise the actual server on each application.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount,actOnVisible,filterVisibleText,waitForVisibleAttribute} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,actOnVisible,filterVisibleText,waitForVisibleAttribute,visibleMatch} from './behavior-visibility.mjs';
 export async function messageList({author:page,recipient,caseName,send,text,openEdit,field}) {
   const list=page.locator('.messages[role="log"]').first();
   if(caseName==='the main message list is a live log') {
@@ -22,7 +22,11 @@ export async function messageList({author:page,recipient,caseName,send,text,open
       'the original newest seed message is the initial tab stop');
   }
   const row=id=>page.locator(`[id="${id}"]`);
-  async function focus(id) {await actOnVisible(row(id),'focus',{});await focused(id);}
+  async function focus(id,lookup=true) {
+    if(lookup) await visibleMatch(row(id));
+    // The original uses execute_script for focus; only its find is scoped.
+    await row(id).evaluate(node=>node.focus());await focused(id);
+  }
   async function focused(id,timeout=2000) {await page.waitForFunction(id=>document.activeElement?.id===id,id,{timeout});}
   async function tabStop(id) {
     await page.waitForFunction(id=>{
@@ -73,12 +77,12 @@ export async function messageList({author:page,recipient,caseName,send,text,open
     });
   }
   if(caseName==='the message list is a single tab stop with a roving tabindex') {
-    await tabStop(third);await focus(third);await page.keyboard.press('Tab');
+    await tabStop(third);await focus(third,false);await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(()=>document.activeElement.classList.contains('avatar')),true);
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'React with thumbs up');
   } else if(caseName==='arrow keys move between messages') {
-    await focus(first);await page.keyboard.press('ArrowDown');await focused(second);
+    await focus(first,false);await page.keyboard.press('ArrowDown');await focused(second);
     await page.keyboard.press('ArrowDown');await focused(ids[2]);
     await page.keyboard.press('ArrowUp');await focused(second);
     await page.keyboard.press('Home');await focused(first);
@@ -151,7 +155,7 @@ export async function messageList({author:page,recipient,caseName,send,text,open
   } else if(caseName==='the menu closes before Turbo caches the page') {
     await menu(third);await page.evaluate(()=>document.dispatchEvent(new Event('turbo:before-cache')));
     await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'hidden'});
-    assert.equal(await row(third).getAttribute('aria-expanded'),'false');
+    await waitForVisibility(row(third).locator(':scope[aria-expanded="false"]'),{state:'attached'});
   } else if(caseName==='paginated history stays quiet past the insert, then the live region comes back') {
     await waitForVisibleCount(filterVisibleText(list.locator('.message'),/^History post 0$/),0);
     await page.evaluate(()=>{
