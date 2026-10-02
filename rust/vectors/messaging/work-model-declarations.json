@@ -1,0 +1,30 @@
+{
+  "reference": "d7c7de92",
+  "sources": {
+    "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519"
+  },
+  "omitted": {
+    "forbidden": true,
+    "status": "planned",
+    "owner": 712064548,
+    "event_count": 0
+  },
+  "stale": {
+    "status": "blocked",
+    "owner": null,
+    "events": [
+      [
+        773523953,
+        "work_update",
+        "in_progress",
+        "blocked"
+      ],
+      [
+        773523953,
+        "work_update",
+        "planned",
+        "in_progress"
+      ]
+    ]
+  }
+}

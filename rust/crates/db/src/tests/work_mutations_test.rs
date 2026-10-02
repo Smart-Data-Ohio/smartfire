@@ -704,3 +704,79 @@ fn work_recipients_honor_current_room_thread_and_agent_assignment_preferences() 
         );
     }
 }
+
+// WS8bm: direct-model declarations embedded in the pinned controller test :387-411.
+fn messaging_work_oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!(
+        "../../../../vectors/messaging/work-model-declarations.json"
+    ))
+    .unwrap()
+}
+
+#[test]
+fn message_controller_model_refuses_untracking_with_owner_omitted_like_rails() {
+    let t = channel_thread_test::frozen();
+    let thread = t.write(|tx| {
+        ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id: id("designers"),
+                creator_id: id("jz"),
+                name: Some("Omitted owner model".into()),
+                work_status: Some("planned".into()),
+                work_owner_id: Some(id("kevin")),
+                ..Default::default()
+            },
+        )
+    });
+    let refused = matches!(
+        work(&t, &thread, "kevin", WorkChanges { status: Some(None), ..Default::default() }),
+        Err(Error::Other(message)) if message == WORK_UPDATE_FORBIDDEN
+    );
+    let actual = t.read(|conn| {
+        let saved = ChannelThread::find(conn, thread.id)?;
+        Ok(json!({"forbidden": refused, "status": saved.work_status,
+            "owner": saved.work_owner_id, "event_count": WorkThreadEvent::for_thread(conn, thread.id)?.len()}))
+    });
+    assert_eq!(actual, messaging_work_oracle()["omitted"]);
+}
+
+#[test]
+fn message_controller_separate_stale_work_changes_match_rails_history() {
+    let t = channel_thread_test::frozen();
+    let thread = t.write(|tx| {
+        ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id: id("designers"),
+                creator_id: id("jz"),
+                name: Some("Independent stale model".into()),
+                work_status: Some("planned".into()),
+                ..Default::default()
+            },
+        )
+    });
+    let first = t.read(|conn| ChannelThread::find(conn, thread.id));
+    let second = t.read(|conn| ChannelThread::find(conn, thread.id));
+    for (stale, status) in [(&first, "in_progress"), (&second, "blocked")] {
+        work(
+            &t,
+            stale,
+            "jz",
+            WorkChanges {
+                status: Some(Some(status.into())),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    }
+    let actual = t.read(|conn| {
+        let saved = ChannelThread::find(conn, thread.id)?;
+        let history = WorkThreadEvent::for_thread(conn, thread.id)?;
+        let events = history.iter().map(|event| json!([
+            event.actor_id, event.event_type, event.from_status, event.to_status
+        ])).collect::<Vec<_>>();
+        Ok(json!({"status": saved.work_status, "owner": saved.work_owner_id, "events": events}))
+    });
+    assert_eq!(actual, messaging_work_oracle()["stale"]);
+}
