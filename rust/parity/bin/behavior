@@ -2,12 +2,34 @@
 # Run behavioral assertions against an already-running, isolated app in the pinned browser.
 set -euo pipefail
 source "$(dirname "$0")/../capture/sandbox/run.sh"
-case "${1:-}" in scheduled|slash|search-files|picker-readiness) suite=$1; shift ;; *) die "usage: behavior scheduled|slash|search-files|picker-readiness --target URL --name NAME --labels .seed/default/labels.json" ;; esac
-trap parity_cleanup EXIT
+case "${1:-}" in scheduled|slash|search-files|picker-readiness|polls|pins|pins-dst) suite=$1; shift ;; *) die "usage: behavior scheduled|slash|search-files|picker-readiness|polls|pins|pins-dst --target URL --name NAME --labels .seed/default/labels.json" ;; esac
+fixture_pid=""
+cleanup_behavior() {
+  if [[ -n "$fixture_pid" ]]; then kill "$fixture_pid" 2>/dev/null || true; wait "$fixture_pid" 2>/dev/null || true; fi
+  parity_cleanup
+}
+trap cleanup_behavior EXIT
+fixture_storage=""; instant=2026-03-02T16:00:00Z; args=()
+while (( $# )); do
+  case "$1" in
+    --fixture-storage) fixture_storage=$2; shift 2 ;;
+    --instant) instant=$2; args+=("$1" "$2"); shift 2 ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+set -- "${args[@]}"
 scratch=${PARITY_SCRATCH:-$ROOT/../.scratch/behavior}
 mkdir -p "$scratch"
 net_dir=$(mktemp -d "$scratch/net.XXXXXX")
 NET_DIRS+=("$net_dir")
+if [[ -n "$fixture_storage" ]]; then
+  # Use the owner's short cache path when fixture sockets are requested.
+  # Linux Unix socket names cannot exceed 108 bytes.
+  (( ${#net_dir} + 14 < 108 )) || die "set PARITY_SCRATCH to a short owned cache path for fixture sockets"
+  node "$ROOT/parity/behavior/fixture-server.mjs" "$net_dir/fixtures.sock" "$fixture_storage" "$instant" &
+  fixture_pid=$!
+  wait_for_socket "$net_dir/fixtures.sock"
+fi
 image=$(docker_image)
 name=${PARITY_NAMESPACE:-campfire}-behavior-$$
 CAPTURE_CONTAINERS+=("$name" "$name-forward")

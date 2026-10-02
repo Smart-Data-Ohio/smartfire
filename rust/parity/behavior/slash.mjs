@@ -1,6 +1,6 @@
-// The 20 non-agent/non-status cases from test/system/slash_commands_test.rb.
-// Remaining cases need live registration/persisted-status setup and are inventoried separately.
+// All 26 test/system/slash_commands_test.rb cases; agent setup uses validated Rails fixtures.
 import assert from "node:assert/strict"
+import { registerLiveCommand } from "./fixture-client.mjs"
 import { runSuite, visible, expect } from "./runtime.mjs"
 
 const editor = page => page.getByLabel("Write a message", { exact: true })
@@ -37,7 +37,7 @@ async function recordFetches(page) {
   })
 }
 
-const cases = () => [
+const cases = ({ labels }) => [
   ["typing slash opens the command picker with combobox semantics", async page => {
     await editor(page).fill("/")
     await visible(option(page, "/poll"))
@@ -114,6 +114,24 @@ const cases = () => [
     await editor(page).press("Enter")
     await expect(editor(page)).toHaveValue("@[Kevin] ")
   }],
+  ["the picker lists registered agent commands", async page => {
+    await editor(page).fill("/dep")
+    await visible(option(page, "/deploy"))
+    await expect(option(page, "/deploy")).toContainText("Bender Bot")
+  }],
+  ["agent commands that take arguments insert and wait", async (page, { db }) => {
+    assert(db, "--database required to observe agent events")
+    const count = () => db.prepare("SELECT COUNT(*) AS n FROM agent_events WHERE agent_id=?").get(labels["agents.bender"]).n
+    const before = count()
+    await selectByEnter(page, "/dep")
+    await expect(editor(page)).toHaveValue("/deploy ")
+    assert.equal(count(), before, "picking an argument command must create no agent event")
+  }],
+  ["agent commands without arguments run immediately when picked", async page => {
+    await selectByEnter(page, "/ship")
+    await visible(feedback(page).filter({ hasText: "Sent to Bender Bot" }))
+    await emptyEditor(page)
+  }],
   ["shrug posts through the picker", async page => {
     await selectByEnter(page, "/shrug")
     await expect(editor(page)).toHaveValue("/shrug ")
@@ -171,6 +189,18 @@ const cases = () => [
   ["double slash escapes a known command", async page => {
     await withNewMessage(page, () => submit(page, "//poll takes no vote"), "/poll takes no vote")
   }],
+  ["a command registered after page load still runs", async (page, { db }) => {
+    assert(db, "--database required to observe registration and persisted invocation")
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM agent_slash_commands WHERE room_id=? AND name='later'").get(labels["rooms.designers"]).n, 0)
+    await editor(page).fill("/later staging")
+    await registerLiveCommand()
+    await page.getByRole("button", { name: "Send Message", exact: true }).click()
+    await visible(feedback(page).filter({ hasText: "Sent to Bender Bot" }))
+    await emptyEditor(page)
+    await expect(page.locator(".message__body").filter({ hasText: "later staging" })).toHaveCount(0)
+    const event = db.prepare("SELECT metadata FROM agent_events WHERE agent_id=? AND event_type='slash_command' ORDER BY id DESC LIMIT 1").get(labels["agents.bender"])
+    assert.equal(JSON.parse(event.metadata).arguments, "staging")
+  }],
   ["me renders as an action line", async page => {
     await withNewMessage(page, () => submit(page, "/me is reviewing the deploy"),
       "is reviewing the deploy", ".message--action[data-message-id]")
@@ -184,6 +214,24 @@ const cases = () => [
     await submit(page, "/event Launch party")
     await visible(page.locator("h1").filter({ hasText: "Schedule an event" }))
     await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Launch party")
+  }],
+  ["agent commands respond ephemerally until the agent replies", async (page, { db }) => {
+    assert(db, "--database required to observe persisted command arguments")
+    const last = () => db.prepare("SELECT id, metadata FROM agent_events WHERE agent_id=? AND event_type='slash_command' ORDER BY id DESC LIMIT 1").get(labels["agents.bender"])
+    const before = last()?.id ?? 0
+    await submit(page, "/deploy staging")
+    await visible(feedback(page).filter({ hasText: "Sent to Bender Bot" }))
+    await emptyEditor(page)
+    await expect(page.locator(".message__body").filter({ hasText: "deploy staging" })).toHaveCount(0)
+    const event = last()
+    assert(event && event.id > before, "submission must persist a new agent event")
+    assert.equal(JSON.parse(event.metadata).arguments, "staging")
+  }],
+  ["status sets the custom status", async (page, { db }) => {
+    assert(db, "--database required to observe persisted custom status")
+    await submit(page, "/status 🚂 On a train")
+    await visible(feedback(page).filter({ hasText: "Status set" }))
+    assert.equal(db.prepare("SELECT custom_status_emoji FROM users WHERE id=?").get(labels["users.jz"]).custom_status_emoji, "🚂")
   }],
   ["huddle reports when unconfigured", async page => {
     await submit(page, "/huddle")
