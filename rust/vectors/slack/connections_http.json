@@ -1,0 +1,1330 @@
+[
+  {
+    "name": "callback",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": "Fixture",
+      "team_domain": "fixture",
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/team.info"
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_member",
+    "role": 0,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/slack/imports",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_known",
+    "team_id": "TFIXTURE",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_reconnect",
+    "preset": true,
+    "disconnected": true,
+    "team_id": "TFIXTURE",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_unreadable_reconnect",
+    "preset": true,
+    "unreadable": true,
+    "team_id": "TFIXTURE",
+    "sequences": [],
+    "status": 500,
+    "location": null,
+    "flash": {},
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": null
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_invalid_team_info",
+    "invalid_team_info": true,
+    "sequences": [],
+    "status": 500,
+    "location": null,
+    "flash": {},
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/team.info"
+      }
+    ],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_team_info_absent",
+    "team_missing": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": "Fixture",
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/team.info"
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_team_name_fallback",
+    "blank_team_name": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": "Team fallback",
+      "team_domain": "fixture",
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/team.info"
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_wrong_team",
+    "team_id": "TOTHER",
+    "team_name": "Other",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "That Slack account is in a different workspace (Fixture). Connect with an account in Other."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TOTHER",
+      "team_name": "Other",
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_missing_scopes",
+    "scopes": "channels:history,channels:read",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Slack did not grant every required permission. Missing: groups:history, groups:read, im:history, im:read, mpim:history, mpim:read, users:read, users:read.email, team:read. Reconnect and approve them all."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_claimed",
+    "claimed": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "That Slack account is already connected to another Smartfire user."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_invalid_code",
+    "exchange_error": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Could not connect Slack. Try again."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      }
+    ],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_denied",
+    "error": "access_denied",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Slack connection was not approved."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_tampered",
+    "bad_state": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Slack connection expired. Try again."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_wrong_user",
+    "state_user": 812,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Slack connection expired. Try again."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_wrong_session",
+    "wrong_state": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Slack connection expired. Try again."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_removed",
+    "unconfigured": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "The Slack app credentials were removed. Set them up again."
+    },
+    "connection": null,
+    "workspace": null,
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_personal_return",
+    "return_to": "/slack/imports",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/slack/imports",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": "Fixture",
+      "team_domain": "fixture",
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/team.info"
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "callback_evil_return",
+    "return_to": "https://evil.test/phish",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack connected."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": "TFIXTURE",
+      "team_name": "Fixture",
+      "team_domain": "fixture",
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/oauth.v2.access",
+        "form": {
+          "client_id": "fixture-client",
+          "client_secret": "fixture-secret",
+          "code": "fixture-code",
+          "redirect_uri": "http://example.org/slack/oauth/callback"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/team.info"
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE",
+          "team_id": "TFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "disconnect",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "preset": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack disconnected."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/auth.revoke",
+        "form": {
+          "token": "fixture-user-grant"
+        }
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "disconnect_member",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "preset": true,
+    "role": 0,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/slack/imports",
+    "flash": {
+      "notice": "Slack disconnected."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/auth.revoke",
+        "form": {
+          "token": "fixture-user-grant"
+        }
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "disconnect_personal_return",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "preset": true,
+    "return_to": "/slack/imports",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/slack/imports",
+    "flash": {
+      "notice": "Slack disconnected."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/auth.revoke",
+        "form": {
+          "token": "fixture-user-grant"
+        }
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "disconnect_missing",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack disconnected."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "disconnect_unreadable",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "preset": true,
+    "unreadable": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack disconnected."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [
+      {
+        "action": "slack.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "disconnect_active",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "preset": true,
+    "active": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Finish or cancel your running Slack import first."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": 852
+  },
+  {
+    "name": "disconnect_other_active",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "preset": true,
+    "other_active": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack disconnected."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/api/auth.revoke",
+        "form": {
+          "token": "fixture-user-grant"
+        }
+      }
+    ],
+    "audit": [
+      {
+        "action": "slack.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "slack_user_id": "UFIXTURE"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "disconnect_sudo",
+    "method": "DELETE",
+    "path": "/slack/connection",
+    "preset": true,
+    "no_sudo": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/sudo/new",
+    "flash": {},
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "setup_save",
+    "method": "PATCH",
+    "path": "/account/slack_import",
+    "unconfigured": true,
+    "body": {
+      "client_id": " client ",
+      "client_secret": " secret "
+    },
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack app credentials saved."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "secret"
+    },
+    "requests": [],
+    "audit": [
+      {
+        "action": "slack.workspace.configure",
+        "actor_id": 811,
+        "target_type": "SlackWorkspace",
+        "target_id": 1,
+        "details": {
+          "client_id": "client"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "setup_keep_secret",
+    "method": "PATCH",
+    "path": "/account/slack_import",
+    "body": {
+      "client_id": "new-client",
+      "client_secret": "  "
+    },
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack app credentials saved."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": "new-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [
+      {
+        "action": "slack.workspace.configure",
+        "actor_id": 811,
+        "target_type": "SlackWorkspace",
+        "target_id": 851,
+        "details": {
+          "client_id": "new-client"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "setup_invalid",
+    "method": "PATCH",
+    "path": "/account/slack_import",
+    "unconfigured": true,
+    "body": {
+      "client_id": " ",
+      "client_secret": ""
+    },
+    "sequences": [],
+    "status": 422,
+    "location": null,
+    "flash": {},
+    "connection": null,
+    "workspace": null,
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "setup_sudo",
+    "method": "PATCH",
+    "path": "/account/slack_import",
+    "no_sudo": true,
+    "body": {
+      "client_id": "new-client",
+      "client_secret": "new-secret"
+    },
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/sudo/new",
+    "flash": {},
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "setup_forbidden",
+    "method": "PATCH",
+    "path": "/account/slack_import",
+    "role": 0,
+    "body": {
+      "client_id": "new-client",
+      "client_secret": "new-secret"
+    },
+    "sequences": [],
+    "status": 403,
+    "location": null,
+    "flash": {},
+    "connection": null,
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "remove",
+    "method": "DELETE",
+    "path": "/account/slack_import",
+    "preset": true,
+    "history": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack credentials removed."
+    },
+    "connection": null,
+    "workspace": {
+      "client_id": null,
+      "configured_by_id": null,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": null
+    },
+    "requests": [],
+    "audit": [
+      {
+        "action": "slack.workspace.remove_credentials",
+        "actor_id": 811,
+        "target_type": null,
+        "target_id": null,
+        "details": {
+          "client_id": "fixture-client"
+        }
+      }
+    ],
+    "history_connection_id": null
+  },
+  {
+    "name": "remove_active",
+    "method": "DELETE",
+    "path": "/account/slack_import",
+    "preset": true,
+    "active": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "alert": "Finish or cancel the running import first."
+    },
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": 852
+  },
+  {
+    "name": "remove_sudo",
+    "method": "DELETE",
+    "path": "/account/slack_import",
+    "preset": true,
+    "no_sudo": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/sudo/new",
+    "flash": {},
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "remove_forbidden",
+    "method": "DELETE",
+    "path": "/account/slack_import",
+    "preset": true,
+    "role": 0,
+    "sequences": [],
+    "status": 403,
+    "location": null,
+    "flash": {},
+    "connection": {
+      "slack_workspace_id": 851,
+      "user_id": 811,
+      "slack_user_id": "UFIXTURE",
+      "scopes": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read",
+      "disconnected_reason": null,
+      "access_token": "fixture-user-grant"
+    },
+    "workspace": {
+      "client_id": "fixture-client",
+      "configured_by_id": 811,
+      "team_id": null,
+      "team_name": null,
+      "team_domain": null,
+      "client_secret": "fixture-secret"
+    },
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  },
+  {
+    "name": "remove_missing",
+    "method": "DELETE",
+    "path": "/account/slack_import",
+    "unconfigured": true,
+    "sequences": [],
+    "status": 302,
+    "location": "http://example.org/account/slack_import",
+    "flash": {
+      "notice": "Slack credentials removed."
+    },
+    "connection": null,
+    "workspace": null,
+    "requests": [],
+    "audit": [],
+    "history_connection_id": null
+  }
+]

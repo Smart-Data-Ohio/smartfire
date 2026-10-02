@@ -1,0 +1,378 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "rooms": [
+    {
+      "incoming": "équipe",
+      "existing": "Équipe",
+      "preview": {
+        "action": "create",
+        "room_id": null
+      },
+      "result": {
+        "action": "create",
+        "room_id": 862,
+        "name": "équipe",
+        "created": true,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "Équipe",
+      "existing": "équipe",
+      "preview": {
+        "action": "merge",
+        "room_id": 861
+      },
+      "result": {
+        "action": "merge",
+        "room_id": 861,
+        "name": "équipe",
+        "created": false,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "Équipe",
+      "existing": "Équipe",
+      "preview": {
+        "action": "create",
+        "room_id": null
+      },
+      "result": {
+        "action": "create",
+        "room_id": 862,
+        "name": "Équipe",
+        "created": true,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "GENERAL",
+      "existing": "general",
+      "preview": {
+        "action": "merge",
+        "room_id": 861
+      },
+      "result": {
+        "action": "merge",
+        "room_id": 861,
+        "name": "general",
+        "created": false,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "general",
+      "existing": "GENERAL",
+      "preview": {
+        "action": "merge",
+        "room_id": 861
+      },
+      "result": {
+        "action": "merge",
+        "room_id": 861,
+        "name": "GENERAL",
+        "created": false,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "Σ",
+      "existing": "σ",
+      "preview": {
+        "action": "merge",
+        "room_id": 861
+      },
+      "result": {
+        "action": "merge",
+        "room_id": 861,
+        "name": "σ",
+        "created": false,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "ΟΣ",
+      "existing": "οσ",
+      "preview": {
+        "action": "merge",
+        "room_id": 861
+      },
+      "result": {
+        "action": "merge",
+        "room_id": 861,
+        "name": "οσ",
+        "created": false,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "οσ",
+      "existing": "ΟΣ",
+      "preview": {
+        "action": "create",
+        "room_id": null
+      },
+      "result": {
+        "action": "create",
+        "room_id": 862,
+        "name": "οσ",
+        "created": true,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "İ",
+      "existing": "i̇",
+      "preview": {
+        "action": "merge",
+        "room_id": 861
+      },
+      "result": {
+        "action": "merge",
+        "room_id": 861,
+        "name": "i̇",
+        "created": false,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "éQUIPE",
+      "existing": "équipe",
+      "preview": {
+        "action": "merge",
+        "room_id": 861
+      },
+      "result": {
+        "action": "merge",
+        "room_id": 861,
+        "name": "équipe",
+        "created": false,
+        "memberships": 1
+      }
+    },
+    {
+      "incoming": "ß",
+      "existing": "SS",
+      "preview": {
+        "action": "create",
+        "room_id": null
+      },
+      "result": {
+        "action": "create",
+        "room_id": 862,
+        "name": "ß",
+        "created": true,
+        "memberships": 1
+      }
+    }
+  ],
+  "emails": [
+    {
+      "incoming": "équipe@example.com",
+      "existing": "Équipe@example.com",
+      "preview": {
+        "matched": 0,
+        "placeholders": 1,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "stats": {
+        "matched": 0,
+        "placeholders": 1,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "user": {
+        "id": 813,
+        "name": "Incoming",
+        "email": "équipe@example.com",
+        "created": true
+      }
+    },
+    {
+      "incoming": "Équipe@example.com",
+      "existing": "équipe@example.com",
+      "preview": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "stats": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "user": {
+        "id": 812,
+        "name": "Existing",
+        "email": "équipe@example.com",
+        "created": false
+      }
+    },
+    {
+      "incoming": "Équipe@example.com",
+      "existing": "Équipe@example.com",
+      "preview": {
+        "matched": 0,
+        "placeholders": 1,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "error": "UNIQUE constraint failed: users.email_address",
+      "records": 0,
+      "users": 2
+    },
+    {
+      "incoming": "GENERAL@EXAMPLE.COM",
+      "existing": "general@example.com",
+      "preview": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "stats": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "user": {
+        "id": 812,
+        "name": "Existing",
+        "email": "general@example.com",
+        "created": false
+      }
+    },
+    {
+      "incoming": "ΟΣ@example.com",
+      "existing": "οσ@example.com",
+      "preview": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "stats": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "user": {
+        "id": 812,
+        "name": "Existing",
+        "email": "οσ@example.com",
+        "created": false
+      }
+    },
+    {
+      "incoming": "οσ@example.com",
+      "existing": "ΟΣ@example.com",
+      "preview": {
+        "matched": 0,
+        "placeholders": 1,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "stats": {
+        "matched": 0,
+        "placeholders": 1,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "user": {
+        "id": 813,
+        "name": "Incoming",
+        "email": "οσ@example.com",
+        "created": true
+      }
+    },
+    {
+      "incoming": "İ@example.com",
+      "existing": "i̇@example.com",
+      "preview": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "stats": {
+        "matched": 1,
+        "placeholders": 0,
+        "deactivated": 0,
+        "bots": 0,
+        "total": 1
+      },
+      "user": {
+        "id": 812,
+        "name": "Existing",
+        "email": "i̇@example.com",
+        "created": false
+      }
+    }
+  ],
+  "handles": [
+    {
+      "name": "Équipe",
+      "id": 812
+    },
+    {
+      "name": "équipe",
+      "id": 813
+    },
+    {
+      "name": "Équipe",
+      "id": 812
+    }
+  ],
+  "group": {
+    "names": [
+      "οτ",
+      "ΟΣ",
+      "οςA",
+      "ω0",
+      "ω1",
+      "ω2",
+      "ω3",
+      "ω4",
+      "ω5",
+      "ω6",
+      "ω7"
+    ],
+    "result": "οςA, ΟΣ, οτ +8"
+  },
+  "downcase": [
+    {
+      "input": "ΟΣ",
+      "output": "οσ"
+    },
+    {
+      "input": "AΣ",
+      "output": "aσ"
+    },
+    {
+      "input": "İ",
+      "output": "i̇"
+    },
+    {
+      "input": "Équipe",
+      "output": "équipe"
+    }
+  ]
+}

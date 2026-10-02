@@ -1,0 +1,410 @@
+[
+  {
+    "input": {},
+    "result": {
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "include_private": false
+    },
+    "result": {
+      "include_private": false,
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "include_private": null
+    },
+    "result": {
+      "include_private": true,
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "include_private": "0"
+    },
+    "result": {
+      "include_private": true,
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "include_private": 0
+    },
+    "result": {
+      "include_private": true,
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "conversation_ids": [
+        "C1",
+        "",
+        " ",
+        null,
+        false,
+        0,
+        "C1",
+        "G2"
+      ]
+    },
+    "result": {
+      "conversation_ids": [
+        "C1",
+        "false",
+        "0",
+        "G2"
+      ],
+      "oldest": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "conversation_ids": "C1"
+    },
+    "result": {
+      "conversation_ids": [
+        "C1"
+      ],
+      "oldest": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "conversation_ids": 42
+    },
+    "result": {
+      "conversation_ids": [
+        "42"
+      ],
+      "oldest": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "conversation_ids": {
+        "C1": "G2"
+      }
+    },
+    "result": {
+      "conversation_ids": [
+        "[\"C1\", \"G2\"]"
+      ],
+      "oldest": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "conversation_ids": [
+        [
+          "C1",
+          "G2"
+        ]
+      ]
+    },
+    "result": {
+      "conversation_ids": [
+        "[\"C1\", \"G2\"]"
+      ],
+      "oldest": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "room_targets": {
+        "C1": "861",
+        "G2": "skip"
+      },
+      "unknown": "ignored"
+    },
+    "result": {
+      "room_targets": {
+        "C1": "861",
+        "G2": "skip"
+      },
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "include_private": true
+    }
+  },
+  {
+    "input": {
+      "room_targets": [
+        "new",
+        "skip"
+      ]
+    },
+    "result": {
+      "room_targets": {},
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "include_private": true
+    }
+  },
+  {
+    "input": {
+      "room_targets": "new"
+    },
+    "result": {
+      "room_targets": {},
+      "conversation_ids": null,
+      "oldest": null,
+      "latest": null,
+      "include_private": true
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01T12:13:14Z"
+    },
+    "result": {
+      "oldest": "2026-01-01T12:13:14.000000Z",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01T12:13:14.123456789Z"
+    },
+    "result": {
+      "oldest": "2026-01-01T12:13:14.123456Z",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01T12:13:14+09:00"
+    },
+    "result": {
+      "oldest": "2026-01-01T12:13:14.000000+09:00",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "latest": "2026-01-01T12:13:14-05:30"
+    },
+    "result": {
+      "latest": "2026-01-01T12:13:14.000000-05:30",
+      "conversation_ids": null,
+      "oldest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01T12:13:14"
+    },
+    "result": {
+      "oldest": "2026-01-01T12:13:14.000000+00:00",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "20260101T121314Z"
+    },
+    "error": "Slack import oldest bound is not ISO 8601: \"20260101T121314Z\"",
+    "class": "ArgumentError"
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01T12:13:14+0900"
+    },
+    "result": {
+      "oldest": "2026-01-01T12:13:14.000000+09:00",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": " "
+    },
+    "result": {
+      "oldest": null,
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": false
+    },
+    "result": {
+      "oldest": null,
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": 0
+    },
+    "error": "Slack import oldest bound is not ISO 8601: 0",
+    "class": "ArgumentError"
+  },
+  {
+    "input": {
+      "oldest": null
+    },
+    "result": {
+      "oldest": null,
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01"
+    },
+    "error": "Slack import oldest bound is not ISO 8601: \"2026-01-01\"",
+    "class": "ArgumentError"
+  },
+  {
+    "input": {
+      "latest": "bad"
+    },
+    "error": "Slack import latest bound is not ISO 8601: \"bad\"",
+    "class": "ArgumentError"
+  },
+  {
+    "input": {
+      "oldest": []
+    },
+    "result": {
+      "oldest": null,
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": {}
+    },
+    "result": {
+      "oldest": null,
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": true
+    },
+    "error": "Slack import oldest bound is not ISO 8601: true",
+    "class": "ArgumentError"
+  },
+  {
+    "input": {
+      "oldest": "2026-02-30T00:00:00Z"
+    },
+    "result": {
+      "oldest": "2026-03-02T00:00:00.000000Z",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01T24:00:00Z"
+    },
+    "result": {
+      "oldest": "2026-01-02T00:00:00.000000Z",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01T12:13:60Z"
+    },
+    "result": {
+      "oldest": "2026-01-01T12:14:00.000000Z",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  },
+  {
+    "input": {
+      "oldest": "2026-01-01t12:13:14z"
+    },
+    "result": {
+      "oldest": "2026-01-01T12:13:14.000000Z",
+      "conversation_ids": null,
+      "latest": null,
+      "include_private": true,
+      "room_targets": {}
+    }
+  }
+]
