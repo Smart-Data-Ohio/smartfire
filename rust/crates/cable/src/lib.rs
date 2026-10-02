@@ -16,4 +16,4 @@ pub mod socket;
 pub mod turbo;
 
 pub use channel::{Channel, ChannelError, ChannelResult, EmptyChannel, Params, Subscription};
-pub use server::{Authenticate, Config, ConnectRequest, Identified, Server, ServerBuilder};
+pub use server::{Authenticate, Config, ConnectRequest, Identified, Server, ServerBuilder, WeakServer};

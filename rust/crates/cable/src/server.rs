@@ -1,7 +1,7 @@
 //! `ActionCable::Server::Base`: configuration, the channel registry, broadcasting, the heartbeat,
 //! remote disconnects and the `/cable` endpoint.
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, Weak};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use axum::extract::Request;
@@ -111,6 +111,29 @@ pub struct Server<U: Send + Sync + 'static> {
 impl<U: Send + Sync + 'static> Clone for Server<U> {
     fn clone(&self) -> Self {
         Self { inner: self.inner.clone() }
+    }
+}
+
+/// Non-owning handle for sinks whose dependencies are also owned by the server.
+pub struct WeakServer<U: Send + Sync + 'static> {
+    inner: Weak<Inner<U>>,
+}
+
+impl<U: Send + Sync + 'static> Clone for WeakServer<U> {
+    fn clone(&self) -> Self {
+        Self { inner: self.inner.clone() }
+    }
+}
+
+impl<U: Send + Sync + 'static> WeakServer<U> {
+    pub fn upgrade(&self) -> Option<Server<U>> {
+        self.inner.upgrade().map(|inner| Server { inner })
+    }
+}
+
+impl<U: Send + Sync + 'static> Server<U> {
+    pub fn downgrade(&self) -> WeakServer<U> {
+        WeakServer { inner: Arc::downgrade(&self.inner) }
     }
 }
 

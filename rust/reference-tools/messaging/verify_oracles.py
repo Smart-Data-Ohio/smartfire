@@ -7,12 +7,15 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
-SCRATCH = ROOT / ".scratch/continuation-oracles"
+SCRATCH = Path(os.environ.get("WS8BM2_ORACLE_SCRATCH", ROOT / ".scratch/continuation-oracles"))
 SCRATCH.mkdir(parents=True, exist_ok=True)
 ENV = dict(os.environ, PARITY_NAMESPACE="ws8bm2", PARITY_OWNER="ws8bm2",
            PARITY_RUNTIME="docker", PARITY_IMAGE="ws8bm2-reference:d7c7de92")
 NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links_files",
-         "reminder_push", "quote_integration", "root_cache", "panels", "date_inputs", "review_saved_race", "review_dates", "date_compact_widths", "providers", "provider_edits", "event_cards", "date_coercions", "composer", "composer_sti", "twitter_preloads", "twitter_cards", "twitter_text", "provider_callbacks", "agent_command", "user_coercions", "date_years"]
+         "reminder_push", "quote_integration", "root_cache", "panels", "date_inputs", "review_saved_race", "review_dates", "date_compact_widths", "providers", "provider_edits", "event_cards", "date_coercions", "composer", "composer_sti", "twitter_preloads", "twitter_cards", "twitter_text", "provider_callbacks", "agent_command", "user_coercions", "date_years",
+         "ws12_consumers", "provider_batch", "private_provider_pages", "search_headers",
+         "older_provider_callbacks", "bounded_provider_callbacks", "mapped_provider_callbacks",
+         "older_owner_callbacks"]
 for name in NAMES:
     storage = Path(tempfile.mkdtemp(prefix=f"{name}-", dir=SCRATCH))
     shutil.copytree(ROOT / "rust/parity/.seed/default", storage, dirs_exist_ok=True)
