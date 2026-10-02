@@ -38,7 +38,7 @@ tool.call("get_context", { message_id: [1996002000], thread_id: thread }, "conte
 tool.call("read_messages", { room_id: [room], before: [1996001002], after: [1996001000], limit: 2 }, "history_root_array_ids")
 tool.call("read_messages", { thread_id: [thread], before: [1996002002], after: [1996002000], limit: 2 }, "history_thread_array_ids")
 [[thread], [0, thread], [[thread]], [], [0], { id: thread }].each_with_index do |value, i|
-  tool.call("get_work", { work_id: value }, "work_array_ids_#{i}")
+  tool.call("read_messages", { thread_id: value, limit: 2 }, "history_thread_id_shape_#{i}")
 end
 tool.call("list_board_posts", { room_id: [room] }, "board_array_id", { board: true })
 travel_to Time.utc(2026, 3, 2, 16) do
