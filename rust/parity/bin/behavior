@@ -2,7 +2,7 @@
 # Run behavioral assertions against an already-running, isolated app in the pinned browser.
 set -euo pipefail
 source "$(dirname "$0")/../capture/sandbox/run.sh"
-case "${1:-}" in scheduled|slash|search-files|picker-readiness|polls|pins|pins-dst) suite=$1; shift ;; *) die "usage: behavior scheduled|slash|search-files|picker-readiness|polls|pins|pins-dst --target URL --name NAME --labels .seed/default/labels.json" ;; esac
+case "${1:-}" in scheduled|slash|search-files|picker-readiness|files-readiness|polls|pins|pins-dst) suite=$1; shift ;; *) die "usage: behavior scheduled|slash|search-files|picker-readiness|files-readiness|polls|pins|pins-dst --target URL --name NAME --labels .seed/default/labels.json" ;; esac
 fixture_pid=""
 cleanup_behavior() {
   if [[ -n "$fixture_pid" ]]; then kill "$fixture_pid" 2>/dev/null || true; wait "$fixture_pid" 2>/dev/null || true; fi

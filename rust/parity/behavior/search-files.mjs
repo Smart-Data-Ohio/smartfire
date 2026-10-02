@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises"
 import { runSuite, visible, expect } from "./runtime.mjs"
 import { createMessage } from "./messages.mjs"
+import { searchUploads } from "./file-search.mjs"
 import { DEFAULT_ORIGIN } from "../capture/proxy.ts"
 
 const cases = ({ room, labels }) => [
@@ -49,9 +50,7 @@ const cases = ({ room, labels }) => [
     await page.getByRole("link", { name: "Show files", exact: true }).click()
     await visible(page.locator(".room-files__name").filter({ hasText: "system-cover.png" }), 10_000)
     await visible(page.locator(".room-files__drive-link").filter({ hasText: "Drive file" }).first())
-    await page.getByLabel("Search by filename", { exact: true }).fill("cover")
-    await page.getByRole("button", { name: "Search", exact: true }).click()
-    await visible(page.locator(".room-files__name").filter({ hasText: "system-cover.png" }), 10_000)
+    await searchUploads(page, "cover", "system-cover.png")
     await page.getByRole("link", { name: "Images", exact: true }).click()
     await expect(page.locator(".room-files__name")).toHaveCount(1, { timeout: 10_000 })
     await page.getByRole("link", { name: "Videos", exact: true }).click()

@@ -119,3 +119,16 @@ With `--legacy-setup`, it fills before releasing the module: both Rails and Rust
 at the unchanged 2,000 ms picker assertion with no autocomplete request. Without that
 flag, it releases the module, waits for controller readiness and fills: both pass. This
 regression changes no application assets and does not retry or lengthen the picker wait.
+
+Files search waits for the response's Images link to carry the submitted filename before
+clicking it. The upload is already present before search, so its visibility alone cannot
+establish that Turbo rendered the response. The existing ten-second search assertion bound
+is retained, as are the filename, Images-count and Videos-empty assertions.
+
+`files-readiness` fetches and holds the actual filename-search response. It verifies that
+the app returned one upload and a correctly filtered Images link. With `--legacy-setup`,
+the old assertion succeeds against the pre-submit DOM, then clicks the old link without
+a filename: both apps fail the unchanged ten-second count assertion. Without that flag,
+the shared search helper must remain pending while the response is held. Releasing the
+response lets it render; Images then carries the filename and both apps pass. The gate
+modifies no response bytes and uses explicit events, not a delay or a retry.
