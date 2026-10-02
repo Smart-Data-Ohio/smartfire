@@ -78,8 +78,21 @@ const mutations=new Map([
   ...['message update preserves the input state','boost by another user preserves the input state'].map(name=>[name,['controllers/messages_controller-','connect() {','connect() { document.addEventListener("turbo:before-stream-render", () => { for (const input of document.querySelectorAll("input[name=\\\"boost[content]\\\"]")) input.value = ""; });']]),
 ]);
 export const mutationNames=[...mutations.keys()];
-export async function installMutation(page,caseName,probe) {
-  const mutation=mutations.get(caseName);
+// Supplement the original one-per-case mutants with the review's escaped
+// defects. Keep source text intact while removing only its keyword styling.
+const missingKeyword=keyword=>['models/code_highlighter-','span.className = "code-token"',`span.className = token.content.trim() === "${keyword}" ? "missing-keyword-token" : "code-token"`];
+const reviewMutations=new Map([
+  ['search results highlight code on initial load and after returning to the channel',new Map([['missing-const',missingKeyword('const')]])],
+  ['editing a code block replaces its language colors and copied source',new Map([['missing-const',missingKeyword('const')],['missing-def',missingKeyword('def')]])],
+  ['opens message actions from context menu and keyboard, and cancels a moving long press',new Map([['hidden-clapping',['messages-','.message__quick-reaction {','.message__quick-reaction[title="Clapping"] { display: none !important; }\n.message__quick-reaction {']]])],
+  ['quick-react creates a boost from the toolbar',new Map([['delayed-boost-write',['boost-delay-write']]])],
+]);
+export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
+  const variants=['default',...(reviewMutations.get(caseName)?.keys()||[])];
+  return selected?variants.filter(name=>name===selected):variants;
+}
+export async function installMutation(page,caseName,probe,variant='default') {
+  const mutation=variant==='default'?mutations.get(caseName):reviewMutations.get(caseName)?.get(variant);
   assert.ok(mutation,`no discrimination mutant for ${caseName}`);
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());
@@ -94,9 +107,20 @@ export async function installMutation(page,caseName,probe) {
     const profile=asset==='profile-button-response'&&url.pathname==='/users/712064548';
     const tombstone=asset==='reply-tombstone-response'&&url.pathname.startsWith('/rooms/')&&url.pathname.includes('/messages/')&&request.method()==='DELETE';
     const boost=asset==='boost-create-response'&&/\/messages\/\d+\/boosts$/.test(url.pathname)&&request.method()==='POST';
+    const delayedBoost=asset==='boost-delay-write'&&/\/messages\/\d+\/boosts$/.test(url.pathname)&&request.method()==='POST';
     const boostDelete=asset==='boost-delete-response'&&/\/messages\/\d+\/boosts\/\d+$/.test(url.pathname)&&(request.method()==='DELETE'||request.postData()?.includes('_method=delete'));
     const githubThread=asset==='github-thread-response'&&/^\/rooms\/654632876\/threads\/\d+$/.test(url.pathname)&&request.method()==='GET';
-    if(!refresh&&!mention&&!search&&!forward&&!profile&&!tombstone&&!boost&&!boostDelete&&!githubThread&&!url.pathname.includes('/assets/'+asset)) return route.continue();
+    if(!refresh&&!mention&&!search&&!forward&&!profile&&!tombstone&&!boost&&!delayedBoost&&!boostDelete&&!githubThread&&!url.pathname.includes('/assets/'+asset)) return route.continue();
+    if(delayedBoost) {
+      // Hold the request before forwarding: neither its write nor its Cable
+      // delivery can happen during the original ten-second assertion budget.
+      probe.applied++;probe.delayedWriteStarted=Date.now();
+      await new Promise(resolve=>setTimeout(resolve,11000));
+      if(page.isClosed()) return;
+      const response=await route.fetch();
+      probe.delayedWriteCompleted=true;
+      return route.fulfill({response});
+    }
     // Reject the request before forwarding it: a deliberately failed write
     // cannot secretly reach the real app and then pass through its Cable frame.
     if(forward||tombstone) {probe.applied++;return route.fulfill({status:422,contentType:'application/json',body:'{"error":"injected failed write"}'});}

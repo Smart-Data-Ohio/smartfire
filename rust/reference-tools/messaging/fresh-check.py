@@ -28,7 +28,7 @@ env = dict(os.environ, CI="1", TMPDIR=str(clone / ".scratch"), CARGO_TARGET_DIR=
 
 revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=clone, text=True).strip()
 print(f"WS8bm fresh checkout: {revision}; no pre-existing scratch or Cargo target; {clone}", flush=True)
-print("WS8bm fresh concurrency: eight test threads; two build jobs; no timing threshold changes", flush=True)
+print("WS8bm fresh concurrency: eight test threads; two build jobs; native timing unchanged; audited browser deadlines match Rails", flush=True)
 if not options.native:
     # Docker's ancestry does not include Codex. Always claim the same host flock slots
     # instead of relying on the host wrapper's ancestry detection inside the container.

@@ -359,7 +359,7 @@
         {
           "name": "a duplicate delivery does not replace the message while its actions are open",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_interactions: exact pinned declaration, scoped real Rails/Rust browser controls and saved-row assertions passed from committed fresh source clone 0677829e154fccba16307159f052c65c432a3329; applied served mutant rejected after case readiness with no actual network failure; controlled boundaries and raw summaries in ws8bm-report.md; no pixels; browser injects mounted-row Turbo markup to test the render guard; it does not verify server-originated redelivery (the original calls message.broadcast_create)"
         },
         {
           "name": "keeps newer typing through an asynchronous edit and leaves failures in edit mode",

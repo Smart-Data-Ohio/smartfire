@@ -1,12 +1,13 @@
 // Behaviour equivalents of message_interactions, message_toolbar and
 // message_actions_mobile at d7c7de92. No screenshots or pixel comparisons.
 import assert from 'node:assert/strict';
+import {CAPYBARA_DEFAULT,DELIVERY_WAIT} from './behavior-deadlines.mjs';
 export const originalMessage=page=>page.locator('.message[data-message-id="607264868"]');
 export async function openMenu(page) {
   const row=originalMessage(page);
   await row.locator(':scope[aria-haspopup="menu"]').waitFor();
   await row.locator('[data-reply-target="body"]').click({button:'right'});
-  await page.locator('#message-actions-menu:not([hidden])').waitFor();
+  await page.locator('#message-actions-menu:not([hidden])').waitFor({timeout:DELIVERY_WAIT});
   // Other viewers may react/copy while edit remains author-only. Geometry
   // waits separately for the author's metadata-dependent Edit action.
   await page.getByRole('menuitem',{name:'Copy text',exact:true}).waitFor();
@@ -14,11 +15,9 @@ export async function openMenu(page) {
 export async function closedMenu(page) {
   await page.locator('.message[data-message-actions-open]').waitFor({state:'detached'});
 }
-export async function menuGeometry(page) {
-  await page.locator('#message-actions-menu .message__edit-action').waitFor();
-  await page.locator('#message-actions-menu').evaluate(async menu=>{
-    await Promise.all(menu.getAnimations().map(animation=>animation.finished));
-  });
+export async function menuGeometry(page,{metadata=false}={}) {
+  if(metadata) await page.locator('#message-actions-menu .message__edit-action').waitFor({timeout:DELIVERY_WAIT});
+  await page.waitForFunction(()=>document.querySelector('#message-actions-menu')?.getAnimations().every(animation=>animation.playState==='finished'),null,{timeout:CAPYBARA_DEFAULT});
   return page.locator('#message-actions-menu').evaluate(menu=>{
     const bounds=el=>{const r=el.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
     const sizes=selector=>[...menu.querySelectorAll(selector)].filter(el=>el.getClientRects().length).map(bounds);
@@ -39,7 +38,7 @@ export function bottomSheet(geometry,singleRow=false) {
 export async function mobileActions({author:page,caseName}) {
   if(caseName.startsWith('message action menu is')) {
     await page.setViewportSize({width:390,height:844});await openMenu(page);
-    bottomSheet(await menuGeometry(page),true);
+    bottomSheet(await menuGeometry(page,{metadata:true}),true);
     await page.locator('.room-header__name').click();await closedMenu(page);
   } else {
     await openMenu(page);const g=await menuGeometry(page);
@@ -63,43 +62,49 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
   const row=originalMessage(page),editor=page.getByRole('combobox',{name:'Write a message',exact:true});
   if(caseName.startsWith('opens message actions')) {
     await openMenu(page);
-    assert.equal(await page.locator('#message-actions-menu .message__quick-reaction').count(),fixture.reaction_count);
+    // Capybara visible:true excludes hidden reactions, even when all eight
+    // elements remain in the DOM. Use the original default assertion budget.
+    await page.waitForFunction(count=>[...document.querySelectorAll('#message-actions-menu .message__quick-reaction')].filter(button=>{
+      const r=button.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(button).visibility!=='hidden';
+    }).length===count,fixture.reaction_count,{timeout:CAPYBARA_DEFAULT});
+    assert.equal(await page.locator('#message-actions-menu .message__quick-reaction:visible').count(),fixture.reaction_count);
     await page.keyboard.press('Escape');await closedMenu(page);
     await row.click();await row.dispatchEvent('keydown',{key:'F10',shiftKey:true,bubbles:true,cancelable:true});
-    await page.locator('#message-actions-menu:not([hidden])').waitFor();
+    await page.locator('#message-actions-menu:not([hidden])').waitFor({timeout:DELIVERY_WAIT});
     await page.keyboard.press('Escape');await page.waitForFunction(id=>document.activeElement?.id===id,await row.getAttribute('id'));
     await page.setViewportSize({width:390,height:844});await longPress(page,true);await closedMenu(page);
-    await longPress(page);await page.locator('#message-actions-menu:not([hidden])').waitFor();
+    await longPress(page);await page.locator('#message-actions-menu:not([hidden])').waitFor({timeout:DELIVERY_WAIT});
     const g=await menuGeometry(page);
     assert.ok(g.menu.left>=0&&g.menu.top>=0&&g.menu.right<=g.viewport.width&&g.menu.bottom<=g.viewport.height);
     page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('menuitem',{name:'Delete message',exact:true}).click();
     await page.locator('#message-actions-menu .message__delete-action').waitFor();await row.waitFor();
   } else if(caseName.startsWith('a release click')) {
     await page.setViewportSize({width:390,height:844});await longPress(page);
-    await page.locator('#message-actions-menu:not([hidden])').waitFor();
+    await page.locator('#message-actions-menu:not([hidden])').waitFor({timeout:DELIVERY_WAIT});
     const hit=await row.evaluate(message=>{
       const r=message.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,target=document.elementFromPoint(x,y);
       if(!target?.closest('#message-actions-menu')) return target?.tagName||'none';
       target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:x,clientY:y,view:window}));return 'menu';
     });
-    assert.equal(hit,'menu');await page.locator('#message-actions-menu:not([hidden])').waitFor();
+    assert.equal(hit,'menu');await page.locator('#message-actions-menu:not([hidden])').waitFor({timeout:DELIVERY_WAIT});
     await page.locator('#composer [data-composer-target="context"][hidden]').waitFor({state:'attached'});
   } else if(caseName.startsWith('shows the message action')) {
     for(const viewport of [{width:390,height:844},{width:320,height:740}]) {
-      await page.setViewportSize(viewport);await openMenu(page);bottomSheet(await menuGeometry(page));
+      await page.setViewportSize(viewport);await openMenu(page);bottomSheet(await menuGeometry(page,{metadata:true}));
       await page.keyboard.press('Escape');await closedMenu(page);
     }
   } else if(caseName.startsWith('edits through')) {
-    await editor.fill('A draft that must survive editing');await openEdit(page,row);
+    await editor.fill('A draft that must survive editing');await openEdit(page,row,{contextTimeout:DELIVERY_WAIT});
     await field(page,"Third time's a charm.");await page.getByRole('button',{name:'Cancel message context',exact:true}).click();
     await field(page,'A draft that must survive editing');await openEdit(page,row);
-    await send(page,'Saved through the main composer');await text(recipient,'Saved through the main composer');
+    await send(page,'Saved through the main composer');await text(recipient,'Saved through the main composer',1,{timeout:DELIVERY_WAIT});
     await page.locator('#composer [data-composer-target="context"][hidden]').waitFor({state:'attached'});
     await field(page,'A draft that must survive editing');
   } else if(caseName.startsWith('a duplicate delivery')) {
     await openMenu(page);
-    // The original triggers a redelivery. Feed the actual mounted row to the
-    // real Turbo render queue; keep the original object identity witness.
+    await page.getByRole('menuitem',{name:'Edit message',exact:true}).waitFor({timeout:DELIVERY_WAIT});
+    // Browser-only Turbo injection exercises the mounted-row guard. Unlike
+    // Rails message.broadcast_create, this does not verify server redelivery.
     await row.evaluate(message=>{
       window.originalDeliveredMessage=message;
       document.addEventListener('turbo:before-stream-render',function observe(event) {
@@ -111,11 +116,11 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
       });
       Turbo.renderStreamMessage(`<turbo-stream action="append" target="${message.parentElement.id}"><template>${message.outerHTML}</template></turbo-stream>`);
     });
-    await page.locator('html[data-duplicate-delivery-rendered]').waitFor({state:'attached'});
+    await page.locator('html[data-duplicate-delivery-rendered]').waitFor({state:'attached',timeout:DELIVERY_WAIT});
     assert.equal(await page.evaluate(()=>window.originalDeliveredMessage.isConnected),true,'redelivery preserves active controls');
     await page.getByRole('menuitem',{name:'Edit message',exact:true}).click();await field(page,"Third time's a charm.");
   } else if(caseName.startsWith('keeps newer typing')) {
-    await openEdit(page,row);await editor.fill('First edit request');
+    await openEdit(page,row,{contextTimeout:DELIVERY_WAIT});await editor.fill('First edit request');
     // Same original deterministic PATCH gate/failure, isolated from the
     // separate real-write edit case and its database assertions.
     await page.evaluate(()=>{
@@ -126,24 +131,24 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     await page.waitForFunction(()=>typeof window.resolveInteractionsEdit==='function');
     await editor.fill('A newer draft typed while saving');
     await page.evaluate(()=>window.resolveInteractionsEdit(new Response('{}',{status:200})));
-    await field(page,'A newer draft typed while saving');
+    await field(page,'A newer draft typed while saving',{timeout:DELIVERY_WAIT});
     await page.locator('#composer [data-composer-target="context"][hidden]').waitFor({state:'attached'});
     await page.evaluate(()=>{
       window.fetch=(input,options={})=>options.method==='PATCH'?Promise.resolve(new Response(JSON.stringify({error:'The message could not be saved'}),{status:422,headers:{'Content-Type':'application/json'}})):window.originalInteractionsFetch(input,options);
     });
     await openEdit(page,row);await editor.fill('Failed edit');await page.getByRole('button',{name:'Send Message',exact:true}).click();
-    await page.locator('#composer [data-composer-target="feedback"]').filter({hasText:'The message could not be saved'}).waitFor();
+    await page.locator('#composer [data-composer-target="feedback"]').filter({hasText:'The message could not be saved'}).waitFor({timeout:DELIVERY_WAIT});
     await page.locator('#composer [data-composer-target="context"]:not([hidden])').waitFor();
     await page.getByRole('button',{name:'Cancel message context',exact:true}).click();
   } else if(caseName.startsWith('replies with notify')) {
     await openMenu(page);await page.getByRole('menuitem',{name:'Reply',exact:true}).click();
-    await page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'}).waitFor();
+    await page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'}).waitFor({timeout:DELIVERY_WAIT});
     assert.equal(await page.getByLabel('Notify author',{exact:true}).isChecked(),true);
     await page.getByLabel('Notify author',{exact:true}).uncheck();await send(page,'A reply without a notification');
-    for(const browser of [page,recipient]) await browser.locator('.message__reply-preview').filter({hasText:'Replying to JZ'}).waitFor();
+    for(const browser of [page,recipient]) await browser.locator('.message__reply-preview').filter({hasText:'Replying to JZ'}).waitFor({timeout:DELIVERY_WAIT});
     await openMenu(page);page.once('dialog',dialog=>dialog.accept());await page.getByRole('menuitem',{name:'Delete message',exact:true}).click();
     await row.waitFor({state:'detached'});await page.reload();
-    await page.locator('.message__reply-preview').filter({hasText:'Replying to a deleted message'}).waitFor();
+    await page.locator('.message__reply-preview').filter({hasText:'Replying to a deleted message'}).waitFor({timeout:DELIVERY_WAIT});
   } else if(caseName.startsWith('copies message')) {
     await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:text=>{window.interactionsCopied=text;return Promise.resolve();}}}));
     await openMenu(page);await page.getByRole('menuitem',{name:'Copy text',exact:true}).click();
@@ -151,26 +156,26 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     await openMenu(page);await page.getByRole('menuitem',{name:'Copy link',exact:true}).click();
     assert.ok((await page.evaluate(()=>window.interactionsCopied)).includes(fixture.message_permalink));
     await openMenu(page);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
-    const dialog=page.locator('dialog[open]');await dialog.waitFor();
-    await dialog.locator('.message-forward-dialog__destination').filter({hasText:'Forward destination'}).click();
+    const dialog=page.locator('dialog[open]');await dialog.waitFor({timeout:DELIVERY_WAIT});
+    await dialog.locator('.message-forward-dialog__destination').filter({hasText:'Forward destination'}).click({timeout:DELIVERY_WAIT});
     await dialog.getByLabel('Add a note (optional)',{exact:true}).fill('Forwarded from the interaction test');
     await dialog.getByRole('button',{name:'Forward',exact:true}).click();
-    await page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}).waitFor();
+    await page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}).waitFor({timeout:DELIVERY_WAIT});
   } else if(caseName.startsWith('forwarding twice')) {
     await openMenu(page);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
-    await page.locator('dialog[open]').waitFor();await page.locator('.message-forward-dialog__destination input').first().check();
+    await page.locator('dialog[open]').waitFor({timeout:DELIVERY_WAIT});await page.locator('.message-forward-dialog__destination input').first().check({timeout:DELIVERY_WAIT});
     const requests=[];page.on('request',request=>{if(request.method()==='POST'&&/\/forwards(?:\.json)?$/.test(new URL(request.url()).pathname)) requests.push(request);});
     const submit=page.locator('[data-message-actions-target="forwardSubmit"]');await submit.click();
-    await page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}).waitFor();
+    await page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}).waitFor({timeout:DELIVERY_WAIT});
     assert.equal(await submit.isDisabled(),true);
     // A real second click is suppressed by the disabled control, not a
     // duplicate handler invocation that bypasses browser disabled semantics.
-    await submit.evaluate(button=>button.click());await page.locator('dialog[open]').waitFor({state:'hidden'});
+    await submit.evaluate(button=>button.click());await page.locator('dialog[open]').waitFor({state:'hidden',timeout:DELIVERY_WAIT});
     assert.equal(requests.length,1);
   } else if(caseName.startsWith('groups emoji reactions')) {
     async function reaction(browser,count,active) {
       const chip=originalMessage(browser).locator('.reaction-chip[data-reaction="👍"]');
-      await chip.locator('.reaction-chip__count').filter({hasText:new RegExp(`^${count}$`)}).waitFor();
+      await chip.locator('.reaction-chip__count').filter({hasText:new RegExp(`^${count}$`)}).waitFor({timeout:DELIVERY_WAIT});
       await browser.waitForFunction(({count,active})=>{
         const chip=document.querySelector('.message[data-message-id="607264868"] .reaction-chip[data-reaction="👍"]');
         return chip?.querySelector('.reaction-chip__count')?.textContent.trim()===String(count)&&chip.classList.contains('reaction-chip--active')===active;

@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {messageList} from './behavior-message-list.mjs';
 import {searchForward} from './behavior-search-forward.mjs';
-import {installMutation} from './behavior-mutations.mjs';
+import {installMutation,mutationVariants} from './behavior-mutations.mjs';
 import {unreadDivider} from './behavior-unread.mjs';
 import {destinationCases,messageDestinations} from './behavior-message-destinations.mjs';
 import {composer} from './behavior-composer.mjs';
@@ -14,6 +14,7 @@ import {boosts} from './behavior-boosts.mjs';
 import {interactions,mobileActions} from './behavior-actions.mjs';
 import {toolbar} from './behavior-toolbar.mjs';
 import {codeHighlighting} from './behavior-code.mjs';
+import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT,REVIEW_GROUPS} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
@@ -24,7 +25,8 @@ assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y'
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
-async function acceptance(base,caseName,probe={}) {
+const selectedMutant=process.env.WS8BM_MUTANT;
+async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
     async function viewer(name) {
@@ -32,11 +34,16 @@ async function acceptance(base,caseName,probe={}) {
       // Mutation routes must remain observable across navigations; a service
       // worker can otherwise fetch/cache the original asset outside page.route.
       // Positive acceptance retains the app's actual service worker.
-      const context=await browser.newContext({viewport:{width:1440,height},...(negative?{serviceWorkers:'block'}:{})});
+      const context=await browser.newContext({viewport:{width:1440,height},...(negative||selectedMutant?{serviceWorkers:'block'}:{})});
       contexts.push(context);
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
       const page=await context.newPage();
+      if(REVIEW_GROUPS.has(file)) {
+        page.setDefaultTimeout(CAPYBARA_DEFAULT);
+        // Capybara visit/page-load is separate from selector assertions.
+        page.setDefaultNavigationTimeout(30000);
+      }
       if(file==='threads') page.on('response',async response=>{
         const url=new URL(response.url());
         if(!/^\/rooms\/654632876\/threads(?:\.json)?(?:\/|$)/.test(url.pathname)) return;
@@ -46,14 +53,14 @@ async function acceptance(base,caseName,probe={}) {
           try {const body=await response.json();entry.threadName=(body.thread||body).name;entry.error=body.error||body.message;} catch {}
         }
       });
-      if(negative) await installMutation(page,caseName,probe);
+      if(negative||selectedMutant) await installMutation(page,caseName,probe,variant);
       page.on('pageerror',error=>console.error('WS8bm browser JavaScript:',base,error.stack));
       page.on('requestfailed',request=>{
         const failure=request.failure()?.errorText;
         // Navigation cancels background fetches; diagnose actual network failures.
         if(failure!=='net::ERR_ABORTED') {
           console.error('WS8bm browser failed request:',request.url(),failure);
-          if(negative) (probe.networkFailures??=[]).push(failure);
+          if(negative||selectedMutant) (probe.networkFailures??=[]).push(failure);
         }
       });
       const response=await page.goto(base+'/rooms/654632876');
@@ -62,39 +69,40 @@ async function acceptance(base,caseName,probe={}) {
       assert.equal(await page.locator('#composer').count(),1,'real room composer is present');
       try {await page.waitForFunction(()=>window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('composer'),'composer'));}
       catch(error) {console.error('WS8bm browser startup:',await page.evaluate(()=>({url:location.href,title:document.title,stimulus:!!window.Stimulus,controllers:document.getElementById('composer')?.dataset.controller,scripts:[...document.scripts].map(s=>s.src||s.type)})));throw error;}
-      await page.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]').waitFor({state:'attached'});
+      await page.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]').waitFor({state:'attached',...(REVIEW_GROUPS.has(file)?{timeout:CABLE_WAIT}:{})});
       return page;
     }
     const profileActors=file==='message_list_a11y'&&caseName==='profile message and ban buttons have accessible names';
     const author=await viewer('JZ'),recipient=await viewer(profileActors||file==='message_interactions'?'David':'Kevin');
     // Startup errors are never accepted as proof of assertion discrimination.
     probe.ready=true;
-    if(negative) {
-      // Shorter failure-only waits for deliberate mutants; acceptance keeps
-      // the original 30-second waits and unchanged concurrency/thresholds.
+    if(negative&&!REVIEW_GROUPS.has(file)) {
+      // Older groups retain their existing failure-only probes. The audited
+      // thirty use the original Rails budgets identically in both modes.
       author.setDefaultTimeout(3000);recipient.setDefaultTimeout(3000);
     }
     const messages=page=>page.locator('.message[data-message-id]');
-    async function text(page,value,count=1) {
-      await page.waitForFunction(({value,count})=>[...document.querySelectorAll('.message[data-message-id] [data-reply-target="body"]')].filter(body=>body.textContent.trim()===value).length===count,{value,count});
+    async function text(page,value,count=1,options={}) {
+      await page.waitForFunction(({value,count})=>[...document.querySelectorAll('.message[data-message-id] [data-reply-target="body"]')].filter(body=>body.textContent.trim()===value).length===count,{value,count},options);
     }
     async function send(page,value) {
       await page.getByRole('combobox',{name:'Write a message',exact:true}).fill(value);
       await page.getByRole('button',{name:'Send Message',exact:true}).click();
-      await text(page,value);
+      await text(page,value,1,REVIEW_GROUPS.has(file)?{timeout:DELIVERY_WAIT}:{});
     }
     async function submit(page,value) {
       await page.getByRole('combobox',{name:'Write a message',exact:true}).fill(value);
       await page.getByRole('button',{name:'Send Message',exact:true}).click();
     }
-    async function openEdit(page,message) {
+    async function openEdit(page,message,{contextTimeout}={}) {
       await message.click({button:'right'});
-      await page.locator('#message-actions-menu:not([hidden])').waitFor();
+      await page.locator('#message-actions-menu:not([hidden])').waitFor(REVIEW_GROUPS.has(file)?{timeout:DELIVERY_WAIT}:{});
       await page.getByRole('menuitem',{name:'Edit message',exact:true}).click();
-      await page.locator('#composer').filter({hasText:'Editing Message'}).waitFor();
+      if(!REVIEW_GROUPS.has(file)) await page.locator('#composer').filter({hasText:'Editing Message'}).waitFor();
+      else if(contextTimeout) await page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}).waitFor({timeout:contextTimeout});
     }
-    async function field(page,value) {
-      await page.waitForFunction(value=>document.querySelector('#composer textarea[name="message[markdown_source]"]')?.value===value,value);
+    async function field(page,value,options={}) {
+      await page.waitForFunction(value=>document.querySelector('#composer textarea[name="message[markdown_source]"]')?.value===value,value,options);
     }
     if(file==='message_list_a11y') {
       if(destinationCases.includes(caseName)) await messageDestinations({author,recipient,base,caseName,fixture,viewer});
@@ -475,18 +483,31 @@ try {
   for(const caseName of cases) {
     try {
     if(negative) {
+      for(const variant of mutationVariants(caseName)) {
+      for(const [app,base] of [['Rails',rails],['Rust',rust]]) {
       const probe={ready:false,applied:0};let failure;
-      try {await acceptance(rust,caseName,probe);} catch(error) {failure=error;}
+      try {await acceptance(base,caseName,probe,variant);} catch(error) {failure=error;}
       if(!probe.ready || !probe.applied || !failure) console.error('WS8bm invalid discrimination run:',caseName,probe,failure);
       assert.ok(probe.ready,'mutant must reach the actual named case, not fail startup');
       assert.equal(probe.networkFailures?.length||0,0,'network failures cannot count as mutant rejection');
       assert.ok(probe.applied>0,'a deliberate served mutation must actually apply');
       assert.ok(failure,'named behaviour check must reject the served mutant');
       assert.ok(failure.code==='ERR_ASSERTION'||failure.name==='TimeoutError',`unexpected infrastructure/adapter failure: ${failure}`);
-      console.log(`WS8bm discrimination: ${file}: ${caseName}: served mutant REJECTED (${failure.code||failure.name})`);
+      if(probe.delayedWriteStarted) console.log(`WS8bm delayed-write probe: ${app}: ${Date.now()-probe.delayedWriteStarted} ms observed; actual write completed: ${!!probe.delayedWriteCompleted}`);
+      console.log(`WS8bm discrimination: ${file}: ${caseName}: ${variant}: ${app} served mutant REJECTED (${failure.code||failure.name})`);
+      }
+      }
     } else {
-      await acceptance(rails,caseName);await acceptance(rust,caseName);
-      console.log(`WS8bm browser flow: ${file}: ${caseName}: Rails PASS; Rust PASS`);
+      for(const [app,base] of [['Rails',rails],['Rust',rust]]) {
+        const probe={ready:false,applied:0};
+        await acceptance(base,caseName,probe,selectedMutant||'default');
+        if(selectedMutant) {
+          assert.ok(probe.ready&&probe.applied>0,'probe must actually apply after valid startup');
+          assert.equal(probe.networkFailures?.length||0,0);
+          console.log(`WS8bm review escape: ${file}: ${caseName}: ${selectedMutant}: ${app} ACCEPTED`);
+        }
+      }
+      if(!selectedMutant) console.log(`WS8bm browser flow: ${file}: ${caseName}: Rails PASS; Rust PASS`);
     }
     } catch(error) {
       console.error(`WS8bm browser flow FAILED: ${file}: ${caseName}:`,error.stack);

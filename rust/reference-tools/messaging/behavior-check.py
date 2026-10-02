@@ -156,11 +156,14 @@ parser.add_argument("files", nargs="*", choices=CASES)
 parser.add_argument("--case", help="run one exact pinned declaration from the selected files")
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
+parser.add_argument("--mutant", help="select one served mutant variant; without --negative, diagnose its acceptance on both apps (not parity credit)")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
 if args.case:
     assert any(args.case in CASES[file] for file in files), "unknown/unmapped named case"
+if args.mutant:
+    assert args.case, "a selected mutant probe requires one exact named case"
 for case in args.exclude_case:
     assert any(case in CASES[file] for file in files), "unknown excluded named case"
 SCRATCH.mkdir(exist_ok=True)
@@ -172,6 +175,10 @@ assert any(f"GIT_REVISION={value}" in revision.splitlines() for value in [PIN, P
 env["PARITY_IMAGE"] = image
 env["WS8BM_NEGATIVE"] = "1" if args.negative else "0"
 env["WS8BM_KEEP_GOING"] = "1" if args.keep_going else "0"
+if args.mutant:
+    env["WS8BM_MUTANT"] = args.mutant
+else:
+    env.pop("WS8BM_MUTANT", None)
 subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"], cwd=ROOT, env=env, check=True)
 subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
@@ -205,11 +212,17 @@ with sqlite3.connect(RUST / "parity/.seed/default/db/production.sqlite3") as con
     protected_counts = {table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                         for table in ["channel_threads", "messages", "thread_memberships"]}
 passed = 0
+passed_named = set()
 failed_cases = []
 mutation_names = set(json.loads(subprocess.check_output([
     "node", "--input-type=module", "-e",
     "import {mutationNames} from './rust/reference-tools/messaging/behavior-mutations.mjs'; console.log(JSON.stringify(mutationNames))"
 ], cwd=ROOT, text=True))) if args.negative else set()
+mutation_variants = json.loads(subprocess.check_output([
+    "node", "--input-type=module", "-e",
+    "import {mutationNames,mutationVariants} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
+    "console.log(JSON.stringify(Object.fromEntries(mutationNames.map(name=>[name,mutationVariants(name)]))))"
+], cwd=ROOT, env=env, text=True)) if args.negative else {}
 for file in files:
     source = subprocess.check_output(["git", "show", f"{PIN}:test/system/{file}_test.rb"], cwd=ROOT)
     selected = [case for case in CASES[file] if (not args.case or case == args.case) and case not in args.exclude_case]
@@ -236,7 +249,13 @@ for file in files:
     batches += [[case] for case in selected if case not in readonly + navigation]
     if file == "composer_attach_menu":
         batches = [selected]  # No server writes; new contexts for each case.
-    for batch in filter(None, batches):
+    jobs = [(batch, args.mutant or "default") for batch in filter(None, batches)]
+    if args.negative and not args.mutant:
+        # A failed highlight check can still have posted a real message. Each
+        # additional mutant therefore gets its own seed/database/server, not
+        # just a fresh browser that would read previous mutants' saved rows.
+        jobs += [([case], variant) for case in selected for variant in mutation_variants[case] if variant != "default"]
+    for batch, variant in jobs:
         case = batch[0]
         for name in batch:
             assert f'test "{name}"'.encode() in source, "case must be named in the pin"
@@ -288,6 +307,8 @@ for file in files:
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
+            if args.negative:
+                run_env["WS8BM_MUTANT"] = variant
             if file == "composer_attach_menu":
                 run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
             process = None
@@ -315,11 +336,24 @@ for file in files:
                     print(result.stdout, end="", flush=True)
                     if result.returncode and not args.keep_going:
                         raise subprocess.CalledProcessError(result.returncode, command)
-                    suffix = ": served mutant REJECTED (" if args.negative else ": Rails PASS; Rust PASS"
-                    prefix = f"WS8bm discrimination: {file}: " if args.negative else f"WS8bm browser flow: {file}: "
-                    succeeded = [name for name in batch if any(line.startswith(prefix + name + suffix) for line in result.stdout.splitlines())]
+                    if args.negative:
+                        variants = json.loads(subprocess.check_output(["node", "--input-type=module", "-e",
+                            "import {mutationVariants} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
+                            f"console.log(JSON.stringify({json.dumps(batch)}.map(name=>mutationVariants(name))))"], cwd=ROOT, env=run_env, text=True))
+                        succeeded = [name for name, names in zip(batch, variants) if names and all(
+                            any(line.startswith(f"WS8bm discrimination: {file}: {name}: {variant}: {app} served mutant REJECTED (") for line in result.stdout.splitlines())
+                            for variant in names for app in ["Rails", "Rust"])]
+                    elif args.mutant:
+                        succeeded = [name for name in batch if all(
+                            f"WS8bm review escape: {file}: {name}: {args.mutant}: {app} ACCEPTED" in result.stdout.splitlines() for app in ["Rails", "Rust"])]
+                    else:
+                        succeeded = [name for name in batch if f"WS8bm browser flow: {file}: {name}: Rails PASS; Rust PASS" in result.stdout.splitlines()]
                     failed_cases.extend(f"{file}: {name}" for name in batch if name not in succeeded)
                     if args.negative:
+                        passed += sum(len(names) for name, names in zip(batch, variants) if name in succeeded)
+                        passed_named.update((file, name) for name in succeeded)
+                        continue
+                    if args.mutant:
                         passed += len(succeeded)
                         continue
                     if not succeeded:
@@ -519,7 +553,9 @@ for file in files:
                     subprocess.run([reference, "down", "--port", str(ports[0])], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
     print(f"WS8bm behaviour source: test/system/{file}_test.rb SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
 if args.negative:
-    print(f"WS8bm discrimination check: {passed} named checks rejected their served mutants; {len(failed_cases)} invalid or escaped", flush=True)
+    print(f"WS8bm discrimination check: {passed} served mutants rejected on Rails and Rust across {len(passed_named)} named checks; {len(failed_cases)} invalid or escaped", flush=True)
+elif args.mutant:
+    print(f"WS8bm review escape check: {passed} served mutants accepted on Rails and Rust; {len(failed_cases)} failed probes; no parity credit", flush=True)
 else:
     print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; {len(failed_cases)} failed; no pixel checks", flush=True)
 if failed_cases:
