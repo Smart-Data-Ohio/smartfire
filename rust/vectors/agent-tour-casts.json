@@ -1,0 +1,270 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "name": "original_null",
+      "sql": "UPDATE users SET tour_completed_at=NULL WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "original_valid_datetime",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "original_empty",
+      "sql": "UPDATE users SET tour_completed_at='' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "original_invalid",
+      "sql": "UPDATE users SET tour_completed_at='not-a-date' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "original_string_zero",
+      "sql": "UPDATE users SET tour_completed_at='0' WHERE id=127326141",
+      "stored": 0
+    },
+    {
+      "name": "original_integer_zero",
+      "sql": "UPDATE users SET tour_completed_at=0 WHERE id=127326141",
+      "stored": 0
+    },
+    {
+      "name": "original_normalized_day",
+      "sql": "UPDATE users SET tour_completed_at='2026-02-31 12:00:00' WHERE id=127326141",
+      "stored": "2026-03-03 12:00:00"
+    },
+    {
+      "name": "original_date",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "whitespace",
+      "sql": "UPDATE users SET tour_completed_at=' \\t\\n' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "padded_valid",
+      "sql": "UPDATE users SET tour_completed_at=' 2026-01-01 00:00:00 ' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "long_leading_spaces",
+      "sql": "UPDATE users SET tour_completed_at='                                                                                                                                 2026-01-01 00:00:00' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "long_trailing_spaces",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00                                                                                                                                 ' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "month_and_year",
+      "sql": "UPDATE users SET tour_completed_at='January 2026' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "RFC_2822",
+      "sql": "UPDATE users SET tour_completed_at='Fri, 02 Oct 2026 12:00:00 GMT' WHERE id=127326141",
+      "stored": "2026-10-02 12:00:00"
+    },
+    {
+      "name": "offset",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T23:59:59+05:45' WHERE id=127326141",
+      "stored": "2026-01-01 18:14:59"
+    },
+    {
+      "name": "fractional",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00.123456789' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00.123456"
+    },
+    {
+      "name": "ISO_week_date",
+      "sql": "UPDATE users SET tour_completed_at='2026-W01-1' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "ordinal_date",
+      "sql": "UPDATE users SET tour_completed_at='2026-001' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "short_year",
+      "sql": "UPDATE users SET tour_completed_at='26-01-01' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "year_one",
+      "sql": "UPDATE users SET tour_completed_at='0001-01-01' WHERE id=127326141",
+      "stored": "0001-01-01 00:00:00"
+    },
+    {
+      "name": "year_10000",
+      "sql": "UPDATE users SET tour_completed_at='10000-01-01' WHERE id=127326141",
+      "stored": "10000-01-01 00:00:00"
+    },
+    {
+      "name": "BC_date",
+      "sql": "UPDATE users SET tour_completed_at='-0044-03-15' WHERE id=127326141",
+      "stored": "-0044-03-15 00:00:00"
+    },
+    {
+      "name": "invalid_month",
+      "sql": "UPDATE users SET tour_completed_at='2026-13-01' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "invalid_day",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-32' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "midnight_24",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 24:00:00' WHERE id=127326141",
+      "stored": "2026-01-02 00:00:00"
+    },
+    {
+      "name": "leap_second",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 23:59:60' WHERE id=127326141",
+      "stored": "2026-01-02 00:00:00"
+    },
+    {
+      "name": "date_slashes",
+      "sql": "UPDATE users SET tour_completed_at='2026/10/02' WHERE id=127326141",
+      "stored": "2026-10-02 00:00:00"
+    },
+    {
+      "name": "US_date",
+      "sql": "UPDATE users SET tour_completed_at='10/02/2026' WHERE id=127326141",
+      "stored": "2026-02-10 00:00:00"
+    },
+    {
+      "name": "named_month",
+      "sql": "UPDATE users SET tour_completed_at='2 October 2026' WHERE id=127326141",
+      "stored": "2026-10-02 00:00:00"
+    },
+    {
+      "name": "time_only",
+      "sql": "UPDATE users SET tour_completed_at='12:34:56' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "month_day_only",
+      "sql": "UPDATE users SET tour_completed_at='October 2' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "unix_decimal",
+      "sql": "UPDATE users SET tour_completed_at=1.5 WHERE id=127326141",
+      "stored": 1.5
+    },
+    {
+      "name": "negative_integer",
+      "sql": "UPDATE users SET tour_completed_at=-1 WHERE id=127326141",
+      "stored": -1
+    },
+    {
+      "name": "explicit_null",
+      "sql": "UPDATE users SET tour_completed_at=NULL WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "very_long_invalid",
+      "sql": "UPDATE users SET tour_completed_at='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "datetime_suffix_junk",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00 not-a-date' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "datetime_prefix_junk",
+      "sql": "UPDATE users SET tour_completed_at='not-a-date 2026-01-01 00:00:00' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "year_month_name",
+      "sql": "UPDATE users SET tour_completed_at='2026 Jan' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "year_month_full",
+      "sql": "UPDATE users SET tour_completed_at='2026 January' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "month_year_hyphen",
+      "sql": "UPDATE users SET tour_completed_at='Jan-2026' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "ISO_year_month",
+      "sql": "UPDATE users SET tour_completed_at='2026-01' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "slash_year_month",
+      "sql": "UPDATE users SET tour_completed_at='2026/01' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "year_first_words",
+      "sql": "UPDATE users SET tour_completed_at='2026 Jan 1' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "month_abbrev_dot",
+      "sql": "UPDATE users SET tour_completed_at='Jan. 1, 2026' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "day_month_abbrev_dot",
+      "sql": "UPDATE users SET tour_completed_at='1 Jan. 2026' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "month_day_AD_year",
+      "sql": "UPDATE users SET tour_completed_at='January 1, AD 2026' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "asctime",
+      "sql": "UPDATE users SET tour_completed_at='Thu Jan 1 00:00:00 2026' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "ISO_without_seconds",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T00:00' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "invalid_hour",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 99:00' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "invalid_minute",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 09:99' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "year_1900_leap_day",
+      "sql": "UPDATE users SET tour_completed_at='1900-02-29' WHERE id=127326141",
+      "stored": "1900-03-01 00:00:00"
+    },
+    {
+      "name": "unsigned_extended_year",
+      "sql": "UPDATE users SET tour_completed_at='+2026-01-01' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "eastern_zone",
+      "sql": "UPDATE users SET tour_completed_at='Thu, 1 Jan 2026 09:00:00 EST' WHERE id=127326141",
+      "stored": "2026-01-01 14:00:00"
+    }
+  ]
+}

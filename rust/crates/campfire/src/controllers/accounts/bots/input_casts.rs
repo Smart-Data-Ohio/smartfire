@@ -3,10 +3,15 @@ use campfire_db::Timestamp;
 use campfire_kit::Param;
 use campfire_views::time::Zone;
 
-pub(super) fn datetime(param: Option<&Param>, zone: &Zone, now: Timestamp)
-    -> Result<Option<Timestamp>, rails_compat::datetime::DateRangeError>
-{
-    let value = match param { Some(Param::Str(value)) => Some(value.as_str()), _ => None };
+pub(super) fn datetime(
+    param: Option<&Param>,
+    zone: &Zone,
+    now: Timestamp,
+) -> Result<Option<Timestamp>, rails_compat::datetime::DateRangeError> {
+    let value = match param {
+        Some(Param::Str(value)) => Some(value.as_str()),
+        _ => None,
+    };
     rails_compat::datetime::cast(value, zone.tz(), now)
 }
 
@@ -257,4 +262,3 @@ fn ruby_string(value: &str) -> String {
     result.push('"');
     result
 }
-

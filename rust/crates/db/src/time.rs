@@ -207,16 +207,24 @@ impl Timestamp {
 }
 
 impl rails_compat::datetime::TimeValue for Timestamp {
-    fn jiff(self) -> JiffTimestamp { self.jiff() }
+    fn jiff(self) -> JiffTimestamp {
+        self.jiff()
+    }
     fn from_wide_shifted_jiff(at: JiffTimestamp, shift: I512) -> Option<Self> {
         Self::from_wide_shifted_jiff(at, shift)
     }
     fn local_datetime(at: jiff::civil::DateTime, zone: &jiff::tz::TimeZone) -> Option<Self> {
         crate::slash_commands::time_parser::local_datetime(at, zone)
     }
-    fn transition_second(self) -> i64 { self.transition_second() }
-    fn calendar_proxy(self) -> (JiffTimestamp, I512) { self.calendar_proxy() }
-    fn since(self, duration: SignedDuration) -> Self { self.since(duration) }
+    fn transition_second(self) -> i64 {
+        self.transition_second()
+    }
+    fn calendar_proxy(self) -> (JiffTimestamp, I512) {
+        self.calendar_proxy()
+    }
+    fn since(self, duration: SignedDuration) -> Self {
+        self.since(duration)
+    }
 }
 
 impl fmt::Debug for Timestamp {

@@ -30,6 +30,32 @@ pub fn cast<T: TimeValue>(
     let Some(parts) = crate::date_parse::parse(value) else {
         return Ok(None);
     };
+    cast_parts(parts, zone, now)
+}
+
+/// ActiveModel::Type::DateTime's UTC database fallback. Unlike assignment via
+/// Time.zone.parse, a stored string needs a year; missing month/day default to 1.
+/// Numeric database values are retained by Rails and handled by the caller.
+pub fn deserialize<T: TimeValue>(value: &str) -> Option<T> {
+    let parts = crate::date_parse::parse_with_completion(value, true)?;
+    parts.year?;
+    let january = jiff::civil::Date::new(2000, 1, 1)
+        .ok()?
+        .at(0, 0, 0, 0)
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .ok()?
+        .timestamp();
+    let now = T::from_wide_shifted_jiff(january, I512::ZERO)?;
+    cast_parts(parts, &jiff::tz::TimeZone::UTC, now)
+        .ok()
+        .flatten()
+}
+
+fn cast_parts<T: TimeValue>(
+    parts: crate::date_parse::Parts,
+    zone: &jiff::tz::TimeZone,
+    now: T,
+) -> Result<Option<T>, DateRangeError> {
     if parts.range_error {
         return Err(DateRangeError);
     }
