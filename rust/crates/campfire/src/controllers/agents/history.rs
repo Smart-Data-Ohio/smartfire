@@ -69,7 +69,7 @@ pub async fn approvals(c: &mut Ctx) -> Result {
             .db
             .write(move |tx| {
                 for row in &mut rows {
-                    if row.status == "pending" && row.expires_at <= now {
+                    if row.status == "pending" && row.expires_at <= tx.now() {
                         row.expire_if_due(tx)?;
                     }
                 }
@@ -78,6 +78,9 @@ pub async fn approvals(c: &mut Ctx) -> Result {
             .await
             .map_err(Error::internal)?;
     }
+    // Selection may have waited for an expiry write. Filtering and presentation
+    // must use the current clock, as Rails' effective-status predicates do.
+    let now = campfire_db::Timestamp::from_jiff(c.now());
     if let Some(status) = filter
         .as_deref()
         .filter(|status| matches!(*status, "pending" | "expired"))

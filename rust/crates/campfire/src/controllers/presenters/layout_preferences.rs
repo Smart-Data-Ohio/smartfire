@@ -33,8 +33,7 @@ impl LoadedPreferences {
                 text_size: row.get("text_size")?,
                 time_zone: row.get("time_zone")?,
                 time_zone_explicit: row.get("time_zone_explicit")?,
-                // Preserve the former `tour_completed_at IS NOT NULL` projection.
-                tour_completed: !matches!(row.get_ref("tour_completed_at")?, rusqlite::types::ValueRef::Null),
+                tour_completed: completed_tour(row.get_ref("tour_completed_at")?),
                 voice_mode: row.get("voice_mode")?,
                 push_to_talk_key: row.get("push_to_talk_key")?,
                 notification_sounds: NotificationSounds {
@@ -108,6 +107,42 @@ pub(super) fn for_user(
         LoadedPreferences::from_row(row, now)
     })?;
     loaded.load(conn)
+}
+
+/// layouts/_tour.html.erb checks the deserialized datetime's nil?, not SQL NULL.
+fn completed_tour(value: rusqlite::types::ValueRef<'_>) -> bool {
+    use campfire_db::slash_commands::time_parser::parse_calendar;
+    use rusqlite::types::ValueRef;
+    match value {
+        ValueRef::Null => false,
+        // ActiveModel::Type::DateTime preserves non-string scalar values.
+        ValueRef::Integer(_) | ValueRef::Real(_) => true,
+        ValueRef::Text(raw) | ValueRef::Blob(raw) => {
+            let Ok(text) = std::str::from_utf8(raw) else {
+                return false;
+            };
+            if Timestamp::parse_db(text).is_some() {
+                return true;
+            }
+            if text.len() > 128 {
+                return false;
+            }
+            // ActiveModel's fallback needs a supplied year. The owner calendar
+            // parser fills omitted fields from its clock; different year defaults
+            // distinguish those partial inputs from an actual persisted datetime.
+            let zone = jiff::tz::TimeZone::UTC;
+            let Some(parsed) = parse_calendar(text, &zone, Timestamp::from_second(0))
+                .ok()
+                .flatten()
+            else {
+                return false;
+            };
+            parse_calendar(text, &zone, Timestamp::from_second(946_684_800))
+                .ok()
+                .flatten()
+                == Some(parsed)
+        }
+    }
 }
 
 /// Calendar::MeetingCache#quiet_window_epochs / #ooo_window_epochs. The refresh producer
