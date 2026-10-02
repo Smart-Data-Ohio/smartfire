@@ -84,9 +84,9 @@ impl BoardSlaRule {
             input.escalate_after_minutes.as_deref(),
         );
         if let (Some(nudge), Some(escalate)) = (
-            cast_integer(input.nudge_after_minutes.as_deref()),
-            cast_integer(input.escalate_after_minutes.as_deref()),
-        ) && escalate <= nudge
+            Self::cast_threshold(input.nudge_after_minutes.as_deref()),
+            Self::cast_threshold(input.escalate_after_minutes.as_deref()),
+        ) && compare_integers(&escalate, &nudge) != std::cmp::Ordering::Greater
         {
             errors.add(
                 "escalate_after_minutes",
@@ -100,6 +100,34 @@ impl BoardSlaRule {
             errors.add("room", "must be a board");
         }
         Ok(errors)
+    }
+    /// Rails' integer-column cast, kept as decimal text for invalid arbitrary-size forms.
+    pub fn cast_threshold(value: Option<&str>) -> Option<String> {
+        let value = value?.trim_matches(numeric_whitespace);
+        if campfire_richtext::ruby::is_blank(value) {
+            return None;
+        }
+        let negative = value.starts_with('-');
+        let unsigned = value.strip_prefix(['+', '-']).unwrap_or(value).as_bytes();
+        let mut digits = String::new();
+        for (index, byte) in unsigned.iter().copied().enumerate() {
+            if byte.is_ascii_digit() {
+                digits.push(char::from(byte));
+            } else if byte != b'_'
+                || digits.is_empty()
+                || !unsigned.get(index + 1).is_some_and(u8::is_ascii_digit)
+            {
+                break;
+            }
+        }
+        let digits = digits.trim_start_matches('0');
+        Some(if digits.is_empty() {
+            "0".into()
+        } else if negative {
+            format!("-{digits}")
+        } else {
+            digits.into()
+        })
     }
     pub fn create(tx: &mut Tx<'_>, input: NewBoardSlaRule) -> Result<Self> {
         Self::validate(tx.conn(), &input, None)?.into_result()?;
@@ -149,18 +177,16 @@ fn threshold_errors(errors: &mut Errors, field: &'static str, value: Option<&str
         errors.add(field, "is not a number");
         return;
     };
-    if value
-        .trim()
-        .parse::<f64>()
-        .ok()
-        .is_none_or(|n| !n.is_finite())
-    {
-        errors.add(field, "is not a number");
-        return;
-    }
     let digits = value.strip_prefix(['+', '-']).unwrap_or(value);
     if digits.is_empty() || !digits.bytes().all(|c| c.is_ascii_digit()) {
-        errors.add(field, "must be an integer");
+        errors.add(
+            field,
+            if float_number(value) {
+                "must be an integer"
+            } else {
+                "is not a number"
+            },
+        );
         return;
     }
     // Huge submitted integers still get Rails' bound errors rather than a parser failure.
@@ -171,15 +197,36 @@ fn threshold_errors(errors: &mut Errors, field: &'static str, value: Option<&str
     }
 }
 fn cast_integer(value: Option<&str>) -> Option<i64> {
-    let value = value?.trim();
-    if value.is_empty() {
-        return None;
+    Some(BoardSlaRule::cast_threshold(value)?.parse().unwrap_or(0))
+}
+fn compare_integers(left: &str, right: &str) -> std::cmp::Ordering {
+    let negative = left.starts_with('-');
+    let right_negative = right.starts_with('-');
+    if negative != right_negative {
+        return right_negative.cmp(&negative);
     }
-    let prefix: String = value
-        .chars()
-        .enumerate()
-        .take_while(|(i, c)| c.is_ascii_digit() || (*i == 0 && (*c == '+' || *c == '-')))
-        .map(|(_, c)| c)
-        .collect();
-    Some(prefix.parse().unwrap_or(0))
+    let left = left.trim_start_matches('-');
+    let right = right.trim_start_matches('-');
+    let order = left.len().cmp(&right.len()).then_with(|| left.cmp(right));
+    if negative { order.reverse() } else { order }
+}
+fn numeric_whitespace(c: char) -> bool {
+    matches!(c, '\t' | '\n' | '\u{0b}' | '\u{0c}' | '\r' | ' ')
+}
+fn float_number(value: &str) -> bool {
+    // Numericality checks a strict integer first, then Kernel.Float, excluding a raw
+    // hexadecimal literal. Its float fallback accepts underscores and exponent overflow.
+    let unsigned = value.strip_prefix(['+', '-']).unwrap_or(value);
+    if unsigned.starts_with("0x") || unsigned.starts_with("0X") {
+        return false;
+    }
+    static NUMBER: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(concat!(
+            r"\A[+-]?(?:",
+            r"(?:[0-9](?:_?[0-9])*(?:\.(?:[0-9](?:_?[0-9])*)?)?|\.[0-9](?:_?[0-9])*)(?:[eE][+-]?[0-9](?:_?[0-9])*)?",
+            r"|0[xX](?:[0-9a-fA-F](?:_?[0-9a-fA-F])*(?:\.(?:[0-9a-fA-F](?:_?[0-9a-fA-F])*)?)?|\.[0-9a-fA-F](?:_?[0-9a-fA-F])*)(?:[pP][+-]?[0-9](?:_?[0-9])*)?",
+            r")\z"
+        )).expect("Ruby Float grammar")
+    });
+    NUMBER.is_match(value.trim_matches(numeric_whitespace))
 }

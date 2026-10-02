@@ -487,6 +487,140 @@
       "escalate": "240"
     },
     {
+      "name": "nudge-\"0x10\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "0x10",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": "0",
+      "escalate": "240"
+    },
+    {
+      "name": "nudge-\" 0x10 \"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": " 0x10 ",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "must be an integer"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes must be an integer"
+      ],
+      "nudge": "0",
+      "escalate": "240"
+    },
+    {
+      "name": "nudge-\"4__2\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "4__2",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": "4",
+      "escalate": "240"
+    },
+    {
+      "name": "nudge-\"4_\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "4_",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": "4",
+      "escalate": "240"
+    },
+    {
+      "name": "nudge-\" 60\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": " 60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": "0",
+      "escalate": "240"
+    },
+    {
+      "name": "nudge-\" \"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": " ",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "can't be blank",
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes can't be blank",
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": null,
+      "escalate": "240"
+    },
+    {
       "name": "nudge-i64-overflow",
       "input": {
         "room_id": 486777696,

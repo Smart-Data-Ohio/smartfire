@@ -122,8 +122,8 @@ async fn render(
                 }
                 rules.entry(draft.work_status.unwrap()).or_insert_with(|| {
                     (
-                        draft_integer(draft.nudge_after_minutes.as_deref()),
-                        draft_integer(draft.escalate_after_minutes.as_deref()),
+                        BoardSlaRule::cast_threshold(draft.nudge_after_minutes.as_deref()),
+                        BoardSlaRule::cast_threshold(draft.escalate_after_minutes.as_deref()),
                     )
                 });
             }
@@ -284,22 +284,4 @@ where
         .prepare(sql)?
         .query_map(params, map)?
         .collect::<rusqlite::Result<Vec<_>>>()?)
-}
-
-fn draft_integer(value: Option<&str>) -> Option<String> {
-    let value = value?.trim();
-    if value.is_empty() {
-        return None;
-    }
-    let negative = value.starts_with('-');
-    let unsigned = value.strip_prefix(['+', '-']).unwrap_or(value);
-    let digits: String = unsigned.chars().take_while(char::is_ascii_digit).collect();
-    let digits = digits.trim_start_matches('0');
-    Some(if digits.is_empty() {
-        "0".into()
-    } else if negative {
-        format!("-{digits}")
-    } else {
-        digits.into()
-    })
 }
