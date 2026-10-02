@@ -7,29 +7,23 @@ pub fn message_by_ids(conn: &Connection, ids: &[i64]) -> Result<Option<Message>>
     if ids.is_empty() {
         return Ok(None);
     }
-    query_one(
-        conn,
-        &format!(
-            "SELECT * FROM messages WHERE id IN ({}) LIMIT 1",
-            placeholders(ids.len())
-        ),
-        params_from_iter(ids),
-        Message::from_row,
-    )
+    query_one(conn,"SELECT * FROM messages WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 1",
+        [serde_json::json!(ids).to_string()],Message::from_row)
+
 }
 pub fn thread_by_ids(conn: &Connection, ids: &[i64]) -> Result<Option<ChannelThread>> {
     if ids.is_empty() {
         return Ok(None);
     }
-    query_one(
-        conn,
-        &format!(
-            "SELECT * FROM channel_threads WHERE id IN ({}) LIMIT 1",
-            placeholders(ids.len())
-        ),
-        params_from_iter(ids),
-        ChannelThread::from_row,
-    )
+    query_one(conn,"SELECT * FROM channel_threads WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 1",
+        [serde_json::json!(ids).to_string()],ChannelThread::from_row)
+
+}
+/// Rails resolves cursor arrays inside the original conversation, before applying
+/// either window. One JSON bind keeps arbitrary IN lists below SQLite's bind limit.
+pub fn conversation_anchor(conn:&Connection,room:i64,thread:Option<i64>,ids:&[i64])->Result<Option<i64>> {
+    query_one(conn,"SELECT id FROM messages WHERE id IN (SELECT value FROM json_each(?)) AND ((? IS NOT NULL AND thread_id=?) OR (? IS NULL AND room_id=? AND thread_id IS NULL)) ORDER BY id LIMIT 1",
+        params![serde_json::json!(ids).to_string(),thread,thread,thread,room],|row|row.get(0))
 }
 pub fn message_window(
     conn: &Connection,
