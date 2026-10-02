@@ -26,6 +26,7 @@
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use rusqlite::{Connection, OpenFlags};
 use tokio::sync::{mpsc, oneshot};
@@ -535,6 +536,7 @@ type Job = Box<dyn FnOnce(&Connection, &Env) + Send>;
 /// The database handle. Cheap to clone.
 #[derive(Clone)]
 pub struct Database {
+    writer_generation: Arc<AtomicU64>,
     writer: mpsc::Sender<Job>,
     readers: Arc<ReaderPool>,
     env: Env,
@@ -553,10 +555,13 @@ impl Database {
 
         let (sender, mut receiver) = mpsc::channel::<Job>(config.write_queue.max(1));
         let writer_env = env.clone();
+        let writer_generation = Arc::new(AtomicU64::new(0));
+        let generation = writer_generation.clone();
         std::thread::Builder::new()
             .name("campfire-db-writer".into())
             .spawn(move || {
                 while let Some(job) = receiver.blocking_recv() {
+                    generation.fetch_add(1, Ordering::SeqCst);
                     // A panicking write must not take the writer down with it.
                     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         job(&conn, &writer_env)
@@ -564,6 +569,7 @@ impl Database {
                     if outcome.is_err() && !conn.is_autocommit() {
                         let _ = conn.execute_batch("ROLLBACK TRANSACTION");
                     }
+                    generation.fetch_add(1, Ordering::SeqCst);
                     match WAL_PAGES.replace(0) {
                         0 => {}
                         pages if pages >= WAL_LIMIT_PAGES => restart_wal(&conn, &checkpoints),
@@ -579,6 +585,7 @@ impl Database {
 
         Ok(Self {
             writer: sender,
+            writer_generation,
             readers: Arc::new(ReaderPool::new(readers)),
             env,
             path: config.path,
@@ -587,6 +594,13 @@ impl Database {
 
     pub fn env(&self) -> &Env {
         &self.env
+    }
+
+    /// Changes before and after every writer job, including its after-commit callbacks.
+    /// Odd values mean work is in progress. Request-local read snapshots may be reused
+    /// only while this value stays equal and even; this is not an external DB version.
+    pub fn write_generation(&self) -> u64 {
+        self.writer_generation.load(Ordering::SeqCst)
     }
 
     pub fn path(&self) -> &Path {
@@ -882,6 +896,47 @@ impl Drop for Checkout<'_> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn identity_snapshot_generation_covers_rollbacks_and_after_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Database::open(
+            Config::new(dir.path().join("generation.sqlite3")),
+            Env::default(),
+        )
+        .unwrap();
+        let snapshot = db.clone();
+        let first = db
+            .write_blocking(move |tx| {
+                let version = snapshot.write_generation();
+                assert_eq!(version % 2, 1, "writer is active");
+                tx.after_commit(move |_| {
+                    assert_eq!(
+                        snapshot.write_generation(),
+                        version,
+                        "after-commit callbacks are still writer work"
+                    );
+                    Ok(())
+                });
+                Ok(version)
+            })
+            .unwrap();
+        let snapshot = db.clone();
+        let rejected = db.write_blocking(move |_| -> Result<()> {
+            assert_eq!(snapshot.write_generation(), first + 2);
+            Err(Error::Other("intentional rollback".into()))
+        });
+        assert!(rejected.is_err());
+        let snapshot = db.clone();
+        db.write_blocking(move |_| {
+            assert_eq!(
+                snapshot.write_generation(),
+                first + 4,
+                "rollback also invalidates the snapshot"
+            );
+            Ok(())
+        })
+        .unwrap();
+    }
     fn main_file_len(path: &Path) -> u64 {
         std::fs::metadata(path).unwrap().len()
     }

@@ -31,13 +31,17 @@ pub(crate) struct Preloads {
 }
 impl Preloads {
     pub fn load(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
-        Self::load_for(p,messages,false)
+        Self::load_for(p, messages, false)
     }
-    pub fn load_payload(p:&Presenter<'_>, messages:&[Message]) -> Result<Self> {
-        Self::load_for(p,messages,true)
+    pub fn load_payload(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
+        Self::load_for(p, messages, true)
     }
-    fn load_for(p:&Presenter<'_>, messages:&[Message], payload:bool) -> Result<Self> {
-        let records = RenderingRecords::load(p.conn, messages)?;
+    fn load_for(p: &Presenter<'_>, messages: &[Message], payload: bool) -> Result<Self> {
+        let records = if payload {
+            RenderingRecords::load_payload(p.conn, messages)?
+        } else {
+            RenderingRecords::load(p.conn, messages)?
+        };
         let mut mentions = records
             .bodies
             .values()
@@ -45,10 +49,24 @@ impl Preloads {
             .flat_map(|body| mention_ids(body, 0))
             .collect::<Vec<_>>();
         let threads = if payload {
-            let all=messages.iter().chain(records.sources.values()).cloned().collect::<Vec<_>>();
-            Some(campfire_db::models::message_rendering::ThreadRenderingRecords::load(p.conn,&all,p.current_user_id.unwrap_or(0))?)
-        } else {None};
-        if let Some(threads)=&threads {mentions.extend(threads.user_ids(p.current_user_id.unwrap_or(0)));}
+            let all = messages
+                .iter()
+                .chain(records.sources.values())
+                .cloned()
+                .collect::<Vec<_>>();
+            Some(
+                campfire_db::models::message_rendering::ThreadRenderingRecords::load(
+                    p.conn,
+                    &all,
+                    p.current_user_id.unwrap_or(0),
+                )?,
+            )
+        } else {
+            None
+        };
+        if let Some(threads) = &threads {
+            mentions.extend(threads.user_ids(p.current_user_id.unwrap_or(0)));
+        }
         let users = records.users(p.conn, messages, &mentions)?;
         let attachments =
             campfire_storage::Blob::attached_messages(p.conn, &records.body_ids(messages))
@@ -66,41 +84,106 @@ impl Preloads {
             })
             .collect();
         let ids = records.body_ids(messages);
-        let fizzy_cards = crate::integrations::fizzy::cards::Card::for_messages(p.conn, &ids)?;
-        let link_references = crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?;
+        let fizzy_cards = if payload {
+            HashMap::new()
+        } else {
+            crate::integrations::fizzy::cards::Card::for_messages(p.conn, &ids)?
+        };
+        let link_references = if payload {
+            HashMap::new()
+        } else {
+            crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?
+        };
         let mut event_views = HashMap::new();
-        let event_messages = if ids.is_empty() { Vec::new() } else {
-            let sql = format!("SELECT DISTINCT message_id FROM event_references WHERE message_id IN ({})", std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(","));
-            p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
+        let event_messages = if payload || ids.is_empty() {
+            Vec::new()
+        } else {
+            let sql = format!(
+                "SELECT DISTINCT message_id FROM event_references WHERE message_id IN ({})",
+                std::iter::repeat_n("?", ids.len())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+            p.conn
+                .prepare(&sql)?
+                .query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
                 .collect::<std::result::Result<Vec<_>, _>>()?
         };
-        for id in event_messages.into_iter().filter(|_|!payload) {
-            if let Some(message) = messages.iter().find(|m| m.id == id).or_else(|| records.sources.get(&id)) {
-                event_views.insert(id, crate::controllers::presenters::events::for_message(p.conn, message)?);
+        for id in event_messages.into_iter().filter(|_| !payload) {
+            if let Some(message) = messages
+                .iter()
+                .find(|m| m.id == id)
+                .or_else(|| records.sources.get(&id))
+            {
+                event_views.insert(
+                    id,
+                    crate::controllers::presenters::events::for_message(p.conn, message)?,
+                );
             }
         }
         // Keep main's GitHub factory and refresh policy, while honoring the existing
         // message-owner contract that a preloaded message performs no further queries.
         // Merely preloading never schedules refreshes; only an actual fragment miss does.
         let mut github = HashMap::new();
-        let linked = if ids.is_empty() { Vec::new() } else {
-            let sql = format!("SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ({})", std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(","));
-            p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_,i64>(0))?
-                .collect::<std::result::Result<Vec<_>,_>>()?
+        let linked = if payload || ids.is_empty() {
+            Vec::new()
+        } else {
+            let sql = format!(
+                "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ({})",
+                std::iter::repeat_n("?", ids.len())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+            p.conn
+                .prepare(&sql)?
+                .query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
+                .collect::<std::result::Result<Vec<_>, _>>()?
         };
-        for id in linked.iter().filter(|_|!payload) {
-            let message = messages.iter().find(|m| m.id == *id).or_else(|| records.sources.get(id));
+        for id in linked.iter().filter(|_| !payload) {
+            let message = messages
+                .iter()
+                .find(|m| m.id == *id)
+                .or_else(|| records.sources.get(id));
             if let Some(message) = message {
-                let html = crate::controllers::presenters::github::message_cards_in_zone(p.conn, p.app(), message, &p.render_zone)?;
+                let html = crate::controllers::presenters::github::message_cards_in_zone(
+                    p.conn,
+                    p.app(),
+                    message,
+                    &p.render_zone,
+                )?;
                 let stamp = crate::controllers::presenters::github::cache_stamp(p.conn, message)?;
-                let refreshes = crate::integrations::github::pull_requests::PullRequest::for_message(p.conn, *id)?
-                    .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(p.now))).map(|pr| pr.id).collect();
-                github.insert(*id, GithubRendering { html, stamp, refreshes });
+                let refreshes =
+                    crate::integrations::github::pull_requests::PullRequest::for_message(
+                        p.conn, *id,
+                    )?
+                    .into_iter()
+                    .filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(p.now)))
+                    .map(|pr| pr.id)
+                    .collect();
+                github.insert(
+                    *id,
+                    GithubRendering {
+                        html,
+                        stamp,
+                        refreshes,
+                    },
+                );
             }
         }
-        let cache = crate::controllers::presenters::message_cache_preloads::CacheFacts::load(p, messages, &records)?;
+        let cache = if payload {
+            Default::default()
+        } else {
+            crate::controllers::presenters::message_cache_preloads::CacheFacts::load(
+                p, messages, &records,
+            )?
+        };
         Ok(Self {
-            cache, threads, github, event_views, fizzy_cards, link_references,
+            cache,
+            threads,
+            github,
+            event_views,
+            fizzy_cards,
+            link_references,
             records,
             users,
             attachments,
@@ -308,7 +391,9 @@ impl PageResolver<'_> {
     }
 }
 impl AttachableResolver for PageResolver<'_> {
-    fn twitter_post_exists_for_url(&self, url: &str) -> bool { self.db.twitter_post_exists_for_url(url) }
+    fn twitter_post_exists_for_url(&self, url: &str) -> bool {
+        self.db.twitter_post_exists_for_url(url)
+    }
 
     fn embed_image_path(&self, url: &str) -> std::result::Result<String, campfire_richtext::Error> {
         self.db.embed_image_path(url)

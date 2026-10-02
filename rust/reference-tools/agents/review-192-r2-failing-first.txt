@@ -1,0 +1,15 @@
+Baseline b79f376e7c24979d8713b425c63be0d835bf173e; only regression registration, test helpers and vectors added.
+PR192_R2_PRIVATE interface=rest_private_work size=5 SELECTs=41
+PR192_R2_PRIVATE interface=mcp_private_work size=5 SELECTs=42
+PR192_R2_PRIVATE interface=mcp_private_work size=50 SELECTs=222
+test controllers::agent_review_r2_tests::pr192_r2_private_mcp_query_count_is_flat ... FAILED
+PR192_R2_PRIVATE interface=rest_private_work size=50 SELECTs=221
+test controllers::agent_review_r2_tests::pr192_r2_private_rest_query_count_is_flat ... FAILED
+PR192_R2_PAYLOAD context=false SELECTs=28
+test controllers::agent_review_r2_tests::pr192_r2_plain_payload_reads_only_rendered_facts ... FAILED
+PR192_R2_PAYLOAD context=true SELECTs=38
+PR192_R2_CONTEXT author_batch_SELECTs=2
+test controllers::agent_review_r2_tests::pr192_r2_context_reuses_preloaded_authors ... FAILED
+PR192_R2_JPEG Rust_status=201 Rails_status=500 jobs=2 variant_file_exists=true
+test controllers::agent_review_r2_tests::pr192_r2_fresh_jpeg_approved_status_and_committed_state ... FAILED
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 2319 filtered out; finished in 0.80s

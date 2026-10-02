@@ -331,12 +331,19 @@ pub(crate) fn process_attachment_in(
             .transform_variant(&blob, &variation)
             .map_err(storage_db_error)?
             .defer_analysis();
-        if let Some(recorded) = storage
+        if storage
             .record_variant(tx.conn(), &blob, &variation, &staged, tx.now().jiff())
             .map_err(storage_db_error)?
+            .is_some()
         {
-            crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
-            keep_after_commit(tx, staged);
+            // Pinned Rails commits these rows, then its deferred variant upload raises
+            // IOError because transform_blob already closed the output IO. Preserve its
+            // missing file and suppressed analysis job, while returning the approved 201.
+            // In-transaction failures still roll back the post and staged media together.
+            tx.after_commit(move |_| {
+                drop(staged);
+                Ok(())
+            });
         }
     }
     Ok(())

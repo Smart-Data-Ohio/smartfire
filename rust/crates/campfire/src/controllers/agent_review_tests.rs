@@ -22,7 +22,7 @@ fn request(method: Method, path: &str, body: Option<Value>) -> Req {
 fn tool(name: &str, arguments: Value) -> Value {
     json!({"jsonrpc":"2.0","id":192,"method":"tools/call","params":{"name":name,"arguments":arguments}})
 }
-async fn readers() -> TestApp {
+pub(super) async fn readers() -> TestApp {
     let app = setup().await.without_job_runner().await;
     app.db().write(|tx| {
         tx.conn().execute("INSERT INTO channel_threads(id,name,room_id,creator_id,work_owner_id,work_status,last_activity_at,created_at,updated_at,messages_count) VALUES(?,'Query probe',?,?,?,'in_progress',?,?,?,50)",rusqlite::params![THREAD,ROOM,DAVID,BOT,tx.now(),tx.now(),tx.now()])?;

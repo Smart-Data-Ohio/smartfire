@@ -38,6 +38,39 @@ pub fn build_batched(
     now: Timestamp,
     mut presenter: impl FnMut(&[Message]) -> Result<Vec<Value>>,
 ) -> Result<ServiceResult> {
+    build_batched_with_users(
+        conn,
+        agent_id,
+        message_id,
+        thread_id,
+        invalid_thread_constraint,
+        limit,
+        now,
+        |records| {
+            let users = User::where_ids(
+                conn,
+                &records.iter().map(|m| m.creator_id).collect::<Vec<_>>(),
+            )?
+            .into_iter()
+            .map(|u| (u.id, u))
+            .collect();
+            Ok((presenter(records)?, users))
+        },
+    )
+}
+
+/// The HTTP adapter shares its page-scoped author records with context serialization.
+#[allow(clippy::too_many_arguments)]
+pub fn build_batched_with_users(
+    conn: &Connection,
+    agent_id: i64,
+    message_id: Option<i64>,
+    thread_id: Option<i64>,
+    invalid_thread_constraint: bool,
+    limit: Option<&Value>,
+    now: Timestamp,
+    mut presenter: impl FnMut(&[Message]) -> Result<(Vec<Value>, HashMap<i64, User>)>,
+) -> Result<ServiceResult> {
     if message_id.is_none() && thread_id.is_none() {
         return Ok(ServiceResult::fail(
             "message_id or thread_id is required",
@@ -132,13 +165,7 @@ pub fn build_batched(
         .chain(window.iter())
         .cloned()
         .collect::<Vec<_>>();
-    let users = User::where_ids(
-        conn,
-        &records.iter().map(|m| m.creator_id).collect::<Vec<_>>(),
-    )?
-    .into_iter()
-    .map(|u| (u.id, u))
-    .collect::<HashMap<_, _>>();
+    let (mut values, users) = presenter(&records)?;
     let mut authors = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for m in window.iter().chain(message.iter()).chain(root.iter()) {
@@ -150,7 +177,6 @@ pub fn build_batched(
             );
         }
     }
-    let mut values = presenter(&records)?;
     for value in &mut values {
         if let Some(creator) = value.get_mut("creator").and_then(Value::as_object_mut)
             && let Some(user) = creator

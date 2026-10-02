@@ -49,7 +49,7 @@ pub async fn context(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResul
             .get("thread_id")
             .filter(|v| !super::mcp::blank(v))
             .is_some_and(|v| !v.is_string() && !v.is_number());
-        agent_context::build_batched(
+        agent_context::build_batched_with_users(
             presenter.conn,
             agent_id,
             message_id,
@@ -57,7 +57,7 @@ pub async fn context(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResul
             invalid_constraint,
             args.get("limit"),
             now,
-            |records| presenter.agent_message_payloads(records),
+            |records| presenter.agent_message_payloads_with_users(records),
         )
     })
     .await
@@ -222,7 +222,7 @@ async fn start(
                     if let Some(attachment) = attachment {
                         blob = messages::attachment_blob(tx, attachment)?;
                         a.attachment_blob_id = blob.as_ref().map(|blob| blob.id);
-                        if let Some(blob) = &blob {
+                        if !in_thread && let Some(blob) = &blob {
                             crate::controllers::presenters::attachments::enqueue_analysis(tx, blob);
                         }
                     }
