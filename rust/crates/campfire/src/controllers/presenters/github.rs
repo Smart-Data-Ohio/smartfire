@@ -136,9 +136,6 @@ pub(crate) fn shared_card_in_discussion(
     }
     card_in_discussion(pr, discussion_thread)
 }
-pub fn message_cards(conn: &Connection, app: &AppState, message: &Message) -> Result<String> {
-    message_cards_in_zone(conn, app, message, &super::page::renderer_time_zone())
-}
 pub fn message_cards_in_zone(
     conn: &Connection,
     app: &AppState,
@@ -158,6 +155,49 @@ pub fn message_cards_in_zone(
         &cards,
     ))
 }
+/// One persisted-fact snapshot for a callback's entire reference set. Callback rendering
+/// uses the detached renderer zone, just like the single-message owner adapter.
+pub(crate) fn message_cards_for_messages(
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+    account: Option<&Account>,
+) -> Result<std::collections::HashMap<i64, String>> {
+    let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+    let prs = PullRequest::for_messages(conn, &ids)?;
+    let public: Vec<_> = messages
+        .iter()
+        .filter(|m| {
+            prs.get(&m.id)
+                .is_some_and(|cards| cards.iter().any(|pr| pr.private == Some(false)))
+        })
+        .map(|m| m.id)
+        .collect();
+    let discussions = PullRequestThread::for_messages(conn, &public)?;
+    let zone = super::page::renderer_time_zone();
+    messages
+        .iter()
+        .map(|message| {
+            let cards = prs
+                .get(&message.id)
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+                .iter()
+                .map(|pr| {
+                    shared_card_in_discussion(
+                        pr,
+                        discussions.get(&(message.room_id, pr.id)).copied(),
+                    )
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok((
+                message.id,
+                render_message_cards(app, message, &zone, account, &cards),
+            ))
+        })
+        .collect()
+}
+
 pub(crate) fn render_message_cards(
     app: &AppState,
     message: &Message,
@@ -242,7 +282,16 @@ pub fn thread_header(
         return Ok(String::new());
     };
     let pr = PullRequest::find(conn, id)?;
-    let data = shared_card(conn, &pr, thread.room_id, true)?;
+    thread_header_for_pull_request(conn, ctx, thread, &pr)
+}
+
+fn thread_header_for_pull_request(
+    conn: &Connection,
+    ctx: &campfire_views::ViewContext<'_>,
+    thread: &campfire_db::ChannelThread,
+    pr: &PullRequest,
+) -> Result<String> {
+    let data = shared_card(conn, pr, thread.room_id, true)?;
     Ok(campfire_views::github::thread_header(
         ctx,
         thread.room_id,
@@ -263,18 +312,21 @@ impl super::Presenter<'_> {
             "SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=? AND room_id=?",
             rusqlite::params![thread.id, thread.room_id], |r| r.get::<_, i64>(0),
         ).optional()?;
-        if let Some(id) = id {
-            let pr = PullRequest::find(self.conn, id)?;
-            if pr.stale(campfire_db::Timestamp::from_jiff(self.now)) {
-                self.remember_github_refresh(id);
-            }
+        let pr = id.map(|id| PullRequest::find(self.conn, id)).transpose()?;
+        if let Some(pr) = &pr
+            && pr.stale(campfire_db::Timestamp::from_jiff(self.now))
+        {
+            self.remember_github_refresh(pr.id);
         }
         let base = self
             .cache_base_url
             .as_deref()
             .unwrap_or("http://example.org");
         super::page::render_detached_in_zone(self.app, None, base, &self.render_zone, |ctx| {
-            thread_header(self.conn, ctx, thread)
+            match &pr {
+                Some(pr) => thread_header_for_pull_request(self.conn, ctx, thread, pr),
+                None => Ok(String::new()),
+            }
         })
         .map(campfire_views::helpers::raw)
     }

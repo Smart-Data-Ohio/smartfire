@@ -3,6 +3,7 @@ use crate::controllers::presenters::test_support::{Req, TestApp};
 use axum::http::{Method, StatusCode};
 
 mod review_regressions;
+mod board_nudge;
 
 // Rails fixture requests disable forgery verification; remove only those dynamic fields.
 fn page_bytes(html: &str) -> String {

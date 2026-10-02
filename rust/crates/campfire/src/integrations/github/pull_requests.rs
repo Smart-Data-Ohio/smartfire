@@ -107,6 +107,17 @@ impl PullRequest {
         .optional()?
         .ok_or(campfire_db::Error::RecordNotFound("Github::PullRequest"))
     }
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        Ok(conn
+            .prepare(
+                "SELECT * FROM github_pull_requests WHERE id IN (SELECT value FROM json_each(?))",
+            )?
+            .query_map([json!(ids).to_string()], Self::from_row)?
+            .collect::<rusqlite::Result<_>>()?)
+    }
     pub fn for_message(conn: &Connection, message_id: i64) -> Result<Vec<Self>> {
         Ok(conn.prepare("SELECT p.* FROM github_pull_requests p JOIN github_pull_request_references r ON r.github_pull_request_id=p.id WHERE r.message_id=? ORDER BY p.owner,p.repo,p.number")?.query_map([message_id],Self::from_row)?.collect::<rusqlite::Result<_>>()?)
     }

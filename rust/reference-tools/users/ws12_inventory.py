@@ -40,7 +40,7 @@ for path in files:
         if "activity_items_controller" in relative or "activity_items_helper" in relative or "system/activity_inbox" in relative:
             owner, evidence = "WS11-UI controller/rendering + WS12 domain integration", "Merge WS11-UI and replace its flagged activity adapters with ActivityItem domain APIs; verify full response bytes and inbox interactions."
         elif any(part in relative for part in ("channel_thread_agent_assignment", "agents/work", "agent_boards", "agent_working_presence", "agent_work_assignment", "agents/posts_controller", "agents/mcp_handoff")):
-            owner,evidence = "WS12 using merged WS11 #176", "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
+            owner,evidence = "WS12 using merged WS11 #176", "WS11 #176 is merged. WS12 now exposes models::agent_work and uses its real ownership/ledger/presence APIs. This original declaration is not claimed closed until its complete producer or HTTP/MCP/UI assertion set is mapped; see ws12-agent-work-api.md for the callable boundary."
         elif relative=="test/models/user_star_test.rb":
             status,evidence="ported","crates/db/src/tests/user_star_test.rs (5 discriminating model/independent-writer tests)."
         elif relative=="test/controllers/rooms/boards_controller_test.rb":
@@ -144,6 +144,18 @@ for path in files:
             status,owner,evidence="ported","WS12","reference-tools/boards/write_browser.mjs: actual signed-session Markdown reply form, rendered message, cleared composer and persisted plain text through the JSON read on both Rails and Rust."
         if relative=="test/system/boards_test.rb" and title=="board pages align to the top under the header":
             status,owner,evidence="ported","WS12","Body-class assertions are covered by full board post/new-page response comparisons and write_browser.mjs. Geometric assertions are excluded from acceptance by the pixel-phase cut in wave4/_common.md and decisions.md; no pixel work is deferred."
+        if relative in {"test/models/board_tag_assignment_test.rb", "test/models/channel_thread_auto_assign_test.rb"}:
+            status,owner,evidence="ported","WS12","board_tag_assignment_test.rs: all rule and callback declarations, 18 actual Rails validation vectors, current membership/activity/post/read eligibility, no owner override, lexical selection, rollback and timestamps. agent_work_tests.rs: actual durable queue failure rollback and four complete committed Rails HTTP responses."
+        if relative=="test/models/work_handoff_test.rb":
+            status,owner,evidence="ported","WS12","agent_work_test.rs: actual Rails WorkHandoffs service cases for collection normalization and every cap/receiver policy, plus full package/audit/ledger snapshots. agent_work_tests.rs: all handoff rows and real durable jobs roll back together. Human handoff HTTP/pages remain a separate declaration set."
+        if relative == "test/controllers/work_threads_controller_test.rb":
+            status,owner,evidence="ported","WS12","human_work_tests.rs: complete Rails state/empty/agent-badge/link-box responses; work_read_test.rs: active human access, membership removal, hidden room exclusion and unbounded updated_at/id order."
+        if relative == "test/controllers/threads/work/handoffs_controller_test.rb":
+            status,owner,evidence="ported","WS12","human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
+        if relative == "test/controllers/threads/work/links_controller_test.rb":
+            status,owner,evidence="ported","WS12 using merged WS14g #190","human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
+        if relative == "test/models/work_thread_link_test.rb":
+            status,owner,evidence="ported","WS12","work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")

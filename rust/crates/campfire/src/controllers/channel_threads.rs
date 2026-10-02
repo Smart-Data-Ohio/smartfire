@@ -4,6 +4,8 @@ mod tests;
 #[cfg(test)]
 mod page_tests;
 #[cfg(test)]
+mod agent_work_tests;
+#[cfg(test)]
 mod board_read_tests;
 #[cfg(test)]
 mod board_write_tests;
@@ -101,18 +103,12 @@ pub async fn show(c: &mut Ctx) -> Result {
         let post = messages::present(c, move |p| crate::controllers::presenters::board_posts::post(p, &room, &thread, &viewer, &records, picker)).await?;
         return page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::channel_threads::board::Show { ctx, post: &post }).await;
     }
-    if thread.work() { return Ok(c.head(StatusCode::NOT_IMPLEMENTED)); }
     render_standalone(c, thread, records, StatusCode::OK).await
 }
 
 pub async fn content(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
-    if !room.board() && thread.work() {
-        // Ordinary work conversation controls and history remain a WS12 seam.
-        // Board posts already have their Rails-compatible conversation pane.
-        return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
-    }
     let id = thread.id;
     let anchor = c.params.get("message_id").filter(|value| value.is_present()).cloned();
     let (records, anchor) = c.app().db.read(move |conn| {
@@ -145,15 +141,33 @@ fn render_thread_schedule_control(ctx: &campfire_views::ViewContext<'_>, room_id
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
     let name = thread.name.clone();
-    let (parent, items, count, status, pull_request_header) = messages::present(c, move |p| {
+    let viewer = require_current_user(c)?.clone();
+    let (parent, items, count, status, pull_request_header, work) = messages::present(c, move |p| {
         let parent = thread.parent_message_id.map(|id| Message::find(p.conn, id)).transpose()?.as_ref().map(|message| p.message_item(message)).transpose()?;
         Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name(),
-            render_thread_pull_request_header(p, &thread)?))
+            render_thread_pull_request_header(p, &thread)?,
+            if thread.work() {Some(render_work_header(p,&thread,&viewer)?)} else {None}))
     }).await?;
-    // Work/board sections remain WS12 seams. The standalone PR header uses WS15g. The ordinary standalone
-    // thread uses the same stable collection entry point as the room's message list.
     page::titled_content(c, response_status, &name, |ctx| campfire_views::channel_threads::Show { ctx,
-        name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items }.render()).await
+        name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items, work: work.as_ref() }.render()).await
+}
+
+pub(super) fn render_work_header(
+    p: &crate::controllers::presenters::Presenter<'_>,
+    thread: &ChannelThread,
+    viewer: &campfire_db::User,
+) -> campfire_db::Result<campfire_views::channel_threads::Work> {
+    let (owner_label,owner_agent) = crate::controllers::presenters::boards::owner(p,thread)?;
+    Ok(campfire_views::channel_threads::Work {
+        id: thread.id,
+        status_label: thread.work_status_label(),
+        owner_label,
+        owner_agent,
+        can_manage: thread.work_manageable_by(p.conn, viewer)?,
+        history: crate::controllers::presenters::board_posts::history(p, thread.id)?,
+        links: crate::controllers::presenters::board_posts::links(p, thread)?,
+        steps: p.thread_steps(thread.id)?,
+    })
 }
 
 /// Named WS15g integration call site, after authorizing the parent room and scoped thread.
@@ -257,6 +271,6 @@ fn render_error(c: &mut Ctx, status: StatusCode, message: &str) -> Result {
     }
 }
 
-fn render_json(c: &mut Ctx, status: StatusCode, payload: &Value) -> Result {
+pub(super) fn render_json(c: &mut Ctx, status: StatusCode, payload: &Value) -> Result {
     Ok(c.render(status, &format::JSON, serde_json::to_string(payload).map_err(Error::internal)?))
 }

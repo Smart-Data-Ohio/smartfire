@@ -490,6 +490,13 @@ impl Agent {
     pub fn can(&self, conn: &Connection, capability: &str, room_id: Option<i64>) -> Result<bool> {
         super::agent_access::capability_for_agent(conn, self.id, capability, room_id)
     }
+    pub fn capabilities_for_rooms(
+        conn: &Connection,
+        capability: &str,
+        requests: &[(i64, Option<i64>)],
+    ) -> Result<std::collections::HashMap<(i64, Option<i64>), bool>> {
+        super::agent_access::capabilities_for_agents(conn, capability, requests)
+    }
     pub fn has_capability_anywhere(&self, conn: &Connection, capability: &str) -> Result<bool> {
         super::agent_access::has_capability_anywhere(conn, self.id, capability)
     }

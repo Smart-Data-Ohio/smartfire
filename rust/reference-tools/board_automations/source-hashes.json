@@ -1,0 +1,6 @@
+{
+  "app/models/board_sla_nudge.rb": "87713ffa62183b6290b7f00b582134a944a84a6e6aa802ebfa83eafe57cbaa0a",
+  "app/services/activity_items/recorder.rb": "cc8edf555e5e0b337e0f54e6c333a61865a38516e605dfa7387053802917fdac",
+  "app/helpers/activity_items_helper.rb": "40a2231e001e46fe4b2838102759d9c4d5c1b8cba2817ce1dfcf5fe5c3d96d19",
+  "app/models/board_automations/nudge_pusher.rb": "04c5ad74ad14463e99a987c8fadb52a02f4e26b4f83240797ff54deb00ff51ee"
+}
