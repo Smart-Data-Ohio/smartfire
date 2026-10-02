@@ -158,6 +158,7 @@ async fn ws12_populated_work_inbox_preloads_owner_events_in_constant_queries() {
             page["reads"],
             page["work_reads"]
         );
+        assert!(!queries.iter().any(|sql| sql.contains("FROM \"users\" WHERE \"users\".\"id\" IN") || sql.contains("FROM \"rooms\" WHERE id IN")), "JSON work sources must not preload HTML actor/room associations: {queries:?}");
         counts.push(queries.len());
         if work != page["work_reads"].as_u64().unwrap() as usize {
             differences.push(format!(

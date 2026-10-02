@@ -17,6 +17,10 @@ async fn app_rows_with_job_runner(rows: Value, run_jobs: bool) -> TestApp {
     let app = TestApp::boot_with_test_clock(std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(SEED_NOW.parse().unwrap())))
         .await.expect("WS8bm2 requires default seed");
     let app = if run_jobs { app } else { app.without_job_runner().await };
+    insert_rows(&app, rows).await;
+    app
+}
+pub(super) async fn insert_rows(app: &TestApp, rows: Value) {
     app.db().write(move |tx| {
         for table in ["rooms", "events", "twitter_posts", "channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references", "event_references", "twitter_post_references"] {
             for row in rows[table].as_array().into_iter().flatten() {
@@ -34,7 +38,6 @@ async fn app_rows_with_job_runner(rows: Value, run_jobs: bool) -> TestApp {
         }
         Ok(())
     }).await.unwrap();
-    app
 }
 fn id(key: &str, i: usize) -> i64 { oracle()[key][i].as_i64().unwrap() }
 

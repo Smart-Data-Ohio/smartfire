@@ -1,0 +1,135 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "kind": "embed",
+      "count": 32767,
+      "suppressed": true,
+      "base_id": 935962057,
+      "model_id": 3,
+      "rows": {
+        "link_embeds": [
+          {
+            "id": 3,
+            "created_at": "2026-03-02 16:00:00",
+            "description": null,
+            "expires_at": "2026-03-03 16:00:00",
+            "fetch_error": null,
+            "fetch_requested_at": null,
+            "fetched_at": null,
+            "image_url": null,
+            "normalized_url": "https://bounded.example.test/embed",
+            "site_name": null,
+            "title": "before",
+            "updated_at": "2026-03-02 16:00:00"
+          }
+        ]
+      },
+      "frames": 32767,
+      "sha256": "206900da1d0f6faedab48dbcfac3cb391447f796c60d0382ee505b8fc05cc73e",
+      "first": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_bounded-embed-1\"><template>  <div id=\"link_embed_cards_message_bounded-embed-1\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>",
+      "last": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_bounded-embed-32767\"><template>  <div id=\"link_embed_cards_message_bounded-embed-32767\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>",
+      "fetch_jobs": 0
+    },
+    {
+      "kind": "linkedin",
+      "count": 2001,
+      "suppressed": false,
+      "base_id": 935994824,
+      "model_id": 4,
+      "rows": {
+        "link_embeds": [
+          {
+            "id": 4,
+            "created_at": "2026-03-02 16:00:00",
+            "description": null,
+            "expires_at": "2026-03-03 16:00:00",
+            "fetch_error": null,
+            "fetch_requested_at": null,
+            "fetched_at": null,
+            "image_url": null,
+            "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:900001",
+            "site_name": null,
+            "title": "before",
+            "updated_at": "2026-03-02 16:00:00"
+          },
+          {
+            "id": 5,
+            "created_at": "2026-03-02 16:00:00",
+            "description": null,
+            "expires_at": null,
+            "fetch_error": null,
+            "fetch_requested_at": null,
+            "fetched_at": null,
+            "image_url": null,
+            "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:900002",
+            "site_name": null,
+            "title": "stale sibling",
+            "updated_at": "2026-03-02 16:00:00"
+          },
+          {
+            "id": 6,
+            "created_at": "2026-03-02 16:00:00",
+            "description": null,
+            "expires_at": null,
+            "fetch_error": null,
+            "fetch_requested_at": null,
+            "fetched_at": null,
+            "image_url": null,
+            "normalized_url": "https://bounded.example.test/opposite",
+            "site_name": null,
+            "title": "unrequested opposite",
+            "updated_at": "2026-03-02 16:00:00"
+          }
+        ]
+      },
+      "frames": 2001,
+      "sha256": "bc18f21379d958716b61aba60a7caba8238e27a981c5ceb643d7d6105a36c0d9",
+      "first": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_bounded-linkedin-1\"><template>  <div id=\"linkedin_cards_message_bounded-linkedin-1\" class=\"linkedin-post-cards\">\n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900001\">after</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900001\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:900001\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n\n  \n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900002\">stale sibling</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900002\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:900002\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n\n  </div>\n</template></turbo-stream>",
+      "last": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_bounded-linkedin-2001\"><template>  <div id=\"linkedin_cards_message_bounded-linkedin-2001\" class=\"linkedin-post-cards\">\n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900001\">after</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900001\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:900001\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n\n  \n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900002\">stale sibling</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:900002\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:900002\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n\n  </div>\n</template></turbo-stream>",
+      "fetch_jobs": 1
+    },
+    {
+      "kind": "github",
+      "count": 32767,
+      "suppressed": true,
+      "base_id": 935996825,
+      "model_id": 2,
+      "rows": {
+        "github_pull_requests": [
+          {
+            "id": 2,
+            "author_avatar_url": null,
+            "author_login": null,
+            "base_branch": null,
+            "changed_files": null,
+            "changed_files_fetched_at": null,
+            "check_status": null,
+            "created_at": "2026-03-02 16:00:00",
+            "fetch_error": null,
+            "fetch_requested_at": null,
+            "fetched_at": "2026-03-02 16:00:00",
+            "github_updated_at": null,
+            "head_branch": null,
+            "head_sha": null,
+            "html_url": null,
+            "number": 1,
+            "owner": "bounded-owner",
+            "payload": null,
+            "private": null,
+            "repo": "bounded-repo",
+            "review_decision": null,
+            "state": null,
+            "title": "before",
+            "updated_at": "2026-03-02 16:00:00"
+          }
+        ]
+      },
+      "frames": 32767,
+      "sha256": "8f06770af732b42bba92cbc7b4e48dcd7a9a8e126a0a032532a440d21a5ceb21",
+      "first": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"github_pr_cards_message_bounded-github-1\"><template><div id=\"github_pr_cards_message_bounded-github-1\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935996826_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=935996826\"></turbo-frame>\n</div>\n</template></turbo-stream>",
+      "last": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"github_pr_cards_message_bounded-github-32767\"><template><div id=\"github_pr_cards_message_bounded-github-32767\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_936029592_github_pull_request_2\" src=\"/rooms/699448326/github/pull_requests/2/card?message_id=936029592\"></turbo-frame>\n</div>\n</template></turbo-stream>",
+      "fetch_jobs": 0
+    }
+  ]
+}

@@ -10,12 +10,19 @@ pub struct Sources {
     messages: HashMap<i64, campfire_db::Message>,
     rooms: HashMap<i64, campfire_db::Room>,
     work_events: HashMap<i64, campfire_db::WorkThreadEvent>,
+    nudges: HashMap<i64, campfire_db::BoardSlaNudge>,
     threads: HashMap<i64, campfire_db::ChannelThread>,
     actors: HashMap<i64, User>,
     room_names: RefCell<HashMap<i64, String>>,
 }
 impl Sources {
     pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        Self::load_for(conn, rows, true)
+    }
+    pub fn load_json(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        Self::load_for(conn, rows, false)
+    }
+    fn load_for(conn: &Connection, rows: &[ActivityItem], html: bool) -> Result<Self> {
         let saved_ids: Vec<_> = rows
             .iter()
             .filter(|row| row.source_type == "SavedItem")
@@ -45,9 +52,19 @@ impl Sources {
             .into_iter()
             .map(|event| (event.id, event))
             .collect::<HashMap<_, _>>();
+        let nudge_ids = rows
+            .iter()
+            .filter(|row| row.source_type == "BoardSlaNudge")
+            .map(|row| row.source_id)
+            .collect::<Vec<_>>();
+        let nudges = campfire_db::BoardSlaNudge::for_ids(conn, &nudge_ids)?
+            .into_iter()
+            .map(|nudge| (nudge.id, nudge))
+            .collect::<HashMap<_, _>>();
         let thread_ids = work_events
             .values()
             .map(|event| event.channel_thread_id)
+            .chain(nudges.values().map(|nudge| nudge.channel_thread_id))
             .collect::<std::collections::BTreeSet<_>>()
             .into_iter()
             .collect::<Vec<_>>();
@@ -57,6 +74,7 @@ impl Sources {
             .collect::<HashMap<_, _>>();
         let actor_ids = work_events
             .values()
+            .filter(|_| html)
             .filter_map(|event| event.actor_id)
             .collect::<std::collections::BTreeSet<_>>()
             .into_iter()
@@ -72,7 +90,7 @@ impl Sources {
         let mut room_ids: Vec<_> = messages
             .values()
             .map(|message| message.room_id)
-            .chain(threads.values().map(|thread| thread.room_id))
+            .chain(threads.values().filter(|_| html).map(|thread| thread.room_id))
             .collect();
         room_ids.sort_unstable();
         room_ids.dedup();
@@ -85,6 +103,7 @@ impl Sources {
             messages,
             rooms,
             work_events,
+            nudges,
             threads,
             actors,
             room_names: RefCell::default(),
@@ -154,22 +173,12 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &Sources) -> Res
             .and_then(|event| messages.threads.get(&event.channel_thread_id))
             .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
             .unwrap_or_else(fallback),
-        "BoardSlaNudge" => {
-            // FLAGGED WS12 BoardSlaNudge facts reader.
-            let thread_id: Option<i64> = conn
-                .query_row(
-                    "SELECT channel_thread_id FROM board_sla_nudges WHERE id=?",
-                    [row.source_id],
-                    |r| r.get(0),
-                )
-                .optional()?;
-            thread_id
-                .map(|id| campfire_db::ChannelThread::find_by_id(conn, id))
-                .transpose()?
-                .flatten()
-                .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
-                .unwrap_or_else(fallback)
-        }
+        "BoardSlaNudge" => messages
+            .nudges
+            .get(&row.source_id)
+            .and_then(|nudge| messages.threads.get(&nudge.channel_thread_id))
+            .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
+            .unwrap_or_else(fallback),
         "HuddleGrant" => {
             campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
                 .map(|grant| format!("/rooms/{}", grant.room_id))
@@ -326,39 +335,32 @@ pub fn item(
             result.body = work_event_body(event);
         }
         "BoardSlaNudge" => {
-            // FLAGGED WS12 BoardSlaNudge facts reader; no writer is implemented here.
-            let (thread,status,stage,entered,created) = conn.query_row("SELECT channel_thread_id,work_status,stage,status_entered_at,created_at FROM board_sla_nudges WHERE id=?",[item.source_id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,campfire_db::Timestamp>(3)?,r.get::<_,campfire_db::Timestamp>(4)?)))?;
-            let thread = campfire_db::ChannelThread::find(conn, thread)?;
-            result.created_at = Some(created.jiff());
+            let nudge = messages
+                .nudges
+                .get(&item.source_id)
+                .ok_or(campfire_db::Error::RecordNotFound("BoardSlaNudge"))?;
+            let thread = messages.thread(nudge.channel_thread_id)?;
+            result.created_at = Some(nudge.created_at.jiff());
             result.title = format!(
                 "{} · {}",
-                super::accounts::room_display_name(
-                    conn,
-                    &campfire_db::Room::find(conn, thread.room_id)?,
-                    viewer
-                )?,
+                messages.room_name(conn, thread.room_id, viewer)?,
                 thread.name
             );
-            let minutes = (app.db.env().now().jiff().as_second() - entered.jiff().as_second())
-                .div_euclid(60)
-                .max(0);
+            let minutes = nudge.waited_minutes(app.db.env().now());
             let age = if minutes >= 60 {
                 format!("{:.1} hours", (minutes as f64 / 6.0).round() / 10.0)
             } else {
                 format!("{minutes} minutes")
             };
-            let status = humanize(Some(&status));
             result.body = format!(
-                "{}sitting in {status} for {age}",
-                if stage == "escalation" {
-                    "Escalated: "
+                "{} in {} for {age}",
+                if nudge.stage == "escalation" {
+                    "Escalated: sitting"
                 } else {
-                    ""
-                }
+                    "Sitting"
+                },
+                humanize(Some(&nudge.work_status))
             );
-            if stage != "escalation" {
-                result.body.replace_range(..1, "S");
-            }
         }
         "ScheduledMessage" => {
             let scheduled = campfire_db::models::scheduled_message::ScheduledMessage::find(
@@ -464,7 +466,7 @@ pub fn payload(
     app: &crate::app::AppState,
     row: &ActivityItem,
 ) -> Result<Payload> {
-    let messages = Sources::load(conn, std::slice::from_ref(row))?;
+    let messages = Sources::load_json(conn, std::slice::from_ref(row))?;
     payload_with_sources(conn, app, row, &messages)
 }
 pub fn payload_with_sources(
