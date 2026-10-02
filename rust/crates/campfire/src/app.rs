@@ -623,7 +623,7 @@ mod google_meeting_refresh_tests;
 mod google_push_channel_tests;
 
 #[cfg(test)]
-mod google_test_support;
+pub(crate) mod google_test_support;
 
 #[cfg(test)]
 #[path = "../../../test-support/asset_goldens.rs"]
