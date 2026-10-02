@@ -1,6 +1,7 @@
 //! `reference/app/models/user.rb` and `user/*.rb` (Role, Bot, Bannable, Mentionable; Avatar
 //! and Transferable are signed ids, which live in `rails_compat`).
 
+mod destruction;
 pub mod removal;
 pub mod icon;
 pub mod lifecycle;
@@ -15,7 +16,7 @@ use crate::error::{OptionalExt, Result};
 use crate::events::Event;
 use crate::models::{Ban, Membership, Message, Session, Webhook};
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
-use crate::time::{SQLITE_NOW, Timestamp};
+use crate::time::Timestamp;
 
 pub mod presentation;
 pub mod profile_settings;
@@ -347,6 +348,18 @@ impl User {
     /// `User.create!`: inserts, then grants memberships to every open room after commit.
     pub fn create(tx: &mut Tx<'_>, attributes: NewUser) -> Result<Self> {
         Self::create_with_open_room_grant(tx, attributes, true)
+    }
+
+    /// Slack's claimable human placeholders and deactivated historical authors.
+    /// The status is assigned on creation, so deactivated authors never receive open rooms.
+    pub fn create_slack_placeholder(tx: &mut Tx<'_>, attributes: NewUser, active: bool,
+        time_zone: Option<&str>, link_allowed: bool) -> Result<Self> {
+        let zone = time_zone.filter(|name| active && crate::slash_commands::time_parser::known_zone(name).is_some());
+        let user = Self::create_with_open_room_grant(tx, attributes, active)?;
+        tx.conn().execute_cached(
+            "UPDATE users SET status = ?, time_zone = ?, google_email_link_allowed = ? WHERE id = ?",
+            params![if active { Status::Active } else { Status::Deactivated }, zone, link_allowed, user.id])?;
+        Self::find(tx.conn(), user.id)
     }
 
     /// User.create_bot!(skip_open_room_grant: true), used by RoomMailbox.
@@ -896,6 +909,7 @@ const DUMMY_DIGEST: &str = "$2a$12$FiKmSp4UhLvSB4Sd/ZUjQunyKP6.NjDRHdr5LnKUVk.BU
 
 /// `after_create_commit :grant_membership_to_open_rooms`: `Rooms::Open.alive` (`app/models/user.rb`).
 fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
+    let sqlite_now = tx.env().sqlite_now_sql();
     let room_ids: Vec<i64> = query_all(
         tx.conn(),
         r#"SELECT "rooms"."id" FROM "rooms" WHERE "rooms"."type" = ? AND "rooms"."deleted_at" IS NULL"#,
@@ -905,7 +919,7 @@ fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
     for room_ids in room_ids.chunks(crate::models::room::MEMBERSHIP_INSERT_BATCH) {
         let rows: Vec<String> = room_ids
             .iter()
-            .map(|_| format!("({SQLITE_NOW}, ?, {SQLITE_NOW}, ?)"))
+            .map(|_| format!("({sqlite_now}, ?, {sqlite_now}, ?)"))
             .collect();
         let sql = format!(
             r#"INSERT INTO "memberships" ("created_at","room_id","updated_at","user_id") VALUES {} ON CONFLICT  DO NOTHING RETURNING "id""#,

@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "channels": [
+    {
+      "id": "CPRIV",
+      "name": "secret",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "is_archived": false,
+      "created": 1699999000,
+      "creator": "UADMIN",
+      "name_normalized": "secret",
+      "num_members": 2,
+      "purpose": { "value": "" },
+      "topic": { "value": "" }
+    },
+    {
+      "id": "DIM",
+      "name": "",
+      "is_channel": false,
+      "is_group": false,
+      "is_im": true,
+      "is_mpim": false,
+      "is_private": true,
+      "is_archived": false,
+      "created": 1699999000,
+      "creator": "UADMIN",
+      "user": "U001",
+      "num_members": 2
+    },
+    {
+      "id": "GMPIM",
+      "name": "mpdm-ada--jane--kev-1",
+      "is_channel": false,
+      "is_group": true,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "is_archived": false,
+      "created": 1699999000,
+      "creator": "UADMIN",
+      "name_normalized": "mpdm-ada--jane--kev-1",
+      "num_members": 3,
+      "purpose": { "value": "Group DM" }
+    }
+  ],
+  "response_metadata": { "next_cursor": "" }
+}

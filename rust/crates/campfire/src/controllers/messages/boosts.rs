@@ -35,9 +35,19 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let message = set_message(c).await?;
     // params.require(:boost).permit(:content)
-    let content = c.params.require("boost")?.permit(&permit_keys(&["content"])).get("content").and_then(|p| p.as_str()).map(str::to_string);
-    let boost = create_boost(c, &message, content).await?;
-    broadcast_create(c, &message, &boost).await?;
+    let content = c.params.require("boost")?.permit(&permit_keys(&["content"])).get("content").and_then(super::string_column).unwrap_or_default();
+    let (message_id, booster_id, app) = (message.id, require_current_user(c)?.id, c.app().clone());
+    let result = c.app().db.write(move |tx| {
+        let p = crate::controllers::presenters::Presenter::new(tx.conn(), &app, None);
+        let content = views::reactions::resolve_content(&content, &p);
+        let reaction = views::reactions::resolve(&content, &p).is_some();
+        Boost::toggle_reaction(tx, message_id, booster_id, &content, reaction)
+    }).await;
+    match result {
+        Ok(()) => broadcast_reactions(c, &message).await?,
+        Err(campfire_db::Error::RecordInvalid(_)) => (), // Rails redirects after failed validation.
+        Err(error) => return Err(db_error(error)),
+    }
     let url = c.url_for(&campfire_routes::message_boosts(message.id));
     c.redirect_to(&url)
 }
@@ -46,9 +56,26 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let message = set_message(c).await?;
     let boost = set_boost(c, &message).await?;
-    destroy_boost(c, &message, boost).await?;
+    c.app().db.write(move |tx| boost.destroy(tx)).await.map_err(db_error)?;
+    broadcast_reactions(c, &message).await?;
     // No destroy template: `head :no_content`.
     Ok(c.head(StatusCode::NO_CONTENT))
+}
+
+/// Message#broadcast_reactions_replace, shared by human toggle/create and delete. WS11's
+/// separate bot controllers retain their own existing broadcast contract through the helpers.
+async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
+    let (app, id, base) = (c.app().clone(), message.id, page::renderer_base_url(c));
+    c.app().db.read(move |conn| {
+        let message = Message::find(conn, id)?;
+        let p = crate::controllers::presenters::Presenter::new(conn, &app, None);
+        let view = p.message(&message)?;
+        let account = campfire_db::Account::first(conn)?;
+        let html = page::render_detached_at(&app, account.as_ref(), &base, |ctx| views::ReactionsPartial {ctx, message: &view}.render()).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+        let room = Room::find(conn, message.room_id)?;
+        app.broadcasts.message_reactions_replace(&room, &message, &html);
+        Ok(())
+    }).await.map_err(db_error)
 }
 
 /// `Current.user.reachable_messages.find(params[:message_id])`

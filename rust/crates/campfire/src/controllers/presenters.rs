@@ -12,6 +12,7 @@ pub mod github;
 mod layout_preferences;
 pub mod link_embeds;
 mod message_cache;
+mod message_dependencies;
 pub mod page;
 pub mod pagination;
 pub mod people;
@@ -562,7 +563,36 @@ impl<'a> Presenter<'a> {
         if let Some(data) = &self.search_preloads {
             return data.plain_text(self, message);
         }
-        message.plain_text_body(self.conn, self.rich_text)
+        if !message.markdown() {
+            return message.plain_text_body(self.conn, self.rich_text);
+        }
+        let body = message.body_html(self.conn)?.unwrap_or_default();
+        let resolver = self.resolver();
+        let mut text = campfire_richtext::markdown::plain_text(
+            &body,
+            &resolver.render_context(self.request_host.clone()),
+            &resolver.db,
+        )
+        .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
+        // Message#plain_text_body applies these after Markdown.plain_text, including
+        // attachment-only Markdown and a forward note. forwarded_markdown is not markdown?.
+        if campfire_views::helpers::is_blank(&text) {
+            text = message
+                .attachment(self.conn)?
+                .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
+                .unwrap_or_default();
+        }
+        Ok(
+            match message
+                .forward_note
+                .as_deref()
+                .filter(|note| !campfire_views::helpers::is_blank(note))
+            {
+                Some(note) if campfire_views::helpers::is_blank(&text) => note.to_string(),
+                Some(note) => format!("{note}\n\n{text}"),
+                None => text,
+            },
+        )
     }
 
     /// `render @messages, cached: message_with_pr_cards_cache_key`: collection hits skip
@@ -588,6 +618,16 @@ impl<'a> Presenter<'a> {
     }
 
     fn message_item_for(&self, message: &Message, search: bool) -> Result<MessageItem> {
+        // Fetch intent belongs to this request even if a prior render filled the cache
+        // and its durable enqueue rolled back. Search uses the same bulk preloads.
+        for post in self.twitter_posts(message)? {
+            self.request_twitter_fetch(&post);
+        }
+        if !message.embeds_suppressed {
+            for reference in self.link_references(message)? {
+                self.request_link_fetch(&reference.embed);
+            }
+        }
         let view = || -> Result<MessageView> {
             let mut view = self.message(message)?;
             if search {
@@ -612,7 +652,11 @@ impl<'a> Presenter<'a> {
             )?
         };
         let Some(base) = self.cache_base_url.as_deref().filter(|_| !has_events) else { return Ok(MessageItem::View(Box::new(view()?))) };
-        let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
+        let mut key = self.message_fragment_cache_key(message, base)?;
+        if search {
+            key.push_str("/show-room-icon/");
+            key.push_str(&self.message_room_icon_cache_key(message)?);
+        }
         let html = fragment_cache::try_fetch_value(|| key, || {
             let view = view()?;
             let account = campfire_db::Account::first(self.conn)?;

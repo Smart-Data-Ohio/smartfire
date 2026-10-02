@@ -1,0 +1,1963 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "cases": [
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"id\":\"UFIXTURE\",\"access_token\":\"fixture-user-grant\",\"scope\":\"channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read\"},\"team\":{\"id\":\"TFIXTURE\",\"name\":\"Fixture\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "body": {
+            "ok": true,
+            "authed_user": {
+              "id": "UFIXTURE",
+              "access_token": "fixture-user-grant",
+              "scope": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read"
+            },
+            "team": {
+              "id": "TFIXTURE",
+              "name": "Fixture"
+            }
+          }
+        },
+        "revoke": false,
+        "team_info": {
+          "id": "TFIXTURE",
+          "name": "Fixture"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":false,\"error\":\"invalid_code\"}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (invalid_code)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":false,\"error\":\"\"}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":false,\"error\":[\"a\",\"b\"]}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant ([\"a\", \"b\"])"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":null}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":[]}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Type Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":false}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Type Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":null}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":\"\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":\" \\n\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":false}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":0}}"
+      },
+      "expected": {
+        "exchange": {
+          "body": {
+            "ok": true,
+            "authed_user": {
+              "access_token": 0
+            }
+          }
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":[]}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":{}}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"authed_user\":{\"access_token\":\"fixture-user-grant\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "body": {
+            "ok": true,
+            "authed_user": {
+              "access_token": "fixture-user-grant"
+            }
+          }
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "null"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (No Method Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "[]"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Type Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "false"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (No Method Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "5"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Type Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "\"ok\""
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (No Method Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "\"error\""
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "\"ok team\""
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (No Method Error)"
+        },
+        "revoke": false,
+        "team_info": "team"
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":0,\"authed_user\":{\"access_token\":\"fixture-user-grant\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "body": {
+            "ok": 0,
+            "authed_user": {
+              "access_token": "fixture-user-grant"
+            }
+          }
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":\"\",\"authed_user\":{\"access_token\":\"fixture-user-grant\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "body": {
+            "ok": "",
+            "authed_user": {
+              "access_token": "fixture-user-grant"
+            }
+          }
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"revoked\":true}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": true,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"revoked\":1}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{\"ok\":true,\"team\":{\"domain\":\"fixture\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (200)"
+        },
+        "revoke": false,
+        "team_info": {
+          "domain": "fixture"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 201,
+        "body": "{\"ok\":true,\"authed_user\":{\"id\":\"UFIXTURE\",\"access_token\":\"fixture-user-grant\",\"scope\":\"channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read\"},\"team\":{\"id\":\"TFIXTURE\",\"name\":\"Fixture\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "body": {
+            "ok": true,
+            "authed_user": {
+              "id": "UFIXTURE",
+              "access_token": "fixture-user-grant",
+              "scope": "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read"
+            },
+            "team": {
+              "id": "TFIXTURE",
+              "name": "Fixture"
+            }
+          }
+        },
+        "revoke": false,
+        "team_info": {
+          "id": "TFIXTURE",
+          "name": "Fixture"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 401,
+        "body": "{\"ok\":true,\"authed_user\":{\"id\":\"UFIXTURE\",\"access_token\":\"fixture-user-grant\",\"scope\":\"channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users:read.email,team:read\"},\"team\":{\"id\":\"TFIXTURE\",\"name\":\"Fixture\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (401)"
+        },
+        "revoke": false,
+        "team_info": {
+          "id": "TFIXTURE",
+          "name": "Fixture"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 500,
+        "body": "{\"revoked\":true,\"ok\":true,\"team\":{\"id\":\"TFIXTURE\"}}"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Slack rejected the OAuth grant (500)"
+        },
+        "revoke": true,
+        "team_info": {
+          "id": "TFIXTURE"
+        }
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": "{bad"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Parser Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "status": 200,
+        "body": ""
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Parser Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "exception": "Net::OpenTimeout"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Open Timeout)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "exception": "Net::ReadTimeout"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Read Timeout)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "exception": "Net::WriteTimeout"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Write Timeout)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "exception": "SocketError"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Socket Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "exception": "OpenSSL::SSL::SSLError"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Ssl Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "exception": "EOFError"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Eof Error)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    },
+    {
+      "input": {
+        "exception": "Errno::ECONNREFUSED"
+      },
+      "expected": {
+        "exchange": {
+          "error": "Could not reach Slack (Econnrefused)"
+        },
+        "revoke": false,
+        "team_info": null
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/api/oauth.v2.access",
+          "form": {
+            "client_id": "fixture-client",
+            "client_secret": "fixture-secret",
+            "code": "fixture-code",
+            "redirect_uri": "https://example.invalid/slack/oauth/callback"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "POST",
+          "path": "/api/auth.revoke",
+          "form": {
+            "token": "fixture-user-grant"
+          },
+          "accept": "application/json",
+          "content_type": "application/x-www-form-urlencoded",
+          "authorization_matches": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/team.info",
+          "form": null,
+          "accept": "application/json",
+          "content_type": null,
+          "authorization_matches": true
+        }
+      ]
+    }
+  ],
+  "authorize": [
+    {
+      "team": null,
+      "url": "https://slack.com/oauth/v2/authorize?client_id=client+%2B%26&redirect_uri=https%3A%2F%2Fexample.invalid%2Fslack%2Foauth%2Fcallback&state=raw+%2Bstate&user_scope=channels%3Ahistory%2Cchannels%3Aread%2Cgroups%3Ahistory%2Cgroups%3Aread%2Cim%3Ahistory%2Cim%3Aread%2Cmpim%3Ahistory%2Cmpim%3Aread%2Cusers%3Aread%2Cusers%3Aread.email%2Cteam%3Aread"
+    },
+    {
+      "team": "",
+      "url": "https://slack.com/oauth/v2/authorize?client_id=client+%2B%26&redirect_uri=https%3A%2F%2Fexample.invalid%2Fslack%2Foauth%2Fcallback&state=raw+%2Bstate&user_scope=channels%3Ahistory%2Cchannels%3Aread%2Cgroups%3Ahistory%2Cgroups%3Aread%2Cim%3Ahistory%2Cim%3Aread%2Cmpim%3Ahistory%2Cmpim%3Aread%2Cusers%3Aread%2Cusers%3Aread.email%2Cteam%3Aread"
+    },
+    {
+      "team": " ",
+      "url": "https://slack.com/oauth/v2/authorize?client_id=client+%2B%26&redirect_uri=https%3A%2F%2Fexample.invalid%2Fslack%2Foauth%2Fcallback&state=raw+%2Bstate&user_scope=channels%3Ahistory%2Cchannels%3Aread%2Cgroups%3Ahistory%2Cgroups%3Aread%2Cim%3Ahistory%2Cim%3Aread%2Cmpim%3Ahistory%2Cmpim%3Aread%2Cusers%3Aread%2Cusers%3Aread.email%2Cteam%3Aread"
+    },
+    {
+      "team": "TFIXTURE",
+      "url": "https://slack.com/oauth/v2/authorize?client_id=client+%2B%26&redirect_uri=https%3A%2F%2Fexample.invalid%2Fslack%2Foauth%2Fcallback&state=raw+%2Bstate&user_scope=channels%3Ahistory%2Cchannels%3Aread%2Cgroups%3Ahistory%2Cgroups%3Aread%2Cim%3Ahistory%2Cim%3Aread%2Cmpim%3Ahistory%2Cmpim%3Aread%2Cusers%3Aread%2Cusers%3Aread.email%2Cteam%3Aread&team=TFIXTURE"
+    }
+  ],
+  "manifest": "{\n  \"display_information\": {\n    \"name\": \"Smartfire Import\"\n  },\n  \"settings\": {\n    \"org_deploy_enabled\": false\n  },\n  \"oauth_config\": {\n    \"redirect_urls\": [\n      \"https://example.invalid/slack/oauth/callback\"\n    ],\n    \"scopes\": {\n      \"user\": [\n        \"channels:history\",\n        \"channels:read\",\n        \"groups:history\",\n        \"groups:read\",\n        \"im:history\",\n        \"im:read\",\n        \"mpim:history\",\n        \"mpim:read\",\n        \"users:read\",\n        \"users:read.email\",\n        \"team:read\"\n      ]\n    }\n  }\n}",
+  "state": {
+    "raw": "fixture-state",
+    "signed": "ImZpeHR1cmUtc3RhdGUi--f13e651594e6751b5b24f5b91a369f44cbba70de",
+    "secret_key_base": "5335c3b1ad35b4ad170c3413bd651ef3b6ed64e257261871a6de3f978cf3868ee417a927040935fb30b0f7debdedb34a2a403e9f34b16cf594c917c2ecd4a995"
+  }
+}

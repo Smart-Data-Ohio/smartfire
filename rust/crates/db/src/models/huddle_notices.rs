@@ -8,6 +8,7 @@ use crate::{
     Timestamp, Tx, User,
 };
 use jiff::SignedDuration;
+use rails_compat::unicode;
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -410,7 +411,7 @@ fn display_name(
     }
     let mut members = members.iter().collect::<Vec<_>>();
     if ruby_sort {
-        members.sort_by_key(|u| u.name.to_lowercase());
+        members.sort_by_key(|u| unicode::downcase(&u.name));
     }
     let others = members
         .iter()
@@ -458,5 +459,46 @@ fn invitations_enabled_value(raw: Option<&str>) -> bool {
         Some(serde_json::Value::Number(number)) => number.as_f64() != Some(0.0),
         Some(serde_json::Value::String(value)) => !matches!(value.as_str(), "0" | "false"),
         _ => true,
+    }
+}
+
+#[cfg(test)]
+mod unicode_tests {
+    #[test]
+    fn unicode_parity_huddle_notice_direct_name_uses_ruby_sort_order() {
+        let t = crate::tests::TestDb::new();
+        let mut users = t.read(|c| {
+            Ok(vec![
+                crate::User::find(c, crate::fixtures::identify("david"))?,
+                crate::User::find(c, crate::fixtures::identify("jason"))?,
+            ])
+        });
+        users[0].name = "ΟΣ".into();
+        users[1].name = "οςa".into();
+        let oracle: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../vectors/unicode_casing_parity.json"
+        ))
+        .unwrap();
+        let expected = oracle["sigma_names"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let room = t.read(|c| crate::Room::find(c, crate::fixtures::identify("designers")));
+        let mut room = room;
+        room.room_type = crate::RoomType::Direct;
+        room.name = None;
+        assert_eq!(
+            super::display_name(
+                &room,
+                crate::fixtures::identify("kevin"),
+                "Viewer",
+                &users,
+                true
+            ),
+            expected
+        );
     }
 }

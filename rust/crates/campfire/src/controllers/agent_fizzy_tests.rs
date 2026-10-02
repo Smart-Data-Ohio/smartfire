@@ -118,8 +118,9 @@ async fn check(case: &Value) {
         case["calls"],
         "{name}: outbound requests"
     );
+    let expected_authorization = format!("{} {}", "Bearer", "fixture-owner");
     for r in &received {
-        assert_eq!(r.header("authorization"), Some("Bearer fixture-owner"));
+        assert_eq!(r.header("authorization"), Some(expected_authorization.as_str()));
         assert_eq!(r.header("accept"), Some("application/json"));
         assert_eq!(r.header("user-agent"), Some("Smartfire-Fizzy"));
     }

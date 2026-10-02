@@ -56,6 +56,8 @@ mod message_forwards;
 pub(crate) mod message_forwards_tests;
 pub mod messages;
 pub mod presenters;
+#[cfg(test)]
+mod activity_domain_tests;
 pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
@@ -65,6 +67,7 @@ pub mod saved_items;
 pub mod scheduled_messages;
 pub mod searches;
 pub mod sessions;
+pub mod slack;
 pub mod sudos;
 pub mod switchers;
 pub mod two_factor;
@@ -205,6 +208,27 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "github/pull_request_review_requests#create" => arc(github::writes::review_request),
         "github/pull_request_write_actions#show" => arc(github::writes::show),
         "github/pull_request_threads#create" => arc(github::discussions::create),
+        "accounts/slack_imports#show" => arc(slack::setup::show),
+        "accounts/slack_imports#update" => arc(slack::setup::update),
+        "accounts/slack_imports#destroy" => arc(slack::setup::destroy),
+        "slack/oauth#start" => arc(slack::start),
+        "slack/oauth#callback" => arc(slack::callback),
+        "accounts/slack_import_runs#index" => arc(slack::runs::admin_index),
+        "accounts/slack_import_runs#create" => arc(slack::runs::admin_create),
+        "accounts/slack_import_runs#show" => arc(slack::runs::admin_show),
+        "accounts/slack_import_runs#status" => arc(slack::runs::admin_status),
+        "accounts/slack_import_runs#plan" => arc(slack::runs::plan),
+        "accounts/slack_import_runs#start_import" => arc(slack::runs::start_import),
+        "accounts/slack_import_runs#catch_up" => arc(slack::runs::catch_up),
+        "accounts/slack_import_runs#cancel" => arc(slack::runs::admin_cancel),
+        "accounts/slack_import_runs#undo" => arc(slack::runs::admin_undo),
+        "slack/imports#index" => arc(slack::runs::personal_index),
+        "slack/imports#create" => arc(slack::runs::personal_create),
+        "slack/imports#show" => arc(slack::runs::personal_show),
+        "slack/imports#status" => arc(slack::runs::personal_status),
+        "slack/imports#cancel" => arc(slack::runs::personal_cancel),
+        "slack/imports#undo" => arc(slack::runs::personal_undo),
+        "slack/connections#destroy" => arc(slack::disconnect),
         "github/connections#create" => arc(github::connections::create),
         "github/connections#destroy" => arc(github::connections::destroy),
         "github/app_connections#connect" => arc(github::connections::connect),
@@ -259,6 +283,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users#new" => arc(users::new),
         "users#index" => arc(users::index),
         "users/cards#show" => arc(users::cards::show),
+        "users/stars#create" => arc(users::stars::create),
+        "users/stars#destroy" => arc(users::stars::destroy),
         "users#create" => arc(users::create),
         "users#show" => arc(users::show),
         "qr_code#show" => arc(qr_code::show),
@@ -807,9 +833,32 @@ mod tests {
         "agents#me", "agents#update",
         "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
         "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
+        "accounts/slack_import_runs#index",
+        "accounts/slack_import_runs#create",
+        "accounts/slack_import_runs#show",
+        "accounts/slack_import_runs#status",
+        "accounts/slack_import_runs#plan",
+        "accounts/slack_import_runs#start_import",
+        "accounts/slack_import_runs#catch_up",
+        "accounts/slack_import_runs#cancel",
+        "accounts/slack_import_runs#undo",
+        "slack/imports#index",
+        "slack/imports#create",
+        "slack/imports#show",
+        "slack/imports#status",
+        "slack/imports#cancel",
+        "slack/imports#undo",
+        "slack/oauth#start",
+        "slack/oauth#callback",
+        "slack/connections#destroy",
+        "accounts/slack_imports#show",
+        "accounts/slack_imports#update",
+        "accounts/slack_imports#destroy",
         "embeds/images#show",
         "users/presences#show",
         "users/dnd_allowances#create",
+        "users/stars#create",
+        "users/stars#destroy",
         "users/dnd_allowances#destroy",
         "users/notification_settings#update",
         "switchers#show",

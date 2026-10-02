@@ -1,0 +1,50 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "name": "bodyless_root",
+      "id": 818,
+      "path": "/rooms/815/messages/818",
+      "body_before": null,
+      "status": 302,
+      "body": "",
+      "location": "http://example.org/rooms/815/messages/818",
+      "content_type": "text/html; charset=utf-8",
+      "fetch_jobs": 1,
+      "claimed": true,
+      "saved_body": null,
+      "suppressed": false,
+      "edited_at": null
+    },
+    {
+      "name": "valid_root",
+      "id": 818,
+      "path": "/rooms/815/messages/818",
+      "body_before": "<p>https://github.com/rails/rails/pull/12</p>",
+      "status": 302,
+      "body": "",
+      "location": "http://example.org/rooms/815/messages/818",
+      "content_type": "text/html; charset=utf-8",
+      "fetch_jobs": 1,
+      "claimed": true,
+      "saved_body": "<p>https://github.com/rails/rails/pull/12</p>",
+      "suppressed": false,
+      "edited_at": null
+    },
+    {
+      "name": "valid_thread",
+      "id": 819,
+      "path": "/rooms/815/threads/817/messages/819",
+      "body_before": "<p>https://github.com/rails/rails/pull/12</p>",
+      "status": 302,
+      "body": "",
+      "location": "http://example.org/rooms/815/threads/817/messages/819",
+      "content_type": "text/html; charset=utf-8",
+      "fetch_jobs": 1,
+      "claimed": true,
+      "saved_body": "<p>https://github.com/rails/rails/pull/12</p>",
+      "suppressed": false,
+      "edited_at": null
+    }
+  ]
+}

@@ -12,7 +12,7 @@ use crate::error::{Errors, OptionalExt, Result};
 use crate::events::Event;
 use crate::models::{Membership, Message, StageRole, User};
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
-use crate::time::{SQLITE_NOW, Timestamp};
+use crate::time::Timestamp;
 
 /// The STI `type` column: `app/models/rooms/{open,closed,direct,voice,stage,board}.rb`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -155,7 +155,12 @@ impl Room {
     }
 
     pub fn all(conn: &Connection) -> Result<Vec<Self>> {
-        query_all(conn, r#"SELECT * FROM "rooms" WHERE "deleted_at" IS NULL"#, [], Self::from_row)
+        query_all(
+            conn,
+            r#"SELECT * FROM "rooms" WHERE "deleted_at" IS NULL"#,
+            [],
+            Self::from_row,
+        )
     }
 
     /// `Room.opens` / `closeds` / `directs` / `voices` / `boards` (and `where(type:)` for stages)
@@ -252,7 +257,9 @@ impl Room {
         creator_id: i64,
         direct_member_key: Option<&str>,
     ) -> Result<Self> {
-        if room_type == RoomType::Direct { crate::models::direct_room::validate_name(name)?; }
+        if room_type == RoomType::Direct {
+            crate::models::direct_room::validate_name(name)?;
+        }
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "rooms" ("created_at", "creator_id", "direct_member_key", "name", "type", "updated_at") VALUES (?, ?, ?, ?, ?, ?) RETURNING "id""#,
@@ -354,7 +361,8 @@ impl Room {
             return Ok(room);
         }
         match Self::create_for(tx, RoomType::Direct, None, creator_id, user_ids) {
-            Err(e) if e.is_record_not_unique() => match Self::find_direct_for(tx.conn(), user_ids)? {
+            Err(e) if e.is_record_not_unique() => match Self::find_direct_for(tx.conn(), user_ids)?
+            {
                 Some(room) => Ok(room),
                 None => Err(e),
             },
@@ -412,7 +420,9 @@ impl Room {
     /// whose new member set collides with another alive room's key: membership changes never
     /// merge two rooms. Written with `update_column`, so `updated_at` stays.
     pub fn refresh_direct_member_key(&self, tx: &mut Tx<'_>) -> Result<()> {
-        let Some(room) = Self::find_by_id(tx.conn(), self.id)? else { return Ok(()) };
+        let Some(room) = Self::find_by_id(tx.conn(), self.id)? else {
+            return Ok(());
+        };
         if room.deleted_at.is_some() {
             return Ok(());
         }
@@ -423,7 +433,8 @@ impl Room {
             |r| r.get(0),
         )?;
         let mut candidate = Self::direct_member_key_for(&user_ids);
-        let squats_pair_key = user_ids.len() <= 2 && room.name.as_deref().is_some_and(|n| !n.trim().is_empty());
+        let squats_pair_key =
+            user_ids.len() <= 2 && room.name.as_deref().is_some_and(|n| !n.trim().is_empty());
         let taken = sql::exists(
             tx.conn(),
             r#"SELECT 1 AS one FROM "rooms" WHERE "rooms"."deleted_at" IS NULL AND "rooms"."type" = ? AND "rooms"."id" != ? AND "rooms"."direct_member_key" = ? LIMIT 1"#,
@@ -463,7 +474,11 @@ impl Room {
             errors.add("type", "can't be changed for a direct room");
             return errors.into_result();
         }
-        if self.direct() { crate::models::direct_room::validate_name(name.as_ref().unwrap_or(&self.name).as_deref())?; }
+        if self.direct() {
+            crate::models::direct_room::validate_name(
+                name.as_ref().unwrap_or(&self.name).as_deref(),
+            )?;
+        }
         if name.is_none() && room_type.is_none() {
             return Ok(());
         }
@@ -520,7 +535,11 @@ impl Room {
 
     /// Immediately revoke access and atomically request asynchronous destruction.
     pub fn begin_destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        crate::models::room_delete::begin_destroy(tx, self, &crate::models::room_delete::HuddleConfig::from_env())
+        crate::models::room_delete::begin_destroy(
+            tx,
+            self,
+            &crate::models::room_delete::HuddleConfig::from_env(),
+        )
     }
 
     // Memberships
@@ -645,7 +664,11 @@ impl Room {
             params![room_id, cutoff, message.creator_id],
         )?;
         let mentionee_ids: Vec<i64> = if muted_recipients {
-            message.mentionees(tx.conn(), tx.rich_text())?.into_iter().map(|user| user.id).collect()
+            message
+                .mentionees(tx.conn(), tx.rich_text())?
+                .into_iter()
+                .map(|user| user.id)
+                .collect()
         } else {
             Vec::new()
         };
@@ -662,7 +685,8 @@ impl Room {
                 message.creator_id.into(),
             ];
             values.extend(mentionee_ids.into_iter().map(rusqlite::types::Value::from));
-            tx.conn().execute(&sql, rusqlite::params_from_iter(values))?;
+            tx.conn()
+                .execute(&sql, rusqlite::params_from_iter(values))?;
         }
 
         tx.conn().execute_cached(
@@ -684,14 +708,24 @@ impl Room {
                 "UPDATE rooms SET inbound_email_token = ?, updated_at = ? WHERE id = ?",
                 params![token, tx.now(), self.id],
             ) {
-                Ok(_) => { self.inbound_email_token = Some(token.clone()); self.updated_at = tx.now(); return Ok(token); }
-                Err(rusqlite::Error::SqliteFailure(error, _)) if error.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE => continue,
+                Ok(_) => {
+                    self.inbound_email_token = Some(token.clone());
+                    self.updated_at = tx.now();
+                    return Ok(token);
+                }
+                Err(rusqlite::Error::SqliteFailure(error, _))
+                    if error.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE =>
+                {
+                    continue;
+                }
                 Err(error) => return Err(error.into()),
             }
         }
     }
 
-    pub fn emailable(&self) -> bool { !self.direct() && !self.board() }
+    pub fn emailable(&self) -> bool {
+        !self.direct() && !self.board()
+    }
 
     pub fn open(&self) -> bool {
         self.room_type == RoomType::Open
@@ -740,10 +774,11 @@ fn insert_memberships(
     user_ids: &[i64],
 ) -> Result<()> {
     // In batches: SQLite binds at most 32,766 variables per statement, 3 per row here.
+    let sqlite_now = tx.env().sqlite_now_sql();
     for user_ids in user_ids.chunks(MEMBERSHIP_INSERT_BATCH) {
         let rows: Vec<String> = user_ids
             .iter()
-            .map(|_| format!("({SQLITE_NOW}, ?, ?, {SQLITE_NOW}, ?)"))
+            .map(|_| format!("({sqlite_now}, ?, ?, {sqlite_now}, ?)"))
             .collect();
         let sql = format!(
             r#"INSERT INTO "memberships" ("created_at","involvement","room_id","updated_at","user_id") VALUES {} ON CONFLICT  DO NOTHING RETURNING "id""#,

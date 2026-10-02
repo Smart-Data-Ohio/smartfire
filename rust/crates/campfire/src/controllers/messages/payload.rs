@@ -2,6 +2,7 @@
 use campfire_db::{ChannelThread, Message, MessagePin, SavedItem, Timestamp, User};
 use campfire_views::helpers::{AvatarIcon, IconSource};
 use campfire_views::messages::support::json_time;
+use rails_compat::unicode;
 use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 
@@ -176,8 +177,8 @@ pub(crate) fn thread_details(p: &Presenter<'_>, record: &ChannelThread, viewer: 
             agents.push(entry);
         } else { humans.push(entry); }
     }
-    humans.sort_by_key(|entry| entry["name"].as_str().unwrap_or_default().to_lowercase());
-    agents.sort_by_key(|entry| entry["name"].as_str().unwrap_or_default().to_lowercase());
+    humans.sort_by_key(|entry| unicode::downcase(entry["name"].as_str().unwrap_or_default()));
+    agents.sort_by_key(|entry| unicode::downcase(entry["name"].as_str().unwrap_or_default()));
     humans.extend(agents);
     value["work_owner_options"] = humans.into();
     let mut query = p.conn.prepare("SELECT id, event_type, created_at, actor_id, from_status, to_status, from_owner_id, from_owner_name, to_owner_id, to_owner_name, metadata FROM work_thread_events WHERE channel_thread_id = ? ORDER BY created_at DESC, id DESC")?;
@@ -229,4 +230,80 @@ fn linkedin_url(url: &str) -> bool {
     use std::sync::LazyLock;
     static PATTERN: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r#"https?://(?:www\.)?linkedin\.com/(?:posts/[^/?#\s<>"'()\]]+|feed/update/urn:li:(?:activity|share|ugcPost):[0-9]+(?:$|[/?#\s<>"'()\].,;:!?}]))"#).unwrap());
     PATTERN.is_match(url)
+}
+
+#[cfg(test)]
+mod unicode_tests {
+    use super::*;
+    use crate::controllers::presenters::test_support::{DAVID, KEVIN, TestApp};
+    use campfire_db::{Agent, NewAgent, NewChannelThread, Room, RoomType};
+
+    #[tokio::test]
+    async fn unicode_parity_thread_payload_sorts_human_and_agent_owner_options() {
+        let app = TestApp::boot_frozen()
+            .await
+            .expect("default seed required")
+            .without_job_runner()
+            .await;
+        let thread = app
+            .booted
+            .app
+            .db
+            .write(|tx| {
+                tx.conn()
+                    .execute("UPDATE users SET name='ΟΣ' WHERE id=?", [DAVID])?;
+                tx.conn()
+                    .execute("UPDATE users SET name='οςa' WHERE id=?", [KEVIN])?;
+                let mut members = vec![DAVID, KEVIN];
+                for name in ["ΟΣ", "οςa"] {
+                    let user = User::create_integration_bot(tx, name)?;
+                    Agent::create(
+                        tx,
+                        NewAgent {
+                            user_id: user.id,
+                            owner_id: Some(DAVID),
+                            ..Default::default()
+                        },
+                    )?;
+                    members.push(user.id);
+                }
+                let room = Room::create_for(tx, RoomType::Closed, Some("Casing"), DAVID, &members)?;
+                ChannelThread::create(
+                    tx,
+                    NewChannelThread {
+                        room_id: room.id,
+                        creator_id: DAVID,
+                        name: Some("Casing".into()),
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+        let state = app.booted.app.clone();
+        let presenter_state = state.clone();
+        let payload = state
+            .db
+            .read(move |c| {
+                let p = Presenter::new(c, &presenter_state, None);
+                thread_details(&p, &thread, &User::find(c, DAVID)?, "http://campfire.test")
+            })
+            .await
+            .unwrap();
+        let names = payload["work_owner_options"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|owner| owner["name"].clone())
+            .collect::<Vec<_>>();
+        let oracle: Value = serde_json::from_str(include_str!(
+            "../../../../../vectors/unicode_casing_parity.json"
+        ))
+        .unwrap();
+        let mut expected = oracle["sigma_names"].as_array().unwrap().clone();
+        expected.extend(expected.clone());
+        assert_eq!(names, expected);
+        assert!(payload["work_owner_options"][0]["human"].as_bool().unwrap());
+        assert!(payload["work_owner_options"][2]["agent"].as_bool().unwrap());
+    }
 }

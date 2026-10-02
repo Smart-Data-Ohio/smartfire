@@ -37,7 +37,17 @@ inputs = [
   ["file", { attachment_blob_id: 13 }],
   ["unrepresentable_image", { attachment_blob_id: 14 }],
   ["sound_text", { markdown_source: "/play bell" }],
-  ["sound_image", { markdown_source: "/play 56k" }]
+  ["sound_image", { markdown_source: "/play 56k" }],
+  ["legacy_bodyless", { body: nil }],
+  ["streaming_empty", { markdown_source: "", streaming: true }],
+  ["edited_text", { markdown_source: "Edited **text**", edited_at: Time.current + 20.seconds }],
+  ["edited_image", { markdown_source: "Edited caption", attachment_blob_id: 1, edited_at: Time.current + 20.seconds }],
+  ["file_reply", { markdown_source: "File reply", attachment_blob_id: 13, reply_to_message_id: source.id + 1 }],
+  ["forwarded_file", { body: "<div>File snapshot</div>", attachment_blob_id: 13, forwarded_at: Time.current,
+    forwarded_from_message_id: source.id + 1, forward_note: "File <&> note" }],
+  ["mixed_reactions", { markdown_source: "Reaction **caption**", attachment_blob_id: 1,
+    boosts: [[user.id, "👍"], [User.find_by!(email_address: "jason@37signals.com").id, "👍"], [user.id, ":github:"],
+      [user.id, "Legacy <&>"], [user.id, "Legacy <&>"], [user.id, ":unknown:"], [user.id, "🇺🇸"]] }]
 ]
 steps = [
   { name: "<pending>", status: "pending", duration_ms: 0, input_summary: " ", output_summary: nil },
@@ -47,12 +57,13 @@ steps = [
 ]
 renderer = ApplicationController.renderer.new(http_host: "campfire.test", https: false)
 rows = inputs.map do |name, attributes|
-  message = room.root_messages.build(attributes.except(:drive_file_ids, :attachment_blob_id).merge(creator_id: attributes.fetch(:creator_id, user.id), client_message_id: "states-#{name}"))
+  message = room.root_messages.build(attributes.except(:drive_file_ids, :attachment_blob_id, :boosts).merge(creator_id: attributes.fetch(:creator_id, user.id), client_message_id: "states-#{name}"))
   message.attachment = ActiveStorage::Blob.find(attributes[:attachment_blob_id]) if attributes[:attachment_blob_id]
   Array(attributes[:drive_file_ids]).each { |file_id| message.drive_attachments.build(file_id:) }
   message.save!
   source.destroy! if name == "deleted_reply"
   steps.each { |step| AgentStep.create!(step.merge(agent:, message:)) } if name == "steps"
+  Array(attributes[:boosts]).each { |booster_id, content| message.boosts.create!(booster_id:, content:) }
   message.reload
   Message.preload_rendering_details([message])
   html = 2.times.map { renderer.render(partial: "messages/message", collection: [message], cached: ->(record) { ApplicationController.helpers.message_with_pr_cards_cache_key(record) }) }
@@ -64,7 +75,7 @@ rows = inputs.map do |name, attributes|
   message.broadcast_remove
   raise "publisher omitted a frame" unless frames.size == 3
   raise "session value" if ([html.first] + frames.map { |frame| frame[:payload] }).any? { |body| body.include?("authenticity_token") || body.match?(/nonce="[^"]+/) }
-  { name:, input: attributes, id: message.id, html: html.first, frames: frames.dup }
+  { name:, input: attributes.transform_values { |value| value.is_a?(Time) ? value.iso8601 : value }, id: message.id, html: html.first, frames: frames.dup }
 end
 File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", source_id: source.id, agent_id: agent.id, steps:, rows:) + "\n")
 puts "WS8bm message-states oracle: #{rows.size} real Rails states rendered cold/warm; #{rows.sum { |row| row[:frames].size }} actual append/replace/remove frames; 0 session-bound values"

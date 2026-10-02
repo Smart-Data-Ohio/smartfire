@@ -11,6 +11,44 @@ fn vectors() -> Value {
     ))
     .unwrap()
 }
+
+#[test]
+fn unicode_parity_github_reviewer_lookup_uses_ruby_downcase() {
+    let t = TestDb::new();
+    t.db.write_blocking(|tx| {
+        let user = TestDb::id("david");
+        let room = TestDb::id("designers");
+        tx.conn()
+            .execute("UPDATE users SET github_login='οσ' WHERE id=?", [user])?;
+        let message = Message::create(
+            tx,
+            campfire_db::NewMessage {
+                room_id: room,
+                creator_id: user,
+                body: Some("Review please".into()),
+                ..Default::default()
+            },
+        )?;
+        record_review_request(tx, &message, Some(&json!(" ΟΣ ")))?;
+        let item = ActivityItem::find_by_user_and_source(tx.conn(), user, "Message", message.id)?;
+        assert_eq!(item.unwrap().event_type, "pr_review_request");
+        Ok(())
+    })
+    .unwrap();
+}
+
+#[test]
+fn unicode_parity_github_reviewer_notification_key_uses_ruby_downcase() {
+    let t = TestDb::new();
+    let payload = json!({"action": "review_requested", "sender": {"login": "alice"}, "repository": {"full_name": "rails/rails"}, "pull_request": {"number": 12, "title": "Casing"}, "requested_reviewer": {"login": "ΟΣ"}});
+    let posts =
+        t.db.read_blocking(|c| {
+            plan(c, "pull_request", &payload).map_err(|e| campfire_db::Error::Other(e.to_string()))
+        })
+        .unwrap();
+    assert_eq!(posts[0].suffix, ":οσ");
+}
+
 #[derive(Clone)]
 struct Sink {
     queue: JobQueue,
@@ -57,6 +95,7 @@ async fn database(case: &Value) -> (TestDb, Sink) {
         message_reference_syncs: vec![super::super::references::sync],
         user_deactivation_hooks: Vec::new(),
         ..Env::default()
+
     };
     let directory =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");

@@ -1,5 +1,6 @@
 //! Bounded, access-neutral file listing reads; callers authorize the room first.
 use crate::{Connection, Result, Timestamp};
+use rails_compat::unicode;
 use rusqlite::{params, types::Value};
 
 pub const TYPES: [&str; 5] = ["all", "images", "videos", "documents", "other"];
@@ -62,8 +63,7 @@ pub fn uploads(
     );
     if !filename.is_empty() {
         sql.push_str(" AND LOWER(b.filename) LIKE ? ESCAPE '\\'");
-        let literal = filename
-            .to_lowercase()
+        let literal = unicode::downcase(filename)
             .replace('\\', "\\\\")
             .replace('%', "\\%")
             .replace('_', "\\_");

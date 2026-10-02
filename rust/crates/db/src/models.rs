@@ -1,6 +1,8 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod slack_import;
+pub mod slack;
 pub mod agent;
 pub mod agent_access;
 pub mod agent_api_pending;
@@ -67,6 +69,8 @@ pub mod two_factor;
 pub mod thread_membership;
 pub mod thread_tag;
 pub mod user;
+pub mod user_star;
+pub use user_star::UserStar;
 pub mod user_status_settings;
 pub mod dnd_allowed_user;
 pub use dnd_allowed_user::DndAllowedUser;

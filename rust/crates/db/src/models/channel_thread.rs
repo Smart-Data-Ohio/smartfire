@@ -788,6 +788,15 @@ impl ChannelThread {
     }
 
     pub fn destroy_by(&self, tx: &mut Tx<'_>, deleted_by_id: Option<i64>) -> Result<()> {
+        self.destroy_inner(tx, false, deleted_by_id)
+    }
+
+    /// Slack undo propagates `importing` to dependent messages, suppressing delivery callbacks.
+    pub fn destroy_imported(&self, tx: &mut Tx<'_>) -> Result<()> {
+        self.destroy_inner(tx, true, None)
+    }
+
+    fn destroy_inner(&self, tx: &mut Tx<'_>, importing: bool, deleted_by_id: Option<i64>) -> Result<()> {
         let fresh = Self::find(tx.conn(), self.id)?;
         tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
@@ -796,7 +805,11 @@ impl ChannelThread {
             tag.destroy(tx)?;
         }
         for message in Message::in_thread(tx.conn(), self.id)? {
-            message.destroy_with_conversation(tx)?;
+            if importing {
+                message.destroy_imported_with_conversation(tx)?;
+            } else {
+                message.destroy_with_conversation(tx)?;
+            }
         }
         // WorkThreadEvent's dependent inbox rows must be destroyed before its FK cascade.
         tx.conn().execute_cached(
@@ -822,18 +835,19 @@ impl ChannelThread {
             r#"DELETE FROM "channel_threads" WHERE "channel_threads"."id" = ?"#,
             [self.id],
         )?;
-        if let Some(parent_id) = self.parent_message_id {
+        if let Some(parent_id) = self.parent_message_id.filter(|_| !importing) {
             tx.conn().execute_cached(
                 r#"UPDATE "messages" SET "updated_at" = ? WHERE "messages"."id" = ?"#,
                 params![tx.now(), parent_id],
             )?;
         }
-        let parent_message_id = self.parent_message_id;
-        // Rails registers the indicator before emit_deleted_work_unassigned.
-        // A ledger failure must not suppress the already-committed deletion's UI update.
-        tx.after_commit_record("channel_threads", self.id, move |tx| {
-            Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
-        });
+        if !importing {
+            let parent_message_id = self.parent_message_id;
+            // Keep main's callback order and record identity; Slack undo suppresses delivery.
+            tx.after_commit_record("channel_threads", self.id, move |tx| {
+                Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
+            });
+        }
         super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         Ok(())
     }
@@ -940,7 +954,10 @@ impl ChannelThread {
             None => None,
         };
         let mut candidates = Vec::new();
-        let mut users: HashMap<i64, User> = User::where_ids(conn, &user_ids)?.into_iter().map(|user| (user.id, user)).collect();
+        let mut users: HashMap<i64, User> = User::where_ids(conn, &user_ids)?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect();
         for membership in memberships {
             let recipient = users.remove(&membership.user_id).or_not_found("User")?;
             candidates.push(ThreadPushCandidate {
@@ -1001,7 +1018,12 @@ impl ChannelThread {
             };
             pushes.push(ThreadPush {
                 user_id: candidate.recipient.id,
-                payload: PushPayload::new(title, body.clone(), path.clone(), Some(format!("room-{}", thread.room_id))),
+                payload: PushPayload::new(
+                    title,
+                    body.clone(),
+                    path.clone(),
+                    Some(format!("room-{}", thread.room_id)),
+                ),
                 tag: format!("room-{}", thread.room_id),
                 subscriptions,
             });
@@ -1010,18 +1032,38 @@ impl ChannelThread {
     }
 
     /// The production policy, with status/cache and DND exceptions preloaded once per batch.
-    pub fn push_recipients_with_policy(conn: &Connection, rich_text: &dyn RichText, thread_id: i64, message_id: i64, now: Timestamp) -> Result<Vec<ThreadPush>> {
-        let Some(message) = Message::find_by_id(conn, message_id)? else { return Ok(Vec::new()) };
-        let ids: Vec<i64> = query_all(conn, "SELECT user_id FROM thread_memberships WHERE thread_id=?", [thread_id], |row| row.get(0))?;
+    pub fn push_recipients_with_policy(
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        thread_id: i64,
+        message_id: i64,
+        now: Timestamp,
+    ) -> Result<Vec<ThreadPush>> {
+        let Some(message) = Message::find_by_id(conn, message_id)? else {
+            return Ok(Vec::new());
+        };
+        let ids: Vec<i64> = query_all(
+            conn,
+            "SELECT user_id FROM thread_memberships WHERE thread_id=?",
+            [thread_id],
+            |row| row.get(0),
+        )?;
         let users = crate::UserStatusSettings::for_ids(conn, &ids)?;
-        let exceptions = super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
+        let exceptions =
+            super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
         Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
             crate::NotificationPolicy {
-                recipient: users.get(&candidate.recipient.id), kind: crate::NotificationKind::ThreadMessage,
-                room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement), thread_involvement: Some(candidate.thread_membership.involvement),
-                mentioned: candidate.mentioned, reply_to_recipient: candidate.reply_to_recipient, keyword_matched: false,
-                dnd_exception: exceptions.contains(&candidate.recipient.id), now,
-            }.push()
+                recipient: users.get(&candidate.recipient.id),
+                kind: crate::NotificationKind::ThreadMessage,
+                room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement),
+                thread_involvement: Some(candidate.thread_membership.involvement),
+                mentioned: candidate.mentioned,
+                reply_to_recipient: candidate.reply_to_recipient,
+                keyword_matched: false,
+                dnd_exception: exceptions.contains(&candidate.recipient.id),
+                now,
+            }
+            .push()
         })
     }
 }
