@@ -203,12 +203,14 @@ impl Storage {
     /// The processed variant's image blob, if `variant_records` already has it.
     pub fn existing_variant(&self, conn: &Connection, blob: &Blob, variation: &Variation) -> Result<Option<Blob>> {
         match blob::find_variant_record(conn, blob.id, &variation.digest())? {
-            Some(record_id) => {
-                let image = Blob::attached(conn, "ActiveStorage::VariantRecord", record_id, "image")?;
-                self.require_existing_file(image)
-            }
+            Some(record_id) => Blob::attached(conn, "ActiveStorage::VariantRecord", record_id, "image"),
             None => Ok(None),
         }
+    }
+
+    /// A recorded variant ready to serve, rather than metadata-only `.processed?`.
+    pub fn existing_variant_file(&self, conn: &Connection, blob: &Blob, variation: &Variation) -> Result<Option<Blob>> {
+        self.require_existing_file(self.existing_variant(conn, blob, variation)?)
     }
 
     /// The record half of `VariantWithRecord#processed`: the variant record, its image blob and
@@ -223,7 +225,12 @@ impl Storage {
 
     /// `blob.preview_image`, if it has been generated.
     pub fn existing_preview_image(&self, conn: &Connection, blob: &Blob) -> Result<Option<Blob>> {
-        self.require_existing_file(Blob::attached(conn, "ActiveStorage::Blob", blob.id, "preview_image")?)
+        Blob::attached(conn, "ActiveStorage::Blob", blob.id, "preview_image")
+    }
+
+    /// A recorded preview whose file can be used for serving or another transform.
+    pub fn existing_preview_file(&self, conn: &Connection, blob: &Blob) -> Result<Option<Blob>> {
+        self.require_existing_file(self.existing_preview_image(conn, blob)?)
     }
 
     // A variant/preview row is not proof of successful processing when its file was
@@ -273,7 +280,7 @@ impl Storage {
     /// `VariantWithRecord#processed`: reuses the variant record when present, otherwise
     /// transforms the blob and records the variant.
     pub fn process_variant(&self, conn: &Connection, blob: &Blob, variation: &Variation, now: jiff::Timestamp) -> Result<Blob> {
-        if let Some(image) = self.existing_variant(conn, blob, variation)? {
+        if let Some(image) = self.existing_variant_file(conn, blob, variation)? {
             return Ok(image);
         }
         let image = self.transform_variant(blob, variation)?;
@@ -282,13 +289,13 @@ impl Storage {
                 image.keep();
                 Ok(recorded)
             }
-            None => self.existing_variant(conn, blob, variation)?.ok_or(Error::FileNotFound),
+            None => self.existing_variant_file(conn, blob, variation)?.ok_or(Error::FileNotFound),
         }
     }
 
     /// `blob.preview_image`, generating it with ffmpeg when missing (`Preview#process`).
     pub fn preview_image(&self, conn: &Connection, blob: &Blob, now: jiff::Timestamp) -> Result<Blob> {
-        if let Some(image) = self.existing_preview_image(conn, blob)? {
+        if let Some(image) = self.existing_preview_file(conn, blob)? {
             return Ok(image);
         }
         let image = self.draw_preview_image(blob)?;
@@ -297,7 +304,7 @@ impl Storage {
                 image.keep();
                 Ok(recorded)
             }
-            None => self.existing_preview_image(conn, blob)?.ok_or(Error::FileNotFound),
+            None => self.existing_preview_file(conn, blob)?.ok_or(Error::FileNotFound),
         }
     }
 

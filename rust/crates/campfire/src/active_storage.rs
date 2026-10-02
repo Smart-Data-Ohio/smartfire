@@ -146,7 +146,7 @@ pub(crate) async fn processed_variant_with(
 ) -> Result<Blob> {
     let storage = app.storage.clone();
     let (source, digested) = (blob.clone(), variation.clone());
-    let existing = app.db.read(move |conn| storage.existing_variant(conn, &source, &digested).map_err(storage_error)).await;
+    let existing = app.db.read(move |conn| storage.existing_variant_file(conn, &source, &digested).map_err(storage_error)).await;
     if let Some(image) = existing.map_err(Error::internal)? {
         return Ok(image);
     }
@@ -166,7 +166,7 @@ pub(crate) async fn processed_variant_with(
                     Ok(recorded)
                 }
                 // Another request recorded it first; ours is dropped (and its file deleted).
-                None => storage.existing_variant(conn, &blob, &variation).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::VariantRecord")),
+                None => storage.existing_variant_file(conn, &blob, &variation).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::VariantRecord")),
             }
         })
         .await
@@ -177,7 +177,7 @@ pub(crate) async fn processed_variant_with(
 async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
     let storage = app.storage.clone();
     let source = blob.clone();
-    let existing = app.db.read(move |conn| storage.existing_preview_image(conn, &source).map_err(storage_error)).await;
+    let existing = app.db.read(move |conn| storage.existing_preview_file(conn, &source).map_err(storage_error)).await;
     if let Some(image) = existing.map_err(Error::internal)? {
         return Ok(image);
     }
@@ -195,7 +195,7 @@ async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
                     keep_after_commit(tx, image);
                     Ok(recorded)
                 }
-                None => storage.existing_preview_image(conn, &blob).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob")),
+                None => storage.existing_preview_file(conn, &blob).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob")),
             }
         })
         .await
@@ -305,7 +305,7 @@ pub(crate) fn process_attachment_in(
     };
     if blob.is_previewable() {
         blob = match storage
-            .existing_preview_image(tx.conn(), &blob)
+            .existing_preview_file(tx.conn(), &blob)
             .map_err(storage_db_error)?
         {
             Some(image) => image,
@@ -325,12 +325,13 @@ pub(crate) fn process_attachment_in(
     let variation = storage
         .variation_for(&blob, &variation)
         .map_err(storage_db_error)?;
-    let existing = match storage.existing_variant(tx.conn(), &blob, &variation) {
-        // Approved JPEG posting reuses its committed metadata without serving the
-        // intentionally absent file. Actual representation lookups fail cleanly.
-        Err(campfire_storage::Error::FileNotFound) if discard_jpeg_variant => return Ok(()),
-        result => result.map_err(storage_db_error)?,
-    };
+    // Posting only reuses metadata for the approved original-JPEG exception;
+    // generated video previews and all actual representation reads require files.
+    let existing = if discard_jpeg_variant {
+        storage.existing_variant(tx.conn(), &blob, &variation)
+    } else {
+        storage.existing_variant_file(tx.conn(), &blob, &variation)
+    }.map_err(storage_db_error)?;
     if existing.is_none() {
         let staged = storage
             .transform_variant(&blob, &variation)
