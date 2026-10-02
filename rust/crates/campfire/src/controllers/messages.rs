@@ -632,6 +632,22 @@ pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
     } else if blob.is_representable() {
         // attachment.representation(:thumb).processed
         let thumb = Variation::resize_to_limit(1200, 800, None);
+        if blob.content_type() == "image/jpeg" {
+            // Rails' approved closed-stream failure commits the JPEG variant's rows
+            // without uploading its file. Later posting only checks `.processed?`;
+            // it does not serve that image. Representation endpoints still reject it.
+            let storage = app.storage.clone();
+            let source = blob.clone();
+            let variation = storage.variation_for(&source, &thumb).map_err(Error::internal)?;
+            let processed = app.db.read(move |conn| {
+                match storage.existing_variant(conn, &source, &variation) {
+                    Ok(image) => Ok(image.is_some()),
+                    Err(campfire_storage::Error::FileNotFound) => Ok(true),
+                    Err(error) => Err(storage_error(error)),
+                }
+            }).await.map_err(db_error)?;
+            if processed { return Ok(()); }
+        }
         active_storage::processed_representation(app, blob, thumb).await?;
     }
     Ok(())

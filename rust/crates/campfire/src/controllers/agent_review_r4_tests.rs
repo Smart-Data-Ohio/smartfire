@@ -273,3 +273,50 @@ async fn pr192_r4_late_media_and_job_failures_roll_back_rows_and_files() {
         "PR192_R4_ROLLBACK preview_attachment/variant_attachment/push_job rows/files=unchanged"
     );
 }
+
+#[tokio::test]
+async fn pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files() {
+    let app = closed_thread().await;
+    let source = fresh_source(&app, 1).await;
+    for client in ["pr192-r4-jpeg-first", "pr192-r4-jpeg-reuse"] {
+        let reply = app.anonymous().send(post(&app, source, client)).await;
+        assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    }
+    let blob = app
+        .db()
+        .read(move |c| Ok(Blob::find(c, source).unwrap().unwrap()))
+        .await
+        .unwrap();
+    let result = crate::active_storage::processed_representation(
+        &app.booted.app,
+        blob,
+        Variation::resize_to_limit(1200, 800, None),
+    )
+    .await;
+    assert!(
+        result.is_err(),
+        "approved missing JPEG file must never be returned for serving: {result:?}"
+    );
+    let counts = app
+        .db()
+        .read(move |c| {
+            Ok((
+                c.query_row(
+                    "SELECT count(*) FROM messages WHERE client_message_id LIKE 'pr192-r4-jpeg-%'",
+                    [],
+                    |r| r.get::<_, i64>(0),
+                )?,
+                c.query_row(
+                    "SELECT count(*) FROM active_storage_variant_records WHERE blob_id=?",
+                    [source],
+                    |r| r.get::<_, i64>(0),
+                )?,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_eq!(counts, (2, 1));
+    println!(
+        "PR192_R4_JPEG reuse_statuses=201/201 messages=2 variants=1 missing_file_serving=clean_error"
+    );
+}

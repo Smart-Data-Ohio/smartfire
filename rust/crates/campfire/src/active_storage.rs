@@ -325,11 +325,13 @@ pub(crate) fn process_attachment_in(
     let variation = storage
         .variation_for(&blob, &variation)
         .map_err(storage_db_error)?;
-    if storage
-        .existing_variant(tx.conn(), &blob, &variation)
-        .map_err(storage_db_error)?
-        .is_none()
-    {
+    let existing = match storage.existing_variant(tx.conn(), &blob, &variation) {
+        // Approved JPEG posting reuses its committed metadata without serving the
+        // intentionally absent file. Actual representation lookups fail cleanly.
+        Err(campfire_storage::Error::FileNotFound) if discard_jpeg_variant => return Ok(()),
+        result => result.map_err(storage_db_error)?,
+    };
+    if existing.is_none() {
         let staged = storage
             .transform_variant(&blob, &variation)
             .map_err(storage_db_error)?
