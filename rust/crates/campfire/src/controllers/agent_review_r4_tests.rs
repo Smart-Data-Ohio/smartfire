@@ -106,11 +106,11 @@ async fn pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and
     );
 }
 #[tokio::test]
-async fn pr192_r4_missing_variant_file_fails_cleanly_without_returning_a_blob() {
+async fn pr192_r4_missing_variant_retains_processed_metadata_and_file_checks() {
     missing_file(false).await;
 }
 #[tokio::test]
-async fn pr192_r4_missing_preview_file_fails_cleanly_without_returning_a_blob() {
+async fn pr192_r4_missing_preview_retains_processed_metadata_and_file_checks() {
     missing_file(true).await;
 }
 async fn missing_file(preview_missing: bool) {
@@ -152,26 +152,46 @@ async fn missing_file(preview_missing: bool) {
         &blob,
         &variation,
     );
-    let result =
-        crate::active_storage::processed_representation(&app.booted.app, blob, variation).await;
+    let checked_storage = storage.clone();
+    let checked_source = blob.clone();
+    let checked_preview = preview.clone();
+    let checked_variation = variation.clone();
+    let missing_file_is_rejected = app
+        .db()
+        .read(move |conn| {
+            Ok(if preview_missing {
+                checked_storage
+                    .existing_preview_file(conn, &checked_source)
+                    .is_err()
+            } else {
+                checked_storage
+                    .existing_variant_file(conn, &checked_preview, &checked_variation)
+                    .is_err()
+            })
+        })
+        .await
+        .unwrap();
     assert!(
-        result.is_err(),
-        "missing media file returned dangling blob: {result:?}"
+        missing_file_is_rejected,
+        "file-aware processing helpers must still reject missing files"
+    );
+    let result = crate::active_storage::processed_representation(&app.booted.app, blob, variation)
+        .await
+        .unwrap();
+    assert_eq!(
+        result.id, image.id,
+        "Rails processed? reuses the record; serving handles a missing final file"
     );
     let reply = app
         .anonymous()
         .send(Req::new(Method::GET, &representation))
         .await;
-    assert_eq!(reply.status.as_u16(), 500);
-    assert_eq!(
-        reply.header("location"),
-        None,
-        "missing file must never produce a signed blob redirect"
-    );
+    assert_eq!(reply.status.as_u16(), 302);
+    assert!(reply.header("location").is_some());
     assert_eq!(super::agent_review_tests::snapshot(&app).await, before);
     assert_eq!(super::agent_review_tests::stored_files(&app), files);
     println!(
-        "PR192_R4_MISSING_FILE preview_missing={preview_missing} clean_error=true rows/files/jobs=unchanged"
+        "PR192_R4_MISSING_FILE preview_missing={preview_missing} processed_metadata=reused file_helper=clean_error redirect=302 rows/files/jobs=unchanged"
     );
 }
 #[tokio::test]
@@ -287,16 +307,19 @@ async fn pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files() {
         .read(move |c| Ok(Blob::find(c, source).unwrap().unwrap()))
         .await
         .unwrap();
-    let result = crate::active_storage::processed_representation(
-        &app.booted.app,
-        blob,
-        Variation::resize_to_limit(1200, 800, None),
-    )
-    .await;
-    assert!(
-        result.is_err(),
-        "approved missing JPEG file must never be returned for serving: {result:?}"
+    let variation = Variation::resize_to_limit(1200, 800, None);
+    let proxy = campfire_storage::paths::representation_proxy_path(
+        &*app.booted.app.storage.verifier,
+        &blob,
+        &variation,
     );
+    let result =
+        crate::active_storage::processed_representation(&app.booted.app, blob, variation).await;
+    let image = result.unwrap();
+    assert!(!app.booted.app.storage.service.exist(&image.key));
+    let response = app.anonymous().send(Req::new(Method::GET, &proxy)).await;
+    assert_eq!(response.status.as_u16(), 404);
+    assert!(response.body.is_empty());
     let counts = app
         .db()
         .read(move |c| {
@@ -317,6 +340,6 @@ async fn pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files() {
         .unwrap();
     assert_eq!(counts, (2, 1));
     println!(
-        "PR192_R4_JPEG reuse_statuses=201/201 messages=2 variants=1 missing_file_serving=clean_error"
+        "PR192_R4_JPEG reuse_statuses=201/201 messages=2 variants=1 missing_file_serving=empty_404"
     );
 }

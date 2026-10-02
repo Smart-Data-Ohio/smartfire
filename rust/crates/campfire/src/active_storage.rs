@@ -146,7 +146,9 @@ pub(crate) async fn processed_variant_with(
 ) -> Result<Blob> {
     let storage = app.storage.clone();
     let (source, digested) = (blob.clone(), variation.clone());
-    let existing = app.db.read(move |conn| storage.existing_variant_file(conn, &source, &digested).map_err(storage_error)).await;
+    // Rails' processed? checks the record, not the file. The serving endpoints
+    // handle a missing final file; a valid derivative needs no intermediate file.
+    let existing = app.db.read(move |conn| storage.existing_variant(conn, &source, &digested).map_err(storage_error)).await;
     if let Some(image) = existing.map_err(Error::internal)? {
         return Ok(image);
     }
@@ -166,7 +168,7 @@ pub(crate) async fn processed_variant_with(
                     Ok(recorded)
                 }
                 // Another request recorded it first; ours is dropped (and its file deleted).
-                None => storage.existing_variant_file(conn, &blob, &variation).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::VariantRecord")),
+                None => storage.existing_variant(conn, &blob, &variation).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::VariantRecord")),
             }
         })
         .await
@@ -177,7 +179,7 @@ pub(crate) async fn processed_variant_with(
 async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
     let storage = app.storage.clone();
     let source = blob.clone();
-    let existing = app.db.read(move |conn| storage.existing_preview_file(conn, &source).map_err(storage_error)).await;
+    let existing = app.db.read(move |conn| storage.existing_preview_image(conn, &source).map_err(storage_error)).await;
     if let Some(image) = existing.map_err(Error::internal)? {
         return Ok(image);
     }
@@ -195,7 +197,7 @@ async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
                     keep_after_commit(tx, image);
                     Ok(recorded)
                 }
-                None => storage.existing_preview_file(conn, &blob).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob")),
+                None => storage.existing_preview_image(conn, &blob).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob")),
             }
         })
         .await
@@ -326,7 +328,7 @@ pub(crate) fn process_attachment_in(
         .variation_for(&blob, &variation)
         .map_err(storage_db_error)?;
     // Posting only reuses metadata for the approved original-JPEG exception;
-    // generated video previews and all actual representation reads require files.
+    // generated video previews must be usable while processing the attachment.
     let existing = if discard_jpeg_variant {
         storage.existing_variant(tx.conn(), &blob, &variation)
     } else {
@@ -438,12 +440,19 @@ fn http_cache_forever(c: &mut Ctx) -> Option<Response> {
 fn send_blob_stream(c: &mut Ctx, blob: &Blob, disposition: Option<&str>) -> Result {
     let storage = c.app().storage.clone();
     let path = storage.path_for(blob);
+    let disposition = content_types::forced_disposition(blob.content_type()).or(disposition).unwrap_or("inline");
     if !path.is_file() {
         // `rescue ActiveStorage::FileNotFoundError`: expires_now, head :not_found.
+        // send_stream sets image headers before download raises in Rails.
         c.expires_now();
-        return Ok(c.head(StatusCode::NOT_FOUND));
+        return Ok(c.send_data(bytes::Bytes::new(), SendOptions {
+            filename: Some(blob.filename.sanitized()),
+            content_type: Some(content_types::for_serving(blob.content_type()).to_string()),
+            disposition: Some(disposition.to_string()),
+            status: StatusCode::NOT_FOUND,
+            ..SendOptions::default()
+        }));
     }
-    let disposition = content_types::forced_disposition(blob.content_type()).or(disposition).unwrap_or("inline");
     c.send_file(
         &path,
         SendOptions {
