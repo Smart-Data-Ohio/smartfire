@@ -168,7 +168,8 @@
         {
           "name": "discusses a pull request from its card",
           "status": "deferred",
-          "evidence": "Uncredited live-worker fixture: pinned Rails first POST/thread header/files pass, then its provider worker replaces Fix login with Could not reach GitHub (Resolution Error). Existing Discuss link is present. Original title/header expectations retained; candidate positive not credited. Header-stripping served mutant rejects, which alone is not positive parity. Diagnostic and exact remaining scope in ws8bm-report.md."
+          "evidence": "",
+          "diagnostic": "Uncredited live-worker fixture: pinned Rails first POST/thread header/files pass, then its provider worker replaces Fix login with Could not reach GitHub (Resolution Error). Existing Discuss link is present. Original title/header expectations retained; candidate positive not credited. Header-stripping served mutant rejects, which alone is not positive parity. Diagnostic and exact remaining scope in ws8bm-report.md."
         }
       ]
     },
@@ -344,7 +345,8 @@
         {
           "name": "a release click landing on the just-opened menu does not activate it",
           "status": "deferred",
-          "evidence": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md. Fresh clone 3296f5779 passes this case on both apps with the corrected Selenium atom. The earlier two reference failures remain recorded; status deliberately remains deferred without new declaration credit. The c5c5d2253 fresh run passed and rejected its served mutant, but the received reliability deferral remains; no new credit."
+          "evidence": "",
+          "diagnostic": "Corrected unchanged-budget checks passed in the initial worktree batch, but committed fresh clone 4d88ea4f38df5d2c04f824cbd714ce4b22cdca95 and its independent recheck both fail on pinned Rails before Rust: DIV != menu at behavior-actions.mjs:89. Assertion, 700 ms hold and Capybara deadlines retained; no current declaration credit; raw reference failures in ws8bm-report.md. Fresh clone 3296f5779 passes this case on both apps with the corrected Selenium atom. The earlier two reference failures remain recorded; status deliberately remains deferred without new declaration credit. The c5c5d2253 fresh run passed and rejected its served mutant, but the received reliability deferral remains; no new credit."
         },
         {
           "name": "shows the message action menu as a bottom sheet on phones",
