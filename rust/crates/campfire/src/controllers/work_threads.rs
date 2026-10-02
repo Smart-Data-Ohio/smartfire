@@ -113,47 +113,8 @@ pub async fn index(c: &mut Ctx) -> Result {
         return super::channel_threads::render_json(c, StatusCode::OK, &payload);
     }
     let rows = messages::present(c, move |p| {
-        threads
-            .into_iter()
-            .map(|thread| {
-                let room = thread.room(p.conn)?;
-                let facts =
-                    super::presenters::boards::rows(p, room.id, std::slice::from_ref(&thread))?
-                        .remove(0);
-                let active = ChannelThread::board_owner_active_map(
-                    p.conn,
-                    room.id,
-                    std::slice::from_ref(&thread),
-                )?;
-                let owner_label = if thread
-                    .work_owner_id
-                    .is_some_and(|id| active.get(&id).copied().unwrap_or(false))
-                {
-                    format!("Owner: {}", facts.owner_label)
-                } else {
-                    facts.owner_label
-                };
-                Ok(views::Row {
-                    id: thread.id,
-                    name: thread.name.clone(),
-                    path: if room.board() {
-                        format!("/rooms/{}/threads/{}", room.id, thread.id)
-                    } else {
-                        format!("/rooms/{}?thread={}", room.id, thread.id)
-                    },
-                    status: thread.work_status.clone().unwrap_or_default(),
-                    status_label: thread.work_status_label(),
-                    room_name: p.room_display_name(&room, Some(&viewer))?,
-                    owner_label,
-                    agent: facts.agent,
-                    count: thread.message_count(p.conn)?,
-                    updated_at: thread.updated_at.jiff(),
-                    links: board_posts::links(p, &thread)?,
-                })
-            })
-            .collect::<campfire_db::Result<Vec<_>>>()
-    })
-    .await?;
+        super::presenters::work_threads::rows(p, &threads, &viewer)
+    }).await?;
     page::framed_page!(c, StatusCode::OK, |ctx| views::Index {
         ctx,
         state: &state,

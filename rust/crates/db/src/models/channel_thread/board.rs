@@ -120,13 +120,13 @@ impl ChannelThread {
 
     /// Owner availability uses live memberships and WS11's public agent permission API.
     /// It does not restrict the `agents` filter, which selects by associated Agent existence.
-    pub fn board_owner_active_map(
+    pub fn board_owner_active_map<'a>(
         conn: &Connection,
         room_id: i64,
-        posts: &[Self],
+        posts: impl IntoIterator<Item = &'a Self>,
     ) -> Result<HashMap<i64, bool>> {
         let ids = posts
-            .iter()
+            .into_iter()
             .filter_map(|post| post.work_owner_id)
             .collect::<HashSet<_>>()
             .into_iter()

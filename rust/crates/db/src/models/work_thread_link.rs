@@ -59,6 +59,17 @@ impl WorkThreadLink {
             Self::from_row,
         )
     }
+    pub fn for_threads(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM work_thread_links WHERE channel_thread_id IN (SELECT value FROM json_each(?)) ORDER BY channel_thread_id,id",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
     pub fn validate(conn: &Connection, attributes: &NewWorkThreadLink) -> Result<Errors> {
         let mut errors = Errors::default();
         let thread = ChannelThread::find_by_id(conn, attributes.channel_thread_id)?;

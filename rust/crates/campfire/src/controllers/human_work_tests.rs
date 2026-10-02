@@ -3,6 +3,8 @@ use super::presenters::test_support::*;
 use axum::http::Method;
 use serde_json::Value;
 
+mod query_tests;
+
 #[tokio::test]
 async fn human_pr_link_and_fetch_claim_roll_back_when_the_durable_job_is_rejected() {
     let oracle: Value =

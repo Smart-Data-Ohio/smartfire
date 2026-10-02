@@ -23,6 +23,7 @@ pub mod room_shell;
 pub mod rooms_directory;
 pub mod boards;
 pub mod board_posts;
+pub mod work_threads;
 pub mod status_settings;
 pub mod switcher;
 #[cfg(test)]
