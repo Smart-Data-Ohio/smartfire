@@ -627,3 +627,28 @@ async fn pr196_extra_tokens_match_ruby_to_s() {
     );
     assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
+
+#[tokio::test]
+async fn pr196_r2_exact_numeric_tokens_reach_real_transport_and_storage() {
+    let cases: serde_json::Value = serde_json::from_str(include_str!("../../../../../../../vectors/bot-ui-extreme-http.json")).unwrap();
+    let (test, server) = fixture(200, r#"{"login":"fixture-machine"}"#).await;
+    let mut browser = admin(&test).await;
+    let mut failures = Vec::new();
+    for case in cases["github_tokens"].as_array().unwrap() {
+        let raw = case["raw"].as_str().unwrap();
+        let before = server.received.lock().unwrap().len();
+        let response = browser.request(Method::POST, &path(&test), &[("accept", "text/html")], Some(("application/json", format!("{{\"access_token\":{raw}}}")))).await;
+        let token = case["token"].as_str().unwrap();
+        let authorization = format!("Bearer {token}");
+        let reached = {
+            let requests = server.received.lock().unwrap();
+            requests.len() == before + 1 && requests.last().and_then(|r|r.header("authorization")) == Some(authorization.as_str())
+        };
+        let persisted = stored(&test).await.is_some_and(|account|account.2==token);
+        if response.status.as_u16() != case["status"].as_u64().unwrap() as u16 || !reached || !persisted {
+            failures.push(format!("{raw}: {} reached={reached} persisted={persisted}",response.status));
+        }
+    }
+    println!("Extreme token HTTP differential: {} compared; {} mismatches", cases["github_tokens"].as_array().unwrap().len(), failures.len());
+    assert!(failures.is_empty(), "{}",failures.join("\n"));
+}

@@ -194,3 +194,57 @@ fn pr196_generated_floats_match_ruby_shortest_format() {
             .join("\n")
     );
 }
+
+
+fn extreme_inputs() -> Value {
+    use std::io::Read;
+    let bytes = include_bytes!("../../../../../..//reference-tools/views/agents_ui/extreme_cast_inputs.json.gz");
+    let mut text = String::new();
+    flate2::read::GzDecoder::new(&bytes[..]).read_to_string(&mut text).unwrap();
+    serde_json::from_str(&text).unwrap()
+}
+fn extreme_oracle() -> Value {
+    serde_json::from_str(include_str!("../../../../../../vectors/bot-ui-extreme-casts.json")).unwrap()
+}
+#[test]
+fn pr196_r2_extreme_date_components_match_pinned_model() {
+    let inputs = extreme_inputs();
+    let oracle = extreme_oracle();
+    let now = campfire_db::Timestamp::parse_db("2026-03-02 16:00:00").unwrap();
+    let mut failures = Vec::new();
+    let cases = oracle["expiry"].as_array().unwrap();
+    for case in cases {
+        let index = case["input_index"].as_u64().unwrap() as usize;
+        let input = campfire_kit::Param::Str(inputs["expiry"][index].as_str().unwrap().into());
+        let zone = campfire_views::time::Zone::for_user(case["zone"].as_str());
+        let actual = json!({"stored":super::input_casts::datetime(Some(&input), &zone, now).map(|t|t.to_db())});
+        let expected = if case.get("error").is_some() {json!({"error":case["error"]})} else {json!({"stored":case["stored"]})};
+        if actual != expected {failures.push(json!({"input":inputs["expiry"][index],"zone":case["zone"],"actual":actual,"expected":expected}));}
+    }
+    println!("Extreme expiry differential: {} compared; {} mismatches; {} value differences; {} exception differences", cases.len(), failures.len(), failures.iter().filter(|v|v["expected"].get("stored").is_some()).count(), failures.iter().filter(|v|v["expected"].get("error").is_some()).count());
+    assert!(failures.is_empty(), "{:?}", &failures[..failures.len().min(20)]);
+}
+#[test]
+fn pr196_r2_raw_numeric_tokens_match_pinned_json() {
+    let inputs = extreme_inputs();
+    let oracle = extreme_oracle();
+    let mut failures = Vec::new();
+    let cases = oracle["tokens"].as_array().unwrap();
+    for case in cases {
+        let index = case["input_index"].as_u64().unwrap() as usize;
+        let raw = inputs["tokens"][index].as_str().unwrap();
+        let actual = match campfire_kit::params::from_json_body(format!("{{\"access_token\":{raw}}}").as_bytes()) {
+            Ok(params) => json!({"string": super::input_casts::token_string(params.get("access_token").unwrap())}),
+            Err(_) => json!({"error":true}),
+        };
+        let expected = if case.get("error").is_some() {json!({"error":true})} else {json!({"string":case["string"]})};
+        if actual != expected {failures.push(json!({"raw":raw,"actual":actual,"expected":expected}));}
+    }
+    println!("Extreme token differential: {} compared; {} mismatches", cases.len(), failures.len());
+    assert!(failures.is_empty(), "{failures:?}");
+}
+
+#[tokio::test]
+async fn pr196_r2_extreme_expiry_http_save_and_error_boundaries() {
+    expiry_cases(serde_json::from_str(include_str!("../../../../../../vectors/bot-ui-extreme-http.json")).unwrap(), 56).await;
+}
