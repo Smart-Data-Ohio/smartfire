@@ -8,6 +8,7 @@ const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
   ...actionMutations,
+  ['Markdown messages reach other users and editing preserves the original source',['models/code_highlighter-','code.dataset.highlighted = "yes"','code.dataset.highlighted = "no"']],
   ['the message list is a single tab stop with a roving tabindex',[list,'index === messages.length - 1 ? 0 : -1','index >= 0 ? 0 : -1']],
   ['arrow keys move between messages',[list,'next.focus()','message.focus()']],
   ...[
@@ -77,7 +78,7 @@ const mutations=new Map([
   ['deleting a boost',['boost-delete-response']],
   ...['message update preserves the input state','boost by another user preserves the input state'].map(name=>[name,['controllers/messages_controller-','connect() {','connect() { document.addEventListener("turbo:before-stream-render", () => { for (const input of document.querySelectorAll("input[name=\\\"boost[content]\\\"]")) input.value = ""; });']]),
 ]);
-export const mutationNames=[...mutations.keys()];
+
 // Supplement the original one-per-case mutants with the review's escaped
 // defects. Keep source text intact while removing only its keyword styling.
 const missingKeyword=keyword=>['models/code_highlighter-','span.className = "code-token"',`span.className = token.content.trim() === "${keyword}" ? "missing-keyword-token" : "code-token"`];
@@ -91,6 +92,83 @@ const reviewMutations=new Map([
   ])],
   ['quick-react creates a boost from the toolbar',new Map([['delayed-boost-write',['boost-delay-write']]])],
 ]);
+// One served-opacity probe per newly visibility-scoped assertion. These can
+// also run diagnostically over the unchanged reviewed assertion modules.
+const opacity=css=>['messages-','.message__quick-reaction {',`${css}\n.message__quick-reaction {`];
+const editor='#composer textarea[name="message[markdown_source]"]';
+const restoredEditor=condition=>[composer,'this.#setMarkdownValue(content)',`this.#setMarkdownValue(content); if (${condition}) this.markdownTarget.style.setProperty("opacity", "0", "important")`];
+export const visibilityAssertionMutations=new Map([
+  ['edits through the normal composer and restores the saved draft on cancel and success',new Map([
+    ['transparent-edit-field',opacity(`${editor} { opacity: 0 !important; }`)],
+    ['transparent-cancelled-draft',restoredEditor('submittedContent === undefined')],
+    ['transparent-saved-draft',restoredEditor('submittedContent !== undefined && current === submittedContent')],
+  ])],
+  ['a duplicate delivery does not replace the message while its actions are open',new Map([
+    ['transparent-redelivery-field',opacity(`html[data-duplicate-delivery-rendered] ${editor} { opacity: 0 !important; }`)],
+    ['transparent-redelivery-flag',opacity('html[data-duplicate-delivery-rendered] { opacity: 0 !important; }')],
+  ])],
+  ['keeps newer typing through an asynchronous edit and leaves failures in edit mode',new Map([
+    ['transparent-newer-draft',restoredEditor('submittedContent !== undefined && current !== submittedContent')],
+  ])],
+  ['code and copying remain available when the highlighter cannot load',new Map([
+    ['transparent-cleared-code-field',opacity(`${editor} { opacity: 0 !important; }`)],
+  ])],
+  ['replies with notify off and renders a tombstone when the target is deleted',new Map([
+    ['transparent-notify-field',opacity('#composer input[name="message[reply_notify_author]"] { opacity: 0 !important; }')],
+  ])],
+  ['copies message text and link and forwards to a server-provided thread destination',new Map([
+    ['transparent-menu-owner',opacity('.message[data-message-actions-open] { opacity: 0 !important; }')],
+  ])],
+  ['the more button opens the shared menu for its message',new Map([
+    ['transparent-more-owner',opacity('.message[data-message-actions-open] { opacity: 0 !important; }')],
+  ])],
+  ['forwarded Markdown keeps tables and code blocks',new Map([
+    ['transparent-ruby-code',opacity('pre code.language-ruby { opacity: 0 !important; }')],
+    ['transparent-forwarded-code',opacity('.message:has(.message__forwarded-label) pre code.language-ruby { opacity: 0 !important; }')],
+  ])],
+  ['search results highlight code on initial load and after returning to the channel',new Map([
+    ['transparent-search-back-link',opacity('a.searches__back { opacity: 0 !important; }')],
+  ])],
+  ['Markdown messages reach other users and editing preserves the original source',new Map([
+    ['transparent-project-link',opacity('.message a[href="https://example.com/notes"] { opacity: 0 !important; }')],
+  ])],
+  ['search tolerates operators, shows an empty state and pages older results',new Map([
+    ['transparent-search-field',opacity('#global-search-input { opacity: 0 !important; }')],
+  ])],
+]);
+export const visibilityLookupMutations=new Map([
+  ['copies message text and link and forwards to a server-provided thread destination',new Map([
+    ['transparent-forward-destination',opacity('.message-forward-dialog__destination { opacity: 0 !important; }')],
+    ['transparent-context-body',opacity('.message[data-message-id="607264868"] [data-reply-target="body"] { opacity: 0 !important; }')],
+  ])],
+  ['forwarding twice in a row submits only once',new Map([
+    ['transparent-forward-checkbox',opacity('.message-forward-dialog__destination input { opacity: 0 !important; }')],
+  ])],
+  ['groups emoji reactions, updates the live count, and highlights the current user',new Map([
+    ['transparent-quick-thumb',opacity('.message__quick-reaction[title="Thumbs up"] { opacity: 0 !important; }')],
+  ])],
+  ['picker arrows move through options, Enter selects, and Escape returns focus',new Map([
+    ['transparent-picker-search',opacity('#emoji-picker-panel input[aria-label="Search emoji and icons"] { opacity: 0 !important; }')],
+  ])],
+  ['the picker shows category tabs and switches between them',new Map([
+    ['transparent-flags-lookup',opacity('#emoji-picker-panel:has(#emoji-picker-tab-people[aria-selected="true"]) #emoji-picker-tab-flags { opacity: 0 !important; }')],
+  ])],
+  ['quick-react creates a boost from the toolbar',new Map([
+    ['transparent-hover-body',opacity('.message[data-message-id="607264868"] [data-reply-target="body"] { opacity: 0 !important; }')],
+  ])],
+  ['message action menu is a bottom sheet with touch-sized targets on phones',new Map([
+    ['transparent-room-header',opacity('.room-header__name { opacity: 0 !important; }')],
+  ])],
+]);
+for(const [name,variants] of visibilityLookupMutations) {
+  if(!visibilityAssertionMutations.has(name)) visibilityAssertionMutations.set(name,new Map());
+  for(const [variant,mutation] of variants) visibilityAssertionMutations.get(name).set(variant,mutation);
+}
+for(const [name,variants] of visibilityAssertionMutations) {
+  if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
+  for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
+}
+export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
   const variants=['default',...(reviewMutations.get(caseName)?.keys()||[])];
   return selected?variants.filter(name=>name===selected):variants;

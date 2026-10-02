@@ -157,9 +157,18 @@ parser.add_argument("--case", help="run one exact pinned declaration from the se
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 parser.add_argument("--mutant", help="select one served mutant variant; without --negative, diagnose its acceptance on both apps (not parity credit)")
+parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups"], help="diagnose all new visibility assertion mutants without parity credit")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
+if args.mutant_set:
+    assert not args.mutant and not args.negative and not args.case, "mutant-set is a diagnostic escape run"
+    diagnostic_export = "visibilityLookupMutations" if args.mutant_set == "visible-lookups" else "visibilityAssertionMutations"
+    diagnostic_variants = json.loads(subprocess.check_output([
+        "node", "--input-type=module", "-e",
+        f"import {{{diagnostic_export}}} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
+        f"console.log(JSON.stringify(Object.fromEntries([...{diagnostic_export}].map(([name,variants])=>[name,[...variants.keys()]]))))"
+    ], cwd=ROOT, text=True))
 if args.case:
     assert any(args.case in CASES[file] for file in files), "unknown/unmapped named case"
 if args.mutant:
@@ -233,6 +242,8 @@ mutation_variants = json.loads(subprocess.check_output([
 for file in files:
     source = subprocess.check_output(["git", "show", f"{PIN}:test/system/{file}_test.rb"], cwd=ROOT)
     selected = [case for case in CASES[file] if (not args.case or case == args.case) and case not in args.exclude_case]
+    if args.mutant_set:
+        selected = [case for case in selected if case in diagnostic_variants]
     if args.negative:
         if args.case:
             assert args.case in mutation_names, "no served mutant for this named check"
@@ -257,6 +268,8 @@ for file in files:
     if file == "composer_attach_menu":
         batches = [selected]  # No server writes; new contexts for each case.
     jobs = [(batch, args.mutant or "default") for batch in filter(None, batches)]
+    if args.mutant_set:
+        jobs = [([case], variant) for case in selected for variant in diagnostic_variants[case]]
     if args.negative and not args.mutant:
         # A failed highlight check can still have posted a real message. Each
         # additional mutant therefore gets its own seed/database/server, not
@@ -314,7 +327,7 @@ for file in files:
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if args.negative:
+            if args.negative or args.mutant_set:
                 run_env["WS8BM_MUTANT"] = variant
             if file == "composer_attach_menu":
                 run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
@@ -350,9 +363,9 @@ for file in files:
                         succeeded = [name for name, names in zip(batch, variants) if names and all(
                             any(line.startswith(f"WS8bm discrimination: {file}: {name}: {variant}: {app} served mutant REJECTED (") for line in result.stdout.splitlines())
                             for variant in names for app in ["Rails", "Rust"])]
-                    elif args.mutant:
+                    elif args.mutant or args.mutant_set:
                         succeeded = [name for name in batch if all(
-                            f"WS8bm review escape: {file}: {name}: {args.mutant}: {app} ACCEPTED" in result.stdout.splitlines() for app in ["Rails", "Rust"])]
+                            f"WS8bm review escape: {file}: {name}: {variant}: {app} ACCEPTED" in result.stdout.splitlines() for app in ["Rails", "Rust"])]
                     else:
                         succeeded = [name for name in batch if f"WS8bm browser flow: {file}: {name}: Rails PASS; Rust PASS" in result.stdout.splitlines()]
                     failed_cases.extend(f"{file}: {name}" for name in batch if name not in succeeded)
@@ -360,7 +373,7 @@ for file in files:
                         passed += sum(len(names) for name, names in zip(batch, variants) if name in succeeded)
                         passed_named.update((file, name) for name in succeeded)
                         continue
-                    if args.mutant:
+                    if args.mutant or args.mutant_set:
                         passed += len(succeeded)
                         continue
                     if not succeeded:
@@ -561,7 +574,7 @@ for file in files:
     print(f"WS8bm behaviour source: test/system/{file}_test.rb SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
 if args.negative:
     print(f"WS8bm discrimination check: {passed} served mutants rejected on Rails and Rust across {len(passed_named)} named checks; {len(failed_cases)} invalid or escaped", flush=True)
-elif args.mutant:
+elif args.mutant or args.mutant_set:
     print(f"WS8bm review escape check: {passed} served mutants accepted on Rails and Rust; {len(failed_cases)} failed probes; no parity credit", flush=True)
 else:
     print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; {len(failed_cases)} failed; no pixel checks", flush=True)
