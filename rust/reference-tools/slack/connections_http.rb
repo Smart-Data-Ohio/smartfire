@@ -113,7 +113,7 @@ vectors=cases.map do |c|
  conn=connection && connection.slice('slack_workspace_id','user_id','slack_user_id','scopes','disconnected_reason').merge('access_token'=> (connection.access_token rescue nil))
  ws=SlackWorkspace.current
  w=ws && ws.attributes.slice('client_id','configured_by_id','team_id','team_name','team_domain').merge('client_secret'=>ws.client_secret)
- audit=AuditLog.order(:id).map{|l|l.attributes.slice('action','actor_id','target_type','target_id','details')}
+ audit=AuditLog.order(:id).map{|l|l.attributes.slice('action','actor_id','target_type','target_id','target_label','details')}
  {**c,sequences:,status:res.status,location:res['Location'],flash:Thread.current[:flash],connection:conn,workspace:w,requests:Thread.current[:requests],audit:,history_connection_id:SlackImport.find_by(id:853)&.slack_connection_id}
 end
 File.write(File.join(ENV.fetch('PARITY_WORK'),'vectors/slack/connections_http.json'),JSON.pretty_generate(vectors)+"\n")

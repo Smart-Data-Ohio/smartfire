@@ -76,23 +76,17 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
         .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?
         .id;
     let code = scalar(c, "code");
-    let secrets = c.app().secrets.clone();
     let audit = audit_context(c)?;
-    let outcome = c
-        .app()
-        .db
-        .write(move |tx| {
-            crate::authentication::enroll(
-                tx,
-                &user,
-                session_id,
-                &ArEncryption::new(&secrets),
-                &code,
-                &audit,
-            )
-        })
-        .await
-        .map_err(Error::internal)?;
+    let target = Target::from(&user);
+    let outcome = crate::authentication::enroll(
+        &c.app().db,
+        user,
+        session_id,
+        c.app().ar_encryption.clone(),
+        code,
+    )
+    .await
+    .map_err(Error::internal)?;
     match outcome {
         crate::authentication::Enrollment::Enabled => profile(c),
         crate::authentication::Enrollment::Wrong => {
@@ -108,6 +102,27 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
             session,
         } => {
             c.set_current(concerns::CurrentSession(*session));
+            // SetupsController#create records the audit after saving enrollment,
+            // backup codes and session verification. An audit failure keeps those
+            // writes. Session revocation and its durable jobs still commit together.
+            c.app()
+                .db
+                .write(move |tx| {
+                    AuditLog::record(
+                        tx,
+                        NewAuditLog {
+                            action: "two_factor.enable".into(),
+                            target: Some(target),
+                            changes: (signed_out > 0)
+                                .then(|| json!({"signed_out_other_devices":signed_out})),
+                            ..Default::default()
+                        },
+                        &audit,
+                    )?;
+                    Ok(())
+                })
+                .await
+                .map_err(Error::internal)?;
             let continue_url = concerns::post_authenticating_url(c);
             render_backups(c, codes, signed_out, continue_url).await
         }

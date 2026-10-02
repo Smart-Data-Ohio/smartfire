@@ -1,0 +1,1091 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1772467200,
+  "cases": [
+    {
+      "name": "defaults",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "dnd_indefinite",
+      "input": {
+        "user": {
+          "dnd_enabled": true,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": true,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"notification-dnd\" content=\"muted\">"
+    },
+    {
+      "name": "dnd_expiry_boundary",
+      "input": {
+        "user": {
+          "dnd_enabled": true,
+          "dnd_until": "2026-03-02 16:00:00 UTC",
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "dnd_future",
+      "input": {
+        "user": {
+          "dnd_enabled": true,
+          "dnd_until": "2026-03-02 16:00:01 UTC",
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": true,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"notification-dnd\" content=\"muted\">"
+    },
+    {
+      "name": "dnd_presence",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "dnd",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": true,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"notification-dnd\" content=\"muted\">"
+    },
+    {
+      "name": "invisible_is_not_muted",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "invisible",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "overnight",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": true,
+          "quiet_hours_start_minute": 1320,
+          "quiet_hours_end_minute": 420,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": "Eastern Time (US & Canada)"
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": [
+          1320,
+          420
+        ],
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"quiet-hours\" content=\"1320-420\"><meta name=\"quiet-hours-zone\" content=\"Eastern Time (US &amp; Canada)\">"
+    },
+    {
+      "name": "zero_start",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": true,
+          "quiet_hours_start_minute": 0,
+          "quiet_hours_end_minute": 60,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": [
+          0,
+          60
+        ],
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"quiet-hours\" content=\"0-60\"><meta name=\"quiet-hours-zone\" content=\"UTC\">"
+    },
+    {
+      "name": "equal_endpoints",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": true,
+          "quiet_hours_start_minute": 60,
+          "quiet_hours_end_minute": 60,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": [
+          60,
+          60
+        ],
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"quiet-hours\" content=\"60-60\"><meta name=\"quiet-hours-zone\" content=\"UTC\">"
+    },
+    {
+      "name": "incomplete_hours",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": true,
+          "quiet_hours_start_minute": 60,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "meeting_windows",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": true,
+          "meeting_status_enabled": true,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [
+          [
+            "2026-03-02T15:00:00Z",
+            "2026-03-02T16:30:00Z"
+          ],
+          [
+            "2026-03-03T12:00:00+02:00",
+            "2026-03-03T12:30:00+02:00"
+          ],
+          [
+            "bad",
+            "2026-03-02T16:00:00Z"
+          ],
+          [],
+          null,
+          [
+            "2026-03-02T18:00:00Z",
+            "2026-03-02T17:00:00Z"
+          ]
+        ],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [
+          [
+            1772463600,
+            1772469000
+          ],
+          [
+            1772532000,
+            1772533800
+          ],
+          [
+            1772474400,
+            1772470800
+          ]
+        ],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"meeting-quiet\" content=\"1772463600-1772469000,1772532000-1772533800,1772474400-1772470800\">"
+    },
+    {
+      "name": "meeting_without_status",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": true,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [
+          [
+            "2026-03-02T15:00:00Z",
+            "2026-03-02T16:30:00Z"
+          ],
+          [
+            "2026-03-03T12:00:00+02:00",
+            "2026-03-03T12:30:00+02:00"
+          ],
+          [
+            "bad",
+            "2026-03-02T16:00:00Z"
+          ],
+          [],
+          null,
+          [
+            "2026-03-02T18:00:00Z",
+            "2026-03-02T17:00:00Z"
+          ]
+        ],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "meeting_without_dnd",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": true,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [
+          [
+            "2026-03-02T15:00:00Z",
+            "2026-03-02T16:30:00Z"
+          ],
+          [
+            "2026-03-03T12:00:00+02:00",
+            "2026-03-03T12:30:00+02:00"
+          ],
+          [
+            "bad",
+            "2026-03-02T16:00:00Z"
+          ],
+          [],
+          null,
+          [
+            "2026-03-02T18:00:00Z",
+            "2026-03-02T17:00:00Z"
+          ]
+        ],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "manual_ooo",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": "2026-03-02 17:00:00 UTC",
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [
+          [
+            0,
+            1772470800
+          ]
+        ],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"ooo-quiet\" content=\"0-1772470800\">"
+    },
+    {
+      "name": "expired_ooo",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": "2026-03-02 16:00:00 UTC",
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "calendar_ooo",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": true,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [
+          [
+            "2026-03-02T15:00:00Z",
+            "2026-03-02T16:30:00Z"
+          ],
+          [
+            "2026-03-03T12:00:00+02:00",
+            "2026-03-03T12:30:00+02:00"
+          ],
+          [
+            "bad",
+            "2026-03-02T16:00:00Z"
+          ],
+          [],
+          null,
+          [
+            "2026-03-02T18:00:00Z",
+            "2026-03-02T17:00:00Z"
+          ]
+        ],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [
+          [
+            1772463600,
+            1772469000
+          ],
+          [
+            1772532000,
+            1772533800
+          ],
+          [
+            1772474400,
+            1772470800
+          ]
+        ],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"ooo-quiet\" content=\"1772463600-1772469000,1772532000-1772533800,1772474400-1772470800\">"
+    },
+    {
+      "name": "combined_ooo",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": true,
+          "ooo_until": "2026-03-02 17:00:00 UTC",
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [
+          [
+            "2026-03-02T15:00:00Z",
+            "2026-03-02T16:30:00Z"
+          ],
+          [
+            "2026-03-03T12:00:00+02:00",
+            "2026-03-03T12:30:00+02:00"
+          ],
+          [
+            "bad",
+            "2026-03-02T16:00:00Z"
+          ],
+          [],
+          null,
+          [
+            "2026-03-02T18:00:00Z",
+            "2026-03-02T17:00:00Z"
+          ]
+        ],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [
+          [
+            0,
+            1772470800
+          ],
+          [
+            1772463600,
+            1772469000
+          ],
+          [
+            1772532000,
+            1772533800
+          ],
+          [
+            1772474400,
+            1772470800
+          ]
+        ],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": "<meta name=\"ooo-quiet\" content=\"0-1772470800,1772463600-1772469000,1772532000-1772533800,1772474400-1772470800\">"
+    },
+    {
+      "name": "ooo_notifications_enabled",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": true,
+          "ooo_calendar_enabled": true,
+          "ooo_until": "2026-03-02 17:00:00 UTC",
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [
+          [
+            "2026-03-02T15:00:00Z",
+            "2026-03-02T16:30:00Z"
+          ],
+          [
+            "2026-03-03T12:00:00+02:00",
+            "2026-03-03T12:30:00+02:00"
+          ],
+          [
+            "bad",
+            "2026-03-02T16:00:00Z"
+          ],
+          [],
+          null,
+          [
+            "2026-03-02T18:00:00Z",
+            "2026-03-02T17:00:00Z"
+          ]
+        ],
+        "scopes": null,
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "drive",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": "https://www.googleapis.com/auth/drive.file",
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": true,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "legacy_drive",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": "https://www.googleapis.com/auth/drive.metadata.readonly",
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "drive_disconnected",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": "https://www.googleapis.com/auth/calendar.events\thttps://www.googleapis.com/auth/drive.file",
+        "disconnected": true,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": true,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "scopes_substring",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": "xhttps://www.googleapis.com/auth/drive.filex",
+        "disconnected": false,
+        "searches": []
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": []
+      },
+      "meta": ""
+    },
+    {
+      "name": "recent_searches",
+      "input": {
+        "user": {
+          "dnd_enabled": false,
+          "dnd_until": null,
+          "presence_setting": "auto",
+          "quiet_hours_enabled": false,
+          "quiet_hours_start_minute": null,
+          "quiet_hours_end_minute": null,
+          "meeting_dnd_enabled": false,
+          "meeting_status_enabled": false,
+          "ooo_notify_enabled": false,
+          "ooo_calendar_enabled": false,
+          "ooo_until": null,
+          "time_zone": null
+        },
+        "busy": [],
+        "ooo": [],
+        "scopes": null,
+        "disconnected": false,
+        "searches": [
+          {
+            "id": 9000,
+            "query": "query 0 <&>",
+            "updated_at": "2026-03-02T16:00:00.000000Z"
+          },
+          {
+            "id": 9001,
+            "query": "query 1 <&>",
+            "updated_at": "2026-03-02T15:59:59.000000Z"
+          },
+          {
+            "id": 9002,
+            "query": "query 2 <&>",
+            "updated_at": "2026-03-02T15:59:58.000000Z"
+          },
+          {
+            "id": 9003,
+            "query": "query 3 <&>",
+            "updated_at": "2026-03-02T15:59:57.000000Z"
+          },
+          {
+            "id": 9004,
+            "query": "query 4 <&>",
+            "updated_at": "2026-03-02T15:59:56.000000Z"
+          },
+          {
+            "id": 9005,
+            "query": "query 5 <&>",
+            "updated_at": "2026-03-02T15:59:55.000000Z"
+          },
+          {
+            "id": 9006,
+            "query": "query 6 <&>",
+            "updated_at": "2026-03-02T15:59:54.000000Z"
+          },
+          {
+            "id": 9007,
+            "query": "query 7 <&>",
+            "updated_at": "2026-03-02T15:59:53.000000Z"
+          },
+          {
+            "id": 9008,
+            "query": "query 8 <&>",
+            "updated_at": "2026-03-02T15:59:52.000000Z"
+          },
+          {
+            "id": 9009,
+            "query": "query 9 <&>",
+            "updated_at": "2026-03-02T15:59:51.000000Z"
+          },
+          {
+            "id": 9010,
+            "query": "query 10 <&>",
+            "updated_at": "2026-03-02T15:59:50.000000Z"
+          },
+          {
+            "id": 9011,
+            "query": "query 11 <&>",
+            "updated_at": "2026-03-02T15:59:49.000000Z"
+          }
+        ]
+      },
+      "expected": {
+        "muted": false,
+        "quiet_hours": null,
+        "meeting_quiet": [],
+        "ooo_quiet": [],
+        "google_drive": false,
+        "recent_searches": [
+          {
+            "id": 9000,
+            "query": "query 0 <&>"
+          },
+          {
+            "id": 9001,
+            "query": "query 1 <&>"
+          },
+          {
+            "id": 9002,
+            "query": "query 2 <&>"
+          },
+          {
+            "id": 9003,
+            "query": "query 3 <&>"
+          },
+          {
+            "id": 9004,
+            "query": "query 4 <&>"
+          },
+          {
+            "id": 9005,
+            "query": "query 5 <&>"
+          },
+          {
+            "id": 9006,
+            "query": "query 6 <&>"
+          },
+          {
+            "id": 9007,
+            "query": "query 7 <&>"
+          },
+          {
+            "id": 9008,
+            "query": "query 8 <&>"
+          },
+          {
+            "id": 9009,
+            "query": "query 9 <&>"
+          }
+        ]
+      },
+      "meta": ""
+    }
+  ],
+  "picker_cases": [
+    {
+      "input": {},
+      "configured": false
+    },
+    {
+      "input": {
+        "GOOGLE_CLIENT_ID": "public-client<&>"
+      },
+      "configured": false
+    },
+    {
+      "input": {
+        "GOOGLE_PICKER_API_KEY": "public-picker-key"
+      },
+      "configured": false
+    },
+    {
+      "input": {
+        "GOOGLE_CLIENT_ID": "public-client<&>",
+        "GOOGLE_PICKER_API_KEY": "public-picker-key"
+      },
+      "configured": false
+    },
+    {
+      "input": {
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "12345"
+      },
+      "configured": false
+    },
+    {
+      "input": {
+        "GOOGLE_CLIENT_ID": "public-client<&>",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "12345"
+      },
+      "configured": false
+    },
+    {
+      "input": {
+        "GOOGLE_PICKER_API_KEY": "public-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "12345"
+      },
+      "configured": false
+    },
+    {
+      "input": {
+        "GOOGLE_CLIENT_ID": "public-client<&>",
+        "GOOGLE_PICKER_API_KEY": "public-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "12345"
+      },
+      "configured": true
+    }
+  ]
+}

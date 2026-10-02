@@ -1,0 +1,153 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "account_id": 12345,
+      "calls": [
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        []
+      ],
+      "reports": [
+        {
+          "error_class": "Google::Client::RateLimited",
+          "handled": true,
+          "severity": "warning",
+          "context": {
+            "job": "Calendar::DisconnectCleanupJob",
+            "account_id": 12345
+          },
+          "source": "application",
+          "tokens_absent": true
+        }
+      ]
+    },
+    {
+      "account_id": null,
+      "calls": [
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        },
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/orphan-id"
+        }
+      ],
+      "jobs": [
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        [
+          "Calendar::DisconnectCleanupJob"
+        ],
+        []
+      ],
+      "reports": [
+        {
+          "error_class": "Google::Client::RateLimited",
+          "handled": true,
+          "severity": "warning",
+          "context": {
+            "job": "Calendar::DisconnectCleanupJob",
+            "account_id": null
+          },
+          "source": "application",
+          "tokens_absent": true
+        }
+      ]
+    }
+  ]
+}

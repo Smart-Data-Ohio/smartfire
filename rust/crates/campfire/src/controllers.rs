@@ -38,12 +38,19 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
+pub mod activity_items;
+pub mod agents;
+pub mod agent_approvals;
 pub mod autocompletable;
 pub mod channel_thread_messages;
 pub mod channel_threads;
 pub mod csp_reports;
 pub mod embeds;
 pub mod first_runs;
+pub mod google_sign_in;
+pub mod google_calendar;
+pub mod google_connections;
+pub mod google_drive;
 pub mod fizzy_cards;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
@@ -57,6 +64,8 @@ pub mod messages;
 pub mod presenters;
 #[cfg(test)]
 mod activity_domain_tests;
+#[cfg(test)]
+mod human_work_tests;
 pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
@@ -76,7 +85,15 @@ pub mod welcome;
 pub mod internal_huddle;
 #[cfg(test)]
 mod internal_huddle_tests;
+#[cfg(test)]
+mod internal_huddle_declaration_tests;
 pub mod workspace_icons;
+pub mod work_threads;
+
+#[cfg(test)]
+mod agent_http_tests;
+#[cfg(test)]
+mod agent_mcp_tests;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -173,6 +190,26 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "rooms/voices#show" => arc(rooms::call_channels::show),
+        "rooms/voices#new" => arc(rooms::call_channels::new),
+        "rooms/voices#create" => arc(rooms::call_channels::create),
+        "rooms/voices#edit" => arc(rooms::call_channels::edit),
+        "rooms/voices#update" => arc(rooms::call_channels::update),
+        "rooms/voices#index" => arc(rooms::index),
+        "rooms/voices#destroy" => arc(rooms::destroy_without_room),
+        "rooms/stages#show" => arc(rooms::call_channels::show),
+        "rooms/stages#new" => arc(rooms::call_channels::new),
+        "rooms/stages#create" => arc(rooms::call_channels::create),
+        "rooms/stages#edit" => arc(rooms::call_channels::edit),
+        "rooms/stages#update" => arc(rooms::call_channels::update),
+        "rooms/stages#index" => arc(rooms::index),
+        "rooms/stages#destroy" => arc(rooms::destroy_without_room),
+
+        "rooms/huddles#show" => arc(rooms::huddles::show),
+        "rooms/huddles#create" => arc(rooms::huddles::create),
+        "rooms/huddles#participants" => arc(rooms::huddles::participants),
+        "rooms/huddles#leave" => arc(rooms::huddles::leave),
+        "users/huddle_presence#show" => arc(rooms::huddles::presence),
         "rooms/stage/roles#update" => arc(rooms::stage_participation::role),
         "rooms/stage/hands#create" => arc(rooms::stage_participation::raise),
         "rooms/stage/hands#destroy" => arc(rooms::stage_participation::lower),
@@ -192,6 +229,18 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "first_runs#create" => arc(first_runs::create),
         "sessions/transfers#show" => arc(sessions::transfers::show),
         "sessions/transfers#update" => arc(sessions::transfers::update),
+        "google/drive_files#index" => arc(google_drive::index),
+        "google/drive_files#show" => arc(google_drive::show),
+        "rooms/drive_recipients#index" => arc(google_drive::recipients),
+        "rooms/drive_recipients#validate" => arc(google_drive::validate_recipients),
+        "google/connections#connect" => arc(google_connections::connect),
+        "google/connections#callback" => arc(google_connections::callback),
+        "google/connections#destroy" => arc(google_connections::destroy),
+        "sessions/google#create" => arc(google_sign_in::create),
+        "sessions/google#callback" => arc(google_sign_in::callback),
+        "users/google_sign_in_links#create" => arc(google_sign_in::link),
+        "accounts/users/google_links#create" => arc(google_sign_in::admin_allow),
+        "accounts/users/google_links#destroy" => arc(google_sign_in::admin_unlink),
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
@@ -227,8 +276,6 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "github/connections#destroy" => arc(github::connections::destroy),
         "github/app_connections#connect" => arc(github::connections::connect),
         "github/app_connections#callback" => arc(github::connections::callback),
-        "accounts/bots/github_connections#create" => arc(github::connections::bot_create),
-        "accounts/bots/github_connections#destroy" => arc(github::connections::bot_destroy),
         "github/webhooks#create" => arc(github::webhooks::create),
         "rooms/github/pull_request_cards#show" => arc(github::cards::show),
         "rooms/github_subscriptions#create" => arc(github::subscriptions::create),
@@ -256,12 +303,31 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/users#update" => arc(accounts::users::update),
         "accounts/users#destroy" => arc(accounts::users::destroy),
         "accounts/bots/keys#update" => arc(accounts::bots::keys::update),
+        "accounts/bots/webhook_secrets#create" => arc(accounts::bots::webhook_secrets::create),
+        "agents/directory#index" => arc(agents::directory::index),
+        "agent_approvals#update" => arc(agent_approvals::update),
+        "agents/approvals#for_agent" => arc(agents::history::approvals),
+        "agents/events#ledger" => arc(agents::history::ledger),
+        "accounts/bots/credentials#index" => arc(accounts::bots::credentials::index),
+        "accounts/bots/credentials#create" => arc(accounts::bots::credentials::create),
+        "accounts/bots/credentials#destroy" => arc(accounts::bots::credentials::destroy),
+        "accounts/bots/github_connections#create" => arc(accounts::bots::github_connections::create),
+        "accounts/bots/github_connections#destroy" => arc(accounts::bots::github_connections::destroy),
+        "accounts/bots/grants#index" => arc(accounts::bots::grants::index),
+        "accounts/bots/grants#create" => arc(accounts::bots::grants::create),
+        "accounts/bots/grants#destroy" => arc(accounts::bots::grants::destroy),
+        "activity_items#index" => arc(activity_items::index),
+        "activity_items#unread_count" => arc(activity_items::unread_count),
+        "activity_items#read" => arc(activity_items::read),
+        "activity_items#handled" => arc(activity_items::handled),
+        "activity_items#open" => arc(activity_items::open),
         "accounts/bots#index" => arc(accounts::bots::index),
         "accounts/bots#create" => arc(accounts::bots::create),
         "accounts/bots#new" => arc(accounts::bots::new),
         "accounts/bots#edit" => arc(accounts::bots::edit),
         "accounts/bots#update" => arc(accounts::bots::update),
         "accounts/bots#destroy" => arc(accounts::bots::destroy),
+        "accounts/bots#kill_switch" => arc(accounts::bots::kill_switch),
         "accounts/join_codes#create" => arc(accounts::join_codes::create),
         "accounts/icons#index" => arc(accounts::icons::index),
         "accounts/icons#create" => arc(accounts::icons::create),
@@ -348,6 +414,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "channel_threads#join" => arc(channel_threads::join),
         "channel_threads#leave" => arc(channel_threads::leave),
         "channel_threads#read" => arc(channel_threads::read),
+        "work_threads#index" => arc(work_threads::index),
+        "threads/work/handoffs#new" => arc(work_threads::new_handoff),
+        "threads/work/handoffs#create" => arc(work_threads::create_handoff),
+        "threads/work/links#index" => arc(work_threads::links_index),
+        "threads/work/links#create" => arc(work_threads::create_link),
+        "threads/work/links#destroy" => arc(work_threads::destroy_link),
         "message_forwards#create" => arc(message_forwards::create),
         "message_forwards#destinations" => arc(message_forwards::destinations),
         "message_forward_sources#forward_source" => arc(message_forwards::forward_source),
@@ -359,6 +431,42 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "channel_thread_messages#destroy" => arc(channel_thread_messages::destroy),
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
+        "agents/contexts#show" => arc(agents::pending::contexts_show),
+        "agents/dms#create" => arc(agents::pending::dms_create),
+        "agents/messages#create" => arc(agents::pending::messages_create),
+        "agents/streaming_messages#create" => arc(agents::pending::streaming_messages_create),
+        "agents/streaming_messages#update" => arc(agents::pending::streaming_messages_update),
+        "agents/streaming_messages#finalize" => arc(agents::pending::streaming_messages_finalize),
+        "agents/pins#create" => arc(agents::pending::pins_create),
+        "agents/pins#destroy" => arc(agents::pending::pins_destroy),
+        "agents/polls#create" => arc(agents::pending::polls_create),
+        "agents/polls#show" => arc(agents::pending::polls_show),
+        "agents/posts#index" => arc(agents::pending::posts_index),
+        "agents/posts#create" => arc(agents::pending::posts_create),
+        "agents/work#index" => arc(agents::pending::work_index),
+        "agents/work#show" => arc(agents::pending::work_show),
+        "agents/work#update" => arc(agents::pending::work_update),
+        "agents/work#result" => arc(agents::pending::work_result),
+        "agents/work#handoff" => arc(agents::pending::work_handoff),
+        "agents/fizzy/boards#index" => arc(agents::integrations::fizzy_boards),
+        "agents/fizzy/boards#show" => arc(agents::integrations::fizzy_board),
+        "agents/fizzy/cards#search" => arc(agents::integrations::fizzy_search),
+        "agents/fizzy/cards#show" => arc(agents::integrations::fizzy_card),
+        "agents/fizzy/card_actions#create" => arc(agents::integrations::fizzy_action),
+        "agents/approvals#index" => arc(agents::approvals::index),
+        "agents/approvals#show" => arc(agents::approvals::show),
+        "agents/approvals#create" => arc(agents::approvals::create),
+        "agents/approvals#destroy" => arc(agents::approvals::destroy),
+        "agents/events#index" => arc(agents::events),
+        "agents#me" => arc(agents::me),
+        "agents#update" => arc(agents::update_me),
+        "agents/mcp#create" => arc(agents::mcp::create),
+        "agents/mcp#method_not_allowed" => arc(agents::mcp::method_not_allowed),
+        "agents/events#ack" => arc(agents::ack),
+        "agents/steps#create" => arc(agents::create_step),
+        "agents/steps#update" => arc(agents::update_step),
+        "agents/slash_commands#create" => arc(agents::register_command),
+        "agents/slash_commands#destroy" => arc(agents::unregister_command),
         "messages/by_bots#index" => arc(messages::by_bots::index),
         "messages/by_bots#create" => arc(messages::by_bots::create),
         "messages/by_bots#update" => arc(messages::by_bots::update),
@@ -409,6 +517,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/closeds#edit" => arc(rooms::closeds::edit),
         "rooms/closeds#show" => arc(rooms::closeds::show),
         "rooms/closeds#update" => arc(rooms::closeds::update),
+        "rooms/boards#index" => arc(rooms::index),
+        "rooms/boards#new" => arc(rooms::boards::new),
+        "rooms/boards#create" => arc(rooms::boards::create),
+        "rooms/boards#show" => arc(rooms::boards::show),
+        "rooms/boards#edit" => arc(rooms::boards::edit),
+        "rooms/boards#update" => arc(rooms::boards::update),
         "rooms/directs#update" => arc(rooms::directs::update),
         "rooms/directs#add_members" => arc(rooms::directs::add_members),
         "rooms/directs#leave" => arc(rooms::directs::leave),
@@ -788,6 +902,24 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "agents#me", "agents#update",
+        "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
+        "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
+        "rooms/voices#index",
+        "rooms/voices#show",
+        "rooms/voices#new",
+        "rooms/voices#create",
+        "rooms/voices#edit",
+        "rooms/voices#update",
+        "rooms/voices#destroy",
+        "rooms/stages#index",
+        "rooms/stages#show",
+        "rooms/stages#new",
+        "rooms/stages#create",
+        "rooms/stages#edit",
+        "rooms/stages#update",
+        "rooms/stages#destroy",
+        "rooms/huddles#show", "rooms/huddles#create", "rooms/huddles#participants", "rooms/huddles#leave", "users/huddle_presence#show",
         "accounts/slack_import_runs#index",
         "accounts/slack_import_runs#create",
         "accounts/slack_import_runs#show",
@@ -1019,21 +1151,22 @@ mod tests {
 
     #[tokio::test]
     async fn unported_actions_say_so_instead_of_404ing() {
-        let unported = campfire_routes::TABLE
-            .iter()
-            .find(|route| {
-                let path = route.spec.trim_end_matches("(.:format)");
-                route.verb == "GET"
-                    && route.action == ActionStatus::Defined
-                    && ported(route.endpoint).is_none()
-                    && !path.contains([':', '*', '('])
-            })
-            .expect("an unported GET route without params");
-        let path = unported.spec.trim_end_matches("(.:format)");
-        let (status, header, body) = request("GET", path).await;
-        assert_eq!(status, StatusCode::NOT_IMPLEMENTED, "{path}");
-        assert_eq!(header.as_deref(), Some(unported.endpoint));
-        assert_eq!(body, format!("Not yet ported: {}\n", unported.endpoint));
+        let unported: Vec<_> = campfire_routes::TABLE.iter().filter(|route| {
+            route.verb == "GET" && route.action == ActionStatus::Defined
+                && ported(route.endpoint).is_none()
+        }).collect();
+        // As actions are ported, the remaining real routes can all have parameters
+        // (or there can be none). Keep exercising every available unported GET.
+        for route in &unported {
+            let path = route.spec.trim_end_matches("(.:format)").split('/').map(|part| {
+                if part.starts_with([':', '*']) { "1" } else { part }
+            }).collect::<Vec<_>>().join("/");
+            let (status, header, body) = request("GET", &path).await;
+            assert_eq!(status, StatusCode::NOT_IMPLEMENTED, "{path}");
+            assert_eq!(header.as_deref(), Some(route.endpoint));
+            assert_eq!(body, format!("Not yet ported: {}\n", route.endpoint));
+        }
+        println!("Dispatch unported GET routes: {} checked", unported.len());
 
         // A route Rails declares without the action stays Rails' 404, and unknown paths too.
         let (status, header, _) = request("GET", "/first_run/new").await;
@@ -1049,3 +1182,55 @@ mod tests {
         assert_eq!(normalize_path("/a%2fb"), "/a%2Fb");
     }
 }
+
+#[cfg(test)]
+mod agent_surface_tests;
+
+#[cfg(test)]
+mod bot_http_tests;
+#[cfg(test)]
+mod agent_legacy_bot_tests;
+
+#[cfg(test)]
+mod agent_conversation_tests;
+
+#[cfg(test)]
+mod agent_fizzy_tests;
+
+#[cfg(test)]
+mod agent_fizzy_action_tests;
+
+#[cfg(test)]
+mod agent_reads_tests;
+
+#[cfg(test)]
+mod agent_pins_tests;
+
+#[cfg(test)]
+mod agent_polls_tests;
+#[cfg(test)]
+mod agent_permissions_tests;
+
+#[cfg(test)]
+mod agent_reactions_tests;
+
+#[cfg(test)]
+mod agent_polling_tests;
+
+#[cfg(test)]
+mod agent_work_validation_tests;
+
+#[cfg(test)]
+mod agent_attachments_tests;
+
+#[cfg(test)]
+mod agent_review_tests;
+
+#[cfg(test)]
+mod agent_review_r2_tests;
+#[cfg(test)]
+mod agent_review_r3_tests;
+#[cfg(test)]
+mod agent_review_r4_tests;
+#[cfg(test)]
+mod agent_review_r5_tests;

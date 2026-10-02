@@ -205,6 +205,13 @@ impl Message {
             Self::from_row,
         )
     }
+    /// Batched association preload, preserving the same rows as `find_by_id`.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!(r#"SELECT * FROM "messages" WHERE id IN ({})"#, sql::placeholders(ids.len())),
+            rusqlite::params_from_iter(ids), Self::from_row)
+    }
 
     /// `Message.last`
     pub fn last(conn: &Connection) -> Result<Option<Self>> {
@@ -466,7 +473,17 @@ impl Message {
     /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
     /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
-        Self::create_with_import_time(tx, attributes, None)
+        Self::create_with_options(tx, attributes, None, false)
+    }
+
+    /// Board creation records its assignment before invoking the real WS11 opener fanout.
+    /// Both remain in the source transaction so every delivery job commits atomically.
+    pub(crate) fn create_with_agent_delivery(
+        tx: &mut Tx<'_>,
+        attributes: NewMessage,
+        defer_agent_delivery: bool,
+    ) -> Result<Self> {
+        Self::create_with_options(tx, attributes, None, defer_agent_delivery)
     }
 
     /// Slack's `importing: true` plus `ActiveRecord::Base.no_touching`: keep validation,
@@ -477,13 +494,14 @@ impl Message {
         created_at: Timestamp,
         edited_at: Option<Timestamp>,
     ) -> Result<Self> {
-        Self::create_with_import_time(tx, attributes, Some((created_at, edited_at)))
+        Self::create_with_options(tx, attributes, Some((created_at, edited_at)), false)
     }
 
-    fn create_with_import_time(
+    fn create_with_options(
         tx: &mut Tx<'_>,
         attributes: NewMessage,
         imported_time: Option<(Timestamp, Option<Timestamp>)>,
+        defer_agent_delivery: bool,
     ) -> Result<Self> {
         let importing = imported_time.is_some();
         let body = Self::rendered_body(tx, &attributes)?;
@@ -587,7 +605,9 @@ impl Message {
             ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
         if !importing {
-            crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
+            if !defer_agent_delivery {
+                crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
+            }
             // Read the final counter after commit. Rails sends unread, push, then indicator.
             tx.after_commit(move |tx| {
                 ChannelThread::broadcast_thread_indicators(tx, &indicator_threads)

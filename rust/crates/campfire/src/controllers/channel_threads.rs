@@ -3,6 +3,12 @@
 mod tests;
 #[cfg(test)]
 mod page_tests;
+#[cfg(test)]
+mod agent_work_tests;
+#[cfg(test)]
+mod board_read_tests;
+#[cfg(test)]
+mod board_write_tests;
 mod writes;
 pub use writes::{create, destroy, new, update};
 #[cfg(test)]
@@ -91,9 +97,11 @@ pub async fn show(c: &mut Ctx) -> Result {
         }).await?;
         return render_json(c, StatusCode::OK, &payload);
     }
-    if room.board() || thread.work() {
-        // WS12 owns board posts, work links, owner controls and work history.
-        return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
+    if room.board() {
+        let viewer = require_current_user(c)?.clone();
+        let picker = c.app().config.google_picker.is_some();
+        let post = messages::present(c, move |p| crate::controllers::presenters::board_posts::post(p, &room, &thread, &viewer, &records, picker)).await?;
+        return page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::channel_threads::board::Show { ctx, post: &post }).await;
     }
     render_standalone(c, thread, records, StatusCode::OK).await
 }
@@ -101,10 +109,6 @@ pub async fn show(c: &mut Ctx) -> Result {
 pub async fn content(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
-    if room.board() || thread.work() {
-        // WS12 owns work/board conversation controls and history, including pane content.
-        return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
-    }
     let id = thread.id;
     let anchor = c.params.get("message_id").filter(|value| value.is_present()).cloned();
     let (records, anchor) = c.app().db.read(move |conn| {
@@ -137,15 +141,33 @@ fn render_thread_schedule_control(ctx: &campfire_views::ViewContext<'_>, room_id
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
     let name = thread.name.clone();
-    let (parent, items, count, status, pull_request_header) = messages::present(c, move |p| {
+    let viewer = require_current_user(c)?.clone();
+    let (parent, items, count, status, pull_request_header, work) = messages::present(c, move |p| {
         let parent = thread.parent_message_id.map(|id| Message::find(p.conn, id)).transpose()?.as_ref().map(|message| p.message_item(message)).transpose()?;
         Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name(),
-            render_thread_pull_request_header(p, &thread)?))
+            render_thread_pull_request_header(p, &thread)?,
+            if thread.work() {Some(render_work_header(p,&thread,&viewer)?)} else {None}))
     }).await?;
-    // Work/board sections remain WS12 seams. The standalone PR header uses WS15g. The ordinary standalone
-    // thread uses the same stable collection entry point as the room's message list.
     page::titled_content(c, response_status, &name, |ctx| campfire_views::channel_threads::Show { ctx,
-        name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items }.render()).await
+        name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items, work: work.as_ref() }.render()).await
+}
+
+pub(super) fn render_work_header(
+    p: &crate::controllers::presenters::Presenter<'_>,
+    thread: &ChannelThread,
+    viewer: &campfire_db::User,
+) -> campfire_db::Result<campfire_views::channel_threads::Work> {
+    let (owner_label,owner_agent) = crate::controllers::presenters::boards::owner(p,thread)?;
+    Ok(campfire_views::channel_threads::Work {
+        id: thread.id,
+        status_label: thread.work_status_label(),
+        owner_label,
+        owner_agent,
+        can_manage: thread.work_manageable_by(p.conn, viewer)?,
+        history: crate::controllers::presenters::board_posts::history(p, thread.id)?,
+        links: crate::controllers::presenters::board_posts::links(p, thread)?,
+        steps: p.thread_steps(thread.id)?,
+    })
 }
 
 /// Named WS15g integration call site, after authorizing the parent room and scoped thread.
@@ -242,10 +264,13 @@ async fn render_membership(c: &mut Ctx, thread: ChannelThread, member: ThreadMem
 }
 
 fn render_error(c: &mut Ctx, status: StatusCode, message: &str) -> Result {
-    if c.format()? == Some(&format::JSON) { render_json(c, status, &json!({"error": message})) }
-    else { Ok(c.head(status)) }
+    match c.respond_to(&[&format::HTML, &format::JSON]) {
+        Ok(chosen) if *chosen == format::JSON => render_json(c, status, &json!({"error": message})),
+        Ok(_) | Err(Error::UnknownFormat) => Ok(c.head(status)),
+        Err(error) => Err(error),
+    }
 }
 
-fn render_json(c: &mut Ctx, status: StatusCode, payload: &Value) -> Result {
+pub(super) fn render_json(c: &mut Ctx, status: StatusCode, payload: &Value) -> Result {
     Ok(c.render(status, &format::JSON, serde_json::to_string(payload).map_err(Error::internal)?))
 }

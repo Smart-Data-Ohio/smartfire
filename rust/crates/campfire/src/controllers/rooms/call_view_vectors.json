@@ -1,0 +1,1058 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "voices_new_form",
+      "input": {
+        "id": null,
+        "name": "New voice channel",
+        "stage": false,
+        "selected_users": [],
+        "unselected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          },
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<form action=\"/rooms/voices\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/voices\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"New voice channel\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    \n  <menu class=\"flex flex-column gap margin-none pad overflow-y constrain-height\" data-controller=\"filter\" data-filter-active-class=\"filter--active\" data-filter-selected-class=\"selected\">\n    \n\n    <div data-filter-target=\"list\" contents>\n      \n\n\n      <li class=\"flex align-center gap margin-none\" data-value=\"bender bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Bender Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"394959859\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Bender Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"david\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>David</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <input type=\"hidden\" name=\"user_ids[]\" value=\"127326141\" />\n      <img class=\"colorize--black flex-item-no-shrink\" aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" />\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"deploy bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Deploy Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523956/card\" href=\"/users/773523956\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Deploy Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523956\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Deploy Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jason\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Jason</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"149087659\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Jason access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jz\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"JZ – Designer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\" href=\"/users/773523953\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>JZ</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523953\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give JZ access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"kevin\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Kevin</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"712064548\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Kevin access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"lonely lou\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Lonely Lou\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523958/card\" href=\"/users/773523958\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Lonely Lou</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523958\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Lonely Lou access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"new member\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"New member\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523959/card\" href=\"/users/773523959\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>New member</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523959\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give New member access to this room</span>\n      </label>\n</li>\n\n    </div>\n</menu>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "name": "voices_new_page_content",
+      "input": {
+        "id": null,
+        "name": "New voice channel",
+        "stage": false,
+        "selected_users": [],
+        "unselected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          },
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "new_page"
+      },
+      "html": "\n\n<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">\n  \n  <form action=\"/rooms/voices\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/voices\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"New voice channel\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    \n  <menu class=\"flex flex-column gap margin-none pad overflow-y constrain-height\" data-controller=\"filter\" data-filter-active-class=\"filter--active\" data-filter-selected-class=\"selected\">\n    \n\n    <div data-filter-target=\"list\" contents>\n      \n\n\n      <li class=\"flex align-center gap margin-none\" data-value=\"bender bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Bender Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"394959859\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Bender Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"david\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>David</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <input type=\"hidden\" name=\"user_ids[]\" value=\"127326141\" />\n      <img class=\"colorize--black flex-item-no-shrink\" aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" />\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"deploy bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Deploy Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523956/card\" href=\"/users/773523956\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Deploy Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523956\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Deploy Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jason\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Jason</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"149087659\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Jason access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jz\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"JZ – Designer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\" href=\"/users/773523953\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>JZ</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523953\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give JZ access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"kevin\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Kevin</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"712064548\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Kevin access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"lonely lou\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Lonely Lou\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523958/card\" href=\"/users/773523958\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Lonely Lou</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523958\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Lonely Lou access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"new member\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"New member\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523959/card\" href=\"/users/773523959\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>New member</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523959\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give New member access to this room</span>\n      </label>\n</li>\n\n    </div>\n</menu>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>\n\n</section>\n"
+    },
+    {
+      "name": "voices_edit_form",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": false,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<form action=\"/rooms/voices/9001\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/voices/9001\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"WS13 &lt;&amp;&gt; room\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    \n  <menu class=\"flex flex-column gap margin-none pad overflow-y constrain-height\" data-controller=\"filter\" data-filter-active-class=\"filter--active\" data-filter-selected-class=\"selected\">\n    \n\n    <div data-filter-target=\"list\" contents>\n      <li class=\"flex align-center gap margin-none\" data-value=\"bender bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Bender Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"394959859\" class=\"switch__input\" checked=\"checked\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Bender Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"david\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>David</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"127326141\" class=\"switch__input\" checked=\"checked\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give David access to this room</span>\n      </label>\n</li>\n\n\n        <hr class=\"separator full-width\" style=\"--border-style: solid\">\n\n      <li class=\"flex align-center gap margin-none\" data-value=\"deploy bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Deploy Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523956/card\" href=\"/users/773523956\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Deploy Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523956\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Deploy Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jason\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Jason</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"149087659\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Jason access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jz\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"JZ – Designer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\" href=\"/users/773523953\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>JZ</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523953\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give JZ access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"kevin\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Kevin</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"712064548\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Kevin access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"lonely lou\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Lonely Lou\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523958/card\" href=\"/users/773523958\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Lonely Lou</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523958\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Lonely Lou access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"new member\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"New member\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523959/card\" href=\"/users/773523959\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>New member</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523959\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give New member access to this room</span>\n      </label>\n</li>\n\n    </div>\n</menu>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "name": "voices_header",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": false,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "header",
+        "unread": false,
+        "membership": false,
+        "live": false,
+        "participants": []
+      },
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_voice_9001\">\n  <span class=\"room-header__kind\">Voice channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "voices_quiet_shared",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": false,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": false,
+        "membership": false,
+        "live": false,
+        "participants": []
+      },
+      "html": "<a id=\"list_rooms_voice_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_9001\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>"
+    },
+    {
+      "name": "voices_quiet_member",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": false,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": true,
+        "membership": true,
+        "live": false,
+        "participants": []
+      },
+      "html": "<a id=\"list_rooms_voice_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room unread\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_9001\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n    <span class=\"sidebar-item__status\">New</span>\n</a>"
+    },
+    {
+      "name": "voices_live_shared",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": false,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": false,
+        "membership": false,
+        "live": true,
+        "participants": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<a id=\"list_rooms_voice_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_9001\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 in voice: David\"\n      title=\"1 in voice: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n</a>"
+    },
+    {
+      "name": "voices_live_member",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": false,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": true,
+        "membership": true,
+        "live": true,
+        "participants": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<a id=\"list_rooms_voice_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room unread\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_9001\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 in voice: David\"\n      title=\"1 in voice: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n    <span class=\"sidebar-item__status\">New</span>\n</a>"
+    },
+    {
+      "name": "stages_new_form",
+      "input": {
+        "id": null,
+        "name": "New stage channel",
+        "stage": true,
+        "selected_users": [],
+        "unselected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          },
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<form action=\"/rooms/stages\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/stages\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"New stage channel\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    \n  <menu class=\"flex flex-column gap margin-none pad overflow-y constrain-height\" data-controller=\"filter\" data-filter-active-class=\"filter--active\" data-filter-selected-class=\"selected\">\n    \n\n    <div data-filter-target=\"list\" contents>\n      \n\n\n      <li class=\"flex align-center gap margin-none\" data-value=\"bender bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Bender Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"394959859\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Bender Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"david\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>David</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <input type=\"hidden\" name=\"user_ids[]\" value=\"127326141\" />\n      <img class=\"colorize--black flex-item-no-shrink\" aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" />\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"deploy bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Deploy Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523956/card\" href=\"/users/773523956\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Deploy Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523956\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Deploy Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jason\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Jason</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"149087659\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Jason access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jz\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"JZ – Designer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\" href=\"/users/773523953\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>JZ</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523953\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give JZ access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"kevin\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Kevin</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"712064548\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Kevin access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"lonely lou\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Lonely Lou\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523958/card\" href=\"/users/773523958\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Lonely Lou</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523958\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Lonely Lou access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"new member\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"New member\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523959/card\" href=\"/users/773523959\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>New member</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523959\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give New member access to this room</span>\n      </label>\n</li>\n\n    </div>\n</menu>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "name": "stages_new_page_content",
+      "input": {
+        "id": null,
+        "name": "New stage channel",
+        "stage": true,
+        "selected_users": [],
+        "unselected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          },
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "new_page"
+      },
+      "html": "\n\n<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">\n  \n  <form action=\"/rooms/stages\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/stages\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"New stage channel\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    \n  <menu class=\"flex flex-column gap margin-none pad overflow-y constrain-height\" data-controller=\"filter\" data-filter-active-class=\"filter--active\" data-filter-selected-class=\"selected\">\n    \n\n    <div data-filter-target=\"list\" contents>\n      \n\n\n      <li class=\"flex align-center gap margin-none\" data-value=\"bender bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Bender Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"394959859\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Bender Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"david\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>David</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <input type=\"hidden\" name=\"user_ids[]\" value=\"127326141\" />\n      <img class=\"colorize--black flex-item-no-shrink\" aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" />\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"deploy bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Deploy Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523956/card\" href=\"/users/773523956\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Deploy Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523956\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Deploy Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jason\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Jason</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"149087659\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Jason access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jz\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"JZ – Designer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\" href=\"/users/773523953\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>JZ</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523953\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give JZ access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"kevin\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Kevin</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"712064548\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Kevin access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"lonely lou\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Lonely Lou\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523958/card\" href=\"/users/773523958\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Lonely Lou</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523958\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Lonely Lou access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"new member\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"New member\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523959/card\" href=\"/users/773523959\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>New member</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523959\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give New member access to this room</span>\n      </label>\n</li>\n\n    </div>\n</menu>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>\n\n</section>\n"
+    },
+    {
+      "name": "stages_edit_form",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": true,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<form action=\"/rooms/stages/9001\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/stages/9001\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"WS13 &lt;&amp;&gt; room\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    \n  <menu class=\"flex flex-column gap margin-none pad overflow-y constrain-height\" data-controller=\"filter\" data-filter-active-class=\"filter--active\" data-filter-selected-class=\"selected\">\n    \n\n    <div data-filter-target=\"list\" contents>\n      <li class=\"flex align-center gap margin-none\" data-value=\"bender bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Bender Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"394959859\" class=\"switch__input\" checked=\"checked\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Bender Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"david\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>David</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"127326141\" class=\"switch__input\" checked=\"checked\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give David access to this room</span>\n      </label>\n</li>\n\n\n        <hr class=\"separator full-width\" style=\"--border-style: solid\">\n\n      <li class=\"flex align-center gap margin-none\" data-value=\"deploy bot\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Deploy Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523956/card\" href=\"/users/773523956\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Deploy Bot</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523956\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Deploy Bot access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jason\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Jason</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"149087659\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Jason access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"jz\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"JZ – Designer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\" href=\"/users/773523953\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>JZ</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523953\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give JZ access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"kevin\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Kevin</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"712064548\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Kevin access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"lonely lou\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"Lonely Lou\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523958/card\" href=\"/users/773523958\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>Lonely Lou</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523958\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give Lonely Lou access to this room</span>\n      </label>\n</li>\n<li class=\"flex align-center gap margin-none\" data-value=\"new member\">\n  <figure class=\"avatar flex-item-no-shrink\" style=\"--avatar-size: 4ch;\">\n    <a title=\"New member\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523959/card\" href=\"/users/773523959\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <div class=\"min-width\">\n    <div class=\"overflow-ellipsis fill-shade\"><strong>New member</strong></div>\n  </div>\n\n  <hr class=\"separator\" aria-hidden=\"true\">\n\n      <label class=\"switch flex-item-no-shrink\">\n        <input type=\"checkbox\" name=\"user_ids[]\" value=\"773523959\" class=\"switch__input\" />\n        <span class=\"switch__btn round\"></span>\n        <span class=\"for-screen-reader\">Give New member access to this room</span>\n      </label>\n</li>\n\n    </div>\n</menu>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "name": "stages_header",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": true,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "header",
+        "unread": false,
+        "membership": false,
+        "live": false,
+        "participants": []
+      },
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_stage_9001\">\n  <span class=\"room-header__kind\">Stage channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "stages_quiet_shared",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": true,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": false,
+        "membership": false,
+        "live": false,
+        "participants": []
+      },
+      "html": "<a id=\"list_rooms_stage_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_9001\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"9001\"></span>\n    <span id=\"sidebar_voice_participants_rooms_stage_9001\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody on stage\"\n      title=\"Nobody on stage\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>"
+    },
+    {
+      "name": "stages_quiet_member",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": true,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": true,
+        "membership": true,
+        "live": false,
+        "participants": []
+      },
+      "html": "<a id=\"list_rooms_stage_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room stage-room unread\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_9001\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"9001\"></span>\n    <span id=\"sidebar_voice_participants_rooms_stage_9001\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody on stage\"\n      title=\"Nobody on stage\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n    <span class=\"sidebar-item__status\">New</span>\n</a>"
+    },
+    {
+      "name": "stages_live_shared",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": true,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": false,
+        "membership": false,
+        "live": true,
+        "participants": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<a id=\"list_rooms_stage_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_9001\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"9001\">\n    <span class=\"stage-live-dot__pip\" role=\"img\" aria-label=\"Live now: David\"></span>\n</span>\n    <span id=\"sidebar_voice_participants_rooms_stage_9001\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 on stage: David\"\n      title=\"1 on stage: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n</a>"
+    },
+    {
+      "name": "stages_live_member",
+      "input": {
+        "id": 9001,
+        "name": "WS13 <&> room",
+        "stage": true,
+        "selected_users": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "title": "Bender Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000"
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "title": "David",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ],
+        "unselected_users": [
+          {
+            "id": 773523956,
+            "name": "Deploy Bot",
+            "title": "Deploy Bot",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100"
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "title": "Jason",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "title": "JZ – Designer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "title": "Kevin – Programmer",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+          },
+          {
+            "id": 773523958,
+            "name": "Lonely Lou",
+            "title": "Lonely Lou",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000"
+          },
+          {
+            "id": 773523959,
+            "name": "New member",
+            "title": "New member",
+            "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000"
+          }
+        ],
+        "kind": "row",
+        "unread": true,
+        "membership": true,
+        "live": true,
+        "participants": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+          }
+        ]
+      },
+      "html": "<a id=\"list_rooms_stage_9001\" data-rooms-list-target=\"room\" data-room-id=\"9001\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"WS13 &lt;&amp;&gt; room\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/9001/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"WS13 &lt;&amp;&gt; room\" class=\"sidebar-item room btn voice-room stage-room unread\" href=\"/rooms/9001\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">WS13 &lt;&amp;&gt; room</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_9001\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"9001\">\n    <span class=\"stage-live-dot__pip\" role=\"img\" aria-label=\"Live now: David\"></span>\n</span>\n    <span id=\"sidebar_voice_participants_rooms_stage_9001\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 on stage: David\"\n      title=\"1 on stage: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9001/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9001\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n    <span class=\"sidebar-item__status\">New</span>\n</a>"
+    }
+  ],
+  "layouts": {
+    "huddle": "<section id=\"channel-huddle\"\n         class=\"huddle shadow\"\n         data-turbo-permanent\n         data-controller=\"huddle\"\n         data-huddle-current-user-id-value=\"127326141\"\n         data-huddle-voice-mode-value=\"voice_activity\"\n         data-huddle-push-to-talk-key-value=\"`\"\n         data-huddle-noise-worklet-url-value=\"/assets/noise-suppressor-worklet-adb3f748.js\"\n         data-huddle-noise-wasm-url-value=\"/assets/rnnoise-f5ba0fec.wasm\"\n         data-huddle-noise-simd-wasm-url-value=\"/assets/rnnoise-simd-4aac0d96.wasm\"\n         data-state=\"idle\"\n         aria-labelledby=\"huddle-room-name\"\n         hidden>\n  <header class=\"huddle__header\">\n    <div class=\"min-width\">\n      <h2 id=\"huddle-room-name\" class=\"huddle__title overflow-ellipsis\" data-huddle-target=\"roomName\">Huddle</h2>\n      <p class=\"huddle__status\" data-huddle-target=\"status\" role=\"status\" aria-live=\"polite\">Not in a huddle</p>\n    </div>\n\n    <div class=\"huddle__header-actions\">\n      <button type=\"button\"\n              class=\"btn btn--plain huddle__connection\"\n              data-huddle-target=\"connection\"\n              data-action=\"huddle#toggleConnectionDetails\"\n              data-quality=\"fair\"\n              aria-expanded=\"false\"\n              aria-label=\"Connection quality: fair. Show details.\"\n              hidden>\n        <span class=\"huddle__connection-bars\" aria-hidden=\"true\"><i></i><i></i><i></i></span>\n      </button>\n\n      <button type=\"button\" class=\"btn btn--plain huddle__leave\" data-action=\"huddle#leave\">\n        <span data-huddle-target=\"leaveLabel\">Leave</span>\n      </button>\n    </div>\n  </header>\n\n  <dl class=\"huddle__connection-details\" data-huddle-target=\"connectionDetails\" hidden>\n    <div><dt>Round-trip time</dt><dd data-huddle-target=\"statRtt\">–</dd></div>\n    <div><dt>Packet loss</dt><dd data-huddle-target=\"statLoss\">–</dd></div>\n    <div><dt>Jitter</dt><dd data-huddle-target=\"statJitter\">–</dd></div>\n    <div><dt>Received</dt><dd data-huddle-target=\"statRx\">–</dd></div>\n    <div><dt>Sent</dt><dd data-huddle-target=\"statSent\">–</dd></div>\n    <div><dt>Transport</dt><dd data-huddle-target=\"statTransport\">–</dd></div>\n  </dl>\n\n  <p class=\"huddle__notice\" data-huddle-target=\"notice\" role=\"alert\" hidden></p>\n\n  <div class=\"huddle__reconnect\" data-huddle-target=\"reconnect\" role=\"status\" hidden>\n    <p class=\"huddle__reconnect-text\">Connection lost. Retrying<span aria-hidden=\"true\"> in <span data-huddle-target=\"reconnectCountdown\">30</span>s</span>…</p>\n    <button type=\"button\" class=\"btn btn--reversed huddle__reconnect-now\" data-action=\"huddle#reconnectNow\">Reconnect now</button>\n  </div>\n\n  <p class=\"huddle__listening\" data-huddle-target=\"listeningNote\" hidden>You are listening</p>\n\n  <div class=\"huddle__sharing\" data-huddle-target=\"sharing\" hidden>\n    <span class=\"huddle__sharing-name overflow-ellipsis\" data-huddle-target=\"sharingName\">Someone is sharing a screen</span>\n    <button type=\"button\"\n            class=\"btn btn--reversed huddle__sharing-view\"\n            data-huddle-target=\"sharingExpand\"\n            data-action=\"huddle#viewSharedScreen\">View</button>\n  </div>\n\n  <button type=\"button\" class=\"btn huddle__resume-audio\" data-huddle-target=\"resumeAudio\" data-action=\"huddle#resumeAudio\" hidden>\n    Play huddle audio\n  </button>\n\n  <label class=\"huddle__stream-quality\" data-huddle-target=\"streamQualityRow\" hidden>\n    <span>Stream quality</span>\n    <select class=\"input\" data-huddle-target=\"streamQuality\" data-action=\"huddle#streamQualityChanged\">\n      <option value=\"auto\">Auto</option>\n      <option value=\"low\">Low</option>\n      <option value=\"high\">High</option>\n    </select>\n  </label>\n\n  <div class=\"huddle__screens\" data-huddle-target=\"screens\" aria-label=\"Shared screens\" hidden></div>\n\n  <div class=\"huddle__cameras\" data-huddle-target=\"cameras\" aria-label=\"Cameras\" hidden></div>\n\n  <div class=\"huddle__people\" data-huddle-target=\"people\" hidden>\n    <div class=\"huddle__people-heading\">\n      <h3>People</h3>\n      <span class=\"txt-small txt-subtle\" data-huddle-target=\"participantCount\">0 participants</span>\n    </div>\n    <ul class=\"huddle__participants\" data-huddle-target=\"participantList\"></ul>\n  </div>\n\n  <div class=\"huddle__controls\" data-huddle-target=\"activeControls\" hidden>\n    <div class=\"huddle__mute-group\">\n      <button type=\"button\" class=\"btn huddle__mute\" data-huddle-target=\"mute\" data-action=\"huddle#toggleMute\" aria-pressed=\"false\" title=\"Microphone live\">\n        <span data-huddle-target=\"muteLabel\">Mute microphone</span>\n      </button>\n      <span class=\"huddle__meter\"\n            data-huddle-target=\"meter\"\n            role=\"meter\"\n            aria-label=\"Microphone level\"\n            aria-valuemin=\"0\"\n            aria-valuemax=\"100\"\n            aria-valuenow=\"0\"\n            hidden><span class=\"huddle__meter-fill\" data-huddle-target=\"meterFill\"></span></span>\n    </div>\n    <button type=\"button\" class=\"btn\" data-huddle-target=\"share\" data-action=\"huddle#toggleScreenShare\" aria-pressed=\"false\">\n      <span data-huddle-target=\"shareLabel\">Share screen</span>\n    </button>\n    <button type=\"button\" class=\"btn\" data-huddle-target=\"camera\" data-action=\"huddle#toggleCamera\" aria-pressed=\"false\" title=\"Camera off\">\n      <span data-huddle-target=\"cameraLabel\">Camera</span>\n    </button>\n  </div>\n\n  <div class=\"huddle__settings\" data-huddle-target=\"settings\" hidden>\n    <div class=\"huddle__devices\" data-huddle-target=\"devicesBlock\" hidden>\n      <h3 class=\"huddle__devices-heading\">Check your devices</h3>\n\n      <label class=\"huddle__device\">\n        <span>Microphone</span>\n        <select class=\"input\" data-huddle-target=\"microphoneSelect\" data-action=\"huddle#microphoneChanged\"></select>\n      </label>\n\n      <label class=\"huddle__device\" data-huddle-target=\"speakerRow\">\n        <span>Speaker</span>\n        <select class=\"input\" data-huddle-target=\"speakerSelect\" data-action=\"huddle#speakerChanged\"></select>\n      </label>\n\n      <label class=\"huddle__device\">\n        <span>Camera</span>\n        <select class=\"input\" data-huddle-target=\"cameraSelect\" data-action=\"huddle#cameraChanged\"></select>\n      </label>\n\n      <div class=\"huddle__preview-wrap\" data-huddle-target=\"previewWrap\" hidden>\n        <video class=\"huddle__preview\" data-huddle-target=\"preview\" autoplay playsinline muted></video>\n      </div>\n\n      <span class=\"huddle__meter huddle__meter--prejoin\"\n            data-huddle-target=\"prejoinMeter\"\n            role=\"meter\"\n            aria-label=\"Microphone level\"\n            aria-valuemin=\"0\"\n            aria-valuemax=\"100\"\n            aria-valuenow=\"0\"\n            hidden><span class=\"huddle__meter-fill\" data-huddle-target=\"prejoinMeterFill\"></span></span>\n\n      <p class=\"huddle__check-error\" data-huddle-target=\"checkError\" role=\"alert\" hidden></p>\n\n      <div class=\"huddle__devices-actions\">\n        <button type=\"button\" class=\"btn btn--reversed\" data-huddle-target=\"checkJoin\" data-action=\"huddle#confirmPrejoinJoin\" disabled>Join</button>\n        <button type=\"button\" class=\"btn btn--plain\" data-huddle-target=\"checkRetry\" data-action=\"huddle#retryPrejoin\" hidden>Try again</button>\n        <button type=\"button\" class=\"btn btn--plain\" data-huddle-target=\"devicesDone\" data-action=\"huddle#closeDevices\" hidden>Done</button>\n      </div>\n    </div>\n\n    <div class=\"huddle__settings-row\" data-huddle-target=\"settingsRow\" hidden>\n      <button type=\"button\"\n              class=\"btn btn--plain huddle__noise\"\n              data-huddle-target=\"noise\"\n              data-action=\"huddle#toggleNoiseSuppression\"\n              aria-pressed=\"true\">\n        <span data-huddle-target=\"noiseLabel\">Noise suppression on</span>\n      </button>\n      <button type=\"button\"\n              class=\"btn btn--plain huddle__check-devices\"\n              data-huddle-target=\"checkDevices\"\n              data-action=\"huddle#toggleDevices\"\n              aria-expanded=\"false\">\n        Check devices\n      </button>\n    </div>\n  </div>\n\n  <button type=\"button\" class=\"btn btn--reversed huddle__retry\" data-huddle-target=\"retry\" data-action=\"huddle#retry\" hidden>\n    Try again\n  </button>\n\n  <div id=\"huddle_role_events\" data-huddle-target=\"roleEvents\" hidden></div>\n</section>\n",
+    "huddle_invitation": "<div id=\"huddle-invitation\"\n     class=\"huddle-invitation shadow\"\n     data-controller=\"huddle-invitation\"\n     role=\"alertdialog\"\n     aria-labelledby=\"huddle-invitation-title\"\n     aria-describedby=\"huddle-invitation-description\"\n     hidden>\n  <div class=\"huddle-invitation__text min-width\">\n    <p class=\"huddle-invitation__kicker\">Incoming huddle</p>\n    <p id=\"huddle-invitation-title\" class=\"huddle-invitation__title overflow-ellipsis\" data-huddle-invitation-target=\"title\"></p>\n    <p id=\"huddle-invitation-description\" class=\"huddle-invitation__description overflow-ellipsis\" data-huddle-invitation-target=\"description\"></p>\n  </div>\n\n  <div class=\"huddle-invitation__actions\">\n    <button type=\"button\" class=\"btn btn--primary\" data-action=\"huddle-invitation#join\">Join</button>\n    <button type=\"button\" class=\"btn btn--plain\" data-action=\"huddle-invitation#dismiss\">Dismiss</button>\n  </div>\n</div>\n",
+    "huddle_join_notice": "<div id=\"huddle-join-notices\" data-controller=\"huddle-join-notice\" data-turbo-permanent>\n  <div class=\"huddle-join-toasts\" data-huddle-join-notice-target=\"toasts\" aria-live=\"polite\"></div>\n  <div data-controller=\"sound\"\n       data-huddle-join-notice-target=\"sound\"\n       data-sound-url-value=\"/assets/incoming-0621d199.mp3\"\n       hidden></div>\n</div>\n"
+  }
+}

@@ -10,13 +10,39 @@
         <span class="for-screen-reader">Edit my profile</span>
 {% endfilter %}{% endif %}  </div>
 {% endblock %}
-{% block content %}{{ "\n\n" }}<section class="panel txt-align-center">
+{% block content %}
+
+<section class="panel txt-align-center">
   <div class="flex flex-column gap {% if user.banned() %}banned{% endif %}">
     <div class="avatar txt-xx-large center" style="background: white">
       {{ h::image_tag(ctx, user.avatar_path.as_str(), h::attrs().alt("Profile avatar").class("avatar")) }}
     </div>
 
-{% if user.bot() %}{% include "users/agents/_profile.html" %}{% else %}{% if !user.deactivated() %}        <div class="flex flex-column gap" style="--row-gap: calc(var(--block-space) / 3)">
+{% if user.bot() %}      <div class="flex flex-column gap" style="--row-gap: calc(var(--block-space) / 3)">
+        <h1 class="txt-x-large txt-tight-lines margin-none">{{ user.name }}</h1>
+
+{% if let Some(profile) = agent_profile %}{{ self.agent_details(profile)? }}{% endif %}      </div>
+
+      <div class="pad-double--inline push--inline push--block-start">
+{% if user.active() %}          {{ h::button_to_direct_room_with(ctx, user.id, &user.name) }}
+{% if self.manage_bot() %}            <div class="margin-block-start">
+              {% filter link_to(h::routes::account_bot_grants(user.id), h::attrs().class("btn full-width")) %}
+                {{ h::image_tag(ctx, "key.svg", h::attrs().aria_hidden().size(20)) }}
+                Manage capability grants
+{% endfilter %}            </div>
+{% if let Some(profile) = agent_profile %}              <div class="margin-block-start">
+                {% filter link_to("/agents/" ~ profile.agent.id ~ "/events", h::attrs().class("btn full-width")) %}
+                  {{ h::image_tag(ctx, "messages-outlined.svg", h::attrs().aria_hidden().size(20)) }}
+                  View activity ledger
+{% endfilter %}              </div>
+              <div class="margin-block-start">
+                {% filter link_to("/agents/" ~ profile.agent.id ~ "/approvals", h::attrs().class("btn full-width")) %}
+                  {{ h::image_tag(ctx, "check.svg", h::attrs().aria_hidden().size(20)) }}
+                  View approval requests
+{% endfilter %}              </div>
+{% endif %}{% endif %}{% else %}          <div>{{ user.name }} is no longer on this account</div>
+{% endif %}      </div>
+{% else %}{% if !user.deactivated() %}        <div class="flex flex-column gap" style="--row-gap: calc(var(--block-space) / 3)">
           <h1 class="txt-x-large txt-tight-lines margin-none">{{ user.name }}</h1>
 {% if ctx.can_administer() %}            <div>{{ h::mail_to(user.email_address.as_deref().unwrap_or_default()) }}</div>
 {% endif %}          <div>{{ user.bio.as_deref().unwrap_or_default() }}</div>

@@ -1,0 +1,248 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "name": "human",
+      "tag": "bug",
+      "assignee_id": 773523953,
+      "flags": [],
+      "expected": {
+        "valid": true,
+        "tag": "bug",
+        "errors": []
+      }
+    },
+    {
+      "name": "normalize",
+      "tag": "  Bug ",
+      "assignee_id": 773523953,
+      "flags": [],
+      "expected": {
+        "valid": true,
+        "tag": "bug",
+        "errors": []
+      }
+    },
+    {
+      "name": "agent",
+      "tag": "bug",
+      "assignee_id": 394959859,
+      "flags": [],
+      "expected": {
+        "valid": true,
+        "tag": "bug",
+        "errors": []
+      }
+    },
+    {
+      "name": "blank",
+      "tag": " ",
+      "assignee_id": 773523953,
+      "flags": [],
+      "expected": {
+        "valid": false,
+        "tag": "",
+        "errors": [
+          "Tag can't be blank",
+          "Tag is invalid"
+        ]
+      }
+    },
+    {
+      "name": "format",
+      "tag": "Not A Tag!",
+      "assignee_id": 773523953,
+      "flags": [],
+      "expected": {
+        "valid": false,
+        "tag": "not a tag!",
+        "errors": [
+          "Tag is invalid"
+        ]
+      }
+    },
+    {
+      "name": "cap",
+      "tag": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "assignee_id": 773523953,
+      "flags": [],
+      "expected": {
+        "valid": false,
+        "tag": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "errors": [
+          "Tag is too long (maximum is 30 characters)"
+        ]
+      }
+    },
+    {
+      "name": "boundary",
+      "tag": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "assignee_id": 773523953,
+      "flags": [],
+      "expected": {
+        "valid": true,
+        "tag": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "errors": []
+      }
+    },
+    {
+      "name": "duplicate",
+      "tag": "BUG",
+      "assignee_id": 773523953,
+      "flags": [
+        "duplicate"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Tag has already been taken"
+        ]
+      }
+    },
+    {
+      "name": "other_board",
+      "tag": "bug",
+      "assignee_id": 773523953,
+      "flags": [
+        "other_board"
+      ],
+      "expected": {
+        "valid": true,
+        "tag": "bug",
+        "errors": []
+      }
+    },
+    {
+      "name": "channel",
+      "tag": "bug",
+      "assignee_id": 127326141,
+      "flags": [
+        "channel"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Room must be a board"
+        ]
+      }
+    },
+    {
+      "name": "missing_room",
+      "tag": "bug",
+      "assignee_id": 127326141,
+      "flags": [
+        "missing_room"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Room must exist"
+        ]
+      }
+    },
+    {
+      "name": "missing_assignee",
+      "tag": "bug",
+      "assignee_id": 0,
+      "flags": [],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Assignee must exist"
+        ]
+      }
+    },
+    {
+      "name": "missing_creator",
+      "tag": "bug",
+      "assignee_id": 773523953,
+      "flags": [
+        "missing_creator"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Created by must exist"
+        ]
+      }
+    },
+    {
+      "name": "outside",
+      "tag": "bug",
+      "assignee_id": 712064548,
+      "flags": [],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Assignee must be an active board member able to own posts"
+        ]
+      }
+    },
+    {
+      "name": "deactivated",
+      "tag": "bug",
+      "assignee_id": 773523953,
+      "flags": [
+        "deactivated"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Assignee must be an active board member able to own posts"
+        ]
+      }
+    },
+    {
+      "name": "suspended",
+      "tag": "bug",
+      "assignee_id": 394959859,
+      "flags": [
+        "suspended"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Assignee must be an active board member able to own posts"
+        ]
+      }
+    },
+    {
+      "name": "no_post",
+      "tag": "bug",
+      "assignee_id": 394959859,
+      "flags": [
+        "no_post"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Assignee must be an active board member able to own posts"
+        ]
+      }
+    },
+    {
+      "name": "no_read",
+      "tag": "bug",
+      "assignee_id": 394959859,
+      "flags": [
+        "no_read"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Assignee must be an active board member able to own posts"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,490 @@
+{
+  "reference": "d7c7de92",
+  "event_id": 9300000001,
+  "cases": [
+    {
+      "name": "nested",
+      "location": "show",
+      "params": {
+        "message_id": [
+          [
+            "601",
+            "602"
+          ],
+          [
+            "603"
+          ]
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[[\"601\", \"602\"], [\"603\"]]_event_9300000001",
+      "input": "601 602 603",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[[&quot;601&quot;, &quot;602&quot;], [&quot;603&quot;]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602 603\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[[&quot;601&quot;, &quot;602&quot;], [&quot;603&quot;]]_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602 603\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "nested",
+      "location": "patch_top",
+      "params": {
+        "message_id": [
+          [
+            "601",
+            "602"
+          ],
+          [
+            "603"
+          ]
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[[\"601\", \"602\"], [\"603\"]]_event_9300000001",
+      "input": "601 602 603",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[[&quot;601&quot;, &quot;602&quot;], [&quot;603&quot;]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602 603\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[[&quot;601&quot;, &quot;602&quot;], [&quot;603&quot;]]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602 603\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "nested",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": [
+            [
+              "601",
+              "602"
+            ],
+            [
+              "603"
+            ]
+          ]
+        }
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[[\"601\", \"602\"], [\"603\"]]_event_9300000001",
+      "input": "601 602 603",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[[&quot;601&quot;, &quot;602&quot;], [&quot;603&quot;]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602 603\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[[&quot;601&quot;, &quot;602&quot;], [&quot;603&quot;]]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602 603\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "mixed",
+      "location": "show",
+      "params": {
+        "message_id": [
+          "601",
+          null,
+          false,
+          7,
+          [],
+          [
+            "602",
+            true
+          ]
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"601\", false, 7, [], [\"602\", true]]_event_9300000001",
+      "input": "601 false 7 602 true",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, false, 7, [], [&quot;602&quot;, true]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 false 7 602 true\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, false, 7, [], [&quot;602&quot;, true]]_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 false 7 602 true\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "mixed",
+      "location": "patch_top",
+      "params": {
+        "message_id": [
+          "601",
+          null,
+          false,
+          7,
+          [],
+          [
+            "602",
+            true
+          ]
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"601\", false, 7, [], [\"602\", true]]_event_9300000001",
+      "input": "601 false 7 602 true",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, false, 7, [], [&quot;602&quot;, true]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 false 7 602 true\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, false, 7, [], [&quot;602&quot;, true]]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 false 7 602 true\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "mixed",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": [
+            "601",
+            null,
+            false,
+            7,
+            [],
+            [
+              "602",
+              true
+            ]
+          ]
+        }
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"601\", false, 7, [], [\"602\", true]]_event_9300000001",
+      "input": "601 false 7 602 true",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, false, 7, [], [&quot;602&quot;, true]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 false 7 602 true\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, false, 7, [], [&quot;602&quot;, true]]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 false 7 602 true\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "hash_items",
+      "location": "show",
+      "params": {
+        "message_id": [
+          {
+            "a": "601"
+          },
+          {
+            "b": [
+              "602",
+              null
+            ]
+          }
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[#<ActionController::Parameters {\"a\" => \"601\"} permitted: false>, #<ActionController::Parameters {\"b\" => [\"602\"]} permitted: false>]_event_9300000001",
+      "input": "{\"a\" => \"601\"} {\"b\" => [\"602\"]}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[#&lt;ActionController::Parameters {&quot;a&quot; =&gt; &quot;601&quot;} permitted: false&gt;, #&lt;ActionController::Parameters {&quot;b&quot; =&gt; [&quot;602&quot;]} permitted: false&gt;]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; &quot;601&quot;} {&quot;b&quot; =&gt; [&quot;602&quot;]}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[#&lt;ActionController::Parameters {&quot;a&quot; =&gt; &quot;601&quot;} permitted: false&gt;, #&lt;ActionController::Parameters {&quot;b&quot; =&gt; [&quot;602&quot;]} permitted: false&gt;]_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; &quot;601&quot;} {&quot;b&quot; =&gt; [&quot;602&quot;]}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "hash_items",
+      "location": "patch_top",
+      "params": {
+        "message_id": [
+          {
+            "a": "601"
+          },
+          {
+            "b": [
+              "602",
+              null
+            ]
+          }
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[#<ActionController::Parameters {\"a\" => \"601\"} permitted: false>, #<ActionController::Parameters {\"b\" => [\"602\"]} permitted: false>]_event_9300000001",
+      "input": "{\"a\" => \"601\"} {\"b\" => [\"602\"]}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[#&lt;ActionController::Parameters {&quot;a&quot; =&gt; &quot;601&quot;} permitted: false&gt;, #&lt;ActionController::Parameters {&quot;b&quot; =&gt; [&quot;602&quot;]} permitted: false&gt;]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; &quot;601&quot;} {&quot;b&quot; =&gt; [&quot;602&quot;]}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[#&lt;ActionController::Parameters {&quot;a&quot; =&gt; &quot;601&quot;} permitted: false&gt;, #&lt;ActionController::Parameters {&quot;b&quot; =&gt; [&quot;602&quot;]} permitted: false&gt;]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; &quot;601&quot;} {&quot;b&quot; =&gt; [&quot;602&quot;]}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "hash_items",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": [
+            {
+              "a": "601"
+            },
+            {
+              "b": [
+                "602",
+                null
+              ]
+            }
+          ]
+        }
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[#<ActionController::Parameters {\"a\" => \"601\"} permitted: false>, #<ActionController::Parameters {\"b\" => [\"602\"]} permitted: false>]_event_9300000001",
+      "input": "{\"a\" => \"601\"} {\"b\" => [\"602\"]}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[#&lt;ActionController::Parameters {&quot;a&quot; =&gt; &quot;601&quot;} permitted: false&gt;, #&lt;ActionController::Parameters {&quot;b&quot; =&gt; [&quot;602&quot;]} permitted: false&gt;]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; &quot;601&quot;} {&quot;b&quot; =&gt; [&quot;602&quot;]}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[#&lt;ActionController::Parameters {&quot;a&quot; =&gt; &quot;601&quot;} permitted: false&gt;, #&lt;ActionController::Parameters {&quot;b&quot; =&gt; [&quot;602&quot;]} permitted: false&gt;]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; &quot;601&quot;} {&quot;b&quot; =&gt; [&quot;602&quot;]}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "deep_hash",
+      "location": "show",
+      "params": {
+        "message_id": {
+          "a": {
+            "b": [
+              null,
+              false,
+              3.5
+            ]
+          }
+        },
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_{\"a\" => {\"b\" => [false, 3.5]}}_event_9300000001",
+      "input": "{\"a\" => {\"b\" => [false, 3.5]}}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "deep_hash",
+      "location": "patch_top",
+      "params": {
+        "message_id": {
+          "a": {
+            "b": [
+              null,
+              false,
+              3.5
+            ]
+          }
+        },
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_{\"a\" => {\"b\" => [false, 3.5]}}_event_9300000001",
+      "input": "{\"a\" => {\"b\" => [false, 3.5]}}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "deep_hash",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": {
+            "a": {
+              "b": [
+                null,
+                false,
+                3.5
+              ]
+            }
+          }
+        }
+      },
+      "status": 200,
+      "frame_id": "response_for_message_{\"a\" => {\"b\" => [false, 3.5]}}_event_9300000001",
+      "input": "{\"a\" => {\"b\" => [false, 3.5]}}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"{&quot;a&quot; =&gt; {&quot;b&quot; =&gt; [false, 3.5]}}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "escaped",
+      "location": "show",
+      "params": {
+        "message_id": [
+          "quote\"&<>\n\t",
+          [
+            "#{x}"
+          ]
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"quote\\\"&<>\\n\\t\", [\"\\#{x}\"]]_event_9300000001",
+      "input": "quote\"&<>\n\t #{x}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;quote\\&quot;&amp;&lt;&gt;\\n\\t&quot;, [&quot;\\#{x}&quot;]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"quote&quot;&amp;&lt;&gt;\n\t #{x}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;quote\\&quot;&amp;&lt;&gt;\\n\\t&quot;, [&quot;\\#{x}&quot;]]_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"quote&quot;&amp;&lt;&gt;\n\t #{x}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "escaped",
+      "location": "patch_top",
+      "params": {
+        "message_id": [
+          "quote\"&<>\n\t",
+          [
+            "#{x}"
+          ]
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"quote\\\"&<>\\n\\t\", [\"\\#{x}\"]]_event_9300000001",
+      "input": "quote\"&<>\n\t #{x}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;quote\\&quot;&amp;&lt;&gt;\\n\\t&quot;, [&quot;\\#{x}&quot;]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"quote&quot;&amp;&lt;&gt;\n\t #{x}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;quote\\&quot;&amp;&lt;&gt;\\n\\t&quot;, [&quot;\\#{x}&quot;]]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"quote&quot;&amp;&lt;&gt;\n\t #{x}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "escaped",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": [
+            "quote\"&<>\n\t",
+            [
+              "#{x}"
+            ]
+          ]
+        }
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"quote\\\"&<>\\n\\t\", [\"\\#{x}\"]]_event_9300000001",
+      "input": "quote\"&<>\n\t #{x}",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;quote\\&quot;&amp;&lt;&gt;\\n\\t&quot;, [&quot;\\#{x}&quot;]]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"quote&quot;&amp;&lt;&gt;\n\t #{x}\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;quote\\&quot;&amp;&lt;&gt;\\n\\t&quot;, [&quot;\\#{x}&quot;]]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"quote&quot;&amp;&lt;&gt;\n\t #{x}\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "empty",
+      "location": "show",
+      "params": {
+        "message_id": [],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[]_event_9300000001",
+      "input": "",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[]_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "empty",
+      "location": "patch_top",
+      "params": {
+        "message_id": [],
+        "response": "invalid"
+      },
+      "status": 302,
+      "frame_id": null,
+      "input": null,
+      "frame_tag": null,
+      "input_tag": null,
+      "body": null
+    },
+    {
+      "name": "empty",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": []
+        }
+      },
+      "status": 302,
+      "frame_id": null,
+      "input": null,
+      "frame_tag": null,
+      "input_tag": null,
+      "body": null
+    },
+    {
+      "name": "flat",
+      "location": "show",
+      "params": {
+        "message_id": [
+          "601",
+          "602"
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"601\", \"602\"]_event_9300000001",
+      "input": "601 602",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, &quot;602&quot;]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, &quot;602&quot;]_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "flat",
+      "location": "patch_top",
+      "params": {
+        "message_id": [
+          "601",
+          "602"
+        ],
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"601\", \"602\"]_event_9300000001",
+      "input": "601 602",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, &quot;602&quot;]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, &quot;602&quot;]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "flat",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": [
+            "601",
+            "602"
+          ]
+        }
+      },
+      "status": 200,
+      "frame_id": "response_for_message_[\"601\", \"602\"]_event_9300000001",
+      "input": "601 602",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, &quot;602&quot;]_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_[&quot;601&quot;, &quot;602&quot;]_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601 602\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "scalar",
+      "location": "show",
+      "params": {
+        "message_id": "601",
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_601_event_9300000001",
+      "input": "601",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_9300000001\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "scalar",
+      "location": "patch_top",
+      "params": {
+        "message_id": "601",
+        "response": "invalid"
+      },
+      "status": 200,
+      "frame_id": "response_for_message_601_event_9300000001",
+      "input": "601",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    },
+    {
+      "name": "scalar",
+      "location": "patch_nested",
+      "params": {
+        "attendance": {
+          "response": "invalid",
+          "message_id": "601"
+        }
+      },
+      "status": 200,
+      "frame_id": "response_for_message_601_event_9300000001",
+      "input": "601",
+      "frame_tag": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_9300000001\">",
+      "input_tag": "<input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />",
+      "body": "<html>\n  <head>\n    \n    \n  </head>\n  <body>\n    <turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_9300000001\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/486777696/events/9300000001/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>\n  </body>\n</html>\n"
+    }
+  ]
+}

@@ -250,11 +250,14 @@ impl Scanner<'_> {
             if self.peek(0) != Some(b'&') {
                 break;
             }
-            let decoded = if self.peek(1) == Some(b'#') { self.char_ref().map(|c| c.to_string()) } else { Some(self.entity_ref()) };
-            match decoded {
-                Some(text) if !truncated => out.push_str(&text),
-                Some(_) => {}
-                None => truncated = true,
+            if self.peek(1) == Some(b'#') {
+                match self.char_ref() {
+                    Some(ch) if !truncated => out.push(ch),
+                    Some(_) => {},
+                    None => truncated = true,
+                }
+            } else {
+                self.entity_ref(&mut out, !truncated);
             }
         }
         out
@@ -282,7 +285,7 @@ impl Scanner<'_> {
     }
 
     /// `htmlParseEntityRef`: a known name followed by `;` decodes; anything else stays as written.
-    fn entity_ref(&mut self) -> String {
+    fn entity_ref(&mut self, out: &mut String, append: bool) {
         self.pos += 1;
         let start = self.pos;
         if self.peek(0).is_some_and(|c| c.is_ascii_alphabetic() || matches!(c, b'_' | b':')) {
@@ -296,9 +299,15 @@ impl Scanner<'_> {
             && let Ok(index) = ENTITIES.binary_search_by(|(n, _)| (*n).cmp(name))
         {
             self.pos += 1;
-            return char::from_u32(ENTITIES[index].1).map(String::from).unwrap_or_default();
+            if append && let Some(ch) = char::from_u32(ENTITIES[index].1) {
+                out.push(ch);
+            }
+            return;
         }
-        format!("&{name}")
+        if append {
+            out.push('&');
+            out.push_str(name);
+        }
     }
 
     /// `htmlParseScript`: everything up to `</name` (any case) is text.

@@ -106,7 +106,37 @@ fn attendance_param<'a>(c: &'a Ctx, key: &str) -> Result<Option<&'a Param>> {
     }
 }
 fn message_param_text(param: &Param) -> String {
-    campfire_richtext::ruby::json_value_to_s(&param.to_json())
+    match param {
+        Param::Array(items) => format!(
+            "[{}]",
+            items
+                .iter()
+                .map(message_param_inspect)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        other => campfire_richtext::ruby::json_value_to_s(&other.to_json()),
+    }
+}
+fn message_param_inspect(param: &Param) -> String {
+    match param {
+        Param::Hash(_) => format!(
+            "#<ActionController::Parameters {} permitted: false>",
+            campfire_richtext::ruby::json_value_inspect(&param.to_json())
+        ),
+        Param::Array(_) => message_param_text(param),
+        other => campfire_richtext::ruby::json_value_inspect(&other.to_json()),
+    }
+}
+fn message_attribute_values(param: &Param, values: &mut Vec<String>) {
+    match param {
+        Param::Array(items) => {
+            for item in items {
+                message_attribute_values(item, values);
+            }
+        }
+        other => values.push(message_param_text(other)),
+    }
 }
 fn sentence(messages: Vec<String>) -> String {
     match messages.len() {
@@ -204,11 +234,11 @@ async fn render_attendance(
     // Rails interpolates an array's inspect form in the frame id, but the tag
     // builder joins array attribute values with spaces in the hidden input.
     let message_id_input = message.as_ref().and_then(Param::as_array).map(|items| {
-        items
-            .iter()
-            .map(message_param_text)
-            .collect::<Vec<_>>()
-            .join(" ")
+        let mut values = Vec::new();
+        for item in items {
+            message_attribute_values(item, &mut values);
+        }
+        values.join(" ")
     });
     let view = c
         .app()

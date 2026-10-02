@@ -1,0 +1,77 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "name": "poll_files",
+      "ids": [
+        "1AbcDefGhIjKlMnOpQrSt",
+        "2BcdEfgHiJkLmNoPqRsTu"
+      ],
+      "result": {
+        "attachments": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          },
+          {
+            "file_id": "2BcdEfgHiJkLmNoPqRsTu",
+            "url": "https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu"
+          }
+        ]
+      },
+      "http": {
+        "status": 200,
+        "cache_control": "no-store",
+        "envelope": [
+          "events",
+          "next_since"
+        ],
+        "next_since_header_matches": true,
+        "attachments": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          },
+          {
+            "file_id": "2BcdEfgHiJkLmNoPqRsTu",
+            "url": "https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu"
+          }
+        ]
+      }
+    },
+    {
+      "name": "poll_empty",
+      "ids": [],
+      "result": {
+        "attachments": []
+      },
+      "http": {
+        "status": 200,
+        "cache_control": "no-store",
+        "envelope": [
+          "events",
+          "next_since"
+        ],
+        "next_since_header_matches": true,
+        "attachments": []
+      }
+    },
+    {
+      "name": "webhook_files",
+      "ids": [
+        "1AbcDefGhIjKlMnOpQrSt"
+      ],
+      "result": {
+        "attachments": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          }
+        ],
+        "agent_id": 773018776,
+        "delivered": true
+      },
+      "http": null
+    }
+  ]
+}

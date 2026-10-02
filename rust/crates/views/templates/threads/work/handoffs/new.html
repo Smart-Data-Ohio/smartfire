@@ -1,0 +1,32 @@
+{% extends "layouts/application.html" %}
+{% block head %}{% endblock %}
+{% block nav %}  <div class="flex-item-justify-start">
+    {{ self.back() }}
+  </div>
+{% endblock %}
+{% block content %}{{ "\n\n" }}<section class="panel" aria-labelledby="handoff-title">
+  <h1 id="handoff-title">Hand off “{{ handoff.name }}”</h1>
+  <p>Ownership moves to the receiving agent, the handoff is recorded in Work history, and the agent gets the context package below through its event feed.</p>
+
+  {% let form = self.form() %}{% filter form_with(form) %}
+{% if let Some(error) = handoff.error %}      <p class="form-error" role="alert">{{ error }}</p>
+{% endif %}    <label>
+      <span>Receiving agent</span>
+      <select required="required" name="receiver_agent_id" id="receiver_agent_id"><option value="">Choose an agent</option>
+{{ self.options() }}</select>
+    </label>
+    <label>
+      <span>Summary</span>
+      {{ form.text_area("summary",None,h::attrs().attr("rows",6).maxlength(2000).required(true).placeholder("Where the work stands and what is next…")) }}
+    </label>
+    <label>
+      <span>Links (one URL per line, up to 10)</span>
+      {{ form.text_area("links",None,h::attrs().attr("rows",3).placeholder("https://example.com/spec")) }}
+    </label>
+    <label>
+      <span>Open questions (one per line, up to 10)</span>
+      {{ form.text_area("open_questions",None,h::attrs().attr("rows",3).placeholder("Which approach did we agree on?")) }}
+    </label>
+    <input type="submit" name="commit" value="Hand off" class="btn btn--reversed" data-disable-with="Hand off" />
+{% endfilter %}</section>
+{% endblock %}

@@ -1,0 +1,192 @@
+
+  <div class="sidebar__container"
+      data-controller="badge-dot dm-presence{% if sidebar.configured %} huddle-presence{% endif %}"
+      data-badge-dot-unread-class="unread"
+      data-dm-presence-url-value="/users/presence"
+      data-huddle-presence-url-value="/users/huddle_presence"
+      data-action="rooms-list:unread@window->badge-dot#update rooms-list:read@window->badge-dot#update turbo:submit-start->turbo-frame#unpermanize workspace-presence:connected@window->dm-presence#refresh">
+    <header class="workspace-identity">
+      <div class="workspace-identity__mark" aria-hidden="true">
+          {% if let Some(path) = sidebar.logo_path.as_ref() %}{{ h::image_tag(ctx,path.as_str(),h::attrs().alt("").size(36)) }}{% else %}<span>{{ self.account_initial() }}</span>{% endif %}
+      </div>
+
+      <div class="workspace-identity__text min-width">
+        <strong class="overflow-ellipsis">{{ sidebar.account_name }}</strong>
+        <span>Smartfire workspace</span>
+      </div>
+    </header>
+
+    <div class="sidebar__scroll overflow-y overflow-hide-scrollbar"
+         data-controller="room-menu sidebar-organize">
+      <nav class="sidebar-list workspace-destinations" aria-label="Your workspace">
+        <a class="sidebar-item btn" data-workspace-destination="/activity" data-controller="activity-indicator" data-activity-indicator-url-value="/activity/unread_count.json" href="/activity">
+          <img aria-hidden="true" class="colorize--black" src="{{ ctx.asset("notification-bell-everything.svg") }}" width="20" height="20" />
+          <span class="sidebar-item__label">Activity inbox</span>
+          <span class="workspace-activity-count" data-activity-indicator-target="count" hidden></span>
+</a>        <a class="sidebar-item btn" data-workspace-destination="/work" href="/work">
+          <img aria-hidden="true" class="colorize--black" src="{{ ctx.asset("check.svg") }}" width="20" height="20" />
+          <span class="sidebar-item__label">Work threads</span>
+</a>        <a class="sidebar-item btn" data-workspace-destination="/saved" href="/saved">
+          <img aria-hidden="true" class="colorize--black" src="{{ ctx.asset("bookmark.svg") }}" width="20" height="20" />
+          <span class="sidebar-item__label">Saved</span>
+</a>        <a class="sidebar-item btn" data-workspace-destination="/scheduled_messages" href="/scheduled_messages">
+          <img aria-hidden="true" class="colorize--black" src="{{ ctx.asset("calendar.svg") }}" width="20" height="20" />
+          <span class="sidebar-item__label">Scheduled</span>
+</a>        <a class="sidebar-item btn" data-workspace-destination="/agents" href="/agents">
+          <img aria-hidden="true" class="colorize--black" src="{{ ctx.asset("bot.svg") }}" width="20" height="20" />
+          <span class="sidebar-item__label">Agents</span>
+</a>        <a class="sidebar-item btn" data-workspace-destination="/users" href="/users">
+          <img aria-hidden="true" class="colorize--black" src="{{ ctx.asset("everyone.svg") }}" width="20" height="20" />
+          <span class="sidebar-item__label">People</span>
+</a>      </nav>
+
+{% if sidebar.favorites.is_empty() %}
+{% endif %}{{ self.favorites()|safe }}      <section class="sidebar-section sidebar-section--channels rooms" aria-labelledby="channels-heading" data-category-drop="">
+        <header class="sidebar-section__header">
+          <h2 id="channels-heading">Channels</h2>
+{% if sidebar.can_create %}            <a class="btn sidebar-section__add" aria-label="New channel" title="New channel" href="/rooms/opens/new">
+              <img aria-hidden="true" style="view-transition-name: new-room" src="{{ ctx.asset("add.svg") }}" width="16" height="16" />
+</a>{% endif %}        </header>
+
+        <div id="shared_rooms" class="sidebar-list" data-controller="sorted-list">
+{{ self.rows(&sidebar.channels, "              ")|safe }}        </div>
+      </section>
+
+      {{ self.categories()|safe }}
+<details class="room-category__new">
+  <summary class="btn room-category__new-toggle">
+    <img aria-hidden="true" src="{{ ctx.asset("add.svg") }}" width="16" height="16" />
+    <span>New category</span>
+  </summary>
+  <form class="room-category__new-form" data-turbo-frame="user_sidebar" action="/room_categories" accept-charset="UTF-8" method="post">{{ h::token_tag("/room_categories","post") }}
+    <input required="required" maxlength="50" autocomplete="off" placeholder="Category name" aria-label="New category name" size="50" type="text" name="room_category[name]" id="room_category_name" />
+    <input type="submit" name="commit" value="Create" class="btn btn--reversed" data-disable-with="Create" />
+</form></details>
+
+
+      <section class="sidebar-section sidebar-section--boards rooms" aria-labelledby="boards-heading">
+        <header class="sidebar-section__header">
+          <h2 id="boards-heading">Boards</h2>
+{% if sidebar.can_create %}            <a class="btn sidebar-section__add" aria-label="New board" title="New board" href="/rooms/boards/new">
+              <img aria-hidden="true" src="{{ ctx.asset("add.svg") }}" width="16" height="16" />
+</a>{% endif %}        </header>
+
+        <div id="board_rooms" class="sidebar-list" data-controller="sorted-list">
+{{ self.rows(&sidebar.boards, "              ")|safe }}        </div>
+      </section>
+
+      <section class="sidebar-section sidebar-section--voice rooms" aria-labelledby="voice-heading">
+        <header class="sidebar-section__header">
+          <h2 id="voice-heading">Voice</h2>
+{% if sidebar.can_create %}            <a class="btn sidebar-section__add" aria-label="New voice channel" title="New voice channel" href="/rooms/voices/new">
+              <img aria-hidden="true" src="{{ ctx.asset("add.svg") }}" width="16" height="16" />
+</a>{% endif %}        </header>
+
+        <div id="voice_rooms" class="sidebar-list" data-controller="sorted-list">
+{{ self.rows(&sidebar.voice, "            ")|safe }}        </div>
+      </section>
+
+      <section class="sidebar-section sidebar-section--stage rooms" aria-labelledby="stage-heading">
+        <header class="sidebar-section__header">
+          <h2 id="stage-heading">Stage</h2>
+{% if sidebar.can_create %}            <a class="btn sidebar-section__add" aria-label="New stage channel" title="New stage channel" href="/rooms/stages/new">
+              <img aria-hidden="true" src="{{ ctx.asset("add.svg") }}" width="16" height="16" />
+</a>{% endif %}        </header>
+
+        <div id="stage_rooms" class="sidebar-list" data-controller="sorted-list">
+{{ self.rows(&sidebar.stage, "              ")|safe }}        </div>
+      </section>
+
+      <turbo-frame id="direct_rooms_control" target="_top">
+        <section class="sidebar-section" aria-labelledby="direct-messages-heading">
+          <header class="sidebar-section__header">
+            <h2 id="direct-messages-heading">Direct messages</h2>
+            <a class="btn sidebar-section__add" data-turbo-frame="_self" aria-label="New direct message" title="New direct message" href="/rooms/directs/new">
+              <img aria-hidden="true" src="{{ ctx.asset("add.svg") }}" width="16" height="16" />
+</a>          </header>
+
+          <div id="direct_rooms" class="sidebar-list" data-controller="sorted-list" data-action="rooms-list:unread@window->sorted-list#updateItem">
+            {{ self.direct_rows()|safe }}
+          </div>
+
+          <div class="sidebar-list sidebar-list--people" aria-label="Start a direct message">
+            {{ self.placeholders()|safe }}
+          </div>
+        </section>
+      </turbo-frame>
+
+      <div id="room-menu"
+     class="room-menu border shadow"
+     popover="manual"
+     role="menu"
+     aria-label="Room actions"
+     hidden
+     data-room-menu-target="menu">
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="favoriteAction" data-action="room-menu#toggleFavorite">
+    <span aria-hidden="true" data-room-menu-target="favoriteGlyph">☆</span>
+    <span data-room-menu-target="favoriteLabel">Add to favourites</span>
+  </button>
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="moveUp" data-action="room-menu#moveUp" hidden>
+    <span aria-hidden="true">↑</span>
+    <span>Move up</span>
+  </button>
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="moveDown" data-action="room-menu#moveDown" hidden>
+    <span aria-hidden="true">↓</span>
+    <span>Move down</span>
+  </button>
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="muteAction" data-action="room-menu#toggleMute">
+    <img aria-hidden="true" src="{{ ctx.asset("notification-bell-muted.svg") }}" width="20" height="20" />
+    <span data-room-menu-target="muteLabel">Mute</span>
+  </button>
+  <div class="room-menu__group" role="group" aria-label="Move to category" data-room-menu-target="categoryGroup" hidden>
+    <span class="room-menu__group-label" aria-hidden="true">Move to category</span>
+    <div data-room-menu-target="categoryList"></div>
+    <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="removeFromCategory" data-action="room-menu#removeFromCategory" hidden>
+      <span>Remove from category</span>
+    </button>
+  </div>
+
+  <div class="room-menu__group" role="group" aria-label="Leave or delete" data-room-menu-target="dangerGroup" hidden>
+    <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="leaveAction" data-action="room-menu#askLeave" hidden>
+      <img aria-hidden="true" src="{{ ctx.asset("logout.svg") }}" width="20" height="20" />
+      <span>Leave</span>
+    </button>
+    <button type="button" class="btn room-menu__item room-menu__item--destructive" role="menuitem" data-room-menu-target="deleteAction" data-action="room-menu#askDelete" hidden>
+      <img aria-hidden="true" src="{{ ctx.asset("trash.svg") }}" width="20" height="20" />
+      <span>Delete…</span>
+    </button>
+  </div>
+
+  <span class="for-screen-reader" role="status" aria-live="polite" data-room-menu-target="status"></span>
+</div>
+
+<dialog class="room-menu__confirm" aria-labelledby="room-menu-confirm-message" data-room-menu-target="confirmDialog">
+  <p id="room-menu-confirm-message" data-room-menu-target="confirmMessage"></p>
+  <div class="room-menu__confirm-actions">
+    <button type="button" class="btn" data-action="room-menu#cancelPending" autofocus>Cancel</button>
+    <button type="button" class="btn" data-room-menu-target="confirmButton" data-action="room-menu#confirmPending">Delete</button>
+  </div>
+</dialog>
+
+    </div>
+  </div>
+
+  <div class="sidebar__tools">
+    <a class="workspace-user min-width" data-action="click-&gt;profile-card#open" data-profile-card-url="/users/{{ sidebar.actor.id }}/card" href="/users/me/profile">
+      <span class="avatar workspace-user__avatar">
+        <img aria-hidden="true" style="view-transition-name: avatar-{{ sidebar.actor.id }}" src="{{ sidebar.actor.avatar_path }}" width="36" height="36" />
+      </span>
+      <span class="workspace-user__identity min-width">
+        <strong class="overflow-ellipsis">{{ sidebar.actor.name }}</strong>
+        <span>Profile</span>
+      </span>
+</a>
+    <a class="btn sidebar__tool" aria-label="Account settings" title="Account settings" href="/account/edit">
+      <img aria-hidden="true" style="view-transition-name: account-settings" src="{{ ctx.asset("settings.svg") }}" width="20" height="20" />
+</a>
+    <button type="button" class="btn sidebar__tool" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"
+            data-action="click->keyboard-shortcuts#openHelp">
+      <img aria-hidden="true" src="{{ ctx.asset("help-circle.svg") }}" width="20" height="20" />
+    </button>
+  </div>
+{{ "" }}

@@ -7,6 +7,7 @@ pub mod fragment_cache;
 pub mod helpers;
 pub mod layouts;
 pub mod link_embeds;
+pub mod message_links;
 pub mod twitter;
 pub mod linkedin_cards;
 pub mod fizzy_cards;
@@ -20,6 +21,8 @@ pub mod two_factor;
 pub mod first_runs;
 pub mod users;
 pub mod accounts;
+pub mod activity;
+pub mod agents;
 pub mod welcome;
 pub mod pwa;
 pub mod autocompletable;
@@ -27,6 +30,7 @@ pub mod rooms;
 pub mod huddle;
 pub mod huddle_stage;
 pub mod messages;
+pub mod message_providers;
 pub mod channel_threads;
 pub mod github;
 pub mod slack;
@@ -178,6 +182,7 @@ pub struct Platform {
 }
 
 pub mod room_files;
-pub mod message_links;
+pub mod work_threads;
+
 #[cfg(test)]
 mod card_html_audit;

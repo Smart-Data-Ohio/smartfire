@@ -3,8 +3,8 @@
 //! No request, cookies or rendering enter this layer.
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target, pair};
 use campfire_db::{
-    ActivityItem, ChallengeFailure, Result, Session, TwoFactorBackupCode, TwoFactorCredential,
-    TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
+    ActivityItem, ChallengeFailure, Database, Result, Session, TwoFactorBackupCode,
+    TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
 };
 use rails_compat::{ar_encryption::ArEncryption, totp};
 use serde_json::json;
@@ -270,49 +270,84 @@ pub enum Enrollment {
     },
 }
 
-pub fn enroll(
-    tx: &mut Tx<'_>,
-    user: &User,
+/// `SetupsController#create` has no action-wide transaction. Each model operation
+/// commits separately; confirmation consumes its setup secret atomically, and
+/// each session destruction commits its dependent deletions and durable jobs.
+pub async fn enroll(
+    db: &Database,
+    user: User,
     session_id: i64,
-    encryption: &ArEncryption,
-    code: &str,
-    context: &Context,
+    encryption: std::sync::Arc<ArEncryption>,
+    code: String,
 ) -> Result<Enrollment> {
-    let mut credential = match TwoFactorCredential::for_user(tx.conn(), user.id)? {
-        Some(credential) if credential.enabled() => return Ok(Enrollment::Enabled),
-        Some(credential) => credential,
-        None => TwoFactorCredential::create(tx, encryption, user.id, &totp::generate_secret())?,
-    };
-    let Some(setup) = TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())? else {
+    let user_id = user.id;
+    let creation_encryption = encryption.clone();
+    let (mut credential, setup) = db
+        .write(move |tx| {
+            let existing = TwoFactorCredential::for_user(tx.conn(), user_id)?;
+            if let Some(credential) = existing.as_ref().filter(|c| c.enabled()) {
+                return Ok((credential.clone(), None));
+            }
+            let setup = TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?;
+            let credential = match existing {
+                Some(credential) => credential,
+                None => TwoFactorCredential::create(
+                    tx,
+                    &creation_encryption,
+                    user_id,
+                    &totp::generate_secret(),
+                )?,
+            };
+            Ok((credential, setup))
+        })
+        .await?;
+    if credential.enabled() {
+        return Ok(Enrollment::Enabled);
+    }
+    let Some(setup) = setup else {
         return Ok(Enrollment::Wrong);
     };
-    if !credential.confirm_with_setup_secret(tx, encryption, &setup, code)? {
+    let credential_id = credential.id;
+    if !db
+        .write(move |tx| credential.confirm_with_setup_secret(tx, &encryption, &setup, &code))
+        .await?
+    {
         return Ok(Enrollment::Wrong);
     }
-    let codes = TwoFactorBackupCode::regenerate_set(tx, credential.id)?;
-    let mut session = Session::find(tx.conn(), session_id)?;
-    session.mark_two_factor_verified(tx)?;
-    let others = Session::for_user(tx.conn(), user.id)?
+    let codes = db
+        .write(move |tx| TwoFactorBackupCode::regenerate_set(tx, credential_id))
+        .await?;
+    let session = db
+        .write(move |tx| {
+            let mut session = Session::find(tx.conn(), session_id)?;
+            session.mark_two_factor_verified(tx)?;
+            Ok(session)
+        })
+        .await?;
+    let others = db
+        .read(move |conn| Session::for_user(conn, user_id))
+        .await?
         .into_iter()
         .filter(|s| s.id != session_id)
         .collect::<Vec<_>>();
-    for other in &others {
-        other.destroy(tx)?;
+    let signed_out = others.len();
+    for other in others {
+        db.write(move |tx| other.destroy(tx)).await?;
     }
-    user.reset_remote_connections(tx);
-    AuditLog::record(
-        tx,
-        NewAuditLog {
-            action: "two_factor.enable".into(),
-            target: Some(Target::from(user)),
-            changes: (!others.is_empty()).then(|| json!({"signed_out_other_devices":others.len()})),
-            ..Default::default()
-        },
-        context,
-    )?;
+    // Authentication#disconnect_remote_connections is best-effort, after the
+    // persisted enrollment steps. A realtime failure cannot undo them.
+    if let Err(error) = db
+        .write(move |tx| {
+            user.reset_remote_connections(tx);
+            Ok(())
+        })
+        .await
+    {
+        tracing::warn!(%error, "Could not disconnect remote connections");
+    }
     Ok(Enrollment::Confirmed {
         codes,
-        signed_out: others.len(),
+        signed_out,
         session: Box::new(session),
     })
 }
@@ -501,4 +536,63 @@ pub fn setup_secret(tx: &mut Tx<'_>, encryption: &ArEncryption, session_id: i64)
         TwoFactorSetupSecret::issue_for(tx, encryption, session_id)?
     };
     setup.secret(encryption)
+}
+
+/// Google identity resolution, audits and the first-factor decision share the caller's write lock.
+/// Tokens have already been verified outside the transaction; no request or rendering enters here.
+pub fn begin_google_session(
+    tx: &mut Tx<'_>, claims: &serde_json::Map<String,serde_json::Value>,
+    attributes: campfire_db::NewSession<'_>, remember_token: Option<&str>, notify: bool,
+    context: &Context,
+) -> Result<(User,Option<Session>)> {
+    use campfire_db::models::google_identity::{self,ResolutionKind};
+            let resolution = google_identity::GoogleIdentity::resolve(tx, claims)?;
+            let user = resolution.user;
+            let action = match resolution.kind {
+                ResolutionKind::Provisioned => Some(("user.create", json!({"method":"google"}))),
+                ResolutionKind::Linked => {
+                    Some(("google.sign_in.link", json!({"email":claims.get("email")})))
+                }
+                ResolutionKind::Existing => None,
+            };
+            if let Some((action, changes)) = action {
+                AuditLog::record(
+                    tx,
+                    NewAuditLog {
+                        action: action.into(),
+                        actor: Some(Actor::from(&user)),
+                        target: Some(Target::from(&user)),
+                        changes: Some(changes),
+                        ..Default::default()
+                    },
+                    context,
+                )?;
+            }
+            let enabled = user.two_factor_enabled(tx.conn())?;
+            let remembered = enabled
+                && campfire_db::TwoFactorRememberedDevice::find_valid(
+                    tx,
+                    remember_token,
+                    Some(user.id),
+                )?
+                .is_some();
+            let session = if enabled && !remembered {
+                None
+            } else {
+                let session = crate::authentication::start_session(
+                    tx,
+                    user.id,
+                    campfire_db::NewSession { two_factor_verified: remembered, ..attributes },
+                    notify,
+                )?;
+                crate::authentication::record_sign_in(
+                    tx,
+                    &user,
+                    "google",
+                    remembered.then_some("remembered_device"),
+                    context,
+                )?;
+                Some(session)
+            };
+            Ok((user, session))
 }

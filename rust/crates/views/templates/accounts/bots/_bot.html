@@ -1,11 +1,14 @@
 <li class="flex flex-column gap flush fill-shade border-radius pad-block pad-inline-double">
   <div class="flex align-center gap">
     <figure class="avatar flex-item--no-shrink" style="--avatar-size: 2.65em;">
-      {{ h::avatar_tag(ctx, bot.user.avatar(), h::attrs().loading("lazy")) }}
+      {{ h::avatar_tag_with_icon(ctx, bot.user.avatar(), bot.icon.as_ref(), h::attrs().loading("lazy")) }}
     </figure>
 
     <div class="min-width">
       <div class="overflow-ellipsis txt-large"><strong>{{ bot.user.name }}</strong></div>
+      <div class="overflow-ellipsis txt-small">
+          {{ bot.ownership_line() }}
+      </div>
     </div>
 
     {% filter link_to(h::routes::edit_account_bot(bot.user.id), h::attrs().class("btn flex-item-justify-end").style("view-transition-name: chat-bot-" ~ bot.user.id)) %}
@@ -13,12 +16,14 @@
       <span class="for-screen-reader">Edit {{ bot.user.name }}</span>
 {% endfilter %}  </div>
 
+{% if !bot.rooms.is_empty() %}    <p class="txt-small margin-none txt-align-start">Replace <code>BOT_KEY</code> with the bot's key, shown once when the bot was created or its key was last generated.</p>
+{% endif %}
 {% for room in bot.rooms %}    <fieldset class="gap max-width pad border border-radius">
       <legend class="min-width txt-align-start pad-inline">
         <strong class="overflow-ellipsis">{{ room.name }}</strong>
       </legend>
 
-{% let curl_text_line = h::curl_text_line(ctx.url(h::routes::room_bot_messages(room.id, bot.bot_key.as_str()).as_str())) %}      <div class="flex align-center gap">
+{% let curl_text_line = h::curl_text_line(ctx.url(h::routes::room_bot_messages(room.id, "BOT_KEY").as_str())) %}      <div class="flex align-center gap">
         {{ h::image_tag(ctx, "messages-outlined.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
 
         <div class="flex-item-grow">
@@ -32,7 +37,7 @@
 {% endfilter %}        </div>
       </div>
 
-{% let curl_upload_line = h::curl_upload_line(ctx.url(h::routes::room_bot_messages(room.id, bot.bot_key.as_str()).as_str())) %}      <div class="flex align-center gap">
+{% let curl_upload_line = h::curl_upload_line(ctx.url(h::routes::room_bot_messages(room.id, "BOT_KEY").as_str())) %}      <div class="flex align-center gap">
         {{ h::image_tag(ctx, "attachment.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
 
         <div class="flex-item-grow">
@@ -47,4 +52,4 @@
       </div>
     </fieldset>
 {% endfor %}</li>
-
+{{ "\n" }}

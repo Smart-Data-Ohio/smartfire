@@ -1,0 +1,35 @@
+<article class="github-pr-card github-pr-card--{{ card.state }}" data-github-pr="{{ card.full_name }}#{{ card.number }}">
+  <header class="github-pr-card__header">
+    <span class="github-pr-card__repo">{{ card.display_name }}</span>
+    <span class="github-pr-card__number">#{{ card.number }}</span>
+    <span class="github-pr-card__state">{{ card.state_label() }}</span>
+  </header>
+
+{% if card.has(card.error) %}    <p class="github-pr-card__error">
+      Couldn’t load this pull request.
+      <span class="github-pr-card__error-detail">{{ card.error }}</span>
+    </p>
+{% else if card.has(card.title) %}    <p class="github-pr-card__title">{{ card.title }}</p>
+
+    <div class="github-pr-card__meta">
+{% if card.has(card.author) %}        <span class="github-pr-card__author">
+{% if card.has(card.avatar) %}            {{ card.avatar_tag(ctx) }}
+{% endif %}          {{ card.author }}
+        </span>
+{% endif %}
+{% if card.has(card.base) && card.has(card.head) %}        <span class="github-pr-card__branches" title="Base ← head">
+          {{ card.base }} ← {{ card.head }}
+        </span>
+{% endif %}
+{% if let Some(label) = card.review_label() %}        <span class="github-pr-card__review github-pr-card__review--{{ card.review }}">{{ label }}</span>
+{% endif %}
+        <span class="github-pr-card__checks github-pr-card__checks--{{ card.checks }}">{{ card.checks_label() }}</span>
+    </div>
+{% else %}    <p class="github-pr-card__loading">Loading pull request…</p>
+{% endif %}
+  <footer class="github-pr-card__footer">
+{% if card.updated_at.is_some() %}      <span class="github-pr-card__updated">Updated {{ card.updated(ctx) }}</span>
+{% endif %}    {{ card.link() }}
+{% if root_message %}        {{ card.discuss(*room_id,*message_id) }}
+{% endif %}  </footer>
+</article>{{ "\n" }}

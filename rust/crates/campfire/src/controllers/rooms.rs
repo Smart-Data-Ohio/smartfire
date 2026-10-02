@@ -14,6 +14,7 @@ pub mod stage_streams;
 pub mod stage_participation;
 pub mod categories;
 pub mod closeds;
+pub mod boards;
 pub mod directs;
 pub mod events;
 pub mod favorites;
@@ -27,6 +28,7 @@ pub mod pins;
 pub mod polls;
 pub mod reads;
 pub mod refreshes;
+
 pub mod slash_commands;
 
 use askama::Template;
@@ -47,6 +49,9 @@ pub enum Scope {
     WithoutDirects,
     /// `Current.user.rooms.directs` (directs)
     Directs,
+    Voices,
+    Stages,
+    Boards,
 }
 
 impl Scope {
@@ -55,6 +60,9 @@ impl Scope {
             Scope::All => true,
             Scope::WithoutDirects => matches!(room.room_type, RoomType::Open | RoomType::Closed),
             Scope::Directs => room.room_type == RoomType::Direct,
+            Scope::Voices => room.room_type == RoomType::Voice,
+            Scope::Stages => room.room_type == RoomType::Stage,
+            Scope::Boards => room.room_type == RoomType::Board,
         }
     }
 }
@@ -133,6 +141,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
     ensure_can_delete(c, &room).await?;
+    if room.voice() || room.stage() { return call_channels::destroy(c, room).await; }
     destroy_room(c, room).await
 }
 
@@ -628,6 +637,7 @@ pub(crate) async fn render_membership_sidebar(
 
 /// `rooms/show` with `find_messages`: the page around `params[:message_id]`, else the last page.
 async fn render_show(c: &mut Ctx, room: Room) -> Result {
+    if room.board() { return boards::render_index(c, room).await; }
     let app = c.app().clone();
     let user = require_current_user(c)?.clone();
     let message_id = c.param_str("message_id").and_then(cast_integer);
@@ -762,7 +772,7 @@ mod switchers_rails_cases;
 mod native_integration_tests;
 
 #[cfg(test)]
-mod query_probe;
+pub(crate) mod query_probe;
 
 #[cfg(test)]
 #[path = "rooms/owner_panel_tests.rs"]
@@ -776,3 +786,67 @@ mod queue_recovery_tests;
 
 #[cfg(test)]
 mod review_cache_tests;
+
+#[cfg(test)]
+mod public_huddle_tests;
+
+#[cfg(test)]
+mod huddle_declaration_tests;
+
+#[cfg(test)]
+mod call_channel_tests;
+#[cfg(test)]
+mod review_tests;
+
+#[cfg(test)]
+mod call_channel_declaration_tests;
+
+#[cfg(test)]
+mod call_page_tests;
+
+pub(crate) mod call_navigation;
+
+pub(crate) mod shell;
+
+#[cfg(test)]
+mod stream_controller_tests;
+
+#[cfg(test)]
+mod stage_page_tests;
+
+#[cfg(test)]
+mod remaining_call_tests;
+
+#[cfg(test)]
+mod remaining_query_tests;
+
+#[cfg(test)]
+mod remaining_presence_tests;
+
+#[cfg(test)]
+mod room_composition_tests;
+
+#[cfg(test)]
+mod room_shell_tests;
+
+#[cfg(test)]
+mod full_room_tests;
+
+#[cfg(test)]
+mod row_broadcast_tests;
+
+#[cfg(test)]
+mod system_browser_tests;
+
+#[cfg(test)]
+pub(super) mod call_channel_broadcast_tests;
+
+pub mod call_channels;
+
+pub mod huddles;
+#[cfg(test)]
+mod boards_read_tests;
+#[cfg(test)]
+mod boards_domain_tests;
+#[cfg(test)]
+mod boards_rails_cases;

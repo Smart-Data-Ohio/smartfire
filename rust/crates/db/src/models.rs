@@ -4,11 +4,15 @@ pub mod account;
 pub mod slack_import;
 pub mod slack;
 pub mod agent;
+pub mod agent_work;
 pub mod agent_access;
+pub mod agent_api_pending;
+pub mod agent_profile;
 pub mod agent_approval;
 pub mod agent_approvals;
 pub mod agent_service;
 pub mod agent_context;
+pub mod agent_reading;
 pub mod agent_direct_messages;
 pub mod agent_lifecycle;
 pub mod agent_streaming;
@@ -27,14 +31,24 @@ pub mod auth_audit;
 pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;
+pub mod board_tag_assignment;
+pub mod board_sla_nudge;
+pub use board_sla_nudge::{BoardSlaNudge, NewBoardSlaNudge};
+pub use board_tag_assignment::{BoardTagAssignment, NewBoardTagAssignment};
+pub mod work_handoff;
+pub use work_handoff::{HandoffPackage, NewWorkHandoff, WorkHandoff};
 pub mod ban;
 pub mod boost;
 pub mod bot_webhook_fanout;
 pub mod channel_thread;
+pub mod work_thread_event;
+pub mod work_thread_link;
+pub use work_thread_link::{NewWorkThreadLink, WorkThreadLink};
 pub mod calendar_event;
 pub mod calendar_dispatch;
 pub mod direct_room;
 pub mod first_run;
+pub mod google_identity;
 pub mod huddle_cleanup;
 pub mod huddle_grant;
 pub mod huddle_effects;
@@ -77,15 +91,18 @@ pub mod notification_policy;
 pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
+
+pub mod room_members;
 pub mod workspace_icon;
 
 pub use account::{Account, AccountSettings};
 pub use auth_audit::{AuthAudit, SudoVerifier};
 pub use active_storage::{Attachment, Blob};
 pub use activity_item::ActivityItem;
+pub use work_thread_event::WorkThreadEvent;
 pub use ban::Ban;
 pub use boost::Boost;
-pub use channel_thread::{ChannelThread, NewChannelThread, ThreadPush, ThreadPushCandidate, ThreadStatus};
+pub use channel_thread::{AgentWorkChanges, ChannelThread, NewChannelThread, ThreadPush, ThreadPushCandidate, ThreadStatus};
 pub use calendar_event::{CalendarEvent, NewCalendarEvent};
 pub use calendar_event::attendance::EventAttendance;
 pub use first_run::FirstRun;
@@ -117,6 +134,18 @@ pub mod room_delete;
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
 
+pub mod google_calendar;
+
+pub mod google_account;
+
+pub mod google_drive_link;
+
+pub mod google_connection;
+
+pub mod drive_recipients;
+
+pub mod google_meeting_cache;
+pub mod google_entry;
 pub use agent_credential::{AgentCredential, CredentialChanges, NewCredential};
 pub use agent_grant::{AgentGrant, GrantChanges, NewGrant};
 pub use agent_approval::{AgentApproval, NewApproval};

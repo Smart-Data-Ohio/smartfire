@@ -1,0 +1,785 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "pending_127326141",
+      "partial": "pending",
+      "input": {
+        "user": {
+          "id": 127326141,
+          "name": "David",
+          "title": "David",
+          "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+        }
+      },
+      "html": "<script type=\"text/template\" data-messages-target=\"template\">\n  <div class=\"message message--me $messageClasses$\"\n      id=\"message_$clientMessageId$\"\n      tabindex=\"-1\"\n      data-format-message-target=\"message\"\n      data-user-id=\"127326141\"\n      data-message-timestamp=\"$messageTimestamp$\"\n      data-messages-target=\"message\">\n    <div class=\"message__day-separator\"><time class=\"message__timestamp\" datetime=\"$messageDatetime$\" data-local-time-target=\"date\"></time></div>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <div class=\"message__body\">\n      <div class=\"message__body-content\">\n        <div class=\"message__meta\">\n          <h3 class=\"message__heading\">\n            <span class=\"message__author\"><strong>David</strong></span>\n            <span class=\"message__permalink\"><time class=\"message__timestamp\" datetime=\"$messageDatetime$\" data-local-time-target=\"time\"></time></span>\n          </h3>\n        </div>\n        $body$\n        \n        \n        \n        \n        \n      </div>\n    </div>\n  </div>\n</script>\n"
+    },
+    {
+      "name": "pending_712064548",
+      "partial": "pending",
+      "input": {
+        "user": {
+          "id": 712064548,
+          "name": "Kevin",
+          "title": "Kevin – Programmer",
+          "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+        }
+      },
+      "html": "<script type=\"text/template\" data-messages-target=\"template\">\n  <div class=\"message message--me $messageClasses$\"\n      id=\"message_$clientMessageId$\"\n      tabindex=\"-1\"\n      data-format-message-target=\"message\"\n      data-user-id=\"712064548\"\n      data-message-timestamp=\"$messageTimestamp$\"\n      data-messages-target=\"message\">\n    <div class=\"message__day-separator\"><time class=\"message__timestamp\" datetime=\"$messageDatetime$\" data-local-time-target=\"date\"></time></div>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <div class=\"message__body\">\n      <div class=\"message__body-content\">\n        <div class=\"message__meta\">\n          <h3 class=\"message__heading\">\n            <span class=\"message__author\"><strong>Kevin</strong></span>\n            <span class=\"message__permalink\"><time class=\"message__timestamp\" datetime=\"$messageDatetime$\" data-local-time-target=\"time\"></time></span>\n          </h3>\n        </div>\n        $body$\n        \n        \n        \n        \n        \n      </div>\n    </div>\n  </div>\n</script>\n"
+    },
+    {
+      "name": "preloads",
+      "partial": "head",
+      "input": {},
+      "html": "<link rel=\"modulepreload\" href=\"/assets/controllers/messages_controller-d90f8204.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/maintain_scroll_controller-1debbbfb.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/reply_controller-d79596bd.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/composer_controller-813bd5df.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/markdown_editor_controller-609753e1.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/typing_notifications_controller-3268db6d.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/local_time_controller-e6492786.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/presence_controller-28f14aad.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/message_list_controller-92f62e5e.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/header_overflow_controller-0a7a2fb6.js\">\n<link rel=\"modulepreload\" href=\"/assets/controllers/attach_menu_controller-4a85d87b.js\">"
+    },
+    {
+      "name": "area_0_false",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9201,
+          "kind": "open",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": false
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9201/messages\">BODY</div>"
+    },
+    {
+      "name": "area_0_true",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9201,
+          "kind": "open",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": true
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9201/messages\" data-messages-scroll-to-divider-value=\"true\">BODY</div>"
+    },
+    {
+      "name": "list_0",
+      "partial": "list",
+      "input": {
+        "room": {
+          "id": 9201,
+          "kind": "open",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "html": "<div id=\"messages_rooms_open_9201\" class=\"messages\" role=\"log\" aria-live=\"polite\" aria-relevant=\"additions\" data-controller=\"maintain-scroll refresh-room message-list\" data-action=\"turbo:before-stream-render@document-&gt;maintain-scroll#beforeStreamRender visibilitychange@document-&gt;refresh-room#visibilityChanged online@window-&gt;refresh-room#online\" data-messages-target=\"messages\" data-refresh-room-loaded-at-value=\"1772467200000\" data-refresh-room-url-value=\"http://campfire.test/rooms/9201/refresh\">BODY</div>"
+    },
+    {
+      "name": "area_1_false",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9202,
+          "kind": "closed",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": false
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9202/messages\">BODY</div>"
+    },
+    {
+      "name": "area_1_true",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9202,
+          "kind": "closed",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": true
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9202/messages\" data-messages-scroll-to-divider-value=\"true\">BODY</div>"
+    },
+    {
+      "name": "list_1",
+      "partial": "list",
+      "input": {
+        "room": {
+          "id": 9202,
+          "kind": "closed",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "html": "<div id=\"messages_rooms_closed_9202\" class=\"messages\" role=\"log\" aria-live=\"polite\" aria-relevant=\"additions\" data-controller=\"maintain-scroll refresh-room message-list\" data-action=\"turbo:before-stream-render@document-&gt;maintain-scroll#beforeStreamRender visibilitychange@document-&gt;refresh-room#visibilityChanged online@window-&gt;refresh-room#online\" data-messages-target=\"messages\" data-refresh-room-loaded-at-value=\"1772467200000\" data-refresh-room-url-value=\"http://campfire.test/rooms/9202/refresh\">BODY</div>"
+    },
+    {
+      "name": "area_2_false",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9203,
+          "kind": "direct",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": false
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9203/messages\">BODY</div>"
+    },
+    {
+      "name": "area_2_true",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9203,
+          "kind": "direct",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": true
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9203/messages\" data-messages-scroll-to-divider-value=\"true\">BODY</div>"
+    },
+    {
+      "name": "list_2",
+      "partial": "list",
+      "input": {
+        "room": {
+          "id": 9203,
+          "kind": "direct",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "html": "<div id=\"messages_rooms_direct_9203\" class=\"messages\" role=\"log\" aria-live=\"polite\" aria-relevant=\"additions\" data-controller=\"maintain-scroll refresh-room message-list\" data-action=\"turbo:before-stream-render@document-&gt;maintain-scroll#beforeStreamRender visibilitychange@document-&gt;refresh-room#visibilityChanged online@window-&gt;refresh-room#online\" data-messages-target=\"messages\" data-refresh-room-loaded-at-value=\"1772467200000\" data-refresh-room-url-value=\"http://campfire.test/rooms/9203/refresh\">BODY</div>"
+    },
+    {
+      "name": "area_3_false",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9204,
+          "kind": "voice",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": false
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9204/messages\">BODY</div>"
+    },
+    {
+      "name": "area_3_true",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9204,
+          "kind": "voice",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": true
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9204/messages\" data-messages-scroll-to-divider-value=\"true\">BODY</div>"
+    },
+    {
+      "name": "list_3",
+      "partial": "list",
+      "input": {
+        "room": {
+          "id": 9204,
+          "kind": "voice",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "html": "<div id=\"messages_rooms_voice_9204\" class=\"messages\" role=\"log\" aria-live=\"polite\" aria-relevant=\"additions\" data-controller=\"maintain-scroll refresh-room message-list\" data-action=\"turbo:before-stream-render@document-&gt;maintain-scroll#beforeStreamRender visibilitychange@document-&gt;refresh-room#visibilityChanged online@window-&gt;refresh-room#online\" data-messages-target=\"messages\" data-refresh-room-loaded-at-value=\"1772467200000\" data-refresh-room-url-value=\"http://campfire.test/rooms/9204/refresh\">BODY</div>"
+    },
+    {
+      "name": "area_4_false",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9205,
+          "kind": "stage",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": false
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9205/messages\">BODY</div>"
+    },
+    {
+      "name": "area_4_true",
+      "partial": "area",
+      "input": {
+        "room": {
+          "id": 9205,
+          "kind": "stage",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "scroll": true
+      },
+      "html": "<div id=\"message-area\" class=\"message-area\" contents=\"true\" data-controller=\"messages presence drop-target\" data-action=\"turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged\" data-messages-first-of-day-class=\"message--first-of-day\" data-messages-formatted-class=\"message--formatted\" data-messages-me-class=\"message--me\" data-messages-mentioned-class=\"message--mentioned\" data-messages-threaded-class=\"message--threaded\" data-messages-page-url-value=\"http://campfire.test/rooms/9205/messages\" data-messages-scroll-to-divider-value=\"true\">BODY</div>"
+    },
+    {
+      "name": "list_4",
+      "partial": "list",
+      "input": {
+        "room": {
+          "id": 9205,
+          "kind": "stage",
+          "name": "Room <&>",
+          "display_name": "Room <&>"
+        },
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "html": "<div id=\"messages_rooms_stage_9205\" class=\"messages\" role=\"log\" aria-live=\"polite\" aria-relevant=\"additions\" data-controller=\"maintain-scroll refresh-room message-list\" data-action=\"turbo:before-stream-render@document-&gt;maintain-scroll#beforeStreamRender visibilitychange@document-&gt;refresh-room#visibilityChanged online@window-&gt;refresh-room#online\" data-messages-target=\"messages\" data-refresh-room-loaded-at-value=\"1772467200000\" data-refresh-room-url-value=\"http://campfire.test/rooms/9205/refresh\">BODY</div>"
+    },
+    {
+      "name": "unread_0",
+      "partial": "unread",
+      "input": {
+        "count": 0
+      },
+      "html": "<div id=\"unread-divider\" class=\"unread-divider\" data-unread-count=\"0\">\n  <span class=\"unread-divider__label\" aria-label=\"0 new messages\">New messages</span>\n</div>\n"
+    },
+    {
+      "name": "unread_1",
+      "partial": "unread",
+      "input": {
+        "count": 1
+      },
+      "html": "<div id=\"unread-divider\" class=\"unread-divider\" data-unread-count=\"1\">\n  <span class=\"unread-divider__label\" aria-label=\"1 new messages\">New messages</span>\n</div>\n"
+    },
+    {
+      "name": "unread_5",
+      "partial": "unread",
+      "input": {
+        "count": 5
+      },
+      "html": "<div id=\"unread-divider\" class=\"unread-divider\" data-unread-count=\"5\">\n  <span class=\"unread-divider__label\" aria-label=\"5 new messages\">New messages</span>\n</div>\n"
+    },
+    {
+      "name": "unread_6",
+      "partial": "unread",
+      "input": {
+        "count": 6
+      },
+      "html": "<div id=\"unread-divider\" class=\"unread-divider\" data-unread-count=\"6\">\n  <span class=\"unread-divider__label\" aria-label=\"6 new messages\">New messages</span>\n</div>\n"
+    },
+    {
+      "name": "unread_50",
+      "partial": "unread",
+      "input": {
+        "count": 50
+      },
+      "html": "<div id=\"unread-divider\" class=\"unread-divider\" data-unread-count=\"50\">\n  <span class=\"unread-divider__label\" aria-label=\"50 new messages\">New messages</span>\n</div>\n"
+    },
+    {
+      "name": "jump_button",
+      "partial": "jump",
+      "input": {
+        "url": null
+      },
+      "html": "<button id=\"jump-to-unread\" class=\"message-area__jump-to-unread btn\" data-action=\"messages#jumpToUnread\" hidden=\"hidden\"><img aria-hidden=\"true\" src=\"/assets/arrow-up-f96b3895.svg\" width=\"20\" height=\"20\" /><span>Jump to unread</span></button>"
+    },
+    {
+      "name": "jump_link",
+      "partial": "jump",
+      "input": {
+        "url": "/rooms/42?message_id=73"
+      },
+      "html": "<a id=\"jump-to-unread\" class=\"message-area__jump-to-unread btn\" href=\"/rooms/42?message_id=73\"><img aria-hidden=\"true\" src=\"/assets/arrow-up-f96b3895.svg\" width=\"20\" height=\"20\" /><span>Jump to unread</span></a>"
+    },
+    {
+      "name": "invitation",
+      "partial": "invitation",
+      "input": {
+        "join_code": "CRMu-l8Ge-KB9B"
+      },
+      "html": "  <div id=\"system_welcome\" class=\"message message--formatted txt-align-center center\">\n    <div class=\"message__body center\">\n      <div class=\"message__body-content position-relative\">\n        <figure class=\"account-logo avatar center margin-block-end txt-large\"><img alt=\"Account logo\" src=\"/account/logo?v=20260101160000\" width=\"300\" height=\"300\" /></figure>\n        <div class=\"flex align-center gap\">\n          <div class=\"system-welcome--translation\">\n            <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Welcome to Smartfire. To invite some people to chat with you, share the join link below.</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Bienvenido a Smartfire. Para invitar a algunas personas a chatear contigo, comparte el enlace de unión que se encuentra a continuación.</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Bienvenue sur Smartfire. Pour inviter des personnes à discuter avec vous, partagez le lien pour rejoindre ci-dessous.</dd><dt>🇮🇳</dt><dd class=\"margin-none\">Smartfire में आपका स्वागत है। अधिक लोगों को चैट के लिए आमंत्रित करने के लिए, नीचे जुड़ने का लिंक साझा करें।</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Willkommen bei Smartfire. Um einige Personen zum Chatten einzuladen, teilen Sie den unten stehenden Beitrittslink.</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Boas vindas ao Smartfire. Para convidar pessoas para conversarem com você, compartilhe o link de convite abaixo.</dd><dt>🇯🇵</dt><dd class=\"margin-none\">Smartfireへようこそ。他の人をチャットに招待するには、下記の参加リンクを共有してください。</dd></dl></div></details>\n          </div>\n          <p>\n            <strong>Welcome to Smartfire</strong><br>\n            To invite people to chat, share the join link below.\n          </p>\n        </div>\n        <div class=\"flex flex-column align-center gap\">\n\n  <label class=\"flex flex-column gap full-width\" style=\"--row-gap: 0.5em\">\n    <strong id=\"invite_label\" class=\"invite-label\">Share to invite more people</strong>\n    <span class=\"flex align-center gap input input--actor fill-white\">\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/person-add-1432b76b.svg\" width=\"20\" height=\"20\" />\n      <input type=\"text\" class=\"input\" id=\"invite_url\" value=\"http://campfire.test/join/CRMu-l8Ge-KB9B\" aria-labelledby=\"invite_label\" readonly>\n    </span>\n  </label>\n\n  <div class=\"flex align-center gap\">\n    <a class=\"btn\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/qr_code/aHR0cDovL2NhbXBmaXJlLnRlc3Qvam9pbi9DUk11LWw4R2UtS0I5Qg==\" href=\"/qr_code/aHR0cDovL2NhbXBmaXJlLnRlc3Qvam9pbi9DUk11LWw4R2UtS0I5Qg==\">\n      <span class=\"for-screen-reader\">Show join link QR code</span>\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/qr-code-dac3b273.svg\" width=\"20\" height=\"20\" />\n</a>\n    <button class=\"btn\" data-controller=\"copy-to-clipboard\" data-action=\"copy-to-clipboard#copy\" data-copy-to-clipboard-success-class=\"btn--success\" data-copy-to-clipboard-content-value=\"http://campfire.test/join/CRMu-l8Ge-KB9B\">\n      <span class=\"for-screen-reader\">Copy join link</span>\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/copy-paste-4c379063.svg\" width=\"20\" height=\"20\" />\n</button>\n    <button class=\"btn\" hidden=\"hidden\" data-controller=\"web-share\" data-action=\"web-share#share\" data-web-share-url-value=\"http://campfire.test/join/CRMu-l8Ge-KB9B\" data-web-share-text-value=\"Hit this link to join me in Smartfire and start chatting.\" data-web-share-title-value=\"Link to join Smartfire\">\n      <span class=\"for-screen-reader\">Share join link</span>\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/share-bf28da4f.svg\" width=\"20\" height=\"20\" />\n</button>\n      <form class=\"button_to\" method=\"post\" action=\"/account/join_code\"><button class=\"btn btn--regenerate\" type=\"submit\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/refresh-249f0509.svg\" width=\"20\" height=\"20\" />\n        <span class=\"for-screen-reader\">Regenerate join link</span>\n</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/join_code\" /></form>  </div>\n</div>\n\n      </div>\n    </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_quiet_127326141",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 127326141,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": null,
+          "ooo_note": null,
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNNVEl3TmpRMU5EZzpvb29fbm90aWNlIg==--e9492e3d119c6715a243f5fdd196ec3e59dbcf13ce1d37d6f84c9a8964c4a642\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_712064548\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_quiet_712064548",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 712064548,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": null,
+          "ooo_note": null,
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhNamN6TWpZeE5ERTpvb29fbm90aWNlIg==--6f81d0a55ff8761ead8878edcfc4de0a73dba2ec19fdfd7bd0b4886c15138601\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_127326141\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_manual_127326141",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 127326141,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-04T02:00:00Z",
+          "ooo_note": "Trip <&>",
+          "presence": "online",
+          "zone": "Pacific Time (US & Canada)",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "until_date": "March 03, 2026",
+            "note": "Trip <&>"
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNNVEl3TmpRMU5EZzpvb29fbm90aWNlIg==--e9492e3d119c6715a243f5fdd196ec3e59dbcf13ce1d37d6f84c9a8964c4a642\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_712064548\">\n          <p class=\"ooo-notice txt-small\" role=\"status\">Kevin is out of office until March 03, 2026. Trip &lt;&amp;&gt;</p>\n\n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_manual_712064548",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 712064548,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-04T02:00:00Z",
+          "ooo_note": "Trip <&>",
+          "presence": "online",
+          "zone": "Pacific Time (US & Canada)",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhNamN6TWpZeE5ERTpvb29fbm90aWNlIg==--6f81d0a55ff8761ead8878edcfc4de0a73dba2ec19fdfd7bd0b4886c15138601\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_127326141\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_invisible_127326141",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 127326141,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-04T02:00:00Z",
+          "ooo_note": "Trip <&>",
+          "presence": "invisible",
+          "zone": "UTC",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNNVEl3TmpRMU5EZzpvb29fbm90aWNlIg==--e9492e3d119c6715a243f5fdd196ec3e59dbcf13ce1d37d6f84c9a8964c4a642\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_712064548\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_invisible_712064548",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 712064548,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-04T02:00:00Z",
+          "ooo_note": "Trip <&>",
+          "presence": "invisible",
+          "zone": "UTC",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhNamN6TWpZeE5ERTpvb29fbm90aWNlIg==--6f81d0a55ff8761ead8878edcfc4de0a73dba2ec19fdfd7bd0b4886c15138601\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_127326141\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_calendar_127326141",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 127326141,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": null,
+          "ooo_note": "No manual note",
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": true,
+          "intervals": [
+            [
+              "2026-03-02T00:00:00Z",
+              "2026-03-05T00:00:00Z"
+            ]
+          ]
+        },
+        "notices": [
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "until_date": "March 05, 2026",
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNNVEl3TmpRMU5EZzpvb29fbm90aWNlIg==--e9492e3d119c6715a243f5fdd196ec3e59dbcf13ce1d37d6f84c9a8964c4a642\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_712064548\">\n          <p class=\"ooo-notice txt-small\" role=\"status\">Kevin is out of office until March 05, 2026.</p>\n\n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_calendar_712064548",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 712064548,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": null,
+          "ooo_note": "No manual note",
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": true,
+          "intervals": [
+            [
+              "2026-03-02T00:00:00Z",
+              "2026-03-05T00:00:00Z"
+            ]
+          ]
+        },
+        "notices": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhNamN6TWpZeE5ERTpvb29fbm90aWNlIg==--6f81d0a55ff8761ead8878edcfc4de0a73dba2ec19fdfd7bd0b4886c15138601\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_127326141\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_overlap_127326141",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 127326141,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-04T02:00:00Z",
+          "ooo_note": "Manual <&>",
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": true,
+          "intervals": [
+            [
+              "2026-03-02T00:00:00Z",
+              "2026-03-05T00:00:00Z"
+            ]
+          ]
+        },
+        "notices": [
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "until_date": "March 05, 2026",
+            "note": "Manual <&>"
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNNVEl3TmpRMU5EZzpvb29fbm90aWNlIg==--e9492e3d119c6715a243f5fdd196ec3e59dbcf13ce1d37d6f84c9a8964c4a642\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_712064548\">\n          <p class=\"ooo-notice txt-small\" role=\"status\">Kevin is out of office until March 05, 2026. Manual &lt;&amp;&gt;</p>\n\n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_overlap_712064548",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 712064548,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-04T02:00:00Z",
+          "ooo_note": "Manual <&>",
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": true,
+          "intervals": [
+            [
+              "2026-03-02T00:00:00Z",
+              "2026-03-05T00:00:00Z"
+            ]
+          ]
+        },
+        "notices": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhNamN6TWpZeE5ERTpvb29fbm90aWNlIg==--6f81d0a55ff8761ead8878edcfc4de0a73dba2ec19fdfd7bd0b4886c15138601\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_127326141\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_expired_127326141",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 127326141,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-02T16:00:00Z",
+          "ooo_note": "Expired note",
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNNVEl3TmpRMU5EZzpvb29fbm90aWNlIg==--e9492e3d119c6715a243f5fdd196ec3e59dbcf13ce1d37d6f84c9a8964c4a642\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_712064548\">\n        \n      </div>\n  </div>\n"
+    },
+    {
+      "name": "ooo_expired_712064548",
+      "partial": "ooo",
+      "input": {
+        "room": {
+          "id": 9240,
+          "kind": "direct",
+          "name": null,
+          "display_name": ""
+        },
+        "viewer_id": 712064548,
+        "state": {
+          "member_id": 712064548,
+          "ooo_until": "2026-03-02T16:00:00Z",
+          "ooo_note": "Expired note",
+          "presence": "online",
+          "zone": "UTC",
+          "calendar": false,
+          "intervals": []
+        },
+        "notices": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "until_date": null,
+            "note": null
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "until_date": null,
+            "note": null
+          }
+        ]
+      },
+      "html": "  <div id=\"ooo-notices\" class=\"ooo-notices\">\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhNamN6TWpZeE5ERTpvb29fbm90aWNlIg==--6f81d0a55ff8761ead8878edcfc4de0a73dba2ec19fdfd7bd0b4886c15138601\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_127326141\">\n        \n      </div>\n      <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHhORGt3T0RjMk5Uazpvb29fbm90aWNlIg==--7be912143e03d808b8df614d342cb8a762aa889a42ae96154a0d61e2e22b4b48\"></turbo-cable-stream-source>\n      <div id=\"ooo_notice_user_149087659\">\n        \n      </div>\n  </div>\n"
+    }
+  ]
+}

@@ -13,14 +13,15 @@
 //! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
+pub mod google;
 pub mod fizzy;
 #[allow(dead_code)] // Staged until WS16's runner and HTTP controllers are ported.
 pub mod slack;
 pub mod twitter;
 pub mod image_proxy;
 mod jobs;
-mod agent_jobs;
 pub mod agent_repositories;
+mod agent_jobs;
 mod agent_streaming;
 pub mod action_claims;
 // WS15g installs the GitHub account, fetcher, notifier and approved-action consumers.
@@ -60,3 +61,5 @@ pub fn sync_message_reference_phase(tx: &mut campfire_db::Tx<'_>, message: &camp
         _ => Ok(()), // Event references remain the flagged WS14 adapter in the registry.
     }
 }
+
+pub(crate) mod message_batches;

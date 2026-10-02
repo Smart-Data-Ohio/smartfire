@@ -121,6 +121,7 @@ jobs:
           path: |
             rust/parity/.seed/default
             rust/parity/.seed/first_run
+            rust/parity/.seed/agents_ui
           key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: Build or load pinned reference image
@@ -151,6 +152,7 @@ jobs:
           path: |
             rust/parity/.seed/default
             rust/parity/.seed/first_run
+            rust/parity/.seed/agents_ui
           key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: Summarize parity setup time

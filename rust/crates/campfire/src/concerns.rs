@@ -44,6 +44,13 @@ pub mod session_keys;
 pub mod sudo;
 pub mod two_factor;
 pub mod user_agent;
+pub mod agent_api;
+
+#[derive(Clone, Copy)]
+pub struct CurrentAgent {
+    pub agent_id: i64,
+    pub credential_id: i64,
+}
 
 use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
 use campfire_kit::{Cookie, Ctx, Error, Result, SameSite, StatusCode, halt};
@@ -125,6 +132,8 @@ pub struct Before {
 pub enum Authentication {
     /// `require_authentication`
     Required,
+    /// MembersController overrides request_authentication with an empty JSON 401.
+    JsonUnauthorized,
     /// `allow_unauthenticated_access`: skip `require_authentication`.
     Skipped,
     /// `require_unauthenticated_access`: skip `require_authentication`, then (after the rest of
@@ -184,14 +193,42 @@ impl Before {
 
 /// `ApplicationController`'s before-actions, in the order the reference runs them.
 pub async fn before_actions(c: &mut Ctx, before: Before) -> Result<()> {
+    before_actions_with_authentication(c, before, None, None).await
+}
+
+/// Subclass overrides of `request_authentication` and `deny_bots`, preserving their
+/// positions in the callback chain (including authentication before CSRF).
+pub async fn before_actions_with_authentication(
+    c: &mut Ctx,
+    before: Before,
+    request_authentication_override: Option<fn(&mut Ctx) -> Result<()>>,
+    deny_bots_override: Option<fn(&mut Ctx) -> Result<()>>,
+) -> Result<()> {
     set_version_headers(c);
     set_current_request(c);
     reject_banned_ip(c).await?;
     if before.authentication == Authentication::Required {
-        require_authentication(c).await?;
+        if let Some(request_authentication) = request_authentication_override {
+            if !(restore_authentication(c).await?
+                || bot_authentication(c).await?
+                || agent_authentication(c).await?)
+            {
+                request_authentication(c)?;
+            }
+        } else {
+            require_authentication(c).await?;
+        }
+    }
+    if before.authentication == Authentication::JsonUnauthorized
+        && !(restore_authentication(c).await? || bot_authentication(c).await? || agent_authentication(c).await?)
+    {
+        if c.format()?.is_some_and(|format| format.is("json")) {
+            return halt(head(StatusCode::UNAUTHORIZED));
+        }
+        request_authentication(c).await?;
     }
     if before.deny_bots {
-        deny_bots(c)?;
+        deny_bots_override.unwrap_or(deny_bots)(c)?;
     }
     if before.deny_agent_tokens {
         deny_agent_tokens(c)?;
@@ -449,9 +486,10 @@ fn authenticate_bot_reply_token(
 pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
     let Some(secret) = agent_bearer_secret(c.request.header("authorization")).map(str::to_string) else { return Ok(false) };
     let ip = c.request.remote_ip()?.to_string();
-    let user = c.app().db.write(move |tx| campfire_db::models::agent_access::authenticate(tx, &secret, &ip)).await.map_err(Error::internal)?;
-    let Some(user) = user else { return halt(head(StatusCode::UNAUTHORIZED)) };
-    c.set_current(CurrentUser(user));
+    let identity = c.app().db.write(move |tx| campfire_db::models::agent_access::authenticate_identity(tx, &secret, &ip)).await.map_err(Error::internal)?;
+    let Some(identity) = identity else { return halt(head(StatusCode::UNAUTHORIZED)) };
+    c.set_current(CurrentAgent { agent_id: identity.agent_id, credential_id: identity.credential_id });
+    c.set_current(CurrentUser(identity.user));
     set_authenticated_by(c, AuthenticatedBy::AgentToken);
     Ok(true)
 }
@@ -674,7 +712,7 @@ async fn resume_session(c: &mut Ctx, session: Session, user: Option<User>) -> Re
 
 /// `authenticated_as(session)`: `Current.session = session` (which sets `Current.user` to
 /// `session.user`), `authenticated_by` session, and, with `set_cookie`, a fresh `session_token` cookie.
-async fn authenticated_as(
+pub(crate) async fn authenticated_as(
     c: &mut Ctx,
     session: Session,
     user: Option<User>,

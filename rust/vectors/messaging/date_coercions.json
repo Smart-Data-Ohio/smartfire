@@ -1,0 +1,1257 @@
+{
+  "reference": "d7c7de92",
+  "coercions": [
+    {
+      "input": null,
+      "string": "",
+      "present": false
+    },
+    {
+      "input": false,
+      "string": "false",
+      "present": false
+    },
+    {
+      "input": true,
+      "string": "true",
+      "present": true
+    },
+    {
+      "input": 20260305,
+      "string": "20260305",
+      "present": true
+    },
+    {
+      "input": 17,
+      "string": "17",
+      "present": true
+    },
+    {
+      "input": 1.5,
+      "string": "1.5",
+      "present": true
+    },
+    {
+      "input": [],
+      "string": "[]",
+      "present": false
+    },
+    {
+      "input": [
+        "2026-03-05 14:30"
+      ],
+      "string": "[\"2026-03-05 14:30\"]",
+      "present": true
+    },
+    {
+      "input": [
+        "2026-03-05 14:30",
+        "junk"
+      ],
+      "string": "[\"2026-03-05 14:30\", \"junk\"]",
+      "present": true
+    },
+    {
+      "input": {},
+      "string": "{}",
+      "present": false
+    },
+    {
+      "input": {
+        "at": "2026-03-05 14:30"
+      },
+      "string": "{\"at\" => \"2026-03-05 14:30\"}",
+      "present": true
+    },
+    {
+      "input": [
+        "x",
+        {
+          "at": "2026-03-05 14:30"
+        }
+      ],
+      "string": "[\"x\", #<ActionController::Parameters {\"at\" => \"2026-03-05 14:30\"} permitted: false>]",
+      "present": true
+    },
+    {
+      "input": "line\nquote\"\\",
+      "string": "line\nquote\"\\",
+      "present": true
+    },
+    {
+      "input": "  ",
+      "string": "  ",
+      "present": false
+    },
+    {
+      "input": "in_progress",
+      "string": "in_progress",
+      "present": true
+    }
+  ],
+  "cases": [
+    {
+      "zone": "UTC",
+      "input": "26-03-05",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "69-03-05",
+      "parts": {
+        "year": 69,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0069-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "68-03-05",
+      "parts": {
+        "year": 68,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0068-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "05/03/26",
+      "parts": {
+        "year": 5,
+        "mon": 3,
+        "mday": 26
+      },
+      "result": "0005-03-26T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03",
+      "parts": {
+        "mon": 20,
+        "mday": 26,
+        "zone": "-03",
+        "offset": -10800
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026",
+      "parts": {
+        "mon": 20,
+        "mday": 26
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "03/05",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "3/5",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "March 5",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "5 Mar 26",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "March 5 26",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "Mar",
+      "parts": {
+        "mon": 3
+      },
+      "result": "2026-03-01T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "5th March",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-064",
+      "parts": {
+        "year": 2026,
+        "yday": 64
+      },
+      "result": "2026-03-01T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-W10-4",
+      "parts": {
+        "cwyear": 2026,
+        "cweek": 10,
+        "cwday": 4
+      },
+      "result": "2026-03-02T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026.03.05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026/3/5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "202603",
+      "parts": {
+        "year": 20,
+        "mon": 26,
+        "mday": 3
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "260305",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "0305",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "15",
+      "parts": {
+        "mday": 15
+      },
+      "result": "2026-03-15T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "123",
+      "parts": {
+        "yday": 123
+      },
+      "result": "2026-03-02T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "1:30pm",
+      "parts": {
+        "hour": 13,
+        "min": 30
+      },
+      "result": "2026-03-02T13:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "1.30pm",
+      "parts": {
+        "hour": 18
+      },
+      "result": "2026-03-02T18:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "14h30",
+      "parts": {
+        "hour": 14,
+        "min": 30
+      },
+      "result": "2026-03-02T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "14:30 UTC+5",
+      "parts": {
+        "zone": "UTC+5",
+        "hour": 14,
+        "min": 30,
+        "offset": 18000
+      },
+      "result": "2026-03-02T09:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "14:30 +05:30",
+      "parts": {
+        "zone": "+05:30",
+        "hour": 14,
+        "min": 30,
+        "offset": 19800
+      },
+      "result": "2026-03-02T09:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 12:00:00,5",
+      "parts": {
+        "hour": 12,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/2",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T12:00:00.500000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T12:00:00.000000999Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 12,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "999/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "result": "2026-03-05T12:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T24:00:00.5Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 24,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/2",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "result": "2026-03-06T00:00:00.500000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 12:30:60Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 12,
+        "min": 30,
+        "sec": 60,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "result": "2026-03-05T12:31:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 13:00 PST",
+      "parts": {
+        "zone": "PST",
+        "hour": 13,
+        "min": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -28800
+      },
+      "result": "2026-03-05T21:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "Thu Mar 5 14:30:00 2026",
+      "parts": {
+        "wday": 4,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-13-05",
+      "parts": {
+        "year": 2026,
+        "mon": 13,
+        "mday": 5
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "32/03/2026",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 32
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "March 32 2026",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 32
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "20261305",
+      "parts": {
+        "year": 2026,
+        "mon": 13,
+        "mday": 5
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "20260332",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 32
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "UTC",
+      "input": "",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "false",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "true",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "17",
+      "parts": {
+        "mday": 17
+      },
+      "result": "2026-03-17T00:00:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "1.5",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "[]",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "[\"2026-03-05 14:30\"]",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "[\"2026-03-05 14:30\", \"junk\"]",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "{}",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "{\"at\" => \"2026-03-05 14:30\"}",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "[\"x\", #<ActionController::Parameters {\"at\" => \"2026-03-05 14:30\"} permitted: false>]",
+      "parts": {
+        "zone": "permitted",
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "result": "2026-03-05T14:30:00.000000Z"
+    },
+    {
+      "zone": "UTC",
+      "input": "line\nquote\"\\",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "  ",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "UTC",
+      "input": "in_progress",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "26-03-05",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "69-03-05",
+      "parts": {
+        "year": 69,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0069-03-05T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "68-03-05",
+      "parts": {
+        "year": 68,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0068-03-05T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "05/03/26",
+      "parts": {
+        "year": 5,
+        "mon": 3,
+        "mday": 26
+      },
+      "result": "0005-03-26T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03",
+      "parts": {
+        "mon": 20,
+        "mday": 26,
+        "zone": "-03",
+        "offset": -10800
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026",
+      "parts": {
+        "mon": 20,
+        "mday": 26
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "03/05",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "3/5",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "March 5",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "5 Mar 26",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "March 5 26",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "Mar",
+      "parts": {
+        "mon": 3
+      },
+      "result": "2026-03-01T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "5th March",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-064",
+      "parts": {
+        "year": 2026,
+        "yday": 64
+      },
+      "result": "2026-03-01T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-W10-4",
+      "parts": {
+        "cwyear": 2026,
+        "cweek": 10,
+        "cwday": 4
+      },
+      "result": "2026-03-02T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026.03.05",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026/3/5",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "202603",
+      "parts": {
+        "year": 20,
+        "mon": 26,
+        "mday": 3
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "260305",
+      "parts": {
+        "year": 26,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "0026-03-05T04:56:02.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "0305",
+      "parts": {
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "15",
+      "parts": {
+        "mday": 15
+      },
+      "result": "2026-03-15T04:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "123",
+      "parts": {
+        "yday": 123
+      },
+      "result": "2026-03-02T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "1:30pm",
+      "parts": {
+        "hour": 13,
+        "min": 30
+      },
+      "result": "2026-03-02T18:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "1.30pm",
+      "parts": {
+        "hour": 18
+      },
+      "result": "2026-03-02T23:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "14h30",
+      "parts": {
+        "hour": 14,
+        "min": 30
+      },
+      "result": "2026-03-02T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "14:30 UTC+5",
+      "parts": {
+        "zone": "UTC+5",
+        "hour": 14,
+        "min": 30,
+        "offset": 18000
+      },
+      "result": "2026-03-02T09:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "14:30 +05:30",
+      "parts": {
+        "zone": "+05:30",
+        "hour": 14,
+        "min": 30,
+        "offset": 19800
+      },
+      "result": "2026-03-02T09:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 12:00:00,5",
+      "parts": {
+        "hour": 12,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/2",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T17:00:00.500000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T12:00:00.000000999Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 12,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "999/1000000000",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "result": "2026-03-05T12:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T24:00:00.5Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 24,
+        "min": 0,
+        "sec": 0,
+        "sec_fraction": "1/2",
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "result": "2026-03-06T00:00:00.500000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 12:30:60Z",
+      "parts": {
+        "zone": "Z",
+        "hour": 12,
+        "min": 30,
+        "sec": 60,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": 0
+      },
+      "result": "2026-03-05T12:31:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 13:00 PST",
+      "parts": {
+        "zone": "PST",
+        "hour": 13,
+        "min": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": -28800
+      },
+      "result": "2026-03-05T21:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "Thu Mar 5 14:30:00 2026",
+      "parts": {
+        "wday": 4,
+        "hour": 14,
+        "min": 30,
+        "sec": 0,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-13-05",
+      "parts": {
+        "year": 2026,
+        "mon": 13,
+        "mday": 5
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "32/03/2026",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 32
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "March 32 2026",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 32
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20261305",
+      "parts": {
+        "year": 2026,
+        "mon": 13,
+        "mday": 5
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260332",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 32
+      },
+      "error": "ArgumentError"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "false",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "true",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305",
+      "parts": {
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T05:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "17",
+      "parts": {
+        "mday": 17
+      },
+      "result": "2026-03-17T04:00:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "1.5",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "[]",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "[\"2026-03-05 14:30\"]",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "[\"2026-03-05 14:30\", \"junk\"]",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "{}",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "{\"at\" => \"2026-03-05 14:30\"}",
+      "parts": {
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "[\"x\", #<ActionController::Parameters {\"at\" => \"2026-03-05 14:30\"} permitted: false>]",
+      "parts": {
+        "zone": "permitted",
+        "hour": 14,
+        "min": 30,
+        "year": 2026,
+        "mon": 3,
+        "mday": 5,
+        "offset": null
+      },
+      "result": "2026-03-05T19:30:00.000000Z"
+    },
+    {
+      "zone": "America/New_York",
+      "input": "line\nquote\"\\",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "  ",
+      "parts": {},
+      "result": null
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in_progress",
+      "parts": {},
+      "result": null
+    }
+  ],
+  "rows": {
+    "messages": [
+      {
+        "id": 935962058,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "coercion-calendar-reference",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "Parameter calendar reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "action_text_rich_texts": [
+      {
+        "id": 935962058,
+        "body": "<p>Parameter calendar reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962058,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": [
+            "2026-03-05 14:30"
+          ]
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": {
+            "at": "2026-03-05 14:30"
+          }
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": false
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": null
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": 17
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-17T00:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": 1.5
+        }
+      },
+      "status": 422,
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": []
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "input": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": [
+            "2026-03-05 14:30",
+            "junk"
+          ]
+        }
+      },
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    }
+  ]
+}

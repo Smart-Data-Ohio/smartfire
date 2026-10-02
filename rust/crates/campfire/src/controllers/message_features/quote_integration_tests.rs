@@ -1,4 +1,4 @@
-//! The nine previously deferred poll/quote controller behaviors (WS11 invocation stays a seam).
+//! The nine previously deferred poll/quote controller behaviors with integrated WS11 invocation.
 use crate::controllers::presenters::{Presenter, page, test_support::*};
 use axum::http::{Method, StatusCode};
 use campfire_db::{Message, NewMessage, NewPoll, Poll};
@@ -8,12 +8,22 @@ fn oracle() -> Value {
     serde_json::from_str(include_str!("../../../../../vectors/messaging/quote_integration.json")).unwrap()
 }
 async fn app() -> TestApp {
+    app_rows(oracle()["rows"].clone()).await
+}
+pub(super) async fn app_rows(rows: Value) -> TestApp {
+    app_rows_with_job_runner(rows, false).await
+}
+async fn app_rows_with_job_runner(rows: Value, run_jobs: bool) -> TestApp {
     let app = TestApp::boot_with_test_clock(std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(SEED_NOW.parse().unwrap())))
         .await.expect("WS8bm2 requires default seed");
-    let rows = oracle()["rows"].clone();
+    let app = if run_jobs { app } else { app.without_job_runner().await };
+    insert_rows(&app, rows).await;
+    app
+}
+pub(super) async fn insert_rows(app: &TestApp, rows: Value) {
     app.db().write(move |tx| {
-        for table in ["messages", "action_text_rich_texts", "message_references"] {
-            for row in rows[table].as_array().unwrap() {
+        for table in ["rooms", "events", "twitter_posts", "channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references", "event_references", "twitter_post_references"] {
+            for row in rows[table].as_array().into_iter().flatten() {
                 let row = row.as_object().unwrap();
                 let columns = row.keys().map(|k| format!("\"{k}\"")).collect::<Vec<_>>().join(",");
                 let placeholders = vec!["?";row.len()].join(",");
@@ -28,7 +38,6 @@ async fn app() -> TestApp {
         }
         Ok(())
     }).await.unwrap();
-    app
 }
 fn id(key: &str, i: usize) -> i64 { oracle()[key][i].as_i64().unwrap() }
 
@@ -115,7 +124,7 @@ async fn preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms(
     }).await.unwrap();
 }
 
-async fn stream(app:&TestApp) -> (crate::channels::tests::support::Client,tokio::task::JoinHandle<()>) {
+pub(super) async fn stream(app:&TestApp) -> (crate::channels::tests::support::Client,tokio::task::JoinHandle<()>) {
     use crate::channels::tests::support::{Client,bind_listener,identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     let listener=bind_listener().await; let address=listener.local_addr().unwrap();
@@ -144,7 +153,7 @@ async fn quote_frame(client:&mut crate::channels::tests::support::Client,target:
 }
 #[tokio::test]
 async fn editing_source_runs_registered_refresh_job_and_replaces_cards_on_real_stream() {
-    let app=app().await; let (mut client,server)=stream(&app).await;
+    let app=app_rows_with_job_runner(oracle()["rows"].clone(), true).await; let (mut client,server)=stream(&app).await;
     let response=app.david().write(write(Method::PATCH,format!("/rooms/{ALL_TALK}/messages/{}",id("sources",1)),json!({"message":{"markdown_source":"revised source"}}))).await;
     assert_eq!(response.status,StatusCode::FOUND,"{}",response.text());
     let html=quote_frame(&mut client,"message_link_cards_message_integration-quote-1").await;

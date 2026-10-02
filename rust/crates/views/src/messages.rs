@@ -2,6 +2,7 @@
 //! `Messages::AttachmentPresentation` and the boost partials.
 
 pub mod json;
+// WS8b-r composer seam: published reusable facts and partial.
 pub mod parts;
 pub mod presentation;
 pub mod reactions;
@@ -57,6 +58,9 @@ pub enum RoomKind {
     Open,
     Closed,
     Direct,
+    Voice,
+    Stage,
+    Board,
 }
 
 impl RoomKind {
@@ -66,6 +70,9 @@ impl RoomKind {
             RoomKind::Open => "rooms_open",
             RoomKind::Closed => "rooms_closed",
             RoomKind::Direct => "rooms_direct",
+            RoomKind::Voice => "rooms_voice",
+            RoomKind::Stage => "rooms_stage",
+            RoomKind::Board => "rooms_board",
         }
     }
 
@@ -134,6 +141,11 @@ pub struct MessageDetails {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct MessageComponents {
+    /// Expanded Rails composite facts, built from preloads in the request's zone.
+    pub cache_key: Option<String>,
+    pub provider_github: Option<Vec<crate::message_providers::GithubEntry>>,
+    pub provider_embeds: Option<Vec<crate::message_providers::EmbedEntry>>,
+    pub provider_events: Option<Vec<crate::events::CardView>>,
     pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub github_cards_html: Option<String>,
@@ -640,6 +652,13 @@ pub fn collection_fragment_key(presentation_key: &str, base_url: &str) -> String
     format!("views/messages/_message:{}/{presentation_key}/{base_url}", include_str!("messages/rails-template-digest.txt").trim_end())
 }
 
+fn composite_fragment_key(key: &str, base_url: &str) -> String {
+    format!("views/messages/_message:{}/{key}/{base_url}", message_digest())
+}
+pub fn cached_composite_fragment(key: &str, base_url: &str) -> Option<fragment_cache::Fragment> {
+    fragment_cache::read(&composite_fragment_key(key, base_url))
+}
+
 /// Retained record-version API for existing view consumers. Rails' HTML partial
 /// has no inner `cache boost`; the mounted message tree uses [`uncached_boost`].
 pub fn boost(ctx: &ViewContext, boost: &BoostView) -> String {
@@ -850,7 +869,7 @@ pub struct BoostsPartial<'a> {
     pub message: &'a MessageView,
 }
 
-/// The complete replacement fragment used by the modern reaction toggle and delete actions.
+/// The grouped replacement fragment shared by human, bot and MCP reaction actions and broadcasts.
 #[derive(Template)]
 #[template(path = "messages/boosts/_reactions.html")]
 pub struct ReactionsPartial<'a> {
@@ -947,10 +966,25 @@ pub fn cards(
     indent: usize,
     bodies: &[String],
 ) -> h::Html {
+    cards_for_client_id(&message.client_message_id, prefix, class, indent, bodies)
+}
+
+/// Provider callbacks need only the message key, not the full message presentation.
+pub fn cards_for_client_id(
+    client_message_id: &str,
+    prefix: &str,
+    class: &str,
+    indent: usize,
+    bodies: &[String],
+) -> h::Html {
     h::raw(format!(
         "{}<div id=\"{}\" class=\"{class}\">{}</div>\n",
         " ".repeat(indent),
-        h::escape(&message.dom_id(prefix)),
+        h::escape(&if prefix.is_empty() {
+            format!("message_{client_message_id}")
+        } else {
+            format!("{prefix}_message_{client_message_id}")
+        }),
         bodies.concat()
     ))
 }
@@ -966,6 +1000,11 @@ pub fn event_cards(ctx: &ViewContext, message: &MessageView) -> h::Html {
         bodies
     ))
 }
+
+/// The metadata-free, viewer-independent Drive chips, also used by the message composition.
+#[derive(Template)]
+#[template(path = "messages/_drive_attachments.html")]
+pub struct DriveAttachments<'a> { pub message: &'a MessageView }
 
 pub fn drive_attachment(url: &str) -> h::Html {
     h::link_to(

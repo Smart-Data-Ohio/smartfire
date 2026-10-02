@@ -75,6 +75,13 @@ impl SavedItem {
     pub fn find_by_id(conn: &Connection, id: i64) -> Result<Option<Self>> {
         query_one(conn, r#"SELECT "saved_items".* FROM "saved_items" WHERE "saved_items"."id" = ? LIMIT 1"#, [id], Self::from_row)
     }
+    /// `activity_items.preload(:source)` for saved-message reminders.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!("SELECT * FROM saved_items WHERE id IN ({})", sql::placeholders(ids.len())),
+            rusqlite::params_from_iter(ids), Self::from_row)
+    }
 
     pub fn find_by_user_and_message(conn: &Connection, user_id: i64, message_id: i64) -> Result<Option<Self>> {
         query_one(
@@ -174,12 +181,33 @@ impl SavedItem {
         if status == self.status && !remind_at_changed {
             return Ok(());
         }
-        let reminded_at = if remind_at_changed { None } else { self.reminded_at };
-        tx.conn().execute_cached(
-            r#"UPDATE "saved_items" SET "remind_at" = ?, "reminded_at" = ?, "status" = ?, "updated_at" = ? WHERE "saved_items"."id" = ?"#,
-            params![remind_at, reminded_at, status, now, self.id],
-        )?;
-        *self = Self::find(tx.conn(), self.id)?;
+        // Active Record partial updates only write dirty attributes. A dispatch or
+        // reschedule may have committed since this instance was loaded: a status
+        // change must preserve that writer's reminder, and vice versa.
+        match (status != self.status, remind_at_changed) {
+            (true, true) => tx.conn().execute_cached(
+                r#"UPDATE "saved_items" SET "remind_at" = ?, "reminded_at" = NULL, "status" = ?, "updated_at" = ? WHERE "id" = ?"#,
+                params![remind_at, status, now, self.id],
+            )?,
+            (false, true) => tx.conn().execute_cached(
+                r#"UPDATE "saved_items" SET "remind_at" = ?, "reminded_at" = NULL, "updated_at" = ? WHERE "id" = ?"#,
+                params![remind_at, now, self.id],
+            )?,
+            (true, false) => tx.conn().execute_cached(
+                r#"UPDATE "saved_items" SET "status" = ?, "updated_at" = ? WHERE "id" = ?"#,
+                params![status, now, self.id],
+            )?,
+            (false, false) => unreachable!("unchanged save returned above"),
+        };
+        // update! keeps unassigned attributes on the loaded instance. The JSON
+        // controller serializes it without reloading, even if another writer
+        // changed reminder fields in the meantime.
+        self.status = status;
+        self.remind_at = remind_at;
+        if remind_at_changed {
+            self.reminded_at = None;
+        }
+        self.updated_at = now;
         Ok(())
     }
 

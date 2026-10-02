@@ -4,6 +4,11 @@ use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext, helpers
 use serde_json::Value;
 
 mod review;
+mod bots_ui;
+mod bot_access_ui;
+mod agents_ui;
+mod agent_history_ui;
+mod member_panel;
 #[path = "../../../test-support/asset_goldens.rs"]
 mod asset_goldens;
 
@@ -740,5 +745,31 @@ fn live_application_layout_rejects_dropped_reordered_stylesheets_and_wrong_diges
     ] {
         assert_ne!(changed, actual, "{mutation} must change the rendered page");
         assert!(!compare(mutation, &changed, &actual));
+    }
+}
+
+#[test]
+fn google_administrator_link_forms_match_complete_pinned_rails_bytes() {
+    let vectors: Value = serde_json::from_str(include_str!("../../../vectors/google_admin_links.json")).unwrap();
+    let asset = |name: &str| campfire_assets::asset_path(name);
+    let signer = |_: &[&str]| String::new();
+    let ctx = context(Some("David"), &asset, &signer, "");
+    let forms = regex::Regex::new(r#"<form\b[^>]*\baction="[^"]*/google_link"[\s\S]*?</form>"#).unwrap();
+    for row in vectors["control_rows"].as_array().unwrap() {
+        use campfire_views::users::{Role, Status, UserSummary};
+        let user = UserSummary {
+            id: row["id"].as_i64().unwrap(),
+            name: row["name"].as_str().unwrap().into(),
+            email_address: row["email"].as_str().map(str::to_string),
+            role: match row["role"].as_str().unwrap() { "administrator" => Role::Administrator, "bot" => Role::Bot, _ => Role::Member },
+            status: match row["status"].as_str().unwrap() { "deactivated" => Status::Deactivated, "banned" => Status::Banned, _ => Status::Active },
+            google_identity_email: row["google_identity_email"].as_str().map(str::to_string),
+            email_self_changed: row["untrusted"].as_bool().unwrap(),
+            google_email_link_allowed: true,
+            ..Default::default()
+        };
+        let html = render(&campfire_views::accounts::UserPartial {ctx: &ctx, user});
+        let actual = forms.find_iter(&html).map(|matched| matched.as_str()).collect::<Vec<_>>();
+        assert_eq!(serde_json::json!(actual), row["forms"], "{}: full control forms", row["name"]);
     }
 }

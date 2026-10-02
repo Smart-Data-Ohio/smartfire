@@ -1,5 +1,5 @@
-//! The standalone ChannelThreadsController templates. Conversation/composer integration and
-//! populated work/board/PR sections are separate seams with their feature owners.
+pub mod board;
+// The standalone and conversation templates share message composition with board posts.
 use askama::Template;
 use crate::{ViewContext, messages::MessageItem};
 use crate::helpers as h;
@@ -34,6 +34,33 @@ pub struct Show<'a> {
     pub pull_request_header: &'a h::Html,
     pub parent: Option<&'a MessageItem>,
     pub messages: &'a [MessageItem],
+    pub work: Option<&'a Work>,
+}
+pub struct Work {
+    pub id: i64,
+    pub status_label: String,
+    pub owner_label: String,
+    pub owner_agent: bool,
+    pub can_manage: bool,
+    pub history: Vec<board::History>,
+    pub links: board::Links,
+    pub steps: Vec<crate::messages::parts::AgentStep>,
+}
+#[derive(Template)]
+#[template(path="channel_threads/_work.html")]
+struct WorkSection<'a> {ctx:&'a ViewContext<'a>,work:&'a Work}
+impl Show<'_> {
+    fn work_section(&self,work:&Work)->h::Html {
+        h::raw(WorkSection {ctx:self.ctx,work}.render().expect("work header"))
+    }
+}
+impl WorkSection<'_> {
+    fn links(&self)->h::Html {
+        h::raw(board::LinksBox {ctx:self.ctx,thread_id:self.work.id,links:&self.work.links,context:"header"}.render().expect("work header links"))
+    }
+    fn handoff(&self)->h::Html {
+        h::link_to_text("Hand off to an agent",&format!("/threads/{}/work/handoff/new",self.work.id),h::attrs().class("btn"))
+    }
 }
 
 /// The content endpoint's pane. Message items and the composer are also stable shell seams.

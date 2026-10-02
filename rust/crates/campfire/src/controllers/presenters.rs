@@ -3,15 +3,20 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod github;
+#[cfg(test)]
+mod message_links;
+pub mod status_settings;
+pub mod activity;
+pub mod agents;
 pub mod agent_payload;
-pub mod agent_profile;
 pub mod attachments;
 pub mod events;
 pub mod fizzy_cards;
-pub mod github;
 mod layout_preferences;
 pub mod link_embeds;
 mod message_cache;
+pub(crate) mod message_cache_preloads;
 mod message_dependencies;
 pub mod page;
 pub mod pagination;
@@ -21,7 +26,9 @@ mod room_list;
 pub mod room_native;
 pub mod room_shell;
 pub mod rooms_directory;
-pub mod status_settings;
+pub mod boards;
+pub mod board_posts;
+pub mod work_threads;
 pub mod switcher;
 #[cfg(test)]
 pub mod test_support;
@@ -37,7 +44,7 @@ use campfire_richtext::Presentation;
 use campfire_storage::{Storage, Variation};
 use campfire_views::fragment_cache;
 use campfire_views::messages::json::{
-    BoostJson, BoostMessageJson, IdJson, MessageBodyJson, MessageJson, UserJson,
+    BoostJson, BoostMessageJson, UserJson,
 };
 use campfire_views::messages::support::RubyNumber;
 use campfire_views::messages::support::json_time;
@@ -94,9 +101,9 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
         RoomType::Open => RoomKind::Open,
         RoomType::Closed => RoomKind::Closed,
         RoomType::Direct => RoomKind::Direct,
-        // The views' RoomKind has no voice, stage or board rooms yet (their screens aren't
-        // ported); they're explicit-membership rooms like closed ones.
-        RoomType::Voice | RoomType::Stage | RoomType::Board => RoomKind::Closed,
+        RoomType::Voice => RoomKind::Voice,
+        RoomType::Stage => RoomKind::Stage,
+        RoomType::Board => RoomKind::Board,
     }
 }
 
@@ -146,6 +153,14 @@ impl campfire_views::helpers::IconSource for Presenter<'_> {
             })
             .or(icon)
     }
+}
+
+pub fn resolve_avatar_icon(conn: &Connection, name: &str) -> Option<campfire_views::helpers::AvatarIcon> {
+        use campfire_views::{helpers::AvatarIcon, messages::reactions::static_icon};
+        let icon = static_icon(name);
+        if matches!(icon, Some(AvatarIcon::Image { brand: true, .. })) { return icon; }
+        let custom: Option<String> = conn.query_row("SELECT title FROM workspace_icons WHERE name = ?1", [name], |row| row.get(0)).optional().ok().flatten();
+        custom.map(|title| AvatarIcon::Image { title, url: format!("/icons/{name}"), brand: false }).or(icon)
 }
 
 /// `users/_user.json.jbuilder` (`json.cache! user`).
@@ -204,6 +219,7 @@ pub struct Presenter<'a> {
     github_refreshes: std::rc::Rc<RefCell<BTreeSet<i64>>>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
+    render_account: RefCell<Option<Option<campfire_db::Account>>>,
     // WS8bm2 shared rendering-details seam for root and search pages.
     pub(crate) search_preloads: Option<super::searches::preloads::Preloads>,
     link_fetches: std::rc::Rc<RefCell<std::collections::BTreeSet<i64>>>,
@@ -234,6 +250,7 @@ impl<'a> Presenter<'a> {
             github_refreshes: Default::default(),
             users: RefCell::default(),
             room_names: RefCell::default(),
+            render_account: RefCell::default(),
             search_preloads: None,
             link_fetches: Default::default(),
             twitter_fetches: Default::default(),
@@ -270,7 +287,12 @@ impl<'a> Presenter<'a> {
         }
     }
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
-        let data = super::searches::preloads::Preloads::load(self, messages)?;
+        self.with_preloads(super::searches::preloads::Preloads::load(self,messages)?,messages)
+    }
+    pub(crate) fn preload_payload(&self,messages:&[Message]) -> Result<Self> {
+        self.with_preloads(super::searches::preloads::Preloads::load_payload(self,messages)?,messages)
+    }
+    fn with_preloads(&self,data:super::searches::preloads::Preloads,messages:&[Message]) -> Result<Self> {
         let ids = data.records.body_ids(messages);
         let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
         for id in &ids {
@@ -300,6 +322,7 @@ impl<'a> Presenter<'a> {
             render_zone: self.render_zone.clone(),
             users: RefCell::default(),
             room_names: RefCell::default(),
+            render_account: RefCell::default(),
             search_preloads: Some(data),
             link_fetches: self.link_fetches.clone(),
             twitter_fetches: self.twitter_fetches.clone(),
@@ -308,7 +331,7 @@ impl<'a> Presenter<'a> {
             github_refreshes: self.github_refreshes.clone(),
         })
     }
-    fn stored_body(&self, message: &Message) -> Result<Option<String>> {
+    pub(crate) fn stored_body(&self, message: &Message) -> Result<Option<String>> {
         if let Some(data) = &self.search_preloads {
             return Ok(data.records.bodies.get(&message.id).cloned().flatten());
         }
@@ -472,6 +495,7 @@ impl<'a> Presenter<'a> {
         Ok(campfire_views::messages::composer::Facts {
             room_id: room.id,
             room_kind: room_kind(room.room_type),
+            room_param_key: Some(campfire_db::broadcasts::room_param_key(room.room_type)),
             room_name: self.room_display_name(room, Some(viewer))?,
             thread: thread.map(|thread| campfire_views::messages::composer::Thread {
                 id: thread.id,
@@ -659,7 +683,13 @@ impl<'a> Presenter<'a> {
         }
         let html = fragment_cache::try_fetch_value(|| key, || {
             let view = view()?;
-            let account = campfire_db::Account::first(self.conn)?;
+            // Detached rendering needs the same singleton account for every miss
+            // in this page. Keep that read lazy so warm hits need no account query.
+            let account = {
+                let mut account = self.render_account.borrow_mut();
+                if account.is_none() { *account = Some(campfire_db::Account::first(self.conn)?); }
+                account.as_ref().unwrap().clone()
+            };
             page::render_detached_in_zone(self.app, account.as_ref(), base, &self.render_zone, |ctx| {
                 use askama::Template;
                 campfire_views::messages::MessagePartial { ctx, message: &view }.render()
@@ -1087,14 +1117,6 @@ impl<'a> Presenter<'a> {
         ))
     }
 
-    /// `message.body.to_s`: the stored rich text rendered inside its layout.
-    pub fn body_html(&self, message: &Message) -> Result<String> {
-        let Some(body) = self.stored_body(message)? else {
-            return Ok(String::new());
-        };
-        Ok(self.render_body_html(&body).unwrap_or_default())
-    }
-
     /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
     pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
         let Some(body) = self.stored_body(message)? else {
@@ -1128,37 +1150,6 @@ impl<'a> Presenter<'a> {
             &resolver.render_context(self.request_host.clone()),
         )
         .map_err(|error| campfire_db::Error::Other(error.to_string()))
-    }
-
-    /// `messages/_message.json.jbuilder` (`json.cache! message`).
-    pub fn message_json(&self, message: &Message, base_url: &str) -> Result<MessageJson> {
-        let key = || {
-            jbuilder_key(
-                "messages/_message",
-                &cache_key_with_version("messages", message.id, message.updated_at.jiff()),
-                base_url,
-            )
-        };
-        fragment_cache::try_fetch_value(key, || self.render_message_json(message, base_url))
-    }
-
-    fn render_message_json(&self, message: &Message, base_url: &str) -> Result<MessageJson> {
-        Ok(MessageJson {
-            id: message.id,
-            created_at: json_time(message.created_at.jiff()),
-            body: MessageBodyJson {
-                plain_text: self.plain_text_body(message)?,
-                html: self.body_html(message)?,
-            },
-            creator: cached_user_json(self.secrets, base_url, &self.user(message.creator_id)?),
-            room: IdJson {
-                id: message.room_id,
-            },
-            url: format!(
-                "{base_url}{}",
-                campfire_routes::room_message(message.room_id, message.id)
-            ),
-        })
     }
 
     /// `messages/boosts/_boost.json.jbuilder` (`json.cache! boost`).
@@ -1313,6 +1304,13 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+pub(crate) mod sql_probe;
+
+#[cfg(test)]
+mod chrome_tests;
+
+pub(crate) mod runtime_chrome;
 pub(crate) mod profile_sections;
 
 pub mod fizzy_profile;

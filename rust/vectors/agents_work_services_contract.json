@@ -1,0 +1,3587 @@
+{
+  "reference": "d7c7de92",
+  "sources": {
+    "app/services/agents/board_posts.rb": "ea6d9456983318654f873d23b82431dd23a6a780224bff792ff3016533f9414c",
+    "app/services/agents/work_threads.rb": "ad11e9fbfba2db894015346b8f8bba7c034f918941077056ce831b9701b5e91f",
+    "app/services/agents/work_handoffs.rb": "27991bb9621bb44dfe81638eb74a423f26a0fd4ca86403fe14e84daa7322a079",
+    "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
+    "app/models/work_handoff.rb": "3fd8c5af4ef8dff0945d1b5a114ffd5788debf11c06c70fca3a8d15d39f35ab2",
+    "app/models/work_thread_event.rb": "d6b62b3f5bab3141a3284be84b5ad387a127430754b880fb7db0aa0a6b430c19",
+    "app/models/board_tag_assignment.rb": "5b5b1601c6601ae6b135e4ec8e592dda9448bdbfb4891839d46c8cf479a4d792",
+    "app/models/thread_tag.rb": "345cd7a0672e9c251c6875476e21bfd1cc5d9f025180b53315c8b9c265c4dc78"
+  },
+  "rows": [
+    {
+      "operation": "create",
+      "name": "defaults",
+      "input": {
+        "title": "Ship"
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "brief",
+      "input": {
+        "title": "Ship",
+        "body": "The brief."
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": [
+            {
+              "creator_id": 394959859,
+              "markdown": "The brief.",
+              "opener": true
+            }
+          ]
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          },
+          {
+            "agent": 773018776,
+            "kind": "posted",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": null,
+            "status": null,
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "none"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "human",
+      "input": {
+        "title": "Ship",
+        "tags": " API, launch,API ",
+        "work_status": "planned",
+        "owner_id": 712064548,
+        "run_url": "https://example.test/run"
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "planned",
+          "owner": 712064548,
+          "tags": [
+            "api",
+            "launch"
+          ],
+          "run_url": "https://example.test/run",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 712064548,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": null
+              },
+              "after": {
+                "status": "planned",
+                "owner": {
+                  "id": 712064548,
+                  "name": "Kevin",
+                  "status": "active",
+                  "role": "member"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "array_tags",
+      "input": {
+        "title": "Ship",
+        "tags": [
+          " API ",
+          "launch",
+          "api",
+          ""
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [
+            "api",
+            "launch"
+          ],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "blank_owner",
+      "input": {
+        "title": "Ship",
+        "owner_id": " "
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "null_owner",
+      "input": {
+        "title": "Ship",
+        "owner_id": null
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "blank_body",
+      "input": {
+        "title": "Ship",
+        "body": "  \n "
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "blank_status",
+      "input": {
+        "title": "Ship",
+        "work_status": " "
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "missing_title",
+      "input": {},
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Name can't be blank",
+        "failure": {
+          "error": "Name can't be blank"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "long_title",
+      "input": {
+        "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Name is too long (maximum is 100 characters)",
+        "failure": {
+          "error": "Name is too long (maximum is 100 characters)"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "bad_status",
+      "input": {
+        "title": "Ship",
+        "work_status": "shipped"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work status is not included in the list",
+        "failure": {
+          "error": "Work status is not included in the list"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "many_tags",
+      "input": {
+        "title": "Ship",
+        "tags": "a,b,c,d,e,f"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Tags are limited to 5 per post",
+        "failure": {
+          "error": "Tags are limited to 5 per post"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "bad_tag",
+      "input": {
+        "title": "Ship",
+        "tags": "Bad tag!"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Tags use lowercase letters, digits, and hyphens",
+        "failure": {
+          "error": "Tags use lowercase letters, digits, and hyphens"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "long_tag",
+      "input": {
+        "title": "Ship",
+        "tags": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Tags must be at most 30 characters",
+        "failure": {
+          "error": "Tags must be at most 30 characters"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "http_run",
+      "input": {
+        "title": "Ship",
+        "run_url": "http://example.test"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Run url must be an https URL",
+        "failure": {
+          "error": "Run url must be an https URL"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "long_run",
+      "input": {
+        "title": "Ship",
+        "run_url": "https://example.test/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Run url is too long (maximum is 500 characters)",
+        "failure": {
+          "error": "Run url is too long (maximum is 500 characters)"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "outside_owner",
+      "input": {
+        "title": "Ship",
+        "owner_id": 773523953
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work owner must be an active human member of the parent room",
+        "failure": {
+          "error": "Work owner must be an active human member of the parent room"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "missing_owner",
+      "input": {
+        "title": "Ship",
+        "owner_id": 999999
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work owner must be an active human member of the parent room",
+        "failure": {
+          "error": "Work owner must be an active human member of the parent room"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "bad_owner",
+      "input": {
+        "title": "Ship",
+        "owner_id": "abc"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work owner is invalid",
+        "failure": {
+          "error": "Work owner is invalid"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "receiver_owner",
+      "input": {
+        "title": "Ship",
+        "owner_id": 900082030
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 1,
+        "fields": {
+          "title": "Ship",
+          "creator_id": 394959859,
+          "work_status": "in_progress",
+          "owner": 900082030,
+          "tags": [],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_assignment",
+            "actor": 394959859,
+            "from_owner": null,
+            "to_owner": 900082030,
+            "metadata": {
+              "before": {
+                "status": "in_progress",
+                "owner": null
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 900082030,
+                  "name": "Receiver",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 900082031,
+            "kind": "work_assigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Ship",
+            "status": "in_progress",
+            "hop": 0,
+            "handoff": null,
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "create",
+      "name": "nonmember",
+      "input": {
+        "title": "Ship"
+      },
+      "flags": [
+        "nonmember"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Work owner must be an active agent member of the parent room with permission to post",
+        "failure": {
+          "error": "Work owner must be an active agent member of the parent room with permission to post"
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "create",
+      "name": "budget_before_validation",
+      "input": {},
+      "flags": [
+        "budget"
+      ],
+      "expected": {
+        "status": 429,
+        "error": "Daily board post budget exceeded (1/day)",
+        "failure": {
+          "error": "Daily board post budget exceeded (1/day)",
+          "cap": "board_posts",
+          "limit": 1,
+          "retry_after": 28739
+        },
+        "added_threads": 0,
+        "fields": null,
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "status",
+      "input": {
+        "work_status": "in_progress",
+        "note": "Digging in"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "in_progress",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_update",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "in_progress",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": "Digging in"
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "same_status",
+      "input": {
+        "work_status": "planned",
+        "note": "No change"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "tags_array",
+      "input": {
+        "tags": [
+          " API ",
+          "launch",
+          "api"
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "api",
+            "launch"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "tags_string",
+      "input": {
+        "tags": "backend,api"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "api",
+            "backend"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "clear_tags",
+      "input": {
+        "tags": null
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "run",
+      "input": {
+        "run_url": "https://example.test/run"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/run",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "clear_run",
+      "input": {
+        "run_url": ""
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": null,
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "all",
+      "input": {
+        "work_status": "blocked",
+        "tags": "api",
+        "run_url": "https://example.test/run",
+        "note": "Waiting"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "blocked",
+          "owner": 394959859,
+          "tags": [
+            "api"
+          ],
+          "run_url": "https://example.test/run",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_update",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "blocked",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": "Waiting"
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "bad_status",
+      "input": {
+        "work_status": "shipping",
+        "tags": "api"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work status is invalid",
+        "failure": {
+          "error": "Work status is invalid"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "blank_status",
+      "input": {
+        "work_status": null
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work status is invalid",
+        "failure": {
+          "error": "Work status is invalid"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "no_fields",
+      "input": {},
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work status is invalid",
+        "failure": {
+          "error": "Work status is invalid"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "note_only",
+      "input": {
+        "note": "Alone"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Work status is invalid",
+        "failure": {
+          "error": "Work status is invalid"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "long_note",
+      "input": {
+        "tags": "api",
+        "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Note is too long (maximum is 500 characters)",
+        "failure": {
+          "error": "Note is too long (maximum is 500 characters)"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "note_boundary",
+      "input": {
+        "work_status": "done",
+        "note": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "done",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_update",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "done",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "invalid_tag_rollback",
+      "input": {
+        "work_status": "done",
+        "tags": "bad tag!"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Tags use lowercase letters, digits, and hyphens",
+        "failure": {
+          "error": "Tags use lowercase letters, digits, and hyphens"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "invalid_run_rollback",
+      "input": {
+        "work_status": "done",
+        "tags": "api",
+        "run_url": "http://example.test"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Run url must be an https URL",
+        "failure": {
+          "error": "Run url must be an https URL"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "odd_tags",
+      "input": {
+        "tags": [
+          null,
+          false,
+          12,
+          [
+            "x"
+          ]
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Tags use lowercase letters, digits, and hyphens",
+        "failure": {
+          "error": "Tags use lowercase letters, digits, and hyphens"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "odd_run",
+      "input": {
+        "run_url": {
+          "url": "https://example.test"
+        }
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Run url must be an https URL",
+        "failure": {
+          "error": "Run url must be an https URL"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "nonmember",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "nonmember"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "unreadable",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "unreadable"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "no_manage",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "no_manage"
+      ],
+      "expected": {
+        "status": 403,
+        "error": "Forbidden: agent lacks manage_threads capability",
+        "failure": {
+          "error": "Forbidden: agent lacks manage_threads capability"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "other_owner",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "other_owner"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 127326141,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "untracked",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "untracked"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": null,
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "read_other_room",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "read_other_room"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "suspended",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "suspended"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "update",
+      "name": "global_read",
+      "input": {
+        "work_status": "done"
+      },
+      "flags": [
+        "global_read"
+      ],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "done",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:01:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_update",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 394959859,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "done",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "note": null
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "replace",
+      "input": {
+        "markdown": "## Shipped"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": "## Shipped",
+          "result_length": 10,
+          "result_updated_by": 394959859,
+          "result_updated_at": "2026-03-02T16:01:00.000Z",
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "result_updated",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 394959859,
+            "metadata": {
+              "excerpt": "## Shipped",
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "clear",
+      "input": {
+        "markdown": ""
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "null",
+      "input": {
+        "markdown": null
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "missing",
+      "input": {},
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Markdown can't be blank",
+        "failure": {
+          "error": "Markdown can't be blank"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "overlong",
+      "input": {
+        "markdown": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Result markdown is too long (maximum is 20000 characters)",
+        "failure": {
+          "error": "Result markdown is too long (maximum is 20000 characters)"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "boundary",
+      "input": {
+        "markdown": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+          "result_length": 20000,
+          "result_updated_by": 394959859,
+          "result_updated_at": "2026-03-02T16:01:00.000Z",
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "result_updated",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 394959859,
+            "metadata": {
+              "excerpt": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "odd_markdown",
+      "input": {
+        "markdown": [
+          false,
+          12
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 200,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": "[false, 12]",
+          "result_length": 11,
+          "result_updated_by": 394959859,
+          "result_updated_at": "2026-03-02T16:01:00.000Z",
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "result_updated",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 394959859,
+            "metadata": {
+              "excerpt": "[false, 12]",
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            }
+          }
+        ],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "nonmember",
+      "input": {},
+      "flags": [
+        "nonmember"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "unreadable",
+      "input": {},
+      "flags": [
+        "unreadable"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "no_manage",
+      "input": {},
+      "flags": [
+        "no_manage"
+      ],
+      "expected": {
+        "status": 403,
+        "error": "Forbidden: agent lacks manage_threads capability",
+        "failure": {
+          "error": "Forbidden: agent lacks manage_threads capability"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "result",
+      "name": "other_owner",
+      "input": {},
+      "flags": [
+        "other_owner"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 127326141,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "package",
+      "input": {
+        "summary": "Halfway",
+        "links": "https://example.test/a\r\n https://example.test/a\nHTTP://example.test/b",
+        "open_questions": [
+          " Why? ",
+          "",
+          "Why?",
+          "Which?\nNext?"
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 900082030,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 900082030,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "planned",
+                "owner": {
+                  "id": 900082030,
+                  "name": "Receiver",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "handoff_id": "handoff",
+              "handoff_summary": "Halfway",
+              "handoff_links_count": 2,
+              "handoff_questions_count": 3
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_unassigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": null,
+            "webhook_status": "pending"
+          },
+          {
+            "agent": 900082031,
+            "kind": "work_handed_off",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": {
+              "id": "handoff",
+              "summary": "Halfway",
+              "links": [
+                "https://example.test/a",
+                "HTTP://example.test/b"
+              ],
+              "open_questions": [
+                "Why?",
+                "Which?",
+                "Next?"
+              ],
+              "sender_name": "Bender Bot",
+              "receiver_agent_id": 900082031
+            },
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "summary_blank",
+      "input": {
+        "summary": " "
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Summary can't be blank",
+        "failure": {
+          "error": "Summary can't be blank"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "summary_cap",
+      "input": {
+        "summary": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Summary is too long (maximum is 2000 characters)",
+        "failure": {
+          "error": "Summary is too long (maximum is 2000 characters)"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "many_links",
+      "input": {
+        "summary": "Hi",
+        "links": [
+          "https://example.test/1",
+          "https://example.test/2",
+          "https://example.test/3",
+          "https://example.test/4",
+          "https://example.test/5",
+          "https://example.test/6",
+          "https://example.test/7",
+          "https://example.test/8",
+          "https://example.test/9",
+          "https://example.test/10",
+          "https://example.test/11"
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Links are limited to 10 per handoff",
+        "failure": {
+          "error": "Links are limited to 10 per handoff"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "bad_links",
+      "input": {
+        "summary": "Hi",
+        "links": [
+          "ftp://example.test",
+          "file:///tmp/x"
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Links must be http(s) URLs",
+        "failure": {
+          "error": "Links must be http(s) URLs"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "long_link",
+      "input": {
+        "summary": "Hi",
+        "links": [
+          "https://example.test/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Links must be at most 500 characters each",
+        "failure": {
+          "error": "Links must be at most 500 characters each"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "many_questions",
+      "input": {
+        "summary": "Hi",
+        "open_questions": [
+          "Why 1?",
+          "Why 2?",
+          "Why 3?",
+          "Why 4?",
+          "Why 5?",
+          "Why 6?",
+          "Why 7?",
+          "Why 8?",
+          "Why 9?",
+          "Why 10?",
+          "Why 11?"
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Open questions are limited to 10 per handoff",
+        "failure": {
+          "error": "Open questions are limited to 10 per handoff"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "long_question",
+      "input": {
+        "summary": "Hi",
+        "open_questions": [
+          "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Open questions must be at most 500 characters each",
+        "failure": {
+          "error": "Open questions must be at most 500 characters each"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "false_links",
+      "input": {
+        "summary": "Hi",
+        "links": false
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 900082030,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 900082030,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "planned",
+                "owner": {
+                  "id": 900082030,
+                  "name": "Receiver",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "handoff_id": "handoff",
+              "handoff_summary": "Hi",
+              "handoff_links_count": 0,
+              "handoff_questions_count": 0
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_unassigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": null,
+            "webhook_status": "pending"
+          },
+          {
+            "agent": 900082031,
+            "kind": "work_handed_off",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": {
+              "id": "handoff",
+              "summary": "Hi",
+              "links": [],
+              "open_questions": [],
+              "sender_name": "Bender Bot",
+              "receiver_agent_id": 900082031
+            },
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "false_questions",
+      "input": {
+        "summary": "Hi",
+        "open_questions": false
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 900082030,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 900082030,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "planned",
+                "owner": {
+                  "id": 900082030,
+                  "name": "Receiver",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "handoff_id": "handoff",
+              "handoff_summary": "Hi",
+              "handoff_links_count": 0,
+              "handoff_questions_count": 0
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_unassigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": null,
+            "webhook_status": "pending"
+          },
+          {
+            "agent": 900082031,
+            "kind": "work_handed_off",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": {
+              "id": "handoff",
+              "summary": "Hi",
+              "links": [],
+              "open_questions": [],
+              "sender_name": "Bender Bot",
+              "receiver_agent_id": 900082031
+            },
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "summary_boundary",
+      "input": {
+        "summary": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "flags": [],
+      "expected": {
+        "status": 201,
+        "error": null,
+        "failure": null,
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 900082030,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:01:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 394959859,
+            "from_owner": 394959859,
+            "to_owner": 900082030,
+            "metadata": {
+              "before": {
+                "status": "planned",
+                "owner": {
+                  "id": 394959859,
+                  "name": "Bender Bot",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "after": {
+                "status": "planned",
+                "owner": {
+                  "id": 900082030,
+                  "name": "Receiver",
+                  "status": "active",
+                  "role": "bot"
+                }
+              },
+              "actor": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              },
+              "handoff_id": "handoff",
+              "handoff_summary": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé...",
+              "handoff_links_count": 0,
+              "handoff_questions_count": 0
+            }
+          }
+        ],
+        "ledger": [
+          {
+            "agent": 773018776,
+            "kind": "work_unassigned",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": null,
+            "webhook_status": "pending"
+          },
+          {
+            "agent": 900082031,
+            "kind": "work_handed_off",
+            "actor": 394959859,
+            "outcome": "delivered",
+            "title": "Owned",
+            "status": "planned",
+            "hop": 1,
+            "handoff": {
+              "id": "handoff",
+              "summary": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+              "links": [],
+              "open_questions": [],
+              "sender_name": "Bender Bot",
+              "receiver_agent_id": 900082031
+            },
+            "webhook_status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "odd_package",
+      "input": {
+        "summary": "Hi",
+        "links": {
+          "a": false
+        },
+        "open_questions": [
+          null,
+          false,
+          12,
+          [
+            "nested"
+          ]
+        ]
+      },
+      "flags": [],
+      "expected": {
+        "status": 422,
+        "error": "Links must be http(s) URLs",
+        "failure": {
+          "error": "Links must be http(s) URLs"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "nonmember",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "nonmember"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "unreadable",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "unreadable"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "no_manage",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "no_manage"
+      ],
+      "expected": {
+        "status": 403,
+        "error": "Forbidden: agent lacks manage_threads capability",
+        "failure": {
+          "error": "Forbidden: agent lacks manage_threads capability"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "other_owner",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "other_owner"
+      ],
+      "expected": {
+        "status": 404,
+        "error": "Work not found",
+        "failure": {
+          "error": "Work not found"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 127326141,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "receiver_outside",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "receiver_outside"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Receiver must be an active agent member of this room with permission to post",
+        "failure": {
+          "error": "Receiver must be an active agent member of this room with permission to post"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "receiver_suspended",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "receiver_suspended"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Receiver must be an active agent member of this room with permission to post",
+        "failure": {
+          "error": "Receiver must be an active agent member of this room with permission to post"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "receiver_no_post",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "receiver_no_post"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Receiver must be an active agent member of this room with permission to post",
+        "failure": {
+          "error": "Receiver must be an active agent member of this room with permission to post"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "receiver_no_manage",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "receiver_no_manage"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Receiver must hold the manage_threads capability in this room",
+        "failure": {
+          "error": "Receiver must hold the manage_threads capability in this room"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "receiver_no_read",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "receiver_no_read"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Receiver must hold the read_messages capability in this room",
+        "failure": {
+          "error": "Receiver must hold the read_messages capability in this room"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "receiver_self",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "receiver_self"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Receiver is already the owner of this work",
+        "failure": {
+          "error": "Receiver is already the owner of this work"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    },
+    {
+      "operation": "handoff",
+      "name": "receiver_missing",
+      "input": {
+        "summary": "Hi"
+      },
+      "flags": [
+        "receiver_missing"
+      ],
+      "expected": {
+        "status": 422,
+        "error": "Receiver must be an active agent member of this room with permission to post",
+        "failure": {
+          "error": "Receiver must be an active agent member of this room with permission to post"
+        },
+        "added_threads": 0,
+        "fields": {
+          "title": "Owned",
+          "creator_id": 127326141,
+          "work_status": "planned",
+          "owner": 394959859,
+          "tags": [
+            "seed"
+          ],
+          "run_url": "https://example.test/initial",
+          "result": null,
+          "result_length": null,
+          "result_updated_by": null,
+          "result_updated_at": null,
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "work_status_changed_at": "2026-03-02T16:00:00.000Z",
+          "messages": []
+        },
+        "history": [],
+        "ledger": []
+      }
+    }
+  ]
+}

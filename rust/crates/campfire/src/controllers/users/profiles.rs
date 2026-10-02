@@ -69,10 +69,11 @@ async fn render_show(
     let owned_errors = c.current::<RenderedErrors>().map(|data| data.0.clone()).unwrap_or_default();
     let source = owned.clone();
     let failures = owned_errors.clone();
-    let configured = c.app().config.profile_google_calendar_configured;
+    let configured = c.app().google.api().config.configured();
     let settings_form = c.app().db.read(move |conn| presenters::status_settings::forms(conn, &source, failures, campfire_db::Timestamp::from_jiff(now), configured)).await.map_err(Error::internal)?;
 
-    let google = c.app().two_factor.google().is_some();
+    let google = c.app().google.sign_in().config.configured();
+    let google_reauthentication = c.app().two_factor.google().is_some();
     let mut appearance = c
         .app()
         .db
@@ -134,7 +135,7 @@ async fn render_show(
             Ok(campfire_views::two_factor::ProfileData {
                 confirmed_at: credential.and_then(|c| c.confirmed_at).map(|t| t.jiff()),
                 devices,
-                google: google
+                google: google_reauthentication
                     && conn.query_row(
                         "SELECT EXISTS(SELECT 1 FROM google_identities WHERE user_id=?)",
                         [id],
@@ -150,26 +151,9 @@ async fn render_show(
         .read(move |conn| presenters::profile_sections::load(conn, id, now))
         .await
         .map_err(Error::internal)?;
-    // WS9 owns sign-in configuration and identity rows directly; WS14g completes Calendar.
+    // Google profile controls use the same injected providers as their endpoints.
     sections.google.sign_in_configured = google;
-    sections.google.calendar_configured = c.app().config.profile_google_calendar_configured;
-    if google {
-        sections.google.identity_email = c
-            .app()
-            .db
-            .read(move |conn| {
-                use rusqlite::OptionalExtension;
-                Ok(conn
-                    .query_row(
-                        "SELECT email FROM google_identities WHERE user_id=?",
-                        [id],
-                        |r| r.get(0),
-                    )
-                    .optional()?)
-            })
-            .await
-            .map_err(Error::internal)?;
-    }
+    sections.google.calendar_configured = c.app().google.api().config.configured();
     sections.status = presenters::profile_sections::status_fields(&owned, &owned_errors, campfire_db::Timestamp::from_jiff(now));
     sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));
     if let Some(fields) = status_preview {

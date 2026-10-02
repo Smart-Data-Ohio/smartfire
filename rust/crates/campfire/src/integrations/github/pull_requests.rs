@@ -107,8 +107,43 @@ impl PullRequest {
         .optional()?
         .ok_or(campfire_db::Error::RecordNotFound("Github::PullRequest"))
     }
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        Ok(conn
+            .prepare(
+                "SELECT * FROM github_pull_requests WHERE id IN (SELECT value FROM json_each(?))",
+            )?
+            .query_map([json!(ids).to_string()], Self::from_row)?
+            .collect::<rusqlite::Result<_>>()?)
+    }
     pub fn for_message(conn: &Connection, message_id: i64) -> Result<Vec<Self>> {
         Ok(conn.prepare("SELECT p.* FROM github_pull_requests p JOIN github_pull_request_references r ON r.github_pull_request_id=p.id WHERE r.message_id=? ORDER BY p.owner,p.repo,p.number")?.query_map([message_id],Self::from_row)?.collect::<rusqlite::Result<_>>()?)
+    }
+    /// Rails message rendering preloads the page's pull requests in one read.
+    pub fn for_messages(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
+        let mut result = std::collections::HashMap::<i64, Vec<Self>>::new();
+        if ids.is_empty() {
+            return Ok(result);
+        }
+        let sql = format!(
+            "SELECT r.message_id,p.* FROM github_pull_requests p JOIN github_pull_request_references r ON r.github_pull_request_id=p.id WHERE r.message_id IN ({}) ORDER BY p.owner,p.repo,p.number",
+            vec!["?"; ids.len()].join(",")
+        );
+        for row in conn
+            .prepare(&sql)?
+            .query_map(rusqlite::params_from_iter(ids), |row| {
+                Ok((row.get::<_, i64>("message_id")?, Self::from_row(row)?))
+            })?
+        {
+            let (message, pr) = row?;
+            result.entry(message).or_default().push(pr);
+        }
+        Ok(result)
     }
     pub fn for_reference(tx: &Tx<'_>, owner: &str, repo: &str, number: i64) -> Result<Self> {
         let (owner, repo) = (owner.to_lowercase(), repo.to_lowercase());

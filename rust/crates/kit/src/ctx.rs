@@ -22,6 +22,9 @@ use crate::response::{self, Body, CacheControl, ExpiresIn, Response, SendBody, S
 use crate::session::{Flash, Session};
 use crate::{Error, Result};
 
+#[derive(Clone)]
+struct RescueNotFound;
+
 pub struct Ctx {
     pub request: Request,
     /// `params`: body params, then query params, then path params, merged like Rails.
@@ -39,6 +42,7 @@ pub struct Ctx {
     flash: Option<Flash>,
     kit: Kit,
     extensions: Extensions,
+    action_started: bool,
     marked_for_same_origin_verification: bool,
     /// `request.env["action_controller.csrf_token"]`: the session's CSRF token once read (or
     /// generated), stored into the session when the request commits.
@@ -109,6 +113,7 @@ impl Ctx {
             flash: None,
             kit,
             extensions: Extensions::new(),
+            action_started: false,
             marked_for_same_origin_verification: false,
             csrf_token: None,
             csp_nonce: None,
@@ -493,6 +498,19 @@ impl Ctx {
         response
     }
 
+    /// Controller-level `rescue_from ActiveRecord::RecordNotFound { head :not_found }`.
+    /// Routing errors and controllers without this rescue retain PublicExceptions rendering.
+    /// Call [`Ctx::start_action`] after the controller's before-actions have succeeded.
+    pub fn rescue_not_found(&mut self) {
+        self.extensions.insert(RescueNotFound);
+    }
+
+    /// End the before-action chain. Rails' Rendering#process_action selects request
+    /// formats here, inside AbstractController::Callbacks; an earlier rescue uses HTML.
+    pub fn start_action(&mut self) {
+        self.action_started = true;
+    }
+
     /// `head status, location: url`
     pub fn head_with_location(&mut self, status: StatusCode, location: &str) -> Result<Response> {
         let location = self.compute_location(location)?;
@@ -700,9 +718,20 @@ impl Ctx {
     /// Turn the action's result into the response Rails would send: halts and errors resolved,
     /// flash and session committed into cookies, cache headers, ETag and 304, HEAD bodies dropped.
     pub(crate) fn finish(mut self, result: Result<Response>) -> Response {
+        let mut rescued = false;
         let mut response = match result {
             Ok(response) => response,
             Err(Error::Halt(response)) => *response,
+            Err(Error::NotFound) if self.extensions.get::<RescueNotFound>().is_some() => {
+                // Rescue#process_action runs outside the callback chain. Exceptions
+                // unwind its after-actions, including JavaScript same-origin verification.
+                rescued = true;
+                if self.action_started {
+                    self.head(StatusCode::NOT_FOUND)
+                } else {
+                    Response::new(StatusCode::NOT_FOUND).content_type(format::HTML.string)
+                }
+            }
             Err(error) => return self.error_response(error),
         };
 
@@ -712,7 +741,7 @@ impl Ctx {
             }
         }
 
-        if let Err(error) = self.verify_same_origin_request(&response) {
+        if !rescued && let Err(error) = self.verify_same_origin_request(&response) {
             return self.error_response(error);
         }
         self.commit_flash();
@@ -804,7 +833,14 @@ impl Ctx {
         if !matches!(self.request.method, Method::GET | Method::HEAD) || response.status != StatusCode::OK {
             return;
         }
-        if is_fresh(&self.request, response.get_header(header::ETAG), response.get_header(header::LAST_MODIFIED)) {
+        // Rack::ConditionalGet compares one exact ETag, unlike Rails' request.fresh?
+        // used by fresh_when above (which accepts wildcard/list validators).
+        let fresh = if let Some(validator) = self.request.header("if-none-match") {
+            response.get_header(header::ETAG) == Some(validator)
+        } else {
+            is_fresh(&self.request, None, response.get_header(header::LAST_MODIFIED))
+        };
+        if fresh {
             response.status = StatusCode::NOT_MODIFIED;
             response.headers.remove(header::CONTENT_TYPE);
             response.headers.remove(header::CONTENT_LENGTH);
@@ -824,10 +860,8 @@ impl Ctx {
     }
 }
 
-/// `request.fresh?(response)` with `strict_freshness` (the 8.0 default), which `fresh_when` and
-/// `Rack::ConditionalGet` both go by here: an `If-None-Match` list naming the ETag (or `*`), or
-/// else an `If-Modified-Since` no earlier than `Last-Modified`. (Rack's own check wants the whole
-/// `If-None-Match` to equal the ETag.)
+/// `request.fresh?(response)` with `strict_freshness` (the 8.0 default), used by
+/// `fresh_when`: an ETag list or wildcard, else an If-Modified-Since date.
 fn is_fresh(request: &Request, etag: Option<&str>, last_modified: Option<&str>) -> bool {
     if let Some(if_none_match) = request.header("if-none-match") {
         let Some(etag) = etag else { return false };

@@ -1,0 +1,32 @@
+<div class="agent-approval-card" id="card_agent_approval_{{ approval.id }}">
+  <div class="agent-approval-card__header">
+    {{ h::image_tag(ctx, &approval.avatar_url, h::attrs().alt("").class("avatar agent-approval-card__avatar").attr("size", "32")) }}
+    <div class="agent-approval-card__identity">
+      <strong>{{ approval.bot_name }}</strong>
+      <span class="txt-small">requests approval · {{ approval.action }}</span>
+{% if let Some(room) = approval.room_name %}        <span class="txt-small">in {{ room }}</span>
+{% endif %}    </div>
+  </div>
+
+  <p class="agent-approval-card__summary">{{ approval.summary }}</p>
+{% if approval.action.starts_with("github.") %}{% if let Some(login) = approval.github_login %}    <p class="txt-small agent-approval-card__identity-note">Acts on GitHub as @{{ login }}</p>
+{% endif %}{% endif %}{% if approval.action.starts_with("fizzy.") %}{% if let Some(name) = approval.fizzy_user_name %}    <p class="txt-small agent-approval-card__identity-note">Acts on Fizzy as {{ name }}</p>
+{% endif %}{% endif %}
+  <div class="txt-small agent-approval-card__meta">
+{% if approval.status == "pending" %}      Expires in {{ self.expires_in() }}
+{% else if approval.status == "expired" %}      Expired
+{% else if approval.status == "approved" || approval.status == "denied" %}      {{ self.status_label() }} by {{ approval.decided_by.as_deref().unwrap_or("someone") }}
+{% if let Some(note) = approval.decision_note %}        · {{ note }}
+{% endif %}{% else if approval.status == "cancelled" %}      Cancelled by the agent
+{% endif %}  </div>
+
+{% if approval.status == "pending" %}    <div class="agent-approval-card__actions">
+{% if approval.approvable %}        {{ h::button_to_form(&self.approve_path(), h::attrs().attr("method", "patch").class("btn btn--primary"), h::attrs().class("agent-approval-card__action-form"), "Approve") }}
+{% else %}        <span class="txt-small">Only an administrator can approve {{ self.service() }} write actions.</span>
+{% endif %}      {% let form = h::form_with(self.decide_path()).method("patch").class("agent-approval-card__deny-form") %}{% filter form_with(form) %}
+        {{ h::hidden_field_tag("decision", Some("denied"), h::attrs()) }}
+        {{ h::text_field_tag("decision_note", None, h::attrs().attr("placeholder", "Note (optional)").attr("maxlength", "200").class("input agent-approval-card__note").aria("label", "Deny note (optional)")) }}
+        {{ form.submit("Deny", h::attrs().class("btn")) }}
+{% endfilter %}    </div>
+{% endif %}</div>
+

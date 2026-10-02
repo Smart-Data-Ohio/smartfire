@@ -1,0 +1,808 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "profile_get",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "idle",
+        "last_seen_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"idle\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "profile_update",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"status\":\"working\",\"status_note\":\"Tests\",\"working_presence\":\"  Thinking  \",\"provider\":\"ignored\",\"daily_message_cap\":1}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "working",
+        "status_note": "Tests",
+        "status_changed_at": "2026-03-02T16:00:00.000Z",
+        "last_seen_at": "2026-03-02T16:00:00.000Z",
+        "working_presence": "Thinking"
+      },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"working\",\"status_note\":\"Tests\",\"status_changed_at\":\"2026-03-02T16:00:00.000Z\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\",\"working_presence\":\"Thinking\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "profile_invalid",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"status\":\"bogus\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "error": "Status is not included in the list"
+      },
+      "response_body": "{\"error\":\"Status is not included in the list\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "profile_clear",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"working_presence\":\"  \"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "working",
+        "status_note": "Tests",
+        "status_changed_at": "2026-03-02T16:00:00.000Z",
+        "last_seen_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"working\",\"status_note\":\"Tests\",\"status_changed_at\":\"2026-03-02T16:00:00.000Z\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "profile_boolean_note",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"status_note\":false}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "working",
+        "status_note": "f",
+        "status_changed_at": "2026-03-02T16:00:00.000Z",
+        "last_seen_at": "2026-03-02T16:00:00.000Z",
+        "working_presence": "Thinking"
+      },
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"working\",\"status_note\":\"f\",\"status_changed_at\":\"2026-03-02T16:00:00.000Z\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\",\"working_presence\":\"Thinking\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "event_envelope",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "events": [
+          {
+            "id": 900000001,
+            "event_type": "github_action_completed",
+            "outcome": "delivered",
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "github_action": {
+              "action": "github.comment",
+              "status": "done"
+            }
+          }
+        ],
+        "next_since": 900000002
+      },
+      "response_body": "{\"events\":[{\"id\":900000001,\"event_type\":\"github_action_completed\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"github_action\":{\"action\":\"github.comment\",\"status\":\"done\"}}],\"next_since\":900000002}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "900000002"
+      }
+    },
+    {
+      "name": "event_array",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": [
+        {
+          "id": 900000001,
+          "event_type": "github_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "github_action": {
+            "action": "github.comment",
+            "status": "done"
+          }
+        }
+      ],
+      "response_body": "[{\"id\":900000001,\"event_type\":\"github_action_completed\",\"outcome\":\"delivered\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"github_action\":{\"action\":\"github.comment\",\"status\":\"done\"}}]",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "900000002"
+      }
+    },
+    {
+      "name": "event_dropped_cursor",
+      "method": "get",
+      "path": "/agents/events?since=900000001&limit=1&envelope=1",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "events": [],
+        "next_since": 900000002
+      },
+      "response_body": "{\"events\":[],\"next_since\":900000002}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": "900000002"
+      }
+    },
+    {
+      "name": "event_ack",
+      "method": "post",
+      "path": "/agents/events/900000001/ack",
+      "body": "{}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 900000001,
+        "outcome": "acknowledged"
+      },
+      "response_body": "{\"id\":900000001,\"outcome\":\"acknowledged\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "event_ack_replay",
+      "method": "post",
+      "path": "/agents/events/900000001/ack",
+      "body": "{}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 900000001,
+        "outcome": "acknowledged"
+      },
+      "response_body": "{\"id\":900000001,\"outcome\":\"acknowledged\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "event_ack_missing",
+      "method": "post",
+      "path": "/agents/events/0/ack",
+      "body": "{}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "agent_human_endpoint",
+      "method": "get",
+      "path": "/rooms.json",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 403,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "unknown_credential",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-unknown",
+      "status": 401,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "revoked_credential",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 401,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "expired_credential",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 401,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "missing_grant",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks read_messages capability"
+      },
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_no_parent",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"name\":\"Inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "error": "Exactly one of message_id or thread_id is required"
+      },
+      "response_body": "{\"error\":\"Exactly one of message_id or thread_id is required\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_missing",
+      "method": "patch",
+      "path": "/agents/steps/0",
+      "body": "{\"name\":\"Inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_create",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"Inspect\",\"status\":\"running\",\"duration_ms\":4}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 201,
+      "response": {
+        "id": 1,
+        "message_id": 935961918,
+        "name": "Inspect",
+        "status": "running",
+        "duration_ms": 4,
+        "position": 0,
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "updated_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_body": "{\"id\":1,\"message_id\":935961918,\"name\":\"Inspect\",\"status\":\"running\",\"duration_ms\":4,\"position\":0,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_duration_0",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":4.5}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "must be an integer"
+          ]
+        }
+      },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"must be an integer\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_duration_1",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"abc\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "is not a number"
+          ]
+        }
+      },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"is not a number\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_duration_2",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"4x\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "is not a number"
+          ]
+        }
+      },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"is not a number\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_duration_3",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":true}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "is not a number"
+          ]
+        }
+      },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"is not a number\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_duration_4",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"1.0\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "must be an integer"
+          ]
+        }
+      },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"],\"duration_ms\":[\"must be an integer\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_duration_5",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ]
+        }
+      },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "step_duration_6",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":null}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ]
+        }
+      },
+      "response_body": "{\"errors\":{\"name\":[\"can't be blank\"]}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "slash_nonmember",
+      "method": "post",
+      "path": "/rooms/201306877/agents/slash_commands",
+      "body": "{\"name\":\"inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "slash_missing_grant",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks post_messages capability"
+      },
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "slash_invalid",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"123\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "error": "Name is invalid"
+      },
+      "response_body": "{\"error\":\"Name is invalid\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "slash_register",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"inspect\",\"description\":\"Check\",\"takes_arguments\":false}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 201,
+      "response": {
+        "name": "inspect",
+        "description": "Check",
+        "room_id": 486777696,
+        "agent_id": 773018776,
+        "takes_arguments": false
+      },
+      "response_body": "{\"name\":\"inspect\",\"description\":\"Check\",\"room_id\":486777696,\"agent_id\":773018776,\"takes_arguments\":false}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "slash_register_replay",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"inspect\",\"description\":\"Check\",\"takes_arguments\":false}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 201,
+      "response": {
+        "name": "inspect",
+        "description": "Check",
+        "room_id": 486777696,
+        "agent_id": 773018776,
+        "takes_arguments": false
+      },
+      "response_body": "{\"name\":\"inspect\",\"description\":\"Check\",\"room_id\":486777696,\"agent_id\":773018776,\"takes_arguments\":false}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "slash_missing",
+      "method": "delete",
+      "path": "/rooms/486777696/agents/slash_commands/absent",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    },
+    {
+      "name": "event_rate_overflow",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_body": "{\"error\":\"rate_limited\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": "60",
+        "Location": null,
+        "X-Smartfire-Next-Since": null
+      }
+    }
+  ]
+}

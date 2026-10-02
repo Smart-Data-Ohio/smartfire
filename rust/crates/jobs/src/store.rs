@@ -166,6 +166,7 @@ pub(crate) struct Orphan {
     pub queue: String,
     pub class: String,
     pub attempts: u32,
+    pub arguments: String,
 }
 
 /// Running jobs whose lease has expired, other than those `runner` is still `performing`: its
@@ -173,12 +174,12 @@ pub(crate) struct Orphan {
 pub(crate) fn orphans(conn: &Connection, runner: &str, performing: &[i64], now: Timestamp) -> Result<Vec<Orphan>> {
     let performing = serde_json::to_string(performing).expect("ids serialize");
     let mut statement = conn.prepare_cached(
-        r#"SELECT "id", "queue_name", "job_class", "attempts" FROM "background_jobs"
+        r#"SELECT "id", "queue_name", "job_class", "attempts", "arguments" FROM "background_jobs"
             WHERE "status" = 'running' AND "lease_expires_at" <= ?1
               AND NOT ("claimed_by" IS ?2 AND "id" IN (SELECT "value" FROM json_each(?3))) ORDER BY "id""#,
     )?;
     let orphans = statement
-        .query_map(params![now, runner, performing], |row| Ok(Orphan { id: row.get(0)?, queue: row.get(1)?, class: row.get(2)?, attempts: row.get(3)? }))?
+        .query_map(params![now, runner, performing], |row| Ok(Orphan { id: row.get(0)?, queue: row.get(1)?, class: row.get(2)?, attempts: row.get(3)?, arguments: row.get(4)? }))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(orphans)
 }

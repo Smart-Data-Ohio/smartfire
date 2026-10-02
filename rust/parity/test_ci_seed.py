@@ -1,6 +1,8 @@
 """Injection checks for every source the image/seed cache promises to track."""
 
 from pathlib import Path
+import re
+import shlex
 import shutil
 import tempfile
 import unittest
@@ -8,6 +10,28 @@ import unittest
 from ci_seed import IMAGE_INPUTS, SEED_INPUTS, cache_keys
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+class SeedCoverageTests(unittest.TestCase):
+    def test_ci_builds_validates_and_caches_every_test_seed(self):
+        # Include literal seed names in table-driven and conditional boot calls, too.
+        known = {p.stem for p in (ROOT / "parity/seeds").glob("*.rb") if p.stem != "build"}
+        required = set()
+        for path in (ROOT / "crates").rglob("*.rs"):
+            source = path.read_text()
+            if re.search(r"\b(?:boot_seed\w*|seed_dir|boot_with_clients|boot_with_huddle_services)\s*\(", source):
+                required.update(set(re.findall(r'"([a-z_]+)"', source)) & known)
+        self.assertIn("agents_ui", required, "the inventory must include navigation/inbox tests")
+        script = (ROOT / "parity/bin/ci-seed").read_text()
+        built = set(shlex.split(re.search(r'"\$ROOT/parity/bin/seed" build ([^\n]+)', script)[1]))
+        validated = set(shlex.split(re.search(r"for seed in ([^;]+); do", script)[1]))
+        workflow = (ROOT.parent / ".github/workflows/rust.yml").read_text()
+        for seed in sorted(required):
+            with self.subTest(seed=seed):
+                self.assertIn(seed, built, f"CI does not build the {seed} test seed")
+                self.assertIn(seed, validated, f"CI does not validate the {seed} test seed")
+                self.assertEqual(workflow.count(f"rust/parity/.seed/{seed}\n"), 2,
+                                 f"CI must restore and save the {seed} test seed")
 
 
 class CacheIdentityTests(unittest.TestCase):

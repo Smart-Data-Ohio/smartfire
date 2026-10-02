@@ -141,3 +141,26 @@ pub fn cpu_time() -> Duration {
         START.get_or_init(std::time::Instant::now).elapsed()
     }
 }
+
+// WS16: fixture-only entropy for byte-exact OAuth redirects. The scope is installed
+// by the test HTTP server, never by request parameters or production configuration.
+tokio::task_local! {
+    static OAUTH_ENTROPY: [u8; 64];
+}
+pub async fn with_oauth_entropy<T>(bytes: [u8; 64], future: impl Future<Output = T>) -> T {
+    OAUTH_ENTROPY.scope(bytes, future).await
+}
+pub fn oauth_entropy() -> Option<[u8; 64]> {
+    OAUTH_ENTROPY.try_with(|bytes| *bytes).ok()
+}
+
+// WS16: consumed at boot, then owned by this database's fixture environment.
+tokio::task_local! {
+    static AUTH_INPUTS: Arc<campfire_db::FixtureAuthInputs>;
+}
+pub async fn with_auth_inputs<T>(inputs: campfire_db::FixtureAuthInputs, future: impl Future<Output = T>) -> T {
+    AUTH_INPUTS.scope(Arc::new(inputs), future).await
+}
+pub fn auth_inputs() -> Option<Arc<campfire_db::FixtureAuthInputs>> {
+    AUTH_INPUTS.try_with(Arc::clone).ok()
+}

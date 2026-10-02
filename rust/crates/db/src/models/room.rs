@@ -154,6 +154,19 @@ impl Room {
         )
     }
 
+    /// Unscoped association preload, preserving the same rows as `find_by_id`.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(r#"SELECT * FROM "rooms" WHERE id IN ({})"#, placeholders(ids.len())),
+            rusqlite::params_from_iter(ids),
+            Self::from_row,
+        )
+    }
+
     pub fn all(conn: &Connection) -> Result<Vec<Self>> {
         query_all(
             conn,

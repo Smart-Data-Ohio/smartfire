@@ -1,0 +1,21 @@
+<div class="pins-panel-wrap" data-controller="pins-panel">
+  <button type="button" class="btn room-header__action room-header__action--pins"
+          aria-label="Show pinned messages" title="Pinned messages"
+          data-action="pins-panel#open">
+    {{ h::image_tag(ctx,"pin.svg",h::attrs().size(20).aria_hidden()) }}
+    <span class="room-header__action-label">Pins</span>
+    <span id="{{ room.dom_id("pins_count") }}" class="room-header__pins-count" aria-label="{{ nav.pins_count }} pinned messages">{{ nav.pins_count }}</span>{{ "\n" }}
+  </button>
+
+  <dialog class="pins-panel" aria-labelledby="{{ room.dom_id("pins_title") }}">
+    <header class="pins-panel__header">
+      <h2 id="{{ room.dom_id("pins_title") }}">Pinned messages</h2>
+      <button type="button" class="btn btn--borderless pins-panel__close"
+              aria-label="Close pinned messages" data-action="pins-panel#close">×</button>
+    </header>
+
+    <turbo-frame id="{{ room.dom_id("pins_frame") }}" src="{{ self.pins_path() }}" loading="lazy">
+      <p class="pins-panel__loading">Loading pinned messages…</p>
+    </turbo-frame>
+  </dialog>
+</div>{{ "\n" }}

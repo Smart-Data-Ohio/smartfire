@@ -206,12 +206,24 @@ impl AgentStep {
         }
     }
     pub fn update(&mut self, tx: &Tx<'_>, changes: AgentStepChanges) -> Result<()> {
+        self.update_with_input_errors(tx, changes, Errors::default())
+    }
+
+    /// Transport seam: preserve validation of raw numeric input before casting.
+    pub fn update_with_input_errors(
+        &mut self,
+        tx: &Tx<'_>,
+        changes: AgentStepChanges,
+        input_errors: Errors,
+    ) -> Result<()> {
         let before =
             Self::find(tx.conn(), self.id)?.ok_or(crate::Error::RecordNotFound("AgentStep"))?;
         let mut candidate = before.clone();
         macro_rules! assign {($($field:ident),*)=>{$(if let Some(value)=changes.$field {candidate.$field=value;})*};}
         assign!(name, status, input_summary, output_summary, duration_ms);
-        Self::validate(tx.conn(), &candidate.attributes(), Some(self.id))?.into_result()?;
+        let mut errors = Self::validate(tx.conn(), &candidate.attributes(), Some(self.id))?;
+        errors.0.extend(input_errors.0);
+        errors.into_result()?;
         if candidate.name != before.name
             || candidate.status != before.status
             || candidate.input_summary != before.input_summary
@@ -296,10 +308,16 @@ fn invalid(errors: Errors) -> ServiceResult {
         status: 422,
     }
 }
-pub fn create(
+pub fn create(tx: &mut Tx<'_>, agent_id: i64, attributes: NewAgentStep) -> Result<ServiceResult> {
+    create_with_input_errors(tx, agent_id, attributes, Errors::default())
+}
+
+/// Extra input errors are applied after parent authorization and before writing.
+pub fn create_with_input_errors(
     tx: &mut Tx<'_>,
     agent_id: i64,
     mut attributes: NewAgentStep,
+    input_errors: Errors,
 ) -> Result<ServiceResult> {
     attributes.agent_id = agent_id;
     if attributes.message_id.is_some() == attributes.channel_thread_id.is_some() {
@@ -339,7 +357,13 @@ pub fn create(
     attributes.output_summary = attributes
         .output_summary
         .filter(|s| !campfire_richtext::ruby::is_blank(s));
-    let errors = AgentStep::validate(tx.conn(), &attributes, None)?;
+    let mut errors = AgentStep::validate(tx.conn(), &attributes, None)?;
+    let position = errors
+        .0
+        .iter()
+        .position(|(field, _)| *field == "base")
+        .unwrap_or(errors.0.len());
+    errors.0.splice(position..position, input_errors.0);
     if !errors.is_empty() {
         return Ok(invalid(errors));
     };
@@ -352,6 +376,17 @@ pub fn update(
     agent_id: i64,
     id: i64,
     changes: AgentStepChanges,
+) -> Result<ServiceResult> {
+    update_with_input_errors(tx, agent_id, id, changes, Errors::default())
+}
+
+/// Same seam as create, retaining live parent authorization on updates.
+pub fn update_with_input_errors(
+    tx: &mut Tx<'_>,
+    agent_id: i64,
+    id: i64,
+    changes: AgentStepChanges,
+    input_errors: Errors,
 ) -> Result<ServiceResult> {
     let Some(mut step) = AgentStep::find(tx.conn(), id)?.filter(|s| s.agent_id == agent_id) else {
         return Ok(ServiceResult::fail("Step not found", 404));
@@ -385,7 +420,7 @@ pub fn update(
             403,
         ));
     };
-    if let Err(error) = step.update(tx, changes) {
+    if let Err(error) = step.update_with_input_errors(tx, changes, input_errors) {
         return match error {
             crate::Error::RecordInvalid(errors) => Ok(invalid(errors)),
             error => Err(error),
