@@ -25,6 +25,7 @@ async fn ws11ui_bot_mutation_independent_saves_match_pinned_rails() {
             None
         } else {
             let legacy = operation.starts_with("legacy");
+            let overflow = operation == "overflow";
             let initial = name.clone();
             Some(
                 t.db()
@@ -37,6 +38,10 @@ async fn ws11ui_bot_mutation_independent_saves_match_pinned_rails() {
                                     user_id: bot.id,
                                     owner_id: Some(DAVID),
                                     kind: AgentKind::Workspace,
+                                    provider: overflow.then(|| "Before input".into()),
+                                    daily_message_cap: overflow.then_some(7),
+                                    daily_board_post_cap: overflow.then_some(7),
+                                    daily_external_action_cap: overflow.then_some(7),
                                     ..Default::default()
                                 },
                             )?;
@@ -96,6 +101,12 @@ async fn ws11ui_bot_mutation_independent_saves_match_pinned_rails() {
                     ]))
                     .await
             }
+            "overflow" => {
+                let mut agent = json!({"provider":"Submitted provider"});
+                agent[case["cap_field"].as_str().unwrap()] = json!("9223372036854775808");
+                browser.write(Req::new(Method::PATCH, &path).header("accept", "text/html")
+                    .header("content-type", "application/json").body(json!({"user":{"name":"Submitted bot","icon_name":"openai"},"agent":agent}).to_string())).await
+            }
             "remove" => browser.write(Req::new(Method::DELETE, &path)).await,
             "legacy" => {
                 browser
@@ -118,8 +129,8 @@ async fn ws11ui_bot_mutation_independent_saves_match_pinned_rails() {
             let id=match bot {Some(id)=>Some(id),None=>conn.query_row("SELECT id FROM users WHERE name=?",[name],|r|r.get::<_,i64>(0)).optional()?};
             let user=id.map(|id|User::find(conn,id)).transpose()?;
             let agent=match id {Some(id)=>Agent::for_user(conn,id)?,None=>None};
-            let user=user.map(|u|Ok::<_,campfire_db::Error>(json!({"name":u.name,"status":u.status.name(),"webhook_url":u.webhook_url(conn)?}))).transpose()?;
-            let agent=agent.map(|a|json!({"kind":a.kind.name(),"owner_id":a.owner_id,"provider":a.provider}));
+            let user=user.map(|u|Ok::<_,campfire_db::Error>(json!({"name":u.name,"icon_name":u.icon_name,"status":u.status.name(),"webhook_url":u.webhook_url(conn)?}))).transpose()?;
+            let agent=agent.map(|a|json!({"kind":a.kind.name(),"owner_id":a.owner_id,"provider":a.provider,"daily_message_cap":a.daily_message_cap,"daily_board_post_cap":a.daily_board_post_cap,"daily_external_action_cap":a.daily_external_action_cap}));
             let mut statement=conn.prepare("SELECT action FROM audit_logs WHERE id>? ORDER BY id")?;
             let audits=statement.query_map([before],|r|r.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?;
             Ok(json!({"bot":user,"agent":agent,"audits":audits}))
@@ -133,6 +144,6 @@ async fn ws11ui_bot_mutation_independent_saves_match_pinned_rails() {
             ));
         }
     }
-    println!("Bot mutation differential: 13 HTTP fault boundaries");
+    println!("Bot mutation differential: 16 HTTP fault boundaries");
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

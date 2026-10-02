@@ -7,6 +7,7 @@
       "table": "users",
       "event": "INSERT",
       "predicate": null,
+      "cap_field": null,
       "status": 500,
       "bot": null,
       "agent": null,
@@ -18,9 +19,11 @@
       "table": "webhooks",
       "event": "INSERT",
       "predicate": null,
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "create_webhook_failure",
+        "icon_name": null,
         "status": "active",
         "webhook_url": null
       },
@@ -33,9 +36,11 @@
       "table": "agents",
       "event": "INSERT",
       "predicate": null,
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "create_agent_failure",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://new.example/hook"
       },
@@ -48,16 +53,21 @@
       "table": "audit_logs",
       "event": "INSERT",
       "predicate": "NEW.action='agent.create'",
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "create_audit_failure",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://new.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": null
+        "provider": null,
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": []
     },
@@ -67,16 +77,21 @@
       "table": "users",
       "event": "UPDATE",
       "predicate": null,
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "update_user_failure",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://old.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": null
+        "provider": null,
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": []
     },
@@ -86,16 +101,21 @@
       "table": "agents",
       "event": "UPDATE",
       "predicate": null,
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "update_agent_failure changed",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://new.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": null
+        "provider": null,
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": []
     },
@@ -105,16 +125,21 @@
       "table": "audit_logs",
       "event": "INSERT",
       "predicate": "NEW.action='agent.webhook_url.change'",
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "update_webhook_audit_failure changed",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://new.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": "Changed"
+        "provider": "Changed",
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": []
     },
@@ -124,16 +149,21 @@
       "table": "audit_logs",
       "event": "INSERT",
       "predicate": "NEW.action='agent.update'",
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "update_edit_audit_failure changed",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://new.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": "Changed"
+        "provider": "Changed",
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": [
         "agent.webhook_url.change"
@@ -145,16 +175,21 @@
       "table": "users",
       "event": "UPDATE",
       "predicate": null,
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "remove_user_failure",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://old.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": null
+        "provider": null,
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": []
     },
@@ -164,16 +199,21 @@
       "table": "audit_logs",
       "event": "INSERT",
       "predicate": "NEW.action='agent.suspend'",
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "remove_audit_failure",
+        "icon_name": null,
         "status": "deactivated",
         "webhook_url": "https://old.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": null
+        "provider": null,
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": []
     },
@@ -183,9 +223,11 @@
       "table": "agents",
       "event": "INSERT",
       "predicate": null,
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "legacy_agent_failure",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://old.example/hook"
       },
@@ -198,16 +240,21 @@
       "table": "audit_logs",
       "event": "INSERT",
       "predicate": "NEW.action='agent.create'",
+      "cap_field": null,
       "status": 500,
       "bot": {
         "name": "legacy_audit_failure",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://old.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": null
+        "provider": null,
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": []
     },
@@ -217,20 +264,97 @@
       "table": null,
       "event": null,
       "predicate": null,
+      "cap_field": null,
       "status": 400,
       "bot": {
         "name": "legacy_missing_params",
+        "icon_name": null,
         "status": "active",
         "webhook_url": "https://old.example/hook"
       },
       "agent": {
         "kind": "workspace",
         "owner_id": 127326141,
-        "provider": null
+        "provider": null,
+        "daily_message_cap": null,
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null
       },
       "audits": [
         "agent.create"
       ]
+    },
+    {
+      "name": "update_daily_message_cap_overflow",
+      "operation": "overflow",
+      "table": null,
+      "event": null,
+      "predicate": null,
+      "cap_field": "daily_message_cap",
+      "status": 500,
+      "bot": {
+        "name": "Submitted bot",
+        "icon_name": "openai",
+        "status": "active",
+        "webhook_url": "https://old.example/hook"
+      },
+      "agent": {
+        "kind": "workspace",
+        "owner_id": 127326141,
+        "provider": "Before input",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": []
+    },
+    {
+      "name": "update_daily_board_post_cap_overflow",
+      "operation": "overflow",
+      "table": null,
+      "event": null,
+      "predicate": null,
+      "cap_field": "daily_board_post_cap",
+      "status": 500,
+      "bot": {
+        "name": "Submitted bot",
+        "icon_name": "openai",
+        "status": "active",
+        "webhook_url": "https://old.example/hook"
+      },
+      "agent": {
+        "kind": "workspace",
+        "owner_id": 127326141,
+        "provider": "Before input",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": []
+    },
+    {
+      "name": "update_daily_external_action_cap_overflow",
+      "operation": "overflow",
+      "table": null,
+      "event": null,
+      "predicate": null,
+      "cap_field": "daily_external_action_cap",
+      "status": 500,
+      "bot": {
+        "name": "Submitted bot",
+        "icon_name": "openai",
+        "status": "active",
+        "webhook_url": "https://old.example/hook"
+      },
+      "agent": {
+        "kind": "workspace",
+        "owner_id": 127326141,
+        "provider": "Before input",
+        "daily_message_cap": 7,
+        "daily_board_post_cap": 7,
+        "daily_external_action_cap": 7
+      },
+      "audits": []
     }
   ],
   "errors": {

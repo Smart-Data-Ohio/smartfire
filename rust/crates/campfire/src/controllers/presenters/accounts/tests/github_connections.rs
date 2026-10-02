@@ -475,10 +475,10 @@ async fn ws11ui_github_token_shapes_match_pinned_ruby_to_s_over_real_transport()
             }
         }
         let account = stored(&test).await;
-        if let Some(token) = case["token"].as_str() {
-            if account.as_ref().map(|a| a.2.as_str()) != Some(token) {
-                errors.push(format!("{}: wrong stored token", case["input"]));
-            }
+        if let Some(token) = case["token"].as_str()
+            && account.as_ref().map(|a| a.2.as_str()) != Some(token)
+        {
+            errors.push(format!("{}: wrong stored token", case["input"]));
         }
     }
     let request =
