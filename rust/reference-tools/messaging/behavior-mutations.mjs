@@ -204,7 +204,7 @@ export const elementScopeMutations=new Map([
   ])],
 ]);
 elementScopeMutations.set('sending preserves the submitted source and a newer draft',new Map([
-  ['hidden-submitted-body-visible-strong',opacity('.message:has(strong) .message__body { visibility: hidden !important; } .message:has(strong) .message__body strong { visibility: visible !important; }')],
+  ['hidden-submitted-body-visible-strong',opacity('.message:has(.markdown-body strong) .message__body { visibility: hidden !important; } .message:has(.markdown-body strong) .message__body strong { visibility: visible !important; }')],
 ]));
 elementScopeMutations.set('search tolerates operators, shows an empty state and pages older results',new Map([
   ['transparent-older-search-text',opacity('#search-results .message .markdown-body p { opacity: 0 !important; }')],
