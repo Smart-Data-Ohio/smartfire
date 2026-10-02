@@ -58,7 +58,9 @@ pub(super) async fn operation(
             if !room.board() {return Ok(Written::Denied(ServiceResult::fail("Room is not a board",422)));}
             let input=agent_work::BoardPostInput {
                 title:attribute_string(args.get("title")),
-                body:args.get("body").map(json_value_to_s),
+                // ChannelThread passes first_message to Message's string column;
+                // Rails casts false to "f", rather than calling false.to_s.
+                body:attribute_string(args.get("body")),
                 tags:args.get("tags").cloned(),
                 work_status:attribute_string(args.get("work_status").filter(|v|!blank(v))),
                 run_url:attribute_string(args.get("run_url").filter(|v|!blank(v))),
