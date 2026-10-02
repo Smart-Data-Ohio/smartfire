@@ -13,7 +13,7 @@ pub mod agent_payload;
 pub mod attachments;
 pub mod events;
 pub mod fizzy_cards;
-mod layout_preferences;
+pub(crate) mod layout_preferences;
 pub mod link_embeds;
 mod message_cache;
 pub(crate) mod message_cache_preloads;
