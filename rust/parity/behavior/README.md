@@ -92,8 +92,11 @@ servers **and browser** at `2025-11-01T16:00:00Z`; its browser zone is New York.
 
 Each case uses a new browser context. Public HTTP creates run each app's validations and
 callbacks for polls, pins and messages. Assertions scope new messages by persisted
-`data-message-id` or exclude earlier DOM IDs. Existing fixture messages/closed polls use
-the anchored room URL when the seed's populated timeline has paged them out. The Files
+`data-message-id` or exclude earlier DOM IDs. Pin cases create fresh JZ-authored copies of the source message in the latest window,
+so their live notes land in that window. Other old fixtures/closed polls use the anchored
+room URL when the populated timeline has paged them out. The done assertion scopes the
+saved row's status (the filter navigation already contains a "Done" link), so an in-flight
+PATCH cannot be mistaken for its completed response. The Files
 case creates a real attachment and Drive row. The quote case uses three users and checks
 the lazy frame's private chip versus the member's full card. No provider network endpoint
 is substituted by those stored fixture rows.
