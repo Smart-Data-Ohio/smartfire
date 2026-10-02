@@ -27,7 +27,7 @@ uses ten. Explicit `visible: false`/`:all` assertions keep DOM semantics.
 | V6 | Empty field after failed highlighter load | code_highlighting:123, default-visible `assert_field` | transparent-cleared-code-field |
 | V7 | Checked Notify author field | message_interactions:234, default-visible `assert_field(checked: true)` | transparent-notify-field |
 | V8 | Message owning the open shared menu | helper:134, default-visible `assert_selector`; used by menu-open calls | transparent-menu-owner |
-| V9 | Open message row after More | message_toolbar:48, default-visible `assert_selector`, replaces raw attribute read | transparent-more-owner |
+| V9 | Open message row after More | message_toolbar:48, default-visible `assert_selector`; preserves the prior empty-value check | transparent-more-owner |
 | V10 | Duplicate-delivery rendered HTML flag | message_interactions:166, default-visible `assert_selector`, replaces attached-only wait | transparent-redelivery-flag |
 | V11 | Initial Ruby source before forwarding | search_forward_edit:46, visible text assertion; a visible row alone does not show its code | transparent-ruby-code |
 | V12 | Forwarded Ruby source bytes | search_forward_edit:60, default-visible `assert_selector`; table visibility does not show the code | transparent-forwarded-code |

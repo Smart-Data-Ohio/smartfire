@@ -1,6 +1,6 @@
 // All thirteen message_toolbar_test.rb declarations, pinned d7c7de92.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount,actOnVisible} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,actOnVisible,waitForVisibleAttribute} from './behavior-visibility.mjs';
 import {originalMessage,closedMenu,assertMenuOpen} from './behavior-actions.mjs';
 import {DELIVERY_WAIT} from './behavior-deadlines.mjs';
 export async function toolbar({author:page,recipient,caseName}) {
@@ -36,7 +36,7 @@ export async function toolbar({author:page,recipient,caseName}) {
   } else if(caseName.startsWith('the more button')) {
     await hover();await row.getByRole('button',{name:'More message actions',exact:true}).click();
     await assertMenuOpen(page);
-    await waitForVisibility(row.locator(':scope[data-message-actions-open]'));
+    await waitForVisibleAttribute(row,'data-message-actions-open','');
     assert.equal(await row.getByRole('button',{name:'More message actions',exact:true}).getAttribute('aria-expanded'),'true');
     await page.keyboard.press('Escape');await closedMenu(page);
   } else if(caseName.startsWith('keyboard users')) {
