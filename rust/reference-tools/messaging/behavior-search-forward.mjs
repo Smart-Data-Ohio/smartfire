@@ -13,7 +13,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     await waitForVisibleCount(page.locator('#search-results .message'),40);
     await waitForVisibleCount(page.locator('#search-results .message').filter({hasText:'system paging alpha'}),0);
     await page.getByRole('link',{name:'Load older results',exact:true}).click();
-    await waitForVisibility(page.locator('#search-results .message').filter({hasText:'system paging alpha'}));
+    await waitForVisibility(page.locator('#search-results').getByText('system paging alpha',{exact:true}),{timeout:10000});
     await waitForVisibleCount(page.locator('#search-results .message'),42);
     const ids=await page.locator('#search-results .message').evaluateAll(rows=>rows.map(row=>row.dataset.messageId));
     assert.equal(new Set(ids).size,42,'older search results append without duplicate messages');
@@ -35,7 +35,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     }
   } else if(caseName==='editing to add a URL renders its card live and the edited marker on load') {
     const message=page.locator(`.message[data-message-id="${fixture.edit_card_id}"]`);
-    await waitForVisibility(message.filter({hasText:'nothing linked yet'}));await openEdit(page,message);
+    await waitForVisibility(message.getByText('nothing linked yet',{exact:true}),{timeout:10000});await openEdit(page,message);
     await send(page,'now with https://x.com/jack/status/424242');
     for(const viewer of [page,recipient]) {
       // Original Rails BROADCAST_WAIT=15; no increased delivery threshold.

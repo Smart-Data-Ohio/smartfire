@@ -1,6 +1,5 @@
 // All boosting_messages_test.rb declarations at pinned d7c7de92.
-import assert from 'node:assert/strict';
-import {waitForVisibility} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleProperty} from './behavior-visibility.mjs';
 export async function boosts({author,recipient,caseName,viewer,openEdit,send,text}) {
   const page=recipient;  // Kevin is the original test's draft owner.
   const message=browser=>browser.locator('.message[data-message-id="607264868"]');
@@ -19,9 +18,9 @@ export async function boosts({author,recipient,caseName,viewer,openEdit,send,tex
     for(const browser of [page,author]) await waitForVisibility(browser.locator('.boost[id]').filter({has:browser.locator('[data-boost-delete-target="content"]').filter({hasText:/^Hello$/})}),{state:'detached'});
   } else if(caseName==='message update preserves the input state') {
     await input(page,'Hey!');await openEdit(author,message(author));await send(author,'Redacted!');await text(page,'Redacted!');
-    assert.equal(await message(page).locator('input[name="boost[content]"]').inputValue(),'Hey!');
+    await waitForVisibleProperty(message(page).locator('input[name="boost[content]"]'),'value','Hey!');
   } else if(caseName==='boost by another user preserves the input state') {
     await input(page,'Hey!');const david=await viewer('David');await input(david,'Morning');await submit(david);await delivered(david,'Morning');await delivered(page,'Morning');
-    assert.equal(await message(page).locator('input[name="boost[content]"]').inputValue(),'Hey!');
+    await waitForVisibleProperty(message(page).locator('input[name="boost[content]"]'),'value','Hey!');
   } else throw new Error(`unimplemented boost case ${caseName}`);
 }

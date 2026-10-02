@@ -1,7 +1,8 @@
 // Behaviour equivalents of composer_test.rb at d7c7de92. Real requests,
 // delivered replies, Cable typing and Turbo visits; no screenshot assertions.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount,visibleMatch} from './behavior-visibility.mjs';
+import {CAPYBARA_DEFAULT,DELIVERY_WAIT} from './behavior-deadlines.mjs';
+import {waitForVisibility,waitForVisibleCount,visibleMatch,waitForVisibleProperty} from './behavior-visibility.mjs';
 export async function composer({author:page,recipient,base,caseName,fixture,viewer,send,text,field}) {
   const editor=page.getByRole('combobox',{name:'Write a message',exact:true});
   const root=page.locator('.message[data-message-id="607264868"]');
@@ -49,6 +50,7 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
     await responded;
     assert.ok(requests.some(url=>url.includes('query=kev%2Bin')),`encoded query expected in ${JSON.stringify(requests)}`);
   } else if(caseName==='composer autocomplete exposes combobox semantics over a polite listbox') {
+    await waitForVisibility(editor,{timeout:CAPYBARA_DEFAULT});
     assert.equal(await editor.getAttribute('role'),'combobox');assert.equal(await editor.getAttribute('aria-autocomplete'),'list');assert.equal(await editor.getAttribute('aria-expanded'),'false');
     await editor.fill(':open');await waitForVisibility(page.locator('suggestion-option').filter({hasText:'OpenAI'}));
     assert.equal(await editor.getAttribute('aria-expanded'),'true');
@@ -132,12 +134,13 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
     await panel.locator('[data-thread-panel-target="createMessage"]').fill('The thread for draft persistence.');
     assert.equal(await panel.locator('[data-thread-panel-target="createName"]').inputValue(),'Composer draft thread');
     await panel.locator('[data-thread-panel-target="createSubmit"]').click();
+    await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'),{timeout:DELIVERY_WAIT});
     await waitForVisibility(panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:'Composer draft thread'}));
     await panel.getByRole('combobox',{name:'Write a thread reply',exact:true}).fill('Thread draft');await editor.fill('Channel draft');
     await room(fixture.pets_id);await room(654632876);await field(page,'Channel draft');await thread();
-    const reply=panel.getByRole('combobox',{name:'Write a thread reply',exact:true});assert.equal(await reply.inputValue(),'Thread draft');
+    const reply=panel.getByRole('combobox',{name:'Write a thread reply',exact:true});await waitForVisibleProperty(reply,'value','Thread draft');
     await reply.fill('Thread draft sent');await panel.getByRole('button',{name:'Send Reply',exact:true}).click();
     await waitForVisibility(panel.locator('.message__body').filter({hasText:'Thread draft sent'}));
-    await room(fixture.pets_id);await room(654632876);await thread();assert.equal(await reply.inputValue(),'');
+    await room(fixture.pets_id);await room(654632876);await thread();await waitForVisibleProperty(reply,'value','');
   } else throw new Error(`unimplemented composer case ${caseName}`);
 }

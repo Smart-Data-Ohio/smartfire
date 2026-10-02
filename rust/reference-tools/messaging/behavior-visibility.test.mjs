@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createRequire} from 'node:module';
-import {installVisibility,setVisibilityTimeout,visibleCount,visibleMatch,waitForVisibleCount,waitForVisibility,waitForVisibleProperty,waitForVisibleAttribute,actOnVisible} from './behavior-visibility.mjs';
+import {installVisibility,setVisibilityTimeout,visibleCount,visibleMatch,waitForVisibleCount,waitForVisibility,waitForVisibleProperty,waitForVisibleAttribute,actOnVisible,waitForVisibleContentCount} from './behavior-visibility.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 
@@ -81,5 +81,31 @@ test('property, attribute and explicit lookup checks cannot accept transparent m
     await waitForVisibleProperty(page.locator('code'),'textContent','puts :forwarded',{timeout:200});
     await actOnVisible(page.locator('#action'),'click',{timeout:200});
     assert.equal(await page.evaluate(()=>window.clicked),true);
+  } finally {await browser.close();}
+});
+
+
+test('visible descendants and ancestors cannot stand in for the selected element',async()=>{
+  const browser=await chromium.launch({headless:true});
+  try {
+    const context=await browser.newContext();await installVisibility(context);
+    const page=await context.newPage();setVisibilityTimeout(page,100);
+    await page.goto('data:text/html,'+encodeURIComponent(`
+      <article class="message">
+        <h2 style="opacity:0">Design review</h2>
+        <pre><code style="visibility:hidden"><span class="code-token" style="visibility:visible">const</span> value = 1;</code></pre>
+        <div class="message__body" style="visibility:hidden"><div data-reply-target="body" style="visibility:visible">Delivered text</div></div>
+      </article>
+    `));
+    await waitForVisibility(page.locator('.message'));
+    await waitForVisibility(page.locator('.code-token'));
+    await waitForVisibility(page.locator('[data-reply-target="body"]'));
+    await assert.rejects(waitForVisibility(page.locator('h2')),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibility(page.locator('pre code')),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibleContentCount(page.locator('.message__body'),'[data-reply-target="body"]','Delivered text',1,{timeout:100}),{name:'TimeoutError'});
+    await page.locator('[style]').evaluateAll(nodes=>nodes.forEach(node=>node.removeAttribute('style')));
+    await waitForVisibility(page.locator('h2'));
+    await waitForVisibility(page.locator('pre code'));
+    await waitForVisibleContentCount(page.locator('.message__body'),'[data-reply-target="body"]','Delivered text',1,{timeout:100});
   } finally {await browser.close();}
 });

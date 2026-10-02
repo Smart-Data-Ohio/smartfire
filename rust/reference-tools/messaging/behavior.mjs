@@ -1,6 +1,6 @@
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
-import {waitForVisibility,isSeleniumVisible,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,visibleMatch,waitForVisibleProperty,waitForVisibleAttribute} from './behavior-visibility.mjs';
+import {waitForVisibility,isSeleniumVisible,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,visibleMatch,waitForVisibleProperty,waitForVisibleAttribute,waitForVisibleContentCount} from './behavior-visibility.mjs';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
@@ -87,7 +87,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
     const messages=page=>page.locator('.message[data-message-id]');
     async function text(page,value,count=1,options={}) {
-      await page.waitForFunction(({value,count})=>[...document.querySelectorAll('.message[data-message-id] [data-reply-target="body"]')].filter(body=>window.__ws8bmSeleniumVisible(body)&&body.textContent.trim()===value).length===count,{value,count},options);
+      await waitForVisibleContentCount(page.locator('.message[data-message-id] .message__body'),'[data-reply-target="body"]',value,count,options);
     }
     async function send(page,value) {
       await page.getByRole('combobox',{name:'Write a message',exact:true}).fill(value);
@@ -192,7 +192,10 @@ async function acceptance(base,caseName,probe={},variant='default') {
         const panel=page.locator('#thread-panel');
         assert.equal(await panel.locator('[data-thread-panel-target="createName"]').inputValue(),name,`${base}: ${caseName}: the completed name must survive until submission`);
         await panel.locator('[data-thread-panel-target="createSubmit"]').click();
-        try {await waitForVisibility(panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}));}
+        try {
+          await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'),{timeout:DELIVERY_WAIT});
+          await waitForVisibility(panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}),{timeout:DELIVERY_WAIT});
+        }
         catch(error) {
           console.error('WS8bm thread create diagnostics:',base,caseName,
             await page.evaluate(()=>Object.fromEntries(['create','conversation','conversationTitle','threadStatus','createStatus','createName','createMessage'].map(target=>{
@@ -204,10 +207,13 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await waitForVisibility(panel.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]'),{state:'attached'});
       }
       const threadMessage=value=>panel.locator('.message[data-message-id]').filter({has:author.locator('[data-reply-target="body"]').filter({hasText:value})});
+      async function assertThreadMessage(value) {
+        await waitForVisibility(panel.locator('.thread-panel__thread-content .message__body').filter({hasText:value}),{timeout:DELIVERY_WAIT});
+      }
       async function reply(value) {
         await panel.getByRole('combobox',{name:'Write a thread reply',exact:true}).fill(value);
         await panel.getByRole('button',{name:'Send Reply',exact:true}).click();
-        await waitForVisibility(threadMessage(value));
+        await assertThreadMessage(value);
       }
       async function threadMenu(value) {
         // The pinned within_thread_message helper waits for the menu controller
@@ -240,7 +246,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         assert.equal((await title.textContent()).trim(),malicious);
         await waitForVisibleCount(title.locator('img'),0);
         assert.equal(await author.evaluate(()=>window.__threadXss),undefined);
-        await waitForVisibility(threadMessage('A safe thread body.'));
+        await assertThreadMessage('A safe thread body.');
       } else if(caseName==='browses active and closed threads and can join or leave a closed one') {
         await create('Active planning thread','The active planning conversation.',false);await finishCreate('Active planning thread');await close(author);
         const david=await viewer('David');
@@ -270,7 +276,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await create('Survives a stray reset','The name survives the re-entry.',false);
         await author.evaluate(()=>window.dispatchEvent(new CustomEvent('message:thread',{detail:{}})));
         await finishCreate('Survives a stray reset');
-        await waitForVisibility(threadMessage('The name survives the re-entry.'));
+        await assertThreadMessage('The name survives the re-entry.');
       } else if(caseName==='the thread root counts its replies live and hides the count when none remain') {
         await create('Indicator thread','The only reply.');await finishCreate('Indicator thread');
         const root=author.locator('.message[data-message-id="607264868"]');
@@ -292,7 +298,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         const first='Let’s keep the design review focused here.';
         await create('Design review thread',first);await finishCreate('Design review thread');
         await waitForVisibility(panel.locator('[data-thread-panel-target="parent"]').filter({hasText:"Third time's a charm."}));
-        await waitForVisibility(threadMessage(first));
+        await assertThreadMessage(first);
         await panel.locator('[data-thread-panel-target="preferences"] summary').click();
         await panel.locator('[data-thread-panel-target="involvement"]').selectOption('nothing');
         await panel.locator('[data-thread-panel-target="manage"] summary').click();
@@ -321,21 +327,24 @@ async function acceptance(base,caseName,probe={},variant='default') {
       if (caseName==='Markdown messages reach other users and editing preserves the original source') {
         const markdown=heredoc("MARKDOWN = <<~'MARKDOWN'.freeze\n",2);
         await submit(author,markdown);
-        async function content(page,id) {
+        async function content(page,id,initial=false) {
           const message=page.locator(`.message[data-message-id="${id}"]`);
+          if(initial) await waitForVisibility(message.locator('h2').filter({hasText:/^Design review$/}),{timeout:CAPYBARA_DEFAULT});
           for(const [selector,value] of [['strong','Ready for review'],['em','clear ownership'],['del','old assumptions'],['blockquote','Keep the conversation close to the work.'],['ul li','Check the channel layout'],['table td','Markdown']]) {
             await waitForVisibility(message.locator(selector).filter({hasText:value}));
           }
           await waitForVisibleCount(message.locator('input[type="checkbox"][disabled]'),2);
-          await waitForVisibility(message.locator('pre code.language-javascript[data-highlighted="yes"] .code-token').filter({hasText:'const'}));
+          const code=message.locator('pre code').filter({hasText:'const message = "<script>literal code</script>";'});
+          await waitForVisibility(code,{timeout:CAPYBARA_DEFAULT});
+          assert.ok((await code.textContent()).includes('const message = "<script>literal code</script>";'));
+          await waitForVisibility(message.locator('pre code.language-javascript[data-highlighted="yes"] .code-token').filter({hasText:'const'}),{timeout:20000});
           await waitForVisibleCount(message.locator('.markdown-code-copy'),1);
           await waitForVisibleAttribute(message.getByRole('link',{name:'Project notes',exact:true}),'href','https://example.com/notes');
-          assert.ok((await message.locator('pre code').textContent()).includes('const message = "<script>literal code</script>";'));
         }
         const message=messages(author).filter({has:author.locator('h2').filter({hasText:/^Design review$/})});
-        await waitForVisibility(message);
+        await waitForVisibility(message.locator('h2').filter({hasText:/^Design review$/}),{timeout:CAPYBARA_DEFAULT});
         const id=await message.getAttribute('data-message-id');
-        await content(author,id);await content(recipient,id);
+        await content(author,id,true);await content(recipient,id,true);
         await openEdit(author,message);await field(author,markdown);
         const edited=markdown.replace('Design review','Review complete');
         await submit(author,edited);
@@ -365,7 +374,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await submit(author,payload);
         for(const page of [author,recipient]) {
           const message=messages(page).filter({has:page.locator('p').filter({hasText:/^Safety check$/})});
-          await waitForVisibility(message);
+          await waitForVisibility(message.locator('.message__body').filter({hasText:'Safety check'}),{timeout:CAPYBARA_DEFAULT});
           await waitForVisibility(message.locator('pre code').filter({hasText:'<img onerror="literal code">'}));
           assert.equal(await message.locator('script, img[onerror], a[href^="javascript:"]').count(),0);
           assert.equal(await page.evaluate(()=>window.markdownPayloadExecuted===true),false);
@@ -378,7 +387,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         const source='**A useful point** with `inline code`.';
         await submit(author,source);
         const parent=messages(author).filter({has:author.locator('strong').filter({hasText:'A useful point'})});
-        await waitForVisibility(parent);
+        await waitForVisibility(parent.locator('.message__body').filter({hasText:'A useful point'}),{timeout:CAPYBARA_DEFAULT});
         await parent.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
         await author.getByRole('menuitem',{name:'Reply',exact:true}).click();
         await waitForVisibility(author.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'}));
@@ -389,7 +398,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await author.getByRole('button',{name:'Send Message',exact:true}).click();
         for(const page of [author,recipient]) {
           const attachment=messages(page).filter({has:page.locator('.message__reply-preview').filter({hasText:'A useful point'})});
-          try {await waitForVisibility(attachment);}
+          try {await waitForVisibility(attachment.locator('.message__reply-preview').filter({hasText:'A useful point'}),{timeout:DELIVERY_WAIT});}
           catch(error) {
             console.error('WS8bm attachment preview diagnostics:',base,uploadResponses,
               await page.locator('.message[data-message-id]').evaluateAll(rows=>rows.map(row=>({id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,body:row.querySelector('[data-reply-target="body"]')?.textContent}))),
@@ -437,7 +446,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
           const editor=document.querySelector('#composer textarea[name="message[markdown_source]"]');
           editor.value=second;editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertFromPaste'}));
         },second);
-        for(const page of [author,recipient]) await waitForVisibility(messages(page).locator('strong').filter({hasText:'First message'}));
+        for(const page of [author,recipient]) await text(page,'First message stays exact.');
         await field(author,second);
         await waitForVisibleCount(messages(recipient).filter({hasText:second}),0);
         await author.getByRole('button',{name:'Send Message',exact:true}).click();

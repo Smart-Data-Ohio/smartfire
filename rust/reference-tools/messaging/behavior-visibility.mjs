@@ -16,8 +16,13 @@ async function visibleIndices(locator,condition=null) {
   return locator.evaluateAll((elements,condition)=>elements.flatMap((element,index)=>{
     if(!window.__ws8bmSeleniumVisible(element)) return [];
     if(condition) {
-      const actual=condition.kind==='attribute'?element.getAttribute(condition.name):element[condition.name];
-      if(actual!==condition.value) return [];
+      if(condition.kind==='descendant-text') {
+        const child=element.querySelector(condition.selector);
+        if(!child||!window.__ws8bmSeleniumVisible(child)||child.textContent.trim()!==condition.value) return [];
+      } else {
+        const actual=condition.kind==='attribute'?element.getAttribute(condition.name):element[condition.name];
+        if(actual!==condition.value) return [];
+      }
     }
     return [index];
   }),condition);
@@ -39,6 +44,11 @@ async function waitForMatches(locator,accept,options,description,condition=null)
 }
 export async function waitForVisibleCount(locator,count,options={}) {
   await waitForMatches(locator,value=>value===count,{timeout:CAPYBARA_DEFAULT,...options},`count=${count}`);
+}
+// assert_message_text selects .message__body. A visible presentation child
+// cannot substitute for that wrapper (visibility can be overridden below it).
+export async function waitForVisibleContentCount(locator,selector,value,count,options={}) {
+  await waitForMatches(locator,actual=>actual===count,{timeout:CAPYBARA_DEFAULT,...options},`content count=${count}`,{kind:'descendant-text',selector,value});
 }
 export async function visibleMatch(locator,options={}) {
   const indices=await waitForMatches(locator,count=>count>0,options,'visible');
