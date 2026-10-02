@@ -187,3 +187,19 @@ pub(crate) fn json_body_params(
     }
     Ok(result)
 }
+
+/// Other routes keep the already-parsed parameters without decoding them twice.
+pub(crate) fn scoped_json_body_params(
+    method: &campfire_kit::Method,
+    path: &str,
+    raw: &[u8],
+) -> Option<std::result::Result<campfire_kit::ParamMap, campfire_kit::params::ParamError>> {
+    if *method != campfire_kit::Method::POST {
+        return None;
+    }
+    let is_token = crate::controllers::recognize(method, path)
+        .ok()
+        .flatten()
+        .is_some_and(|(route, _)| route.endpoint == "accounts/bots/github_connections#create");
+    is_token.then(|| json_body_params(method, path, raw))
+}

@@ -56,7 +56,7 @@ pub struct ActionHandler<F> {
 /// A request-specific JSON cast, after the ordinary body-size bound. Forms and
 /// multipart uploads retain the standard parser. Other actions can keep it too.
 pub type JsonBodyParser =
-    fn(&Method, &str, &[u8]) -> std::result::Result<ParamMap, params::ParamError>;
+    fn(&Method, &str, &[u8]) -> Option<std::result::Result<ParamMap, params::ParamError>>;
 impl<F> ActionHandler<F> {
     pub fn json_body_parser(mut self, parser: JsonBodyParser) -> Self {
         self.json_body_parser = Some(parser);
@@ -147,7 +147,9 @@ where
         && !parsed.raw.is_empty()
         && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON)
     {
-        parsed.params = parser(&original_method, parts.uri.path(), &parsed.raw);
+        if let Some(params) = parser(&original_method, parts.uri.path(), &parsed.raw) {
+            parsed.params = params;
+        }
     }
     let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip());
     let head = parts.method == Method::HEAD;

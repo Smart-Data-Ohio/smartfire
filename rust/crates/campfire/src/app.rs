@@ -273,7 +273,7 @@ fn router(app: &App, kit: Kit) -> Router {
     };
     let dispatch = || axum::routing::any(
         campfire_kit::action(dispatch_with_fragment_cache)
-            .json_body_parser(controllers::accounts::bots::github_connections::json_body_params),
+            .json_body_parser(controllers::accounts::bots::github_connections::scoped_json_body_params),
     );
     let routes = Router::new()
         .merge(
