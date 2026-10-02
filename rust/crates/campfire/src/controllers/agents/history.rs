@@ -17,11 +17,13 @@ pub async fn approvals(c: &mut Ctx) -> Result {
             AuthenticatedBy::AgentToken | AuthenticatedBy::BotKey
         )
     {
-        return Err(Error::NotFound);
+        return Ok(c.head(StatusCode::NOT_FOUND));
     }
-    let id = agent_id(c)?;
+    let Ok(id) = agent_id(c) else {
+        return Ok(c.head(StatusCode::NOT_FOUND));
+    };
     let user = viewer.clone();
-    let (agent, bot) = c
+    let Some((agent, bot)) = c
         .app()
         .db
         .read(move |conn| {
@@ -39,7 +41,9 @@ pub async fn approvals(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?
-        .ok_or(Error::NotFound)?;
+    else {
+        return Ok(c.head(StatusCode::NOT_FOUND));
+    };
     let filter = c
         .param_str("status")
         .filter(|s| campfire_db::models::agent_approval::STATUSES.contains(s))

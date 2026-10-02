@@ -1,11 +1,131 @@
 //! Rails activity presentation over the owner's permission-filtered ActivityItem APIs.
 use campfire_db::{ActivityItem, Connection, Result, User};
 use campfire_views::activity::Item;
+use rusqlite::OptionalExtension;
+use std::collections::HashMap;
+
+/// Request-local association preload, after the owner's accessibility query.
+pub struct MessageSources {
+    saved: HashMap<i64, i64>,
+    messages: HashMap<i64, campfire_db::Message>,
+}
+impl MessageSources {
+    pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        let saved_ids: Vec<_> = rows
+            .iter()
+            .filter(|row| row.source_type == "SavedItem")
+            .map(|row| row.source_id)
+            .collect();
+        let saved: HashMap<_, _> =
+            campfire_db::models::saved_item::SavedItem::for_ids(conn, &saved_ids)?
+                .into_iter()
+                .map(|saved| (saved.id, saved.message_id))
+                .collect();
+        let ids: Vec<_> = rows
+            .iter()
+            .filter(|row| row.source_type == "Message")
+            .map(|row| row.source_id)
+            .chain(saved.values().copied())
+            .collect();
+        let messages = campfire_db::Message::for_ids(conn, &ids)?
+            .into_iter()
+            .map(|message| (message.id, message))
+            .collect();
+        Ok(Self { saved, messages })
+    }
+    fn message(&self, row: &ActivityItem) -> Option<&campfire_db::Message> {
+        let id = if row.source_type == "SavedItem" {
+            *self.saved.get(&row.source_id)?
+        } else {
+            row.source_id
+        };
+        self.messages.get(&id)
+    }
+}
+
+/// `ActivityItemsHelper#activity_item_source_path`, independent of the JSON source whitelist.
+pub fn destination(conn: &Connection, row: &ActivityItem) -> Result<String> {
+    let messages = MessageSources::load(conn, std::slice::from_ref(row))?;
+    source_path(conn, row, &messages)
+}
+fn source_path(conn: &Connection, row: &ActivityItem, messages: &MessageSources) -> Result<String> {
+    let fallback = || "/activity".to_owned();
+    Ok(match row.source_type.as_str() {
+        "Message" | "SavedItem" => messages
+            .message(row)
+            .map(|message| {
+                if let Some(thread) = message.thread_id {
+                    format!(
+                        "/rooms/{}?thread={thread}&message_id={}",
+                        message.room_id, message.id
+                    )
+                } else {
+                    campfire_routes::room_at_message(message.room_id, message.id)
+                }
+            })
+            .unwrap_or_else(fallback),
+        "WorkThreadEvent" | "BoardSlaNudge" => {
+            // FLAGGED WS12 facts readers, shared with the presentation below.
+            let table = if row.source_type == "WorkThreadEvent" {
+                "work_thread_events"
+            } else {
+                "board_sla_nudges"
+            };
+            let thread_id: Option<i64> = conn
+                .query_row(
+                    &format!("SELECT channel_thread_id FROM {table} WHERE id=?"),
+                    [row.source_id],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            thread_id
+                .map(|id| campfire_db::ChannelThread::find_by_id(conn, id))
+                .transpose()?
+                .flatten()
+                .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
+                .unwrap_or_else(fallback)
+        }
+        "HuddleGrant" => {
+            campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
+                .map(|grant| format!("/rooms/{}", grant.room_id))
+                .unwrap_or_else(fallback)
+        }
+        "Event" => {
+            let event =
+                campfire_db::models::calendar_event::CalendarEvent::find(conn, row.source_id)?;
+            format!("/rooms/{}/events/{}", event.room_id, event.id)
+        }
+        "AgentApproval" => campfire_db::AgentApproval::find(conn, row.source_id)?
+            .map(|approval| format!("/agents/{}/approvals", approval.agent_id))
+            .unwrap_or_else(fallback),
+        "AgentBudgetNotice" => {
+            // FLAGGED WS11 AgentBudgetNotice reader; no mutation is implemented here.
+            let agent_id: Option<i64> = conn
+                .query_row(
+                    "SELECT agent_id FROM agent_budget_notices WHERE id=?",
+                    [row.source_id],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            agent_id
+                .map(|id| campfire_db::Agent::find(conn, id))
+                .transpose()?
+                .flatten()
+                .map(|agent| format!("/account/bots/{}/edit", agent.user_id))
+                .unwrap_or_else(fallback)
+        }
+        "ScheduledMessage" => "/scheduled_messages".into(),
+        "TwoFactorCredential" => "/users/me/profile".into(),
+        "Session" => "/users/me/sessions".into(),
+        _ => fallback(),
+    })
+}
 pub fn item(
     conn: &Connection,
     app: &crate::app::AppState,
     item: &ActivityItem,
     viewer: &User,
+    messages: &MessageSources,
 ) -> Result<Item> {
     let mut result = Item {
         id: item.id,
@@ -31,16 +151,7 @@ pub fn item(
             }
         }
         "Message" | "SavedItem" => {
-            let message_id = if item.source_type == "SavedItem" {
-                conn.query_row(
-                    "SELECT message_id FROM saved_items WHERE id=?",
-                    [item.source_id],
-                    |r| r.get::<_, i64>(0),
-                )?
-            } else {
-                item.source_id
-            };
-            if let Some(message) = campfire_db::Message::find_by_id(conn, message_id)? {
+            if let Some(message) = messages.message(item) {
                 let room = campfire_db::Room::find(conn, message.room_id)?;
                 result.created_at = Some(message.created_at.jiff());
                 result.title = super::accounts::room_display_name(conn, &room, viewer)?;
@@ -349,7 +460,17 @@ pub fn payload(
     row: &ActivityItem,
     viewer: &User,
 ) -> Result<Payload> {
-    let view = item(conn, app, row, viewer)?;
+    let messages = MessageSources::load(conn, std::slice::from_ref(row))?;
+    payload_with_sources(conn, app, row, viewer, &messages)
+}
+pub fn payload_with_sources(
+    conn: &Connection,
+    app: &crate::app::AppState,
+    row: &ActivityItem,
+    viewer: &User,
+    messages: &MessageSources,
+) -> Result<Payload> {
+    let view = item(conn, app, row, viewer, messages)?;
     let mut source = Source {
         kind: row.source_type.clone(),
         id: row.source_id,
@@ -362,12 +483,9 @@ pub fn payload(
     };
     let source = match row.source_type.as_str() {
         "Message" | "SavedItem" => {
-            let id = if row.source_type == "SavedItem" {
-                campfire_db::models::saved_item::SavedItem::find(conn, row.source_id)?.message_id
-            } else {
-                row.source_id
-            };
-            let message = campfire_db::Message::find(conn, id)?;
+            let message = messages
+                .message(row)
+                .ok_or(campfire_db::Error::RecordNotFound("Message"))?;
             source.room_id = Some(message.room_id);
             source.thread_id = message.thread_id;
             source.creator_id = Some(message.creator_id);

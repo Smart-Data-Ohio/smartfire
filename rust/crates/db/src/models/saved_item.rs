@@ -75,6 +75,13 @@ impl SavedItem {
     pub fn find_by_id(conn: &Connection, id: i64) -> Result<Option<Self>> {
         query_one(conn, r#"SELECT "saved_items".* FROM "saved_items" WHERE "saved_items"."id" = ? LIMIT 1"#, [id], Self::from_row)
     }
+    /// `activity_items.preload(:source)` for saved-message reminders.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!("SELECT * FROM saved_items WHERE id IN ({})", sql::placeholders(ids.len())),
+            rusqlite::params_from_iter(ids), Self::from_row)
+    }
 
     pub fn find_by_user_and_message(conn: &Connection, user_id: i64, message_id: i64) -> Result<Option<Self>> {
         query_one(

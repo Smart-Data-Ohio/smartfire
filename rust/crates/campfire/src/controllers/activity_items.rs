@@ -64,9 +64,10 @@ pub async fn index(c: &mut Ctx) -> Result {
             )?;
             let unread = ActivityItem::unread_count(conn, &viewer)? as usize;
             let next = (rows.len() == 100).then(|| rows.last().unwrap().id);
+            let sources = activity::MessageSources::load(conn, &rows)?;
             let payloads = if json {
                 rows.iter()
-                    .map(|i| activity::payload(conn, &app, i, &viewer))
+                    .map(|i| activity::payload_with_sources(conn, &app, i, &viewer, &sources))
                     .collect::<campfire_db::Result<Vec<_>>>()?
             } else {
                 Vec::new()
@@ -75,7 +76,7 @@ pub async fn index(c: &mut Ctx) -> Result {
                 Vec::new()
             } else {
                 rows.iter()
-                    .map(|i| activity::item(conn, &app, i, &viewer))
+                    .map(|i| activity::item(conn, &app, i, &viewer, &sources))
                     .collect::<campfire_db::Result<Vec<_>>>()?
             };
             Ok((items, payloads, unread, next))
@@ -302,21 +303,23 @@ pub async fn open(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     let app = c.app().clone();
     let chosen = c.respond_to(&[&format::HTML, &format::TURBO_STREAM, &format::JSON])?;
-    let payload = c
-        .app()
-        .db
-        .read(move |conn| activity::payload(conn, &app, &item, &viewer))
-        .await
-        .map_err(Error::internal)?;
     if chosen == &format::JSON {
+        let payload = c
+            .app()
+            .db
+            .read(move |conn| activity::payload(conn, &app, &item, &viewer))
+            .await
+            .map_err(Error::internal)?;
         c.json(StatusCode::OK, &payload)
     } else {
+        let destination = c
+            .app()
+            .db
+            .read(move |conn| activity::destination(conn, &item))
+            .await
+            .map_err(Error::internal)?;
         let mut response = c.redirect_to_with(
-            payload
-                .source
-                .as_ref()
-                .map(|s| s.path.as_str())
-                .unwrap_or("/activity"),
+            &destination,
             Redirect {
                 status: Some(StatusCode::SEE_OTHER),
                 ..Default::default()

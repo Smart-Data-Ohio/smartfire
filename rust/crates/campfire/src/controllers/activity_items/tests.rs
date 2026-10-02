@@ -2,6 +2,8 @@
 use crate::controllers::presenters::test_support::{Req, TestApp};
 use axum::http::{Method, StatusCode};
 
+mod review_regressions;
+
 // Rails fixture requests disable forgery verification; remove only those dynamic fields.
 fn page_bytes(html: &str) -> String {
     let forms = regex::Regex::new(r#"<input type="hidden" name="authenticity_token" value="[^"]*"(?: autocomplete="off")? />"#).unwrap().replace_all(html, "");
@@ -72,13 +74,28 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
                 differences.push(name.clone());
             }
         }
-        let expected = case["state"].clone();
+        let expected = case["opened_state"]
+            .as_object()
+            .map(|_| case["opened_state"].clone())
+            .unwrap_or_else(|| case["state"].clone());
+        let state_id = if case["opened_state"].is_object() {
+            case["path"]
+                .as_str()
+                .unwrap()
+                .split('/')
+                .nth(2)
+                .unwrap()
+                .parse()
+                .unwrap()
+        } else {
+            8400000000
+        };
         if expected.is_null() {
             continue;
         }
         t.db()
             .read(move |conn| {
-                let row = campfire_db::ActivityItem::find(conn, 8400000000)?;
+                let row = campfire_db::ActivityItem::find(conn, state_id)?;
                 let stamp = |t: campfire_db::Timestamp| {
                     t.jiff().strftime("%Y-%m-%d %H:%M:%S UTC").to_string()
                 };

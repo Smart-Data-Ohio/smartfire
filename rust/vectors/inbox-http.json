@@ -1156,6 +1156,11 @@
         "read_at": "2026-03-02 16:00:00 UTC",
         "handled_at": null,
         "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
       }
     },
     {
@@ -1176,6 +1181,11 @@
       },
       "state": {
         "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
         "handled_at": null,
         "updated_at": "2026-03-02 16:00:00 UTC"
       }
@@ -1929,6 +1939,897 @@
         "location": null
       },
       "state": null
+    },
+    {
+      "name": "open Message text/html",
+      "method": "post",
+      "path": "/activity/8400000000/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/486777696/@136976342"
+      },
+      "state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Message text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000000/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/486777696/@136976342"
+      },
+      "state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Message application/json",
+      "method": "post",
+      "path": "/activity/8400000000/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000000,\"event_type\":\"mention\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"Message\",\"id\":136976342,\"room_id\":486777696,\"thread_id\":null,\"creator_id\":773523953,\"body\":\"When we are not sure, we are alive.\",\"path\":\"/rooms/486777696/@136976342\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open SavedItem text/html",
+      "method": "post",
+      "path": "/activity/8400000001/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876/@935962043"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open SavedItem text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000001/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876/@935962043"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open SavedItem application/json",
+      "method": "post",
+      "path": "/activity/8400000001/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000001,\"event_type\":\"message_reminder\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"SavedItem\",\"id\":1,\"room_id\":654632876,\"thread_id\":null,\"creator_id\":127326141,\"body\":\"You asked to be reminded about this message: Launch checklist\\n\\nReady for review. @149087659\\n\\n Write the plan\\n\\n Ship the port\\n\\nlet ready = true;\\n\\nArea\\nState\\n\\nParity\\nIn progress\",\"path\":\"/rooms/654632876/@935962043\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open WorkThreadEvent text/html",
+      "method": "post",
+      "path": "/activity/8400000002/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876?thread=1"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open WorkThreadEvent text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000002/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876?thread=1"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open WorkThreadEvent application/json",
+      "method": "post",
+      "path": "/activity/8400000002/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000002,\"event_type\":\"work_update\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"WorkThreadEvent\",\"id\":8300000001,\"room_id\":654632876,\"thread_id\":1,\"creator_id\":149087659,\"body\":\"Status: None → In progress\",\"path\":\"/rooms/654632876?thread=1\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open BoardSlaNudge text/html",
+      "method": "post",
+      "path": "/activity/8400000003/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876?thread=1"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open BoardSlaNudge text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000003/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876?thread=1"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open BoardSlaNudge application/json",
+      "method": "post",
+      "path": "/activity/8400000003/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000003,\"event_type\":\"work_sla\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":null}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open HuddleGrant text/html",
+      "method": "post",
+      "path": "/activity/8400000004/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/186869642"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open HuddleGrant text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000004/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/186869642"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open HuddleGrant application/json",
+      "method": "post",
+      "path": "/activity/8400000004/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000004,\"event_type\":\"huddle_started\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"HuddleGrant\",\"id\":8300000003,\"room_id\":186869642,\"thread_id\":null,\"creator_id\":149087659,\"body\":\"Jason started a huddle\",\"path\":\"/rooms/186869642\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Event text/html",
+      "method": "post",
+      "path": "/activity/8400000005/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876/events/390339825"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Event text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000005/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/rooms/654632876/events/390339825"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Event application/json",
+      "method": "post",
+      "path": "/activity/8400000005/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000005,\"event_type\":\"event_update\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"Event\",\"id\":390339825,\"room_id\":654632876,\"thread_id\":null,\"creator_id\":127326141,\"body\":\"The time changed: March 4, 2026 at 11:00 AM EST.\",\"path\":\"/rooms/654632876/events/390339825\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open AgentApproval text/html",
+      "method": "post",
+      "path": "/activity/8400000006/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/agents/773018776/approvals"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open AgentApproval text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000006/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/agents/773018776/approvals"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open AgentApproval application/json",
+      "method": "post",
+      "path": "/activity/8400000006/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000006,\"event_type\":\"agent_approval_request\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"AgentApproval\",\"id\":1,\"room_id\":654632876,\"thread_id\":null,\"creator_id\":394959859,\"body\":\"Approve a preview deployment\",\"path\":\"/agents/773018776/approvals\",\"status\":\"pending\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open AgentBudgetNotice text/html",
+      "method": "post",
+      "path": "/activity/8400000007/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/account/bots/394959859/edit"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open AgentBudgetNotice text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000007/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/account/bots/394959859/edit"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open AgentBudgetNotice application/json",
+      "method": "post",
+      "path": "/activity/8400000007/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000007,\"event_type\":\"agent_budget_exceeded\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"AgentBudgetNotice\",\"id\":8300000004,\"room_id\":null,\"thread_id\":null,\"creator_id\":394959859,\"body\":\"Bender Bot hit its daily messages budget (/day).\",\"path\":\"/account/bots/394959859/edit\",\"status\":\"messages\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open ScheduledMessage text/html",
+      "method": "post",
+      "path": "/activity/8400000008/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/scheduled_messages"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open ScheduledMessage text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000008/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/scheduled_messages"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open ScheduledMessage application/json",
+      "method": "post",
+      "path": "/activity/8400000008/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000008,\"event_type\":\"scheduled_message_dropped\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":null}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open TwoFactorCredential text/html",
+      "method": "post",
+      "path": "/activity/8400000009/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open TwoFactorCredential text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000009/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open TwoFactorCredential application/json",
+      "method": "post",
+      "path": "/activity/8400000009/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000009,\"event_type\":\"two_factor_lockout\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":null}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Session text/html",
+      "method": "post",
+      "path": "/activity/8400000010/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/users/me/sessions"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Session text/vnd.turbo-stream.html",
+      "method": "post",
+      "path": "/activity/8400000010/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 303,
+      "body": "",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": "http://campfire.test/users/me/sessions"
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
+    },
+    {
+      "name": "open Session application/json",
+      "method": "post",
+      "path": "/activity/8400000010/open",
+      "params": {},
+      "sql": [],
+      "viewer": "david",
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":8400000010,\"event_type\":\"new_sign_in\",\"state\":\"read\",\"read_at\":\"2026-03-02T16:00:00.000Z\",\"handled_at\":null,\"created_at\":\"2026-03-02T16:00:00.000Z\",\"source\":{\"type\":\"Session\",\"id\":481019661,\"room_id\":null,\"thread_id\":null,\"creator_id\":null,\"body\":\"New sign-in to your account from Chrome on macOS, March 2, 2026 at 4:00 PM UTC. Wasn't you? Review your sessions.\",\"path\":\"/users/me/sessions\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      },
+      "state": {
+        "read_at": null,
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      },
+      "opened_state": {
+        "read_at": "2026-03-02 16:00:00 UTC",
+        "handled_at": null,
+        "updated_at": "2026-03-02 16:00:00 UTC"
+      }
     }
   ]
 }

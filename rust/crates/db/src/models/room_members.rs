@@ -28,14 +28,19 @@ pub fn for_room(conn: &Connection, room: i64, viewer: i64, now: Timestamp) -> Re
     let mut settings = UserStatusSettings::for_ids(conn, &ids)?;
     let leases = WorkspacePresenceLease::presence_by_user_id(conn, &ids, now)?;
     let stars = User::find(conn, viewer)?.starred_ids_among(conn, &ids)?;
+    let bot_ids: Vec<_> = users
+        .iter()
+        .filter(|user| user.is_bot())
+        .map(|user| user.id)
+        .collect();
+    let mut agents: std::collections::HashMap<_, _> = Agent::for_users(conn, &bot_ids)?
+        .into_iter()
+        .map(|agent| (agent.user_id, agent))
+        .collect();
     users
         .into_iter()
         .map(|user| {
-            let agent = if user.is_bot() {
-                Agent::for_user(conn, user.id)?
-            } else {
-                None
-            };
+            let agent = agents.remove(&user.id);
             Ok(Member {
                 settings: settings
                     .remove(&user.id)

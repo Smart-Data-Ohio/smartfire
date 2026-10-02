@@ -22,14 +22,13 @@ pub async fn update(c: &mut Ctx) -> Result {
             AuthenticatedBy::AgentToken | AuthenticatedBy::BotKey
         )
     {
-        return Err(Error::NotFound);
+        return Ok(c.head(StatusCode::NOT_FOUND));
     }
-    let id = c
-        .param_str("id")
-        .and_then(concerns::cast_integer)
-        .ok_or(Error::NotFound)?;
+    let Some(id) = c.param_str("id").and_then(concerns::cast_integer) else {
+        return Ok(c.head(StatusCode::NOT_FOUND));
+    };
     let for_lookup = actor.clone();
-    let approval = c
+    let Some(approval) = c
         .app()
         .db
         .read(move |conn| {
@@ -42,7 +41,9 @@ pub async fn update(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?
-        .ok_or(Error::NotFound)?;
+    else {
+        return Ok(c.head(StatusCode::NOT_FOUND));
+    };
     let decision = c
         .params
         .get("decision")

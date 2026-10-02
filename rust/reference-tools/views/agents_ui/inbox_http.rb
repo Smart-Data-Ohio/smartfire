@@ -56,6 +56,12 @@ paging = ["DELETE FROM activity_items"] + room.messages.order(:id).limit(105).ea
 end
 ['', '?before=8600000005', '?before=missing', '?before=999999999', '?before=8400000099'].each { |query| add.call("pagination #{query}", 'get', "/activity.json#{query}", {}, paging) }
 add.call('pagination stream', 'get', '/activity.turbo_stream', {}, paging, 'david', 'text/vnd.turbo-stream.html')
+# Every polymorphic source has an HTML destination even when its JSON source is nil.
+sources.each_with_index do |source, index|
+  %w[text/html text/vnd.turbo-stream.html application/json].each do |accept|
+    add.call("open #{source.class.name} #{accept}", 'post', "/activity/#{8400000000 + index}/open", {}, [], 'david', accept)
+  end
+end
 cases.each do |entry|
   ActiveRecord::Base.transaction do
     setup.each { |sql| ActiveRecord::Base.connection.execute(sql) }
@@ -73,6 +79,9 @@ cases.each do |entry|
       entry[:body] = nil # Production error templates belong to WS9; assert status and no write.
     end
     entry[:state] = ActivityItem.find_by(id: 8400000000)&.attributes&.slice('read_at','handled_at','updated_at')
+    if entry[:name].start_with?('open ')
+      entry[:opened_state] = ActivityItem.find_by(id: entry[:path].split('/')[2])&.attributes&.slice('read_at','handled_at','updated_at')
+    end
     raise ActiveRecord::Rollback
   end
   ActiveSupport::ExecutionContext.clear
