@@ -707,6 +707,8 @@ async fn descriptions_and_private_calendar_copies_match_rails() {
     let Some(app) = TestApp::boot().await else {
         return;
     };
+    // Rails uses the test queue adapter here: inspect producer rows before consumption.
+    let app = app.without_job_runner().await;
     let e = event(&app).await;
     let id = e.id;
     app.db().write(move|tx| {

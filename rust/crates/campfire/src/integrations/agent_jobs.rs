@@ -774,5 +774,8 @@ mod delivery_path_cases;
 mod webhook_key_cases;
 
 #[cfg(test)]
+mod drive_attachment_cases;
+
+#[cfg(test)]
 #[path = "agent_jobs/message_controller_tests.rs"]
 mod message_controller_tests;

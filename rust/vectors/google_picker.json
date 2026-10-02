@@ -1,0 +1,206 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": true,
+      "public": {
+        "client_id": "test-client-id",
+        "api_key": "test-picker-key",
+        "project_number": "123456789012"
+      }
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "not-a-number"
+      },
+      "configured": true,
+      "public": {
+        "client_id": "test-client-id",
+        "api_key": "test-picker-key",
+        "project_number": "not-a-number"
+      }
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": " test-client-id ",
+        "GOOGLE_PICKER_API_KEY": " test-picker-key ",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": " 123456789012 "
+      },
+      "configured": true,
+      "public": {
+        "client_id": " test-client-id ",
+        "api_key": " test-picker-key ",
+        "project_number": " 123456789012 "
+      }
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": null,
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": " ",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "\t\n",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": " ",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": " ",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": null,
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": " ",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "\t\n",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": " ",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": " ",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "123456789012"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": null
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": ""
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": " "
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": "\t\n"
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": " "
+      },
+      "configured": false,
+      "public": null
+    },
+    {
+      "values": {
+        "GOOGLE_CLIENT_ID": "test-client-id",
+        "GOOGLE_PICKER_API_KEY": "test-picker-key",
+        "GOOGLE_CLOUD_PROJECT_NUMBER": " "
+      },
+      "configured": false,
+      "public": null
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "reference": "d7c7de92",
+  "now": 1790769600,
+  "access": [
+    {
+      "microseconds": -1,
+      "expired": true,
+      "snapshot_expired": true,
+      "responses": [
+        [
+          200,
+          "{\"access_token\":\"refreshed-access-token\",\"expires_in\":3600}"
+        ],
+        [
+          200,
+          "{}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/token"
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/boundary"
+        }
+      ]
+    },
+    {
+      "microseconds": 0,
+      "expired": true,
+      "snapshot_expired": true,
+      "responses": [
+        [
+          200,
+          "{\"access_token\":\"refreshed-access-token\",\"expires_in\":3600}"
+        ],
+        [
+          200,
+          "{}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/token"
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/boundary"
+        }
+      ]
+    },
+    {
+      "microseconds": 1,
+      "expired": false,
+      "snapshot_expired": false,
+      "responses": [
+        [
+          200,
+          "{}"
+        ]
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events/boundary"
+        }
+      ]
+    }
+  ],
+  "flow": [
+    {
+      "offset": -1,
+      "valid": false
+    },
+    {
+      "offset": 0,
+      "valid": false
+    },
+    {
+      "offset": 1,
+      "valid": true
+    }
+  ],
+  "renewal": [
+    {
+      "microseconds": -1,
+      "renewed": true
+    },
+    {
+      "microseconds": 0,
+      "renewed": true
+    },
+    {
+      "microseconds": 1,
+      "renewed": false
+    }
+  ],
+  "cache": [
+    {
+      "microseconds": -1,
+      "result": "ok",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-10-01T12%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken"
+        }
+      ]
+    },
+    {
+      "microseconds": 0,
+      "result": "ok",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-10-01T12%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken"
+        }
+      ]
+    },
+    {
+      "microseconds": 1,
+      "result": "fresh",
+      "requests": []
+    }
+  ],
+  "followup": [
+    {
+      "microseconds": -1,
+      "claimed": true
+    },
+    {
+      "microseconds": 0,
+      "claimed": true
+    },
+    {
+      "microseconds": 1,
+      "claimed": false
+    }
+  ]
+}

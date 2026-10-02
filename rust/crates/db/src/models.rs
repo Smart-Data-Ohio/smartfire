@@ -36,6 +36,7 @@ pub mod calendar_event;
 pub mod calendar_dispatch;
 pub mod direct_room;
 pub mod first_run;
+pub mod google_identity;
 pub mod huddle_cleanup;
 pub mod huddle_grant;
 pub mod huddle_effects;
@@ -118,6 +119,18 @@ pub mod room_delete;
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
 
+pub mod google_calendar;
+
+pub mod google_account;
+
+pub mod google_drive_link;
+
+pub mod google_connection;
+
+pub mod drive_recipients;
+
+pub mod google_meeting_cache;
+pub mod google_entry;
 pub use agent_credential::{AgentCredential, CredentialChanges, NewCredential};
 pub use agent_grant::{AgentGrant, GrantChanges, NewGrant};
 pub use agent_approval::{AgentApproval, NewApproval};
