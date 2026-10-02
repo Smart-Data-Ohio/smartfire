@@ -1,5 +1,5 @@
-//! The standalone ChannelThreadsController templates. Conversation/composer integration and
-//! populated work/board/PR sections are separate seams with their feature owners.
+pub mod board;
+// The standalone and conversation templates share message composition with board posts.
 use askama::Template;
 use crate::{ViewContext, messages::MessageItem};
 use crate::helpers as h;

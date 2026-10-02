@@ -199,784 +199,784 @@
       "line": 24,
       "test": "handoff_work hands off through the shared service",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 40,
       "test": "handoff_work denies a thread the agent does not own",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 51,
       "test": "handoff_work denies a missing manage_threads grant",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 61,
       "test": "handoff_work denies an ineligible receiver",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 71,
       "test": "handoff_work denies a receiver missing read_messages",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 82,
       "test": "handoff_work denies a kill-switched receiver",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 93,
       "test": "handoff_work rejects missing arguments",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 100,
       "test": "handoff_work shares its throttle bucket with the rest endpoint",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 14,
       "test": "creates a post with defaults and returns the work payload",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 53,
       "test": "creates a post with tags, status, run_url, and a human owner",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 83,
       "test": "creates a post with an array of tags",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 96,
       "test": "creates a post owned by another agent through the assignment path",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 115,
       "test": "owner defaults to the agent itself, like a blank owner_id",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 139,
       "test": "a first message writes the posted ledger row and notifies the board",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 157,
       "test": "a messageless post still assigns the owner without a posted row",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 176,
       "test": "rejects invalid posts with 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 207,
       "test": "requires post_messages and manage_threads in the board",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 229,
       "test": "requires post_messages even with manage_threads",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 241,
       "test": "is 404 for rooms the agent is not a member of",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 256,
       "test": "is 422 for non-board rooms",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 272,
       "test": "rejects session and bot-key requests",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 288,
       "test": "lists the board's open posts newest activity first",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 312,
       "test": "a reply moves the post to the top of the list",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 328,
       "test": "lists by single status, done, and all",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 350,
       "test": "rejects invalid list filters with 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 360,
       "test": "lists by owner me, agents, and id",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 382,
       "test": "lists by tag",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 395,
       "test": "caps the list at 100 posts",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 406,
       "test": "listing requires read_messages",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 416,
       "test": "a legacy agent without grants can list but cannot create",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 430,
       "test": "listing is 404 once the agent leaves the board",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 438,
       "test": "creation, listing, and event delivery share one work payload",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 12,
       "test": "list shows only owned threads newest first with the work fields",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 33,
       "test": "list is capped at 100 threads",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 44,
       "test": "list only includes rooms where the agent holds read_messages",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 63,
       "test": "list is Bearer-only and empty without owned threads",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 75,
       "test": "show returns one owned thread",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 88,
       "test": "work links omit a private pull request's title and branches unless the owner can read it",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 114,
       "test": "show includes links with pull request, event, and drive entries",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 158,
       "test": "list includes links on owned threads",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 173,
       "test": "show is 404 for threads the agent does not own",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 184,
       "test": "patch changes the status and records the note in work history",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 216,
       "test": "patch is 404 for threads the agent does not own",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 228,
       "test": "list excludes rooms the agent no longer belongs to",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 247,
       "test": "show and patch are 404 once the agent is no longer a room member",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 262,
       "test": "patch is 403 without manage_threads in the thread room",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 276,
       "test": "patch is 403 when manage_threads covers another room",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 289,
       "test": "patch rejects invalid statuses and long notes with 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 311,
       "test": "patch cannot reassign, convert, or stop tracking",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 326,
       "test": "patch updates tags and run_url alongside the status",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 345,
       "test": "patch updates tags alone in array and string forms",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 371,
       "test": "patch updates run_url alone and blank clears it",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 390,
       "test": "patch rejects invalid tags and run_url with 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 413,
       "test": "patch cannot stop tracking with a blank status",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 426,
       "test": "patch with only a note and no field is 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 438,
       "test": "patch tags without manage_threads is 403",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 451,
       "test": "put replaces the pinned result and records the event",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 476,
       "test": "put result requires ownership and manage_threads",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 499,
       "test": "put result rejects missing markdown and overlong results with 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 522,
       "test": "put result checks ownership and grants before markdown presence",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 543,
       "test": "put result with blank markdown clears",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 560,
       "test": "put result with unchanged markdown writes nothing",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 579,
       "test": "put result reaches the human inbox as work_update",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 595,
       "test": "patch and put result are Bearer-only",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 613,
       "test": "a revoked read grant hides an owned thread from show, update, and result",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 637,
       "test": "a read grant for another room does not unlock an owned thread",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 647,
       "test": "a workspace-wide read grant still reads an owned thread",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 658,
       "test": "a revoked credential is 401",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 14,
       "test": "assignment appears in event polling with the work payload",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 34,
       "test": "assignment work payload includes links",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 51,
       "test": "unassignment appears in event polling",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 64,
       "test": "ack works on work rows",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 75,
       "test": "assignment enqueues the webhook instead of blocking on it",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 97,
       "test": "assignment posts no webhook without read_messages",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 113,
       "test": "polling omits work rows for rooms the agent lost read_messages in",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 128,
       "test": "polling omits work rows after membership removal",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 142,
       "test": "work events do not count toward the message rate limit",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 25,
       "test": "an agent hands off its thread with a context package",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 45,
       "test": "the receiver polls the handoff with its context package",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 64,
       "test": "the receiver acks the handoff row",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 76,
       "test": "the handoff enqueues the receiver webhook with the package",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 92,
       "test": "a thread the agent does not own is 404",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 103,
       "test": "a missing manage_threads grant is 403",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 114,
       "test": "a human session is 403",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 124,
       "test": "an ineligible receiver is 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 135,
       "test": "a receiver missing manage_threads is 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 146,
       "test": "a receiver missing read_messages is 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 158,
       "test": "handing off to the current owner is 422",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 167,
       "test": "an over-capped package is 422 and keeps the owner",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 176,
       "test": "handoffs throttle at 60 a minute per credential",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 12,
       "test": "new post form renders in boards and 404s in channels and for non-members",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_read_tests.rs: 29 complete Rails HTTP bodies, including new forms, pages, permissions, links/history/result, pane/anchors and missing memberships."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 27,
       "test": "creates a post with a first message, owner, status, and tags",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 50,
       "test": "creates a post without a first message and defaults to planned",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 68,
       "test": "creates a post with an agent owner through the assignment path",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 87,
       "test": "rejects posts with invalid titles, owners, statuses, and tags",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 118,
       "test": "non-members cannot create posts",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 128,
       "test": "a new post notifies everything-followers and always the human owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 151,
       "test": "a messageless post with an owner still writes the assignment event and notifies the owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -984,23 +984,23 @@
       "test": "a messageless post creates no inbox items but marks the board unread",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 180,
       "test": "post owner, creator, board creator, and admins can change the status",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 197,
       "test": "post creator, board creator, and admins can assign the owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1008,7 +1008,7 @@
       "test": "the owning agent can change the status but cannot reassign",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1016,47 +1016,47 @@
       "test": "the owning agent without manage_threads cannot change the status",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 246,
       "test": "post owner can edit the title and tags like the status managers",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 266,
       "test": "result edits follow the status rule and write a result_updated event",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 288,
       "test": "stopping work tracking is rejected for posts",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 301,
       "test": "auto-archive changes are rejected for posts",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 309,
       "test": "only the board creator and admins can close, lock, or delete a post",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1064,7 +1064,7 @@
       "test": "members can reply in a post and join or leave it from the page",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1072,7 +1072,7 @@
       "test": "any member can link and unlink but non-members cannot",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1080,7 +1080,7 @@
       "test": "board page renders the list with rows, filters, and a new-post link",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1088,7 +1088,7 @@
       "test": "board index pages at fifty posts with a load more link",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1096,7 +1096,7 @@
       "test": "board rows and containers carry filter data for live updates",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1104,7 +1104,7 @@
       "test": "rendering the board index costs no extra queries per post",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1112,23 +1112,23 @@
       "test": "board rendering groups posts into read-only status columns",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 513,
       "test": "post payloads do not advertise removing work tracking",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 530,
       "test": "post page shows the board header, result, and manage controls without tracking controls",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "channel_threads/board_read_tests.rs: 29 complete Rails HTTP bodies, including new forms, pages, permissions, links/history/result, pane/anchors and missing memberships."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1136,7 +1136,7 @@
       "test": "a status change replaces the list row and moves the column row",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1144,7 +1144,7 @@
       "test": "a new post prepends into the board list and its status column",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1152,7 +1152,7 @@
       "test": "a tag change replaces the post row over the room stream",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1160,7 +1160,7 @@
       "test": "deleting a post removes its rows instead of re-rendering them",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1168,7 +1168,7 @@
       "test": "deleting a channel thread broadcasts no board row remove",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1176,7 +1176,7 @@
       "test": "bot posting API returns 422 in a board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1184,7 +1184,7 @@
       "test": "the board creator sees the automations page",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1192,7 +1192,7 @@
       "test": "an administrator sees the automations page",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1200,7 +1200,7 @@
       "test": "a plain member is forbidden",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1208,7 +1208,7 @@
       "test": "a non-member is redirected",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1216,7 +1216,7 @@
       "test": "creating a tag rule audits the change",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1224,7 +1224,7 @@
       "test": "creating a tag rule rejects an invalid tag",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1232,7 +1232,7 @@
       "test": "creating a tag rule rejects an ineligible assignee",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1240,7 +1240,7 @@
       "test": "removing a tag rule audits the change",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1248,7 +1248,7 @@
       "test": "removing an unknown rule redirects with an alert",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1256,7 +1256,7 @@
       "test": "saving sla timers upserts rules and audits each change",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1264,7 +1264,7 @@
       "test": "the automations page offers no done row",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1272,7 +1272,7 @@
       "test": "saving sla timers refuses a done rule",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1280,7 +1280,7 @@
       "test": "saving sla timers with an invalid threshold saves nothing",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1288,7 +1288,7 @@
       "test": "blanking a status removes its rule",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1296,135 +1296,135 @@
       "test": "re-saving unchanged timers writes no audit row",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 8,
       "test": "show redirects to get general show",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 15,
       "test": "new",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 20,
       "test": "create",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 35,
       "test": "create prepends the board row into the boards section",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 45,
       "test": "create forbidden by non-admin when account restricts creation to admins",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 54,
       "test": "create allowed for members when the account does not restrict creation",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 62,
       "test": "update with membership revisions",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 75,
       "test": "update replaces the board row and header",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 89,
       "test": "a non-administrator creator can manage members of their own board",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 102,
       "test": "only admins or creators can update",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 114,
       "test": "remove yourself",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 126,
       "test": "non-members cannot see the board page",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 134,
       "test": "non-members cannot reach the board namespace",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 145,
       "test": "open and closed rooms cannot be converted to boards",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 155,
       "test": "boards cannot be converted through the open or closed namespaces",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/rooms/boards_controller_test.rb",
       "line": 168,
       "test": "a direct room can't be converted to a board and have its participants revised",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: all 16 declarations, actual sessions, CSRF, membership/audit rows and real Cable; boards_read_tests.rs: full Rails form/error responses."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1432,7 +1432,7 @@
       "test": "a manager opens the handoff form",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1440,7 +1440,7 @@
       "test": "the current owner opens the handoff form",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1448,7 +1448,7 @@
       "test": "a plain member is forbidden",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1456,7 +1456,7 @@
       "test": "a non-member gets 404",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1464,7 +1464,7 @@
       "test": "an untracked thread is 422",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1472,7 +1472,7 @@
       "test": "a person hands off with a context package",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1480,7 +1480,7 @@
       "test": "a manager hands off a thread owned by someone else",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1488,7 +1488,7 @@
       "test": "handoff answers json with the work payload and package",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1496,7 +1496,7 @@
       "test": "handoff rejects an agent outside the room",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1504,7 +1504,7 @@
       "test": "handoff rejects a receiver missing manage_threads",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1512,7 +1512,7 @@
       "test": "handoff rejects the current owner",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1520,7 +1520,7 @@
       "test": "handoff rejects an over-capped package",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/handoffs_controller_test.rb",
@@ -1528,7 +1528,7 @@
       "test": "the handoff summary renders escaped in work history",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1536,7 +1536,7 @@
       "test": "index renders the panel link box for a room member",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1544,7 +1544,7 @@
       "test": "a non-manager member can open the link box",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1552,7 +1552,7 @@
       "test": "index is 404 for non-members and unknown threads",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1560,7 +1560,7 @@
       "test": "index is 422 for a thread without work tracking",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1568,7 +1568,7 @@
       "test": "linking a pull request resolves through for_reference and enqueues a card fetch",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1576,7 +1576,7 @@
       "test": "linking a pull request is 422 without a PR url",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1584,7 +1584,7 @@
       "test": "linking an event in the same room",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1592,7 +1592,7 @@
       "test": "linking a cancelled event in the same room still works",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1600,7 +1600,7 @@
       "test": "linking an event from another room is 404",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1608,7 +1608,7 @@
       "test": "linking an event without a choice is 422",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1616,7 +1616,7 @@
       "test": "linking a drive file without credentials stores the url alone",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1624,7 +1624,7 @@
       "test": "linking a drive file caches the name when credentials resolve it",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1632,7 +1632,7 @@
       "test": "linking a drive file stores the url alone when resolution fails",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1640,7 +1640,7 @@
       "test": "linking a drive file is 422 for an unrecognised url",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1648,7 +1648,7 @@
       "test": "linking with an unknown kind is 422",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1656,7 +1656,7 @@
       "test": "linking a duplicate is 422",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1664,7 +1664,7 @@
       "test": "a non-manager member can add and remove links",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1672,7 +1672,7 @@
       "test": "removing a link of each kind refreshes every box",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1680,7 +1680,7 @@
       "test": "removing an unknown link is 404",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1688,7 +1688,7 @@
       "test": "adding and removing is 404 for non-members",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1696,7 +1696,7 @@
       "test": "adding and removing is 422 without work tracking",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
@@ -1704,31 +1704,31 @@
       "test": "html requests redirect back to the thread",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/users/sidebars_boards_test.rb",
       "line": 10,
       "test": "boards list in their own section between channels and voice",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: sidebar section order, unread viewer/creator rows, creation policy."
     },
     {
       "file": "test/controllers/users/sidebars_boards_test.rb",
       "line": 25,
       "test": "board rows show unread state and new members see the board",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: sidebar section order, unread viewer/creator rows, creation policy."
     },
     {
       "file": "test/controllers/users/sidebars_boards_test.rb",
       "line": 37,
       "test": "new board control follows room creation permissions",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "controllers/rooms/boards_rails_cases.rs: sidebar section order, unread viewer/creator rows, creation policy."
     },
     {
       "file": "test/controllers/users/stars_controller_test.rb",
@@ -1856,7 +1856,7 @@
       "test": "boards-only filter lists board posts with links to the post page",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/work_threads_boards_test.rb",
@@ -1864,7 +1864,7 @@
       "test": "channel work rows keep linking to the thread panel",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
@@ -1872,7 +1872,7 @@
       "test": "global work list filters by state and current room access",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
@@ -1880,7 +1880,7 @@
       "test": "work page explains what work threads are and how to start one",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
@@ -1888,7 +1888,7 @@
       "test": "owned-by-agents filter lists agent-owned work with the agent badge",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
@@ -1896,7 +1896,7 @@
       "test": "work list rows hide the empty link box but show linked items",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/work_threads_controller_test.rb",
@@ -1904,7 +1904,7 @@
       "test": "global work access requires an active human room member",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/helpers/activity_items_helper_test.rb",
@@ -1943,8 +1943,8 @@
       "line": 17,
       "test": "an agent post flows from creation through reply to result",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -1952,7 +1952,7 @@
       "test": "a private pull request link shows its reference and state but never its title",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -1960,7 +1960,7 @@
       "test": "the thread header renders each link kind with remove controls and link forms",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -1968,7 +1968,7 @@
       "test": "the work list row renders each link kind with remove controls",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -1976,7 +1976,7 @@
       "test": "a drive link without a cached title shows the plain url",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -1984,7 +1984,7 @@
       "test": "drive links fall back to the plain link without credentials",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -1992,7 +1992,7 @@
       "test": "the event picker lists upcoming room events soonest first without linked ones",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
@@ -2000,7 +2000,7 @@
       "test": "linking creates no inbox items",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/jobs/room/destroy_job_board_automations_test.rb",
@@ -2008,7 +2008,7 @@
       "test": "destroying a board with automations and a posted digest leaves no orphans",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/jobs/room/destroy_job_board_automations_test.rb",
@@ -2016,7 +2016,7 @@
       "test": "destroying a board with digests, scheduled messages, and polls leaves no orphans",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/activity_item_approvals_test.rb",
@@ -2056,7 +2056,7 @@
       "test": "non-deciders never receive an inbox item",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/activity_item_test.rb",
@@ -2143,72 +2143,72 @@
       "line": 8,
       "test": "sets presence with a TTL",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
       "line": 16,
       "test": "blank clears presence",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
       "line": 24,
       "test": "expired presence reads as cleared",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
       "line": 32,
       "test": "presence is capped in length",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
       "line": 38,
       "test": "shared service sets and clears",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
       "line": 50,
       "test": "shared service rejects overlong text",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agents/work_payload_test.rb",
       "line": 13,
       "test": "carries the full work shape for a channel thread",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agents/work_payload_test.rb",
       "line": 37,
       "test": "marks human owners and null owners",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/agents/work_payload_test.rb",
       "line": 52,
       "test": "carries board identity, tags, run_url, and links for a post",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2216,7 +2216,7 @@
       "test": "a stale post produces one quiet digest note",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2224,7 +2224,7 @@
       "test": "the digest escapes titles and names instead of rendering markdown",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2232,7 +2232,7 @@
       "test": "the digest fires once per day and again the next day",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2240,7 +2240,7 @@
       "test": "a repeat sweep is a silent no-op that logs no error",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2248,7 +2248,7 @@
       "test": "no stale posts posts nothing and claims nothing",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2256,7 +2256,7 @@
       "test": "done posts never appear even with a legacy done rule",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2264,7 +2264,7 @@
       "test": "boards without rules are skipped",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2272,7 +2272,7 @@
       "test": "the digest note stays quiet: no inbox, unread, or agent delivery",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/digest_dispatcher_test.rb",
@@ -2280,7 +2280,7 @@
       "test": "the digest note never streams",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
@@ -2288,7 +2288,7 @@
       "test": "pushes the nudge payload to the recipient subscriptions",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
@@ -2296,7 +2296,7 @@
       "test": "nudge and escalation notifications can be built by the delivery pool",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
@@ -2304,7 +2304,7 @@
       "test": "escalations push with the escalated prefix",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
@@ -2312,7 +2312,7 @@
       "test": "skips a recipient who left the board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
@@ -2320,7 +2320,7 @@
       "test": "dnd silences the push like other reminders",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2328,7 +2328,7 @@
       "test": "a post past the nudge threshold notifies its owner once",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2336,7 +2336,7 @@
       "test": "a repeat sweep opens no write transaction for claimed crossings",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2344,7 +2344,7 @@
       "test": "a post past the escalation threshold escalates to the board creator",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2352,7 +2352,7 @@
       "test": "an unassigned post past both thresholds claims twice but pushes once",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2360,7 +2360,7 @@
       "test": "a post owned by the board creator pushes once when both stages fire",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2368,7 +2368,7 @@
       "test": "distinct recipients each get their own push in one sweep",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2376,7 +2376,7 @@
       "test": "the escalation fires on a later sweep when only the nudge was due",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2384,7 +2384,7 @@
       "test": "a status change resets the timers for the new crossing",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2392,7 +2392,7 @@
       "test": "a post that left the status before the sweep fires nothing",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2400,7 +2400,7 @@
       "test": "an agent-owned post nudges the agent's human owner",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2408,7 +2408,7 @@
       "test": "an unassigned post nudges the board creator",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2416,7 +2416,7 @@
       "test": "a post under the threshold fires nothing",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2424,7 +2424,7 @@
       "test": "a legacy done rule fires nothing for done posts",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2432,7 +2432,7 @@
       "test": "a post in an unruled status fires nothing",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2440,7 +2440,7 @@
       "test": "a deleted board fires nothing",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_automations/sla_dispatcher_test.rb",
@@ -2448,7 +2448,7 @@
       "test": "a revoked recipient loses the inbox item but the claim holds",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2456,7 +2456,7 @@
       "test": "creates a rule per status",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2464,7 +2464,7 @@
       "test": "covers the blocked status like any other",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2472,7 +2472,7 @@
       "test": "rejects the done status",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2480,7 +2480,7 @@
       "test": "rejects an unknown status",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2488,7 +2488,7 @@
       "test": "rejects a duplicate status on the same board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2496,7 +2496,7 @@
       "test": "rejects non-positive and over-long thresholds",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2504,7 +2504,7 @@
       "test": "rejects an escalation at or before the nudge",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_sla_rule_test.rb",
@@ -2512,7 +2512,7 @@
       "test": "rejects a non-board room",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2520,7 +2520,7 @@
       "test": "assigns to a human member",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2528,7 +2528,7 @@
       "test": "normalises the tag",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2536,7 +2536,7 @@
       "test": "assigns to an eligible agent member",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2544,7 +2544,7 @@
       "test": "rejects a tag outside the thread tag format",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2552,7 +2552,7 @@
       "test": "rejects a duplicate tag on the same board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2560,7 +2560,7 @@
       "test": "allows the same tag on another board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2568,7 +2568,7 @@
       "test": "rejects a non-board room",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2576,7 +2576,7 @@
       "test": "rejects an assignee outside the board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2584,7 +2584,7 @@
       "test": "rejects a suspended agent assignee",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2592,7 +2592,7 @@
       "test": "rejects an agent assignee without post_messages",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/board_tag_assignment_test.rb",
@@ -2600,239 +2600,239 @@
       "test": "rejects an agent assignee without read_messages",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 16,
       "test": "an active member agent with post_messages is an eligible work owner",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 25,
       "test": "a legacy agent keeps post eligibility through the fallback",
-      "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "status": "ported",
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 33,
       "test": "a suspended agent is rejected with a validation error",
-      "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "status": "ported",
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 45,
       "test": "a non-member agent is rejected with a validation error",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 57,
       "test": "an agent without post_messages is rejected with a validation error",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 68,
       "test": "a human outside the parent room keeps the human eligibility error",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 77,
       "test": "a bot without an agent row is rejected with a validation error",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 89,
       "test": "suspending the agent or revoking its membership reads as an unavailable owner",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 110,
       "test": "assignment writes one work_assigned row in the same transaction as the work event",
-      "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "status": "ported",
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 130,
       "test": "unassignment writes one work_unassigned row",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 146,
       "test": "unassignment after the agent left the room writes the ledger row but enqueues no webhook",
-      "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "status": "ported",
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 159,
       "test": "assignment webhooks are enqueued after the outermost transaction commits",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 171,
       "test": "reassignment to a human writes work_unassigned and no work_assigned",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 182,
       "test": "reassignment between agents notifies both",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 195,
       "test": "status-only changes and human-to-human assignment write no agent rows",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 210,
       "test": "assignment rows roll back when the work event fails",
-      "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "status": "ported",
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 222,
       "test": "the work event rolls back when the assignment row fails",
-      "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "status": "ported",
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 234,
       "test": "an agent status update records a work event with the note",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 250,
       "test": "an agent status update reaches the inbox through the human path",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 272,
       "test": "an agent tags update replaces the set without touching the status",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 282,
       "test": "an agent work update validates tags and run_url",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 300,
       "test": "an agent result update records the event with the agent as actor",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 313,
       "test": "an agent cannot write the result of work it does not own",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 324,
       "test": "an agent cannot move work it does not own",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 335,
       "test": "an agent status update rejects unknown statuses and long notes",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 353,
       "test": "two agents assigning posts to each other stop at the hop limit",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 388,
       "test": "deleting an agent-owned thread emits work_unassigned",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 416,
       "test": "deleting a thread without an agent owner emits nothing",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 422,
       "test": "a human assignment starts a new root at hop 0",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2840,7 +2840,7 @@
       "test": "a new tag auto-assigns an unowned post to a person",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2848,7 +2848,7 @@
       "test": "adding a tag later auto-assigns too",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2856,7 +2856,7 @@
       "test": "auto-assign to an agent writes its work_assigned ledger row",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2864,7 +2864,7 @@
       "test": "auto-assign never overrides a human assignment",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2872,7 +2872,7 @@
       "test": "auto-assign never overrides an agent assignment",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2880,7 +2880,7 @@
       "test": "auto-assign skips a rule whose assignee left the board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2888,7 +2888,7 @@
       "test": "auto-assign skips an agent that lost read_messages",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2896,7 +2896,7 @@
       "test": "auto-assign skips a suspended agent",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2904,7 +2904,7 @@
       "test": "auto-assign ignores channel threads",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",
@@ -2912,79 +2912,79 @@
       "test": "work_status_changed_at stamps on every status change",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 10,
       "test": "board posts require work tracking while channel threads stay optional",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 27,
       "test": "close_stale_in skips board posts but still archives channel threads",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 42,
       "test": "tag writer normalises names",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 52,
       "test": "tag writer accepts an array of names as well as a comma-separated string",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 66,
       "test": "tag count, length, and format are validated without destroying existing tags",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 86,
       "test": "tag edits replace the previous set",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 101,
       "test": "result edits record a result_updated event with an excerpt",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 127,
       "test": "result edits notify the creator and owner other than the actor",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 149,
       "test": "result edits require status permission and respect the length limit",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
@@ -2992,55 +2992,55 @@
       "test": "run_url accepts only short https URLs",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "WS12 board post/result/work slice. Completed mutation cases are mapped below; this remaining declaration needs its own complete assertion set (including run URL and other combined scenarios)."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 191,
       "test": "board post query filters by status, owner, and tag",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 210,
       "test": "board posts page cumulatively at fifty per page with a clamped page",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 227,
       "test": "board page counts group replies and links without per-row queries",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 244,
       "test": "board owner availability matches work_owner_active? for every owner kind",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/work_read_test.rs covers every assigned owner kind, membership removal and revoked agent grants, plus HTTP owner labels."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 274,
       "test": "agent owner filter matches update-work eligibility",
       "status": "deferred",
-      "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "Eligible owner reads and assignment writes exist. This declaration has not been mapped to a complete assertion set; its remaining combined scenarios are still WS12-owned."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 290,
       "test": "board posts skip muted members for unread and broadcast only to marked members",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3048,7 +3048,7 @@
       "test": "hand_off! transfers ownership and records the handoff in work history",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3056,7 +3056,7 @@
       "test": "hand_off! writes a work_handed_off ledger row with the context snapshot",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3064,7 +3064,7 @@
       "test": "hand_off! unassigns a previous agent owner",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3072,7 +3072,7 @@
       "test": "hand_off! records work.handoff in the audit log",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3080,7 +3080,7 @@
       "test": "hand_off! enqueues the receiver webhook after commit",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3088,7 +3088,7 @@
       "test": "hand_off! rejects the current owner",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3096,7 +3096,7 @@
       "test": "hand_off! refuses an agent sender that no longer owns the thread",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3104,7 +3104,7 @@
       "test": "hand_off! refuses a human sender who can no longer manage the thread",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3112,7 +3112,7 @@
       "test": "hand_off! rejects untracked threads",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3120,7 +3120,7 @@
       "test": "hand_off! rejects an over-capped package",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/channel_thread_handoff_test.rb",
@@ -3128,7 +3128,7 @@
       "test": "hand_off! validates receiver ownership eligibility on save",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/message_board_test.rb",
@@ -3136,55 +3136,55 @@
       "test": "root messages are rejected in a board but thread replies are allowed",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/rooms/board_test.rb",
       "line": 4,
       "test": "type predicate",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs: exclusive type predicates, board/non-direct scopes, mentions defaults and user deactivation."
     },
     {
       "file": "test/models/rooms/board_test.rb",
       "line": 13,
       "test": "boards scope and channel queries include board rooms",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs: exclusive type predicates, board/non-direct scopes, mentions defaults and user deactivation."
     },
     {
       "file": "test/models/rooms/board_test.rb",
       "line": 21,
       "test": "default involvement for new members is mentions",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs: exclusive type predicates, board/non-direct scopes, mentions defaults and user deactivation."
     },
     {
       "file": "test/models/rooms/board_test.rb",
       "line": 28,
       "test": "deactivating a user removes their board memberships",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs: exclusive type predicates, board/non-direct scopes, mentions defaults and user deactivation."
     },
     {
       "file": "test/models/thread_tag_test.rb",
       "line": 9,
       "test": "name is required, lowercase, and limited in length",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs: real required parent, syntax/length, per-post uniqueness; channel_thread_test.rs retains original tag tests."
     },
     {
       "file": "test/models/thread_tag_test.rb",
       "line": 25,
       "test": "names are unique per post but reusable across posts",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "crates/db/src/tests/board_test.rs: real required parent, syntax/length, per-post uniqueness; channel_thread_test.rs retains original tag tests."
     },
     {
       "file": "test/models/user_star_test.rb",
@@ -3264,7 +3264,7 @@
       "test": "normalises link and question collections",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3272,7 +3272,7 @@
       "test": "requires a summary within the cap",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3280,7 +3280,7 @@
       "test": "caps links and requires http urls",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3288,7 +3288,7 @@
       "test": "caps open questions",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3296,7 +3296,7 @@
       "test": "receiver_error accepts an eligible agent",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3304,7 +3304,7 @@
       "test": "receiver_error rejects non-agents and unknown agents",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3312,7 +3312,7 @@
       "test": "receiver_error rejects an agent outside the room",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3320,7 +3320,7 @@
       "test": "receiver_error rejects a suspended agent",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3328,7 +3328,7 @@
       "test": "receiver_error rejects an agent missing post_messages",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3336,7 +3336,7 @@
       "test": "receiver_error rejects an agent missing manage_threads",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3344,7 +3344,7 @@
       "test": "receiver_error rejects an agent missing read_messages",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3352,7 +3352,7 @@
       "test": "receiver_error rejects the current owner",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_handoff_test.rb",
@@ -3360,7 +3360,7 @@
       "test": "payload carries the context package",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3368,7 +3368,7 @@
       "test": "pull request links require only the pull request",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3376,7 +3376,7 @@
       "test": "pull request links reject other columns",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3384,7 +3384,7 @@
       "test": "event links require only the event",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3392,7 +3392,7 @@
       "test": "event links reject other columns",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3400,7 +3400,7 @@
       "test": "event links must belong to the thread's room",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3408,7 +3408,7 @@
       "test": "drive file links require the url and keep an optional cached title",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3416,7 +3416,7 @@
       "test": "drive file links reject other columns",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3424,7 +3424,7 @@
       "test": "long drive titles truncate to the column limit",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3432,7 +3432,7 @@
       "test": "links are unique per thread",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3440,7 +3440,7 @@
       "test": "the same objects link to other threads",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/models/work_thread_link_test.rb",
@@ -3448,7 +3448,7 @@
       "test": "destroying the thread destroys its links",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
@@ -3638,9 +3638,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 209,
       "test": "work updates for one thread collapse into a single item",
-      "status": "deferred",
-      "owner": "WS12 with existing WS17 message candidates",
-      "evidence": "Full generic recorder/source authorization and work grouping/recipient hooks remain. Existing message-recorder concurrency is checked by WS12, not a claim that every original declaration is closed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3662,9 +3662,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 272,
       "test": "work assigned by a bot without an agent ignores the agent_work switch",
-      "status": "deferred",
-      "owner": "WS12 with existing WS17 message candidates",
-      "evidence": "Full generic recorder/source authorization and work grouping/recipient hooks remain. Existing message-recorder concurrency is checked by WS12, not a claim that every original declaration is closed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3678,9 +3678,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 308,
       "test": "recording the same source twice is idempotent",
-      "status": "deferred",
-      "owner": "WS12 with existing WS17 message candidates",
-      "evidence": "Full generic recorder/source authorization and work grouping/recipient hooks remain. Existing message-recorder concurrency is checked by WS12, not a claim that every original declaration is closed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3719,8 +3719,8 @@
       "line": 19,
       "test": "assigns an agent from the update dialog and renders its API status change after refresh",
       "status": "deferred",
-      "owner": "WS12 after WS11 #176",
-      "evidence": "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+      "owner": "WS12 using merged WS11 #176",
+      "evidence": "WS11 #176 is merged. Owner eligibility and assignment ledgers use its real APIs; the remaining agent work services/declarations are still WS12-owned and unblocked."
     },
     {
       "file": "test/system/board_automations_test.rb",
@@ -3728,7 +3728,7 @@
       "test": "the board creator configures tag rules and sla timers",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/system/board_automations_test.rb",
@@ -3736,7 +3736,7 @@
       "test": "a plain member sees no automations link and is forbidden directly",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/system/board_automations_test.rb",
@@ -3744,7 +3744,7 @@
       "test": "a tagged post auto-assigns and the history shows it",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/system/board_automations_test.rb",
@@ -3752,7 +3752,7 @@
       "test": "a person hands a post to an agent with context",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/system/board_automations_test.rb",
@@ -3760,7 +3760,7 @@
       "test": "the stale-work digest renders on the board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/system/boards_test.rb",
@@ -3768,15 +3768,15 @@
       "test": "boards carry posts from creation to result with live rows",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/system/boards_test.rb",
       "line": 67,
       "test": "board pages align to the top under the header",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Body-class assertions are covered by full board post/new-page response comparisons and write_browser.mjs. Geometric assertions are excluded from acceptance by the pixel-phase cut in wave4/_common.md and decisions.md; no pixel work is deferred."
     },
     {
       "file": "test/system/boards_test.rb",
@@ -3784,15 +3784,15 @@
       "test": "a non-member cannot open the board",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/system/boards_test.rb",
       "line": 99,
       "test": "replying on a board post sends and clears the composer",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "reference-tools/boards/write_browser.mjs: actual signed-session Markdown reply form, rendered message, cleared composer and persisted plain text through the JSON read on both Rails and Rust."
     },
     {
       "file": "test/system/starred_people_test.rb",
@@ -3830,9 +3830,9 @@
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 304,
       "test": "converts a thread to work, assigns an eligible owner, and keeps an audit trail",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
@@ -3840,47 +3840,47 @@
       "test": "work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 356,
       "test": "assigned owner can change work status but cannot reassign it",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 375,
       "test": "only a thread manager can remove work tracking",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 387,
       "test": "the work model also protects conversion when the owner field is omitted",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 398,
       "test": "work status updates from separate stale instances produce one event per real change",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 413,
       "test": "a manager can assign an eligible agent and the agent is notified",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
@@ -3888,15 +3888,15 @@
       "test": "the owner picker lists eligible agents with profiles and excludes ineligible ones",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 480,
       "test": "a member who cannot manage the thread cannot assign an agent",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
@@ -3904,7 +3904,7 @@
       "test": "ordinary thread fields remain separate from work tracking",
       "status": "deferred",
       "owner": "WS12",
-      "evidence": "Outside the completed stars and inbox-access/state slices."
+      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
     }
   ]
 }
