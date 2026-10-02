@@ -43,10 +43,10 @@ case "${1:-}" in
     ;;
   check-image) check_image ;;
   build)
-    "$ROOT/parity/bin/seed" build default first_run
+    "$ROOT/parity/bin/seed" build default first_run agents_ui
     ;;
   validate)
-    for seed in default first_run; do
+    for seed in default first_run agents_ui; do
       test -s "$SEEDS/$seed/db/production.sqlite3"
       test -f "$SEEDS/$seed/labels.json"
       test -d "$SEEDS/$seed/storage"

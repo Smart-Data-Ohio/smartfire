@@ -1,0 +1,12 @@
+{#- The member-panel toggle in app/views/rooms/show/_nav.html.erb -#}
+{{ "    " }}<button type="button"
+            class="btn room-header__action member-panel-toggle"
+            aria-controls="channel-members"
+            aria-expanded="false"
+            aria-label="Show members"
+            title="Show members"
+            data-member-panel-target="toggle"
+            data-action="member-panel#toggle">
+      {{ h::image_tag(ctx, "everyone.svg", h::attrs().size(20).aria("hidden", "true")) }}
+      <span class="member-panel-toggle__count" data-member-panel-target="toggleCount" aria-hidden="true"></span>
+    </button>{{ "\n" }}

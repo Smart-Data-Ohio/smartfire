@@ -7,10 +7,11 @@
 
 #[cfg(test)]
 mod tests;
+pub mod bot_access;
 
 use campfire_db::{Account, CachedStatements, Connection, Membership, PushSubscription, Room, RoomType, User};
 use campfire_kit::Ctx;
-use campfire_views::accounts::{Bot, BotForm, BotRoom, HelpContact};
+use campfire_views::accounts::{Bot, BotAgentForm, BotForm, BotGithubAccount, BotRoom, HelpContact};
 use campfire_views::users::{
     MentionUser, ProfileMembership, PushSubscription as PushSubscriptionView, SidebarDirect, SidebarDirectItem, SidebarRoom, UserSummary,
 };
@@ -251,22 +252,57 @@ pub fn account_users(conn: &Connection, can_administer: bool) -> campfire_db::Re
 pub fn bot(conn: &Connection, secrets: &Secrets, bot: &User) -> campfire_db::Result<Bot> {
     let mut rooms = Room::for_user_without_directs(conn, bot.id)?;
     sort_by_lower_name(&mut rooms, |room| room.name.as_deref().unwrap_or(""));
+    let agent = campfire_db::Agent::for_user(conn, bot.id)?;
+    let owner_name = agent.as_ref().and_then(|agent| agent.owner_id)
+        .map(|id| User::find_by_id(conn, id)).transpose()?.flatten().map(|user| user.name);
+    let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
+    let icon = if attachments::attached_blob(conn, "User", bot.id, "avatar")?.is_none() {
+        icon_name.as_deref().and_then(|name| super::resolve_avatar_icon(conn, name))
+    } else { None };
     Ok(Bot {
         user: user_summary(secrets, bot),
-        bot_key: bot.bot_key(),
+        kind: agent.map(|agent| agent.kind.name().into()), owner_name, icon,
         rooms: rooms.into_iter().map(|room| BotRoom { id: room.id, name: room.name.unwrap_or_default() }).collect(),
     })
 }
 
-/// The fields `accounts/bots/_form` fills in: `image_tag bot.avatar` is the blob's absolute
-/// redirect URL.
-pub fn bot_form(conn: &Connection, storage: &campfire_storage::Storage, base_url: &str, bot: &User) -> campfire_db::Result<BotForm> {
+/// Read-only facts for the bot edit form. Reading a legacy bot never creates an Agent.
+pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, bot: &User, zone: &campfire_views::time::Zone, github_usable: bool) -> campfire_db::Result<BotForm> {
+    use campfire_db::models::{agent_posting::{self, Cap}, webhook::Webhook};
     let avatar = attachments::attached_blob(conn, "User", bot.id, "avatar")?;
+    let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
+    let profile = campfire_db::Agent::for_user(conn, bot.id)?;
+    let webhook = Webhook::find_by_user(conn, bot.id)?;
+    // Ruby's || falls back only for nil, not for an empty agent secret.
+    let agent_secret = profile.as_ref().map(|agent| agent.webhook_signing_secret(conn, &app.ar_encryption)).transpose()?.flatten();
+    let signing_secret = match agent_secret {
+        Some(value) => Some(value),
+        None => webhook.as_ref().map(|webhook| webhook.signing_secret(&app.ar_encryption)).transpose()?.flatten(),
+    };
+    let budget_usage_line = profile.as_ref().map(|agent| -> campfire_db::Result<String> {
+        let window = agent_posting::daily_window(campfire_db::Timestamp::from_jiff(app.clock.now()), zone.tz())?;
+        let cells = [(Cap::Messages, agent.daily_message_cap, "messages"),
+            (Cap::BoardPosts, agent.daily_board_post_cap, "board posts"),
+            (Cap::ExternalActions, agent.daily_external_action_cap, "external actions")].into_iter().map(|(cap, limit, noun)| {
+                let used = agent_posting::cap_usage(conn, agent.id, bot.id, cap, &window)?;
+                Ok(limit.map(|limit| format!("{used}/{limit} {noun}")).unwrap_or_else(|| format!("{used} {noun}")))
+            }).collect::<campfire_db::Result<Vec<_>>>()?;
+        Ok(cells.join(" · "))
+    }).transpose()?.unwrap_or_default();
+    let github = crate::integrations::github::accounts::Account::for_user(conn, bot.id)?.map(|account| BotGithubAccount {
+        usable: github_usable, login: account.github_login, disconnected_reason: account.disconnected_reason,
+    });
     Ok(BotForm {
-        name: Some(bot.name.clone()),
-        webhook_url: bot.webhook_url(conn)?,
-        avatar_attachment_url: avatar
-            .map(|blob| format!("{base_url}{}", campfire_storage::paths::blob_redirect_path(&*storage.verifier, &blob, None))),
+        name: Some(bot.name.clone()), webhook_url: bot.webhook_url(conn)?,
+        avatar_attachment_url: avatar.map(|blob| format!("{base_url}{}", campfire_storage::paths::blob_redirect_path(&*app.storage.verifier, &blob, None))),
+        persisted: true, icon_name: icon_name.clone(),
+        icon: icon_name.as_deref().and_then(|name| super::resolve_avatar_icon(conn, name)),
+        agent: profile.map(|agent| BotAgentForm {
+            id: agent.id, owner_id: agent.owner_id, provider: agent.provider, runtime: agent.runtime,
+            description: agent.description, daily_message_cap: agent.daily_message_cap,
+            daily_board_post_cap: agent.daily_board_post_cap, daily_external_action_cap: agent.daily_external_action_cap,
+            raw_caps: Default::default(), suspended: agent.suspended_at.is_some(), errors: None, error_fields: Vec::new(),
+        }), budget_usage_line, signing_secret, github, ..Default::default()
     })
 }
 

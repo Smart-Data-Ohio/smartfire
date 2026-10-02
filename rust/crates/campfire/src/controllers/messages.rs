@@ -12,9 +12,9 @@ mod upload_tests;
 mod review_tests;
 pub mod pins;
 pub mod by_bots;
+pub mod rendered;
 pub(crate) mod payload;
 pub(crate) mod freshness;
-pub(crate) mod rendered;
 #[cfg(test)]
 mod root_tests;
 #[cfg(test)]

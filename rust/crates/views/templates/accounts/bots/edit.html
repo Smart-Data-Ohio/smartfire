@@ -5,21 +5,70 @@
     {{ h::link_back_to(ctx, h::routes::account_bots()) }}
   </div>
 {% endblock %}
-{% block content %}<section class="panel" style="view-transition-name: chat-bot-{{ bot_id }}">
-{% let form = h::form_with(h::routes::account_bot(bot_id)).model("user").method("patch").class("flex flex-column gap") %}  {% filter form_with(form) %}
+{% block content %}
+
+<section class="panel" style="view-transition-name: chat-bot-{{ bot_id }}">
+{% let form = h::form_with(h::routes::account_bot(bot_id)).model("user").method("patch").class("flex flex-column gap").errors(&bot.error_fields) %}  {% filter form_with(form) %}
     {% include "accounts/bots/_form.html" %}
 {% endfilter %}
   <hr class="separator full-width margin-block-double">
 
-{{ self.github_panel() }}
-  <div class="flex align-center gap justify-space-between">
-    {% filter button_to(h::routes::account_bot(bot_id), h::attrs().method("delete").class("btn txt--small btn--negative").aria("label", "Delete this chat bot").data("turbo_confirm", "Are you sure you want to permanently remove this bot from the account? This can’t be undone.")) %}
-      {{ h::image_tag(ctx, "trash.svg", h::attrs().aria_hidden().size(20)) }}
-      {{ h::image_tag(ctx, "bot.svg", h::attrs().aria_hidden().size(20)) }}
-{% endfilter %}
-    {% filter button_to(h::routes::account_bot_key(bot_id), h::attrs().method("put").class("btn full-width txt--small btn--negative").aria("label", "Generate a new key").data("turbo_confirm", "Are you sure you want to change the bot key? All usage of this bot must be updated.")) %}
-      {{ h::image_tag(ctx, "refresh.svg", h::attrs().aria_hidden().size(20)) }}
+{% if bot.manageable(ctx) %}    <div class="flex align-center gap justify-space-between margin-block-end">
+      {% filter link_to(h::routes::account_bot_credentials(bot_id), h::attrs().class("btn full-width txt--small")) %}
+        {{ h::image_tag(ctx, "key.svg", h::attrs().aria_hidden().size(20)) }}
+        Manage agent credentials
+{% endfilter %}    </div>
+{% endif %}
+  <div class="flex align-center gap justify-space-between margin-block-end">
+    {% filter link_to(h::routes::account_bot_grants(bot_id), h::attrs().class("btn full-width txt--small")) %}
       {{ h::image_tag(ctx, "key.svg", h::attrs().aria_hidden().size(20)) }}
+      Manage capability grants
 {% endfilter %}  </div>
-</section>
+
+{% if let Some(agent) = bot.agent %}    <div class="margin-block-end txt-small">
+      Today's usage: {{ bot.budget_usage_line }}
+    </div>
+    <div class="flex align-center gap justify-space-between margin-block-end">
+      {% filter link_to(h::routes::agent_events(agent.id), h::attrs().class("btn full-width txt--small")) %}
+        {{ h::image_tag(ctx, "messages-outlined.svg", h::attrs().aria_hidden().size(20)) }}
+        View activity ledger
+{% endfilter %}    </div>
+    <div class="flex align-center gap justify-space-between margin-block-end">
+      {% filter link_to(h::routes::agent_approvals(agent.id), h::attrs().class("btn full-width txt--small")) %}
+        {{ h::image_tag(ctx, "check.svg", h::attrs().aria_hidden().size(20)) }}
+        View approval requests
+{% endfilter %}    </div>
+{% if !agent.suspended %}      <div class="flex align-center gap justify-space-between margin-block-end">
+        {% filter button_to_form(h::routes::kill_switch_account_bot(bot_id), h::attrs().class("btn full-width txt--small btn--negative"), h::attrs().data("turbo_confirm", "Suspend this agent and cancel its pending approvals? This cannot be undone from here.")) %}
+          {{ h::image_tag(ctx, "remove.svg", h::attrs().aria_hidden().size(20)) }}
+          Kill switch: suspend agent
+{% endfilter %}      </div>
+{% endif %}{% endif %}
+  <hr class="separator full-width margin-block-double">
+
+  <section aria-labelledby="webhook-signing-secret-title">
+    <h2 id="webhook-signing-secret-title" class="txt-large margin-block-end">Webhook signing secret</h2>
+
+
+{% if let Some(secret) = h::presence(bot.signing_secret.as_deref()) %}      <p>Deliveries carry an <code>X-Smartfire-Signature</code> header. Copy this secret into the receiving service to verify them:</p>
+      <p><code>{{ secret }}</code></p>
+      {{ h::button_to_form(h::routes::account_bot_webhook_secret(bot_id).as_str(), h::attrs().class("btn btn--negative"), h::attrs().data("turbo_confirm", "Reset the signing secret? The receiving service must be updated with the new secret."), "Reset signing secret") }}
+{% else %}      <p>No signing secret yet. Deliveries go out unsigned until one is generated.</p>
+      {{ h::button_to(h::routes::account_bot_webhook_secret(bot_id).as_str(), h::attrs().class("btn"), "Generate signing secret") }}
+{% endif %}  </section>
+
+  <hr class="separator full-width margin-block-double">
+
+{{ self.ws15g_github_connection_fragment()? }}{{ self.ws15e_fizzy_connection_fragment() }}
+
+{% if ctx.can_administer() %}    <div class="flex align-center gap justify-space-between">
+      {% filter button_to(h::routes::account_bot(bot_id), h::attrs().method("delete").class("btn txt--small btn--negative").aria("label", "Delete this chat bot").data("turbo_confirm", "Are you sure you want to permanently remove this bot from the account? This can’t be undone.")) %}
+        {{ h::image_tag(ctx, "trash.svg", h::attrs().aria_hidden().size(20)) }}
+        {{ h::image_tag(ctx, "bot.svg", h::attrs().aria_hidden().size(20)) }}
+{% endfilter %}
+      {% filter button_to(h::routes::account_bot_key(bot_id), h::attrs().method("put").class("btn full-width txt--small btn--negative").aria("label", "Generate a new key").data("turbo_confirm", "Are you sure you want to change the bot key? All usage of this bot must be updated.")) %}
+        {{ h::image_tag(ctx, "refresh.svg", h::attrs().aria_hidden().size(20)) }}
+        {{ h::image_tag(ctx, "key.svg", h::attrs().aria_hidden().size(20)) }}
+{% endfilter %}    </div>
+{% endif %}</section>
 {% endblock %}
