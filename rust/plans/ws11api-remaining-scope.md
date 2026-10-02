@@ -1,7 +1,7 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next`, stacked on #202 and merged with main
-`b573dd24c3e0035d3b1c85c0a3b89b3cea32343d`, which includes #192, #202, #199 and #203.
+Updated on `rust/ws11api-next-2`, stacked on #205 (45bffea35), merged
+with main 500c3f6987e9aa48382e2be15396597dc37a66af. The #205 branch is not rewritten.
 The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
@@ -14,10 +14,15 @@ No pending work-write adapter remains. No other unported WS11 API implementation
 was found in the prior audit or this round. Broader named-case evidence remains partial.
 
 #203 (`rust/ws11api-proxy-headers`, `7ec7d26c`) is now merged through main.
-Its reviewed representation/blob proxy header correction is retained for successful
-responses and handled empty 404s, including the nine-header oracle and six failing-first
-regressions. Disk downloads and byte-range send_data responses retain their Rails
-transfer-encoding headers. No proxy-header implementation gap remains.
+Its Content-Transfer-Encoding correction is retained for successful streams and
+handled empty 404s. The prior claim of exact proxy header parity was too broad:
+Rust retains six security defaults that pinned Rails HTTP/1.1 Live responses omit.
+The maintainer approved those six additions. The new oracle uses config.ru
+Rack::Deflater and explicit HTTP/1.1, compares every response header and rejects
+unexpected names and duplicate values. Only those six additions and the named
+Date/X-Request-Id/X-Runtime request values are approved differences. Disk and
+range transfer-encoding headers remain compared. No unapproved header drift is
+accepted; ws11api-approved-differences.md records the exact scope.
 Both approved JPEG/video crash differences and unconditional committed-file retention
 remain explicitly documented; they are deliberate differences, not unported API paths.
 
@@ -39,7 +44,7 @@ explicit dispatch; all 38 call installed service/model adapters, including the f
 | Approvals | List/show/create/cancel, replay, budgets, zone-aware expiry/DST, permission-before-validation | agents/approvals.rs; agent_surface.json; agent_review192_http.json |
 | Conversations | Root/thread post, signed attachment, context, DMs, streaming start/append/finalize, idempotency | conversations.rs; agent_conversation_http.json; agent_attachments_http.json |
 | Message operations | Reactions, pin/unpin, create/read polls, steps, slash register/unregister | service adapters; reaction/pin/poll/HTTP vectors |
-| Media proxy headers | Representation/blob proxy success and empty-404 headers match Rails; disk/range headers preserved | active_storage.rs; nine-header representation oracle; six failing-first controls from #203 |
+| Media proxy headers | Every header compared; six explicitly approved security additions on HTTP/1.1 proxies; disk/range transfer encoding preserved | config.ru Rack::Deflater oracle; 21 representation responses, 4 blob controls; duplicate/name/value mutation controls |
 | Work readers | List/show work and board posts, filters, preloads, array IDs, private link policy | reads.rs; agent_reads_http.json; agent_review192_http.json |
 | Fizzy | Four reads and approval-only card actions; all nine read/write MCP aliases, owner-only credential and no network on denied writes | integrations.rs; installed WS15e reads/requests/jobs; Fizzy HTTP vectors |
 | GitHub | REST approval-only PR actions, owner identity/account policy, grants/budgets/replay and no external write before approval | github/agent_actions.rs; WS15g approval_requests and Accounts; owner HTTP tests |
@@ -58,25 +63,30 @@ exact byte comparisons; sizes/checksums are never masked.
 
 ## Broader named-case evidence still partial
 
-The pinned domain inventory has 378 cases in 26 files. This round closes 15 individual
-comparisons with real model/job paths and fresh pinned Rails vectors: three reply-token
-cases, two delivery lock/hop cases, one kill-switch ownership case, and nine assignment
-ledger/history/commit/rollback cases. The mapping is now **312 comparisons, 66 deferred**
-(previously 297/81). Executed pass counts are reported separately from mapping counts.
-The source manifests and vector projections do not silently credit broader API tests
-as closure of unmapped names. No new production behavior mismatch was found in the
-15 comparisons; negative mutations prove the new assertions discriminate.
+The pinned domain inventory has 378 cases in 26 files. This round closes all
+13 remaining WS11-owned names: four streaming projections, three bot cases,
+four assignment callbacks and two budget comparisons. The ledger is now
+**325 comparisons, 53 deferred** (previously 312/66). Executed pass counts are
+reported separately from mapping counts. Each new named comparison has a fresh
+pinned Rails vector and an independently wrong observable negative control.
+No new production behavior mismatch was found in those 13 cases.
 
-The delivery lock case uses Rails' original lock spy and SQL transaction observation,
-then challenges Rust with two independent SQLite writer connections sharing one file:
-one remaining allowance, two concurrent source writes, one admitted job, one suppression.
-This tests the actual serialized write boundary instead of copying a Ruby method spy.
-The old absent-HTTP-credential deferral is closed by existing REST/MCP auth vectors.
+Streaming uses real model callbacks, actual WebSocket frames and both human
+subscribers' unread broadcasts, activity/ledger/index projections and logical
+queued arguments. Factory/reset entropy is controlled at the generator input.
+Queued webhook comparisons run actual durable claims and handlers; only the
+external dialer is replaced, like the Rails Net::HTTP fixture. WS12's merged
+activity viewer and handoff service execute unchanged, including stranger
+redaction and exhausted message-cap handoff behavior. The original budget case
+sets all three caps but consumes the message cap; this comparison preserves that
+named case rather than claiming three separately exhausted usage buckets.
 
-Every remaining name is listed below. Deferral is evidence debt unless stated otherwise;
-installed production code and broader API vectors do not replace a named comparison.
-This is a coherent partial checkpoint: WS11-owned comparisons still remain, so the
-remaining list is **not only owner-blocked**.
+The delivery lock comparison from #205 retains its two independent writers.
+The array lookup sweep additionally fixes thread/cursor/reaction N+1 lookups,
+preserves Rails' global/scoped selection and permission order, and handles
+40,000 candidates with one JSON bind. All WS11-owned named comparisons are now
+closed. **Only peer-owned evidence remains**; none is called an unmerged service
+blocker. The exact remaining names follow.
 
 ### test/models/agent_test.rb
 
@@ -133,7 +143,7 @@ Reason: WS8 owns built-in command behavior; WS11 custom agent registration/invoc
 
 Owner: WS11 agent callbacks; WS12 mutation producers.
 
-Reason: WS12 owns the first eight owner-eligibility/viewer cases and the eight agent-work mutation/validation cases. WS11 owns the final four hop/deletion/root callback comparisons; these remain unworked at this checkpoint.
+Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/validation named comparisons. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
 
 - an active member agent with post_messages is an eligible work owner
 - a legacy agent keeps post eligibility through the fallback
@@ -151,40 +161,9 @@ Reason: WS12 owns the first eight owner-eligibility/viewer cases and the eight a
 - an agent cannot write the result of work it does not own
 - an agent cannot move work it does not own
 - an agent status update rejects unknown statuses and long notes
-- two agents assigning posts to each other stop at the hop limit
-- deleting an agent-owned thread emits work_unassigned
-- deleting a thread without an agent owner emits nothing
-- a human assignment starts a new root at hop 0
 
-### test/models/message_streaming_test.rb
 
-Owner: WS11 finalization; WS12 activity; WS14/15 external reference sync.
 
-Reason: WS11 owns complete start/coalescing/finalization assertions; WS12 activity and WS14/15 external-reference side effects keep their owners. The full four named projections remain unworked.
-
-- stream start broadcasts the append without the unread broadcast
-- finalize fires every side effect exactly once
-- appends re-render without firing side effects
-- a coalesced update sends a trailing broadcast with the final text
-
-### test/models/user/bot_test.rb
-
-Owner: WS11 bot domain/removal; WS11-api by-bot HTTP surface.
-
-Reason: WS11 owns fixed-entropy factory/reset comparisons and the actual queued webhook execution comparison. Real digest/token/HTTP tests are additional evidence; these three names remain unworked.
-
-- create bot
-- reset bot key
-- deliver message by webhook
-
-### test/models/agent_budgets_test.rb
-
-Owner: WS11 domain.
-
-Reason: WS11 owns these two budget comparisons; they remain unworked at this checkpoint. They exercise installed WS12 ActivityItem.accessible_to and WorkHandoffs.create producers/viewers. Any production change in those services remains with WS12.
-
-- a stranger cannot read another agent's budget item
-- an agent-created handoff counts toward no budget, even with caps exhausted
 
 ## Peer-owned fixed read costs
 

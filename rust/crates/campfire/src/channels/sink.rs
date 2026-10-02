@@ -411,3 +411,6 @@ mod tests {
 
 #[cfg(test)]
 mod stream_tests;
+
+#[cfg(test)]
+mod stream_remaining_cases;

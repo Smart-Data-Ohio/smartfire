@@ -1,0 +1,468 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "start": {
+      "name": "start",
+      "message_id": 1901720001,
+      "returns": [],
+      "snapshots": [
+        {
+          "streaming": true,
+          "source": "Starting",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [],
+          "frames": [],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        },
+        {
+          "streaming": true,
+          "source": "Starting",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [],
+          "frames": [
+            "<turbo-stream action=\"append\" target=\"messages_rooms_closed_486777696\"><template>\n<div id=\"message_ws11-next-2-start\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-start\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-start\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-start\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n            <p class=\"message__streaming\" role=\"status\">\n    <span class=\"message__streaming-dot\" aria-hidden=\"true\"></span>\n    Working…\n  </p>\n\n          \n\n          <div id=\"presentation_message_ws11-next-2-start\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Starting</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-start\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-start\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-start\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-start\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-start\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-start\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-start\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-start\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-start\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-start\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-start\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        }
+      ]
+    },
+    "finalize": {
+      "name": "finalize",
+      "message_id": 1901720001,
+      "returns": [
+        true,
+        false
+      ],
+      "snapshots": [
+        {
+          "streaming": true,
+          "source": "Hey @[David] and @[Stream Watcher] and @[Legacy Stream] hovercraft",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [],
+          "frames": [],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        },
+        {
+          "streaming": false,
+          "source": "Hey @[David] and @[Stream Watcher] and @[Legacy Stream] hovercraft",
+          "activity": [
+            [
+              127326141,
+              "mention"
+            ]
+          ],
+          "ledger": [
+            [
+              773018776,
+              "posted",
+              "delivered"
+            ],
+            [
+              1901700012,
+              "mention",
+              "pending"
+            ]
+          ],
+          "indexed": true,
+          "unread": [
+            [
+              127326141,
+              "2026-03-02T16:00:00.000000Z"
+            ],
+            [
+              149087659,
+              "2026-03-02T16:00:00.000000Z"
+            ]
+          ],
+          "jobs": [
+            {
+              "class": "Agent::DeliveryJob",
+              "args": [
+                1901730002
+              ]
+            },
+            {
+              "class": "Bot::WebhookJob",
+              "args": [
+                "gid://campfire/User/1901700021",
+                "gid://campfire/Message/1901720001"
+              ]
+            },
+            {
+              "class": "Room::PushMessageJob",
+              "args": [
+                "gid://campfire/Rooms::Closed/486777696",
+                "gid://campfire/Message/1901720001"
+              ]
+            }
+          ],
+          "frames": [
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-finalize\"><template>\n<div id=\"message_ws11-next-2-finalize\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-finalize\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-finalize\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-finalize\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_ws11-next-2-finalize\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></p><div class=\"mention mention--user-127326141\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" data-user-id=\"127326141\">\n  <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/127326141\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  David\n</div>\n and <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAxMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--45a441843e43817e874a363c23002298d935a14c\" content-type=\"application/vnd.campfire.mention\"><div class=\"mention mention--user-1901700011\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAxMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--45a441843e43817e874a363c23002298d935a14c\" data-user-id=\"1901700011\">\n  <a title=\"Stream Watcher\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/1901700011\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTcwMDAxMSwicHVyIjoidXNlci9hdmF0YXIifX0--24d2e9cd2b0b3770cfdada6807fbd9b313673dd4149bf158850270ecd11fa6a6/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  Stream Watcher\n</div>\n</action-text-attachment> and <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAyMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--cddc01e9a08932d6dd5c79d69b933b8afdf2ae83\" content-type=\"application/vnd.campfire.mention\"><div class=\"mention mention--user-1901700021\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAyMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--cddc01e9a08932d6dd5c79d69b933b8afdf2ae83\" data-user-id=\"1901700021\">\n  <a title=\"Legacy Stream\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/1901700021\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTcwMDAyMSwicHVyIjoidXNlci9hdmF0YXIifX0--357a3243a364dcc2ed389abc6db73acca1d50297f866d0a92639325779bcbd82/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  Legacy Stream\n</div>\n</action-text-attachment> hovercraft<p></p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-finalize\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-finalize\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-finalize\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-finalize\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-finalize\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-finalize\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-finalize\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-finalize\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-finalize\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-finalize\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-finalize\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [
+              {
+                "roomId": 486777696
+              }
+            ],
+            "149087659": [
+              {
+                "roomId": 486777696
+              }
+            ]
+          }
+        },
+        {
+          "streaming": false,
+          "source": "Hey @[David] and @[Stream Watcher] and @[Legacy Stream] hovercraft",
+          "activity": [
+            [
+              127326141,
+              "mention"
+            ]
+          ],
+          "ledger": [
+            [
+              773018776,
+              "posted",
+              "delivered"
+            ],
+            [
+              1901700012,
+              "mention",
+              "pending"
+            ]
+          ],
+          "indexed": true,
+          "unread": [
+            [
+              127326141,
+              "2026-03-02T16:00:00.000000Z"
+            ],
+            [
+              149087659,
+              "2026-03-02T16:00:00.000000Z"
+            ]
+          ],
+          "jobs": [
+            {
+              "class": "Agent::DeliveryJob",
+              "args": [
+                1901730002
+              ]
+            },
+            {
+              "class": "Bot::WebhookJob",
+              "args": [
+                "gid://campfire/User/1901700021",
+                "gid://campfire/Message/1901720001"
+              ]
+            },
+            {
+              "class": "Room::PushMessageJob",
+              "args": [
+                "gid://campfire/Rooms::Closed/486777696",
+                "gid://campfire/Message/1901720001"
+              ]
+            }
+          ],
+          "frames": [
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-finalize\"><template>\n<div id=\"message_ws11-next-2-finalize\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-finalize\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-finalize\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-finalize\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_ws11-next-2-finalize\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></p><div class=\"mention mention--user-127326141\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" data-user-id=\"127326141\">\n  <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/127326141\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  David\n</div>\n and <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAxMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--45a441843e43817e874a363c23002298d935a14c\" content-type=\"application/vnd.campfire.mention\"><div class=\"mention mention--user-1901700011\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAxMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--45a441843e43817e874a363c23002298d935a14c\" data-user-id=\"1901700011\">\n  <a title=\"Stream Watcher\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/1901700011\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTcwMDAxMSwicHVyIjoidXNlci9hdmF0YXIifX0--24d2e9cd2b0b3770cfdada6807fbd9b313673dd4149bf158850270ecd11fa6a6/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  Stream Watcher\n</div>\n</action-text-attachment> and <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAyMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--cddc01e9a08932d6dd5c79d69b933b8afdf2ae83\" content-type=\"application/vnd.campfire.mention\"><div class=\"mention mention--user-1901700021\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTkwMTcwMDAyMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--cddc01e9a08932d6dd5c79d69b933b8afdf2ae83\" data-user-id=\"1901700021\">\n  <a title=\"Legacy Stream\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/1901700021\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTkwMTcwMDAyMSwicHVyIjoidXNlci9hdmF0YXIifX0--357a3243a364dcc2ed389abc6db73acca1d50297f866d0a92639325779bcbd82/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  Legacy Stream\n</div>\n</action-text-attachment> hovercraft<p></p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-finalize\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-finalize\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-finalize\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-finalize\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-finalize\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-finalize\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-finalize\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-finalize\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-finalize\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-finalize\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-finalize\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [
+              {
+                "roomId": 486777696
+              }
+            ],
+            "149087659": [
+              {
+                "roomId": 486777696
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "append": {
+      "name": "append",
+      "message_id": 1901720001,
+      "returns": [
+        true
+      ],
+      "snapshots": [
+        {
+          "streaming": true,
+          "source": "Hey @[David]",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [],
+          "frames": [],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        },
+        {
+          "streaming": true,
+          "source": "Hey @[David] hovercraft",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [],
+          "frames": [
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-append\"><template>\n<div id=\"message_ws11-next-2-append\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-append\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-append\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-append\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n            <p class=\"message__streaming\" role=\"status\">\n    <span class=\"message__streaming-dot\" aria-hidden=\"true\"></span>\n    Working…\n  </p>\n\n          \n\n          <div id=\"presentation_message_ws11-next-2-append\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></p><div class=\"mention mention--user-127326141\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" data-user-id=\"127326141\">\n  <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/127326141\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  David\n</div>\n hovercraft<p></p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-append\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-append\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-append\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-append\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-append\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-append\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-append\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-append\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-append\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-append\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-append\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        },
+        {
+          "streaming": true,
+          "source": "Hey @[David] hovercraft eels",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [],
+          "frames": [
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-append\"><template>\n<div id=\"message_ws11-next-2-append\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-append\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-append\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-append\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n            <p class=\"message__streaming\" role=\"status\">\n    <span class=\"message__streaming-dot\" aria-hidden=\"true\"></span>\n    Working…\n  </p>\n\n          \n\n          <div id=\"presentation_message_ws11-next-2-append\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></p><div class=\"mention mention--user-127326141\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" data-user-id=\"127326141\">\n  <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/127326141\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  David\n</div>\n hovercraft<p></p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-append\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-append\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-append\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-append\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-append\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-append\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-append\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-append\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-append\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-append\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-append\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        },
+        {
+          "streaming": false,
+          "source": "Hey @[David] hovercraft eels",
+          "activity": [
+            [
+              127326141,
+              "mention"
+            ]
+          ],
+          "ledger": [
+            [
+              773018776,
+              "posted",
+              "delivered"
+            ]
+          ],
+          "indexed": true,
+          "unread": [
+            [
+              127326141,
+              "2026-03-02T16:00:00.000000Z"
+            ],
+            [
+              149087659,
+              "2026-03-02T16:00:00.000000Z"
+            ]
+          ],
+          "jobs": [
+            {
+              "class": "Room::PushMessageJob",
+              "args": [
+                "gid://campfire/Rooms::Closed/486777696",
+                "gid://campfire/Message/1901720001"
+              ]
+            }
+          ],
+          "frames": [
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-append\"><template>\n<div id=\"message_ws11-next-2-append\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-append\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-append\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-append\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n            <p class=\"message__streaming\" role=\"status\">\n    <span class=\"message__streaming-dot\" aria-hidden=\"true\"></span>\n    Working…\n  </p>\n\n          \n\n          <div id=\"presentation_message_ws11-next-2-append\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></p><div class=\"mention mention--user-127326141\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" data-user-id=\"127326141\">\n  <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/127326141\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  David\n</div>\n hovercraft<p></p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-append\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-append\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-append\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-append\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-append\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-append\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-append\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-append\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-append\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-append\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-append\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>",
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-append\"><template>\n<div id=\"message_ws11-next-2-append\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-append\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-append\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-append\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_ws11-next-2-append\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></p><div class=\"mention mention--user-127326141\" sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" data-user-id=\"127326141\">\n  <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"/users/127326141\" data-turbo-prefetch=\"false\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\"></a>\n  David\n</div>\n hovercraft eels<p></p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-append\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-append\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-append\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-append\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-append\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-append\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-append\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-append\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-append\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-append\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-append\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [
+              {
+                "roomId": 486777696
+              }
+            ],
+            "149087659": [
+              {
+                "roomId": 486777696
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "trailing": {
+      "name": "trailing",
+      "message_id": 1901720001,
+      "returns": [
+        true,
+        false
+      ],
+      "snapshots": [
+        {
+          "streaming": true,
+          "source": "One",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [],
+          "frames": [],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        },
+        {
+          "streaming": true,
+          "source": "One two",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [
+            {
+              "class": "Message::StreamTrailingBroadcastJob",
+              "args": [
+                1901720001,
+                "2026-03-02T16:00:00.000000Z"
+              ]
+            }
+          ],
+          "frames": [
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-trailing\"><template>\n<div id=\"message_ws11-next-2-trailing\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-trailing\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-trailing\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-trailing\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n            <p class=\"message__streaming\" role=\"status\">\n    <span class=\"message__streaming-dot\" aria-hidden=\"true\"></span>\n    Working…\n  </p>\n\n          \n\n          <div id=\"presentation_message_ws11-next-2-trailing\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>One</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-trailing\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-trailing\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-trailing\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-trailing\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-trailing\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-trailing\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-trailing\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-trailing\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-trailing\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-trailing\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-trailing\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        },
+        {
+          "streaming": true,
+          "source": "One two",
+          "activity": [],
+          "ledger": [],
+          "indexed": false,
+          "unread": [
+            [
+              127326141,
+              null
+            ],
+            [
+              149087659,
+              null
+            ]
+          ],
+          "jobs": [
+            {
+              "class": "Message::StreamTrailingBroadcastJob",
+              "args": [
+                1901720001,
+                "2026-03-02T16:00:00.000000Z"
+              ]
+            }
+          ],
+          "frames": [
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-trailing\"><template>\n<div id=\"message_ws11-next-2-trailing\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-trailing\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-trailing\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-trailing\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n            <p class=\"message__streaming\" role=\"status\">\n    <span class=\"message__streaming-dot\" aria-hidden=\"true\"></span>\n    Working…\n  </p>\n\n          \n\n          <div id=\"presentation_message_ws11-next-2-trailing\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>One</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-trailing\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-trailing\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-trailing\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-trailing\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-trailing\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-trailing\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-trailing\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-trailing\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-trailing\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-trailing\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-trailing\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>",
+            "<turbo-stream action=\"replace\" target=\"message_ws11-next-2-trailing\"><template>\n<div id=\"message_ws11-next-2-trailing\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"1901720001\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"394959859\" data-actions-url=\"http://example.org/rooms/486777696/messages/1901720001/actions\" data-message-url=\"http://example.org/rooms/486777696/messages/1901720001\" data-boost-url=\"http://example.org/messages/1901720001/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_ws11-next-2-trailing\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_ws11-next-2-trailing\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_ws11-next-2-trailing\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Bender Bot\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\">\n        <strong data-reply-target=\"author\">Bender Bot</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://example.org/rooms/486777696/@1901720001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://example.org/rooms/486777696/@1901720001\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n            <p class=\"message__streaming\" role=\"status\">\n    <span class=\"message__streaming-dot\" aria-hidden=\"true\"></span>\n    Working…\n  </p>\n\n          \n\n          <div id=\"presentation_message_ws11-next-2-trailing\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>One two</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_ws11-next-2-trailing\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_ws11-next-2-trailing\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_ws11-next-2-trailing\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_ws11-next-2-trailing\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_ws11-next-2-trailing\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_ws11-next-2-trailing\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_ws11-next-2-trailing\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_ws11-next-2-trailing\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_ws11-next-2-trailing\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_ws11-next-2-trailing\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/1901720001/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_ws11-next-2-trailing\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>"
+          ],
+          "badges": {
+            "127326141": [],
+            "149087659": []
+          }
+        }
+      ]
+    }
+  }
+}

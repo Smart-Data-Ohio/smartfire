@@ -10,7 +10,7 @@ add = ->(name, method, path, body = nil, setup = {}) { cases << { name: name, me
 tool = ->(name, args, label, setup = {}) { add.call(label, :post, "/agents/mcp", { jsonrpc: "2.0", id: 192, method: "tools/call", params: { name: name, arguments: args } }, setup) }
 %w[thread before after react context_message context_thread rest_context_message rest_context_thread].each do |label|
   [5, 50].each do |size|
-    target = label.include?("thread") || label == "get_work" ? thread : label == "before" ? 1996002049 : 1996002000
+    target = label.include?("thread") ? thread : label == "before" ? 1996002049 : 1996002000
     ids = (1..size).map { |n| -n } + [target]
     if label.start_with?("rest_")
       key = label.end_with?("thread") ? :thread_id : :message_id
@@ -22,7 +22,6 @@ tool = ->(name, args, label, setup = {}) { add.call(label, :post, "/agents/mcp",
       when "react" then ["react", { message_id: ids, content: "👍" }]
       when "context_message" then ["get_context", { message_id: ids, limit: 5 }]
       when "context_thread" then ["get_context", { thread_id: ids, limit: 5 }]
-      when "get_work" then ["get_work", { work_id: ids }]
       end
       # Use the same JSON-RPC id as the committed Rust request.
       add.call("#{label}_#{size}", :post, "/agents/mcp", { jsonrpc: "2.0", id: 196, method: "tools/call", params: { name: name, arguments: args } })
@@ -62,11 +61,6 @@ travel_to Time.utc(2026, 3, 2, 16) do
             conn.execute("INSERT INTO action_text_rich_texts(name,record_type,record_id,body,created_at,updated_at) VALUES('body','Message',#{id},'<p>Query probe</p>','2026-03-02 16:00:00','2026-03-02 16:00:00')")
           end
         end
-        if item[:setup][:approval]
-          User.find(agent.user_id).update_columns(time_zone: item[:setup][:zone])
-          AgentGrant.create!(agent: agent, capability: "external_action", granted_by_id: 127326141)
-        end
-        conn.execute("UPDATE rooms SET type='Rooms::Board' WHERE id=#{room}") if item[:setup][:board]
         Rails.cache = ActiveSupport::Cache::MemoryStore.new
         session = ActionDispatch::Integration::Session.new(Rails.application)
         session.host! "campfire.test"

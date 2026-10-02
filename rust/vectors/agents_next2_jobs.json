@@ -1,0 +1,157 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "queued_bot": {
+      "jobs": [
+        {
+          "class": "Bot::WebhookJob",
+          "args": [
+            "gid://campfire/User/394959859",
+            "gid://campfire/Message/935961918"
+          ]
+        }
+      ],
+      "requests": [
+        {
+          "body": "{\"user\":{\"id\":394959859,\"name\":\"Bender Bot\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":935961918,\"body\":{\"html\":\"\\u003cp\\u003e004. Who took my stapler?\\u003c/p\\u003e\",\"plain\":\"004. Who took my stapler?\"},\"path\":\"/rooms/486777696/@935961918\"}}",
+          "timestamp": "1772467200",
+          "signature": "sha256=6a84d57029b87c6dd50841090c4103180578694cf4c5653511d9a0082df1f762",
+          "content_type": "application/json"
+        }
+      ]
+    },
+    "delete_owned": {
+      "exists": false,
+      "jobs": [
+        {
+          "class": "Agent::EventWebhookJob",
+          "args": [
+            28,
+            0
+          ]
+        },
+        {
+          "class": "Agent::EventWebhookJob",
+          "args": [
+            29,
+            0
+          ]
+        }
+      ],
+      "before": [
+        {
+          "id": 28,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "actor_id": 127326141,
+          "webhook_status": "pending",
+          "metadata": {
+            "thread_id": 1901820001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          }
+        },
+        {
+          "id": 29,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "actor_id": 127326141,
+          "webhook_status": "pending",
+          "metadata": {
+            "thread_id": 1901820001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0,
+            "work_snapshot": {
+              "id": 1901820001,
+              "room_id": 486777696,
+              "board_id": null,
+              "board_name": null,
+              "title": "Agent work",
+              "work_status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "agent": true
+              },
+              "tags": [],
+              "result": null,
+              "result_updated_at": null,
+              "run_url": null,
+              "url": "/rooms/486777696?thread=1901820001",
+              "updated_at": "2026-03-02T16:00:00.000Z",
+              "links": [],
+              "thread_id": 1901820001,
+              "status": "planned",
+              "assigned_by": "David"
+            }
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": 28,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "actor_id": 127326141,
+          "webhook_status": "failed",
+          "metadata": {
+            "thread_id": 1901820001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          }
+        },
+        {
+          "id": 29,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "actor_id": 127326141,
+          "webhook_status": "delivered",
+          "metadata": {
+            "thread_id": 1901820001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0,
+            "work_snapshot": {
+              "id": 1901820001,
+              "room_id": 486777696,
+              "board_id": null,
+              "board_name": null,
+              "title": "Agent work",
+              "work_status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "agent": true
+              },
+              "tags": [],
+              "result": null,
+              "result_updated_at": null,
+              "run_url": null,
+              "url": "/rooms/486777696?thread=1901820001",
+              "updated_at": "2026-03-02T16:00:00.000Z",
+              "links": [],
+              "thread_id": 1901820001,
+              "status": "planned",
+              "assigned_by": "David"
+            }
+          }
+        }
+      ],
+      "requests": [
+        {
+          "body": "{\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":29},\"event_type\":\"work_unassigned\",\"work\":{\"id\":1901820001,\"room_id\":486777696,\"board_id\":null,\"board_name\":null,\"title\":\"Agent work\",\"work_status\":\"planned\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/486777696?thread=1901820001\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"links\":[],\"thread_id\":1901820001,\"status\":\"planned\",\"assigned_by\":\"David\"}}",
+          "timestamp": "1772467200",
+          "signature": "sha256=51b73f96f998cc80664a685559fc310dd73a32cfdabe02c0e7cb977499b8118e",
+          "content_type": "application/json"
+        }
+      ]
+    }
+  }
+}
