@@ -9,7 +9,26 @@ async fn complete_search_headers_match_rails_when_both_include_the_production_de
         "../../../../../vectors/messaging/search_headers.json"
     ))
     .unwrap();
-    let app = TestApp::boot_frozen_with_env(&[("VAPID_PUBLIC_KEY", vector["vapid_public_key"].as_str().unwrap())])
+    // Match the committed Rails fixture's push configuration as well as its request headers.
+    let env = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../parity/.env.reference"
+    ))
+    .unwrap();
+    let vapid = env
+        .lines()
+        .filter_map(|line| line.split_once('='))
+        .filter(|(key, _)| matches!(*key, "VAPID_PUBLIC_KEY" | "VAPID_PRIVATE_KEY"))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        vapid
+            .iter()
+            .find(|(key, _)| *key == "VAPID_PUBLIC_KEY")
+            .unwrap()
+            .1,
+        vector["vapid_public_key"].as_str().unwrap()
+    );
+    let app = TestApp::boot_frozen_with_env(&vapid)
         .await
         .unwrap()
         .without_job_runner()

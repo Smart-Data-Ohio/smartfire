@@ -222,3 +222,5 @@ mod provider_tests;
 #[cfg(test)]
 mod composer_tests;
 
+#[cfg(test)]
+mod older_provider_tests;

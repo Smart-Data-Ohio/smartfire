@@ -136,9 +136,6 @@ pub(crate) fn shared_card_in_discussion(
     }
     card_in_discussion(pr, discussion_thread)
 }
-pub fn message_cards(conn: &Connection, app: &AppState, message: &Message) -> Result<String> {
-    message_cards_in_zone(conn, app, message, &super::page::renderer_time_zone())
-}
 pub fn message_cards_in_zone(
     conn: &Connection,
     app: &AppState,
@@ -158,6 +155,49 @@ pub fn message_cards_in_zone(
         &cards,
     ))
 }
+/// One persisted-fact snapshot for a callback's entire reference set. Callback rendering
+/// uses the detached renderer zone, just like the single-message owner adapter.
+pub(crate) fn message_cards_for_messages(
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+    account: Option<&Account>,
+) -> Result<std::collections::HashMap<i64, String>> {
+    let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+    let prs = PullRequest::for_messages(conn, &ids)?;
+    let public: Vec<_> = messages
+        .iter()
+        .filter(|m| {
+            prs.get(&m.id)
+                .is_some_and(|cards| cards.iter().any(|pr| pr.private == Some(false)))
+        })
+        .map(|m| m.id)
+        .collect();
+    let discussions = PullRequestThread::for_messages(conn, &public)?;
+    let zone = super::page::renderer_time_zone();
+    messages
+        .iter()
+        .map(|message| {
+            let cards = prs
+                .get(&message.id)
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+                .iter()
+                .map(|pr| {
+                    shared_card_in_discussion(
+                        pr,
+                        discussions.get(&(message.room_id, pr.id)).copied(),
+                    )
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok((
+                message.id,
+                render_message_cards(app, message, &zone, account, &cards),
+            ))
+        })
+        .collect()
+}
+
 pub(crate) fn render_message_cards(
     app: &AppState,
     message: &Message,

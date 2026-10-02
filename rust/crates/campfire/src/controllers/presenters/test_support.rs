@@ -247,6 +247,17 @@ impl TestApp {
         Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
     }
 
+    /// Real durable GitHub fetch jobs with the owner's HTTP client over a caller-owned network.
+    pub async fn boot_with_github_reader(
+        reader: crate::integrations::github::client::ReadClient,
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services(
+            "default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+            crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(),
+            Some(crate::integrations::github::client::AppClient::new(None, None)), Some(reader),
+        ).await
+    }
+
     pub async fn boot_with_github_app(
         github_app: crate::integrations::github::client::AppClient,
     ) -> Option<TestApp> {
@@ -299,6 +310,7 @@ impl TestApp {
             extra,
             crate::huddle::Config::default(),
             github_app,
+            None,
         )
         .await
     }
@@ -309,7 +321,7 @@ impl TestApp {
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None).await
+        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None, None).await
     }
 
     async fn boot_seed_with_huddle_services(
@@ -319,6 +331,7 @@ impl TestApp {
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
         github_app: Option<crate::integrations::github::client::AppClient>,
+        github_read: Option<crate::integrations::github::client::ReadClient>,
     ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
@@ -351,7 +364,7 @@ impl TestApp {
             Some(client) => crate::app::boot_with_all_services(
                 config,
                 clock,
-                crate::integrations::github::client::ReadClient::from_env(),
+                github_read.unwrap_or_else(crate::integrations::github::client::ReadClient::from_env),
                 client,
                 network.clone(),
                 network,

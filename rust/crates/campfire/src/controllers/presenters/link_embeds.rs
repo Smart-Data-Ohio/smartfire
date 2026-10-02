@@ -96,12 +96,15 @@ pub fn can_offer_suppression(conn: &Connection, message: &Message, viewer: i64) 
 
 pub fn container(app: &App, conn: &Connection, message: &Message, linkedin: bool) -> campfire_db::Result<String> {
     let view = super::Presenter::new(conn, app, None).message(message)?;
+    Ok(container_view(&view, linkedin))
+}
+fn container_view(view: &messages::MessageView, linkedin: bool) -> String {
     let (part, class, cards) = if linkedin {
         ("linkedin_cards", "linkedin-post-cards", &view.components.linkedin_cards)
     } else {
         ("link_embed_cards", "link-embed-cards", &view.components.link_embed_cards)
     };
-    Ok(messages::cards(&view, part, class, 2, cards).0)
+    messages::cards(view, part, class, 2, cards).0
 }
 
 pub fn broadcast_updates(app: &App, embed_id: i64) -> anyhow::Result<()> {
@@ -112,9 +115,17 @@ pub fn broadcast_updates(app: &App, embed_id: i64) -> anyhow::Result<()> {
         let ids = query
             .query_map([embed_id], |row| row.get::<_, i64>(0))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        for id in ids {
-            let message = Message::find(conn, id)?;
-            broadcast_message(&app2, conn, &message, embed.linkedin())?;
+        let mut messages = Message::for_ids(conn, &ids)?;
+        messages.sort_by_key(|m| m.id);
+        let room_ids: Vec<_> = messages.iter().map(|m| m.room_id).collect::<std::collections::BTreeSet<_>>().into_iter().collect();
+        let rooms: std::collections::HashMap<_, _> = Room::for_ids(conn, &room_ids)?.into_iter().map(|r| (r.id, r)).collect();
+        let presenter = super::Presenter::new(conn, &app2, None).preload_search(&messages)?;
+        for message in &messages {
+            let room = rooms.get(&message.room_id).ok_or(campfire_db::Error::RecordNotFound("Room"))?;
+            let html = container_view(&presenter.message(message)?, embed.linkedin());
+            let part = if embed.linkedin() { "linkedin_cards" } else { "link_embed_cards" };
+            app2.broadcasts.turbo(&Stream::conversation(room, message), campfire_cable::turbo::Action::Replace,
+                &message_dom_id(message, Some(part)), Some(&html), true);
         }
         Ok(())
     })?;
