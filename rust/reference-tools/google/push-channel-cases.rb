@@ -35,10 +35,12 @@ specs = [
   {name:'watch_server_error', old:true, response:[503, {}]},
   {name:'watch_no_scope', old:true, scopes:'openid email'},
   {name:'watch_unreadable', old:true, unreadable:true},
+  {name:'watch_unreadable_access', old:true, unreadable_access:true},
   {name:'watch_no_secret', old:true, secret:false},
   {name:'renew_disconnected', renew:true, old:true, disconnected:true},
   {name:'renew_no_scope', renew:true, old:true, scopes:'openid email'},
-  {name:'renew_unreadable', renew:true, old:true, unreadable:true}
+  {name:'renew_unreadable', renew:true, old:true, unreadable:true},
+  {name:'renew_unreadable_access', renew:true, old:true, expiry_offset_us:7200000000, unreadable_access:true}
 ]
 calls = []; answers = []
 http = Object.new
@@ -72,6 +74,7 @@ rows = specs.map do |spec|
     users.each do |user|
       account = GoogleAccount.create!(user:, email:'fixture@example.test', access_token:'access-token', refresh_token:'refresh-token', access_token_expires_at:BASE+3600, scopes:spec[:scopes], disconnected_reason:spec[:disconnected] ? 'revoked' : nil) if spec.fetch(:account, true)
       ActiveRecord::Base.connection.execute("UPDATE google_accounts SET refresh_token='broken-AR-ciphertext' WHERE id=#{account.id}") if spec[:unreadable]
+      ActiveRecord::Base.connection.execute("UPDATE google_accounts SET access_token='broken-AR-ciphertext' WHERE id=#{account.id}") if spec[:unreadable_access]
       Calendar::PushChannel.create!(user:, channel_id:"old-#{user.id}", token_digest:Calendar::PushChannel.digest("old-token-#{user.id}"), resource_id:"old-resource-#{user.id}", expires_at:spec[:expiry_offset_us] && BASE+Rational(spec[:expiry_offset_us], 1_000_000), last_message_number:42, last_notification_at:BASE-60, last_error:'previous failure', created_at:BASE-300, updated_at:BASE-300) if spec[:old]
     end
     # Raw ciphertext corruption must be observed by a fresh association, as in the helper's reload.

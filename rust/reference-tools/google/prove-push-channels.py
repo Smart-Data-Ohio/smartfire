@@ -36,6 +36,16 @@ cases = [
      't <= now.since(jiff::SignedDuration::from_hours(24))',
      't < now.since(jiff::SignedDuration::from_hours(24))',
      'google_push_channel_watch_renewal_and_preload'),
+    ('watch-credential-rescue', 'crates/campfire/src/integrations/google/calendar.rs',
+     'let response = match async {\n'
+     '        let mut credentials = api\n'
+     '            .credentials_from_account(&app.db, &app.secrets, account)\n'
+     '            .await?;',
+     'let mut credentials = api\n'
+     '        .credentials_from_account(&app.db, &app.secrets, account)\n'
+     '        .await?;\n'
+     '    let response = match async {',
+     'google_push_channel_unreadable_access_records_watch_error'),
 ]
 for name, relative, before, after, test in cases:
     path = root / relative

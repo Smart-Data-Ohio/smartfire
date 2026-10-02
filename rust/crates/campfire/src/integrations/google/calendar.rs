@@ -292,9 +292,6 @@ async fn watch_with_account(
     if !usable {
         return Ok(());
     }
-    let mut credentials = api
-        .credentials_from_account(&app.db, &app.secrets, account)
-        .await?;
     let old = app
         .db
         .read(move |conn| {
@@ -318,8 +315,12 @@ async fn watch_with_account(
     rand::rng().fill_bytes(&mut bytes);
     let token = bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
     let payload = json!({"id":channel_id,"type":"web_hook","address":address,"token":token});
-    let response = match api
-        .request_with(
+    // Rails rescues client errors from constructing credentials as well as HTTP.
+    let response = match async {
+        let mut credentials = api
+            .credentials_from_account(&app.db, &app.secrets, account)
+            .await?;
+        api.request_with(
             &mut credentials,
             &app.db,
             &app.secrets,
@@ -331,6 +332,8 @@ async fn watch_with_account(
             now(app),
         )
         .await
+    }
+    .await
     {
         Ok(v) => v,
         Err(e) if e.unavailable() => return Err(e),

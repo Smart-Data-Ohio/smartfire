@@ -2408,6 +2408,56 @@
     },
     {
       "spec": {
+        "name": "watch_unreadable_access",
+        "old": true,
+        "unreadable_access": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "initial_offsets_us": {
+        "127326141": null
+      },
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": null,
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "Unauthorized: Google token could not be read",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
+      ],
+      "disconnected": [
+        "The stored token could not be read; reconnect"
+      ],
+      "user_reads": 0,
+      "account_reads": 1
+    },
+    {
+      "spec": {
         "name": "watch_no_secret",
         "old": true,
         "secret": false
@@ -2566,6 +2616,58 @@
       "error": null,
       "channels": [
         null
+      ],
+      "disconnected": [
+        "The stored token could not be read; reconnect"
+      ],
+      "user_reads": 1,
+      "account_reads": 2
+    },
+    {
+      "spec": {
+        "name": "renew_unreadable_access",
+        "renew": true,
+        "old": true,
+        "expiry_offset_us": 7200000000,
+        "unreadable_access": true
+      },
+      "user_ids": [
+        127326141
+      ],
+      "initial": [
+        {
+          "id": 1,
+          "user_id": 127326141,
+          "channel_id": "old-127326141",
+          "token_digest": "0f782b6c628430d9b834050257d52c065199a751d002a50470d1df3f0785ed45",
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "previous failure",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z"
+        }
+      ],
+      "initial_offsets_us": {
+        "127326141": 7200000000
+      },
+      "calls": [],
+      "error": null,
+      "channels": [
+        {
+          "user_id": 127326141,
+          "resource_id": "old-resource-127326141",
+          "expires_at": "2026-09-23T12:30:00.000000Z",
+          "last_message_number": 42,
+          "last_notification_at": "2026-09-23T10:29:00.000000Z",
+          "last_error": "Unauthorized: Google token could not be read",
+          "created_at": "2026-09-23T10:25:00.000000Z",
+          "updated_at": "2026-09-23T10:25:00.000000Z",
+          "same_row": true,
+          "old_identity": true,
+          "digest_matches": true
+        }
       ],
       "disconnected": [
         "The stored token could not be read; reconnect"

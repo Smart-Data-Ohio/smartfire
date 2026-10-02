@@ -80,6 +80,9 @@ async fn fixture(row: &Value, now: Timestamp) -> (TestApp, Arc<Recorded>) {
                 if setup["unreadable"] == true {
                     tx.conn().execute("UPDATE google_accounts SET refresh_token='broken-AR-ciphertext' WHERE user_id=?",[id])?;
                 }
+                if setup["unreadable_access"] == true {
+                    tx.conn().execute("UPDATE google_accounts SET access_token='broken-AR-ciphertext' WHERE user_id=?",[id])?;
+                }
                 Ok(())
             }).await.unwrap();
         }
@@ -273,6 +276,64 @@ async fn google_push_channel_watch_renewal_and_preload_match_pinned_rails() {
     println!(
         "Pinned Rails PushChannel: {} watch/renew scenarios; 0 skipped",
         v["rows"].as_array().unwrap().len()
+    );
+}
+
+#[tokio::test]
+async fn google_push_channel_unreadable_access_records_watch_error() {
+    let v = vectors();
+    let now = stamp(&v["now"]).unwrap();
+    let mut actual = Vec::new();
+    let mut expected = Vec::new();
+    for (mode, case_name) in [("watch", "rewatch"), ("renew", "renew_soon")] {
+        let row = v["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["spec"]["name"] == case_name)
+            .unwrap();
+        let (a, recorded) = fixture(row, now).await;
+        a.db()
+            .write(|tx| {
+                // Keep the refresh token usable; only credential decoding fails.
+                tx.conn().execute(
+                    "UPDATE google_accounts SET access_token='broken-AR-ciphertext' WHERE user_id=?",
+                    [DAVID],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let outcome = if mode == "watch" {
+            calendar::watch(&a.booted.app, DAVID).await
+        } else {
+            calendar::renew(&a.booted.app).await
+        };
+        let (last_error, disconnected) = a
+            .db()
+            .read(|conn| {
+                let last_error = conn.query_row(
+                    "SELECT last_error FROM calendar_push_channels WHERE user_id=?",
+                    [DAVID],
+                    |r| r.get::<_, Option<String>>(0),
+                )?;
+                let disconnected = conn.query_row(
+                    "SELECT disconnected_reason FROM google_accounts WHERE user_id=?",
+                    [DAVID],
+                    |r| r.get::<_, Option<String>>(0),
+                )?;
+                Ok((last_error, disconnected))
+            })
+            .await
+            .unwrap();
+        let observed = json!({"mode":mode,"error":outcome.as_ref().err().map(api::Error::class),"last_error":last_error,"disconnected":disconnected,"calls":recorded.calls.lock().unwrap().len()});
+        println!("Unreadable access watch: {observed}");
+        actual.push(observed);
+        expected.push(json!({"mode":mode,"error":null,"last_error":"Unauthorized: Google token could not be read","disconnected":"The stored token could not be read; reconnect","calls":0}));
+    }
+    assert_eq!(
+        actual, expected,
+        "unreadable access must retain Rails watch error handling"
     );
 }
 #[tokio::test]
