@@ -26,6 +26,7 @@ for script, filename in [
     ('reactions_http_contract.rb', 'agent_reactions_http.json'),
     ('bot_reactions_http_contract.rb', 'agent_bot_reactions_http.json'),
     ('work_validation_http_contract.rb', 'agent_work_validation_http.json'),
+    ('work_writes_http_contract.rb', 'agent_work_writes_http.json'),
     ('attachments_http_contract.rb', 'agent_attachments_http.json'),
     ('permissions_http_contract.rb', 'agent_permissions_http.json'),
     ('review192_contract.rb', 'agent_review192_http.json'),
