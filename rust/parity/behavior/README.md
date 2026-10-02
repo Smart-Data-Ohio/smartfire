@@ -4,6 +4,8 @@
 server. It uses `Dockerfile.playwright` and the locked package file, the ordinary origin
 proxy and seeded sessions. It creates no screenshots and compares no pixels. The browser
 has no external network. Both apps are presented as `http://localhost:3999`.
+The runner creates its empty, ignored `node_modules` mountpoint before mounting the
+checkout read only; a fresh clone needs no host npm installation.
 
 Run from the worktree root against **isolated copies** of the default seed. The apps and
 browser use `2026-03-02T16:00:00Z`; the browser uses UTC and a 1400×1400 viewport. Build

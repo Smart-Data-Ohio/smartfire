@@ -34,6 +34,9 @@ image=$(docker_image)
 name=${PARITY_NAMESPACE:-campfire}-behavior-$$
 CAPTURE_CONTAINERS+=("$name" "$name-forward")
 # Short, identical container socket paths also work for deeply nested worktrees.
+# Docker cannot create a nested tmpfs mountpoint through the read-only checkout.
+# A fresh clone has no ignored node_modules directory; create only the mountpoint.
+mkdir -p "$REFERENCE_ROOT/rust/parity/node_modules"
 docker run -d --rm --init --name "$name-forward" --network host -u "$(id -u):$(id -g)" \
   -v "$REFERENCE_ROOT:/work:ro" -v "$net_dir:/bridge" --tmpfs /work/rust/parity/node_modules \
   -w /work/rust/parity "$image" node capture/forward.ts /bridge/upstream.sock >/dev/null
