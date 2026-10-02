@@ -496,7 +496,7 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
             row["content_type"],
             "{name}: media type"
         );
-        if !crate::app::asset_goldens::compare(name, &reply.text(), row["body"].as_str().unwrap()) {
+        if reply.body != row["body"].as_str().unwrap().as_bytes() {
             let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join("../../../.scratch/claim-diff");
             std::fs::create_dir_all(&dir).unwrap();
