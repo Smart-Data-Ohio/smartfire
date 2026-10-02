@@ -781,6 +781,15 @@ impl Database {
         *self.readers.query_log.lock().unwrap() = None;
     }
 
+    /// Lower SQLite's real bind-variable limit on idle reader connections for boundary tests.
+    /// Tests call this only on an otherwise idle app with its job runner stopped.
+    #[cfg(feature = "test-support")]
+    pub fn set_reader_parameter_limit(&self, limit: i32) -> Vec<i32> {
+        let readers = self.readers.idle.lock().unwrap();
+        assert!(!readers.is_empty(), "parameter-limit test needs idle readers");
+        readers.iter().map(|conn| conn.set_limit(rusqlite::limits::Limit::SQLITE_LIMIT_VARIABLE_NUMBER, limit).expect("valid SQLite limit")).collect()
+    }
+
     /// Trace the pooled readers and SELECTs issued from writer transactions.
     #[cfg(feature = "test-support")]
     pub fn capture_queries(&self) -> Arc<Mutex<Vec<String>>> {

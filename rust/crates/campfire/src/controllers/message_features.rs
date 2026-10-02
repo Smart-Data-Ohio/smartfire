@@ -227,3 +227,9 @@ mod older_provider_tests;
 
 #[cfg(test)]
 mod bounded_provider_tests;
+
+#[cfg(test)]
+mod mapped_provider_tests;
+
+#[cfg(test)]
+mod older_owner_tests;
