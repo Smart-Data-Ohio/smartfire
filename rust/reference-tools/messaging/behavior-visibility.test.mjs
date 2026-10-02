@@ -109,3 +109,67 @@ test('visible descendants and ancestors cannot stand in for the selected element
     await waitForVisibleContentCount(page.locator('.message__body'),'[data-reply-target="body"]','Delivered text',1,{timeout:100});
   } finally {await browser.close();}
 });
+
+test('visible text excludes hidden descendants, honors whitespace and can see overridden children',async()=>{
+  const {filterVisibleText,byVisibleText,visibleText,waitForVisibleText}=await import('./behavior-visibility.mjs');
+  const browser=await chromium.launch({headless:true});
+  try {
+    const context=await browser.newContext();await installVisibility(context);
+    const page=await context.newPage();setVisibilityTimeout(page,100);
+    await page.goto('data:text/html,'+encodeURIComponent(`
+      <article id="card">X<span style="visibility:hidden">Loading post</span></article>
+      <div id="body">visible <span style="opacity:0">hidden</span><span style="display:none">secret</span></div>
+      <div style="visibility:hidden"><strong style="visibility:visible">overridden</strong>invisible</div>
+      <pre><code>one\n  two <span style="visibility:hidden">hidden</span></code></pre>
+      <div id="wrap"><div data-body>visible <span style="visibility:hidden">secret</span></div></div>
+    `));
+    await waitForVisibility(page.locator('#card'));
+    await assert.rejects(waitForVisibility(filterVisibleText(page.locator('#card'),'Loading post')),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibility(byVisibleText(page,'secret')),{name:'TimeoutError'});
+    assert.equal(await visibleText(page.locator('#body')),'visible');
+    await waitForVisibleText(page.locator('strong'),'overridden',{timeout:100});
+    assert.equal(await visibleText(page.locator('code')),'one\n  two ');
+    await assert.rejects(waitForVisibleContentCount(page.locator('#wrap'),'[data-body]','secret',1,{timeout:100}),{name:'TimeoutError'});
+    await page.locator('#card span').evaluate(node=>node.style.visibility='visible');
+    await waitForVisibility(filterVisibleText(page.locator('#card'),'Loading post'));
+    await page.goto('data:text/html,<div id="card"><span style="visibility:hidden">Loading post</span>error</div>');
+    await assert.rejects(waitForVisibility(filterVisibleText(page.locator('#card'),'Loading post')),{name:'TimeoutError'});
+  } finally {await browser.close();}
+});
+
+test('negative queries retry forbidden matches; all-node checks keep hidden nodes',async()=>{
+  const {waitForDomCount}=await import('./behavior-visibility.mjs');
+  const browser=await chromium.launch({headless:true});
+  try {
+    const context=await browser.newContext();await installVisibility(context);
+    const page=await context.newPage();setVisibilityTimeout(page,150);
+    await page.goto('data:text/html,<div id="forbidden">present</div><script>setTimeout(()=>document.querySelector("div").remove(),80)</script>');
+    await waitForVisibility(page.locator('#forbidden'),{state:'hidden'});
+    assert.equal(await page.locator('#forbidden').count(),0,'absence cannot pass while the visible forbidden node remains');
+    await page.goto('data:text/html,<div id="forbidden">present</div>');
+    await assert.rejects(waitForVisibility(page.locator('#forbidden'),{state:'hidden'}),{name:'TimeoutError'});
+    await page.locator('#forbidden').evaluate(node=>node.style.opacity='0');
+    await waitForVisibility(page.locator('#forbidden'),{state:'hidden'});
+    await assert.rejects(waitForDomCount(page.locator('#forbidden'),0,{timeout:100}),{name:'TimeoutError'});
+    await waitForDomCount(page.locator('#forbidden'),1,{timeout:100});
+  } finally {await browser.close();}
+});
+
+test('all element actions require Selenium visibility, including opacity through parents',async()=>{
+  const browser=await chromium.launch({headless:true});
+  try {
+    const context=await browser.newContext();await installVisibility(context);
+    const page=await context.newPage();
+    await page.goto('data:text/html,'+encodeURIComponent(`<div style="opacity:0"><textarea></textarea><button>Click</button><input type="checkbox"><select><option value="a">A</option></select></div>`));
+    for(const [selector,action,args] of [['textarea','fill',['draft']],['button','click',[]],['input','check',[]],['select','selectOption',['a']],['textarea','press',['Enter']],['button','hover',[]]]) {
+      await assert.rejects(actOnVisible(page.locator(selector),action,{timeout:100},args),{name:'TimeoutError'});
+    }
+    assert.equal(await page.locator('textarea').inputValue(),'');
+    assert.equal(await page.locator('input').isChecked(),false);
+    await page.locator('div').evaluate(node=>node.style.opacity='1');
+    await actOnVisible(page.locator('textarea'),'fill',{timeout:100},['draft']);
+    await actOnVisible(page.locator('input'),'check',{timeout:100});
+    assert.equal(await page.locator('textarea').inputValue(),'draft');
+    assert.equal(await page.locator('input').isChecked(),true);
+  } finally {await browser.close();}
+});

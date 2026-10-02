@@ -1,6 +1,6 @@
 // Non-pixel code_highlighting_test.rb flows from pinned d7c7de92.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount,actOnVisible} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,actOnVisible,filterVisibleText,waitForDomCount} from './behavior-visibility.mjs';
 import {CAPYBARA_DEFAULT} from './behavior-deadlines.mjs';
 export async function codeHighlighting({author:page,recipient,caseName,fixture,base,openEdit,field}) {
   const {samples,literal_code_source,code_source,code_replacement,highlight_wait,code_search_id}=fixture;
@@ -9,22 +9,22 @@ export async function codeHighlighting({author:page,recipient,caseName,fixture,b
     if(keyword) {
       // The original waits once for the highlighted keyword, not for any
       // token or for two sequential twenty-second readiness conditions.
-      await waitForVisibility(code.locator('.code-token').filter({hasText:keyword}).first(),{timeout:highlight_wait*1000});
+      await waitForVisibility(filterVisibleText(code.locator('.code-token'),keyword).first(),{timeout:highlight_wait*1000});
     } else {
       await waitForVisibility(code,{timeout:highlight_wait*1000});
       await waitForVisibility(code.locator('.code-token').first(),{timeout:CAPYBARA_DEFAULT});
     }
   }
   async function post(source) {
-    await page.getByRole('combobox',{name:'Write a message',exact:true}).fill(source);
-    await page.getByRole('button',{name:'Send Message',exact:true}).click();
+    await actOnVisible(page.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},[source]);
+    await actOnVisible(page.getByRole('button',{name:'Send Message',exact:true}),'click',{});
     return page.locator('.message[data-message-id]').filter({has:page.locator('pre code')});
   }
   async function copy(row,expected) {
     // Same original clipboard permission-independent boundary. The actual
     // copy handler and its saved source still run.
     await page.evaluate(()=>{navigator.clipboard.writeText=async source=>{window.copiedCode=source;};});
-    await row.getByRole('button',{name:'Copy code',exact:true}).click();await waitForVisibility(row.getByRole('button',{name:'Code copied',exact:true}));
+    await actOnVisible(row.getByRole('button',{name:'Copy code',exact:true}),'click',{});await waitForVisibility(row.getByRole('button',{name:'Code copied',exact:true}));
     assert.equal(await page.evaluate(()=>window.copiedCode),expected);
   }
   if(caseName.startsWith('language fences')) {
@@ -34,7 +34,7 @@ export async function codeHighlighting({author:page,recipient,caseName,fixture,b
     for(const [language,code] of samples) {
       const element=marked(row,language);await highlight(element);assert.equal(await element.textContent(),code+'\n');
     }
-    assert.equal(await row.locator('pre img,pre script').count(),0);assert.notEqual(await page.evaluate(()=>window.codeExecuted),true);
+    await waitForDomCount(row.locator('pre img,pre script'),0);assert.notEqual(await page.evaluate(()=>window.codeExecuted),true);
     assert.equal(await marked(row,'c#').getAttribute('data-code-language'),'csharp');
     assert.equal(await marked(row,'c++').getAttribute('data-code-language'),'cpp');
     await copy(row.locator('pre').filter({has:page.locator('code.language-ts')}),samples.find(([language])=>language==='ts')[1]+'\n');
@@ -43,12 +43,12 @@ export async function codeHighlighting({author:page,recipient,caseName,fixture,b
   } else if(caseName.startsWith('unlabelled code')) {
     const row=await post(literal_code_source);
     await waitForVisibility(row.locator('pre.code-highlighted code .code-token').first(),{timeout:highlight_wait*1000});
-    await waitForVisibility(marked(row,'text'),{timeout:highlight_wait*1000});
+    await waitForVisibility(filterVisibleText(marked(row,'text'),'const plain = "@[JZ] :smile:";'),{timeout:highlight_wait*1000});
     assert.equal((await marked(row,'text').textContent()).trim(),'const plain = "@[JZ] :smile:";');
     await waitForVisibleCount(row.locator('code.language-text span,code.language-unknown-language span,p code span'),0);
-    await waitForVisibility(row.locator('code.language-unknown-language').filter({hasText:'<script>window.codeExecuted = true</script>'}));
+    await waitForVisibility(filterVisibleText(row.locator('code.language-unknown-language'),'<script>window.codeExecuted = true</script>'));
     assert.equal((await row.locator('code.language-unknown-language').textContent()).trim(),'<script>window.codeExecuted = true</script>');
-    assert.equal(await row.locator('pre script').count(),0);assert.notEqual(await page.evaluate(()=>window.codeExecuted),true);
+    await waitForDomCount(row.locator('pre script'),0);assert.notEqual(await page.evaluate(()=>window.codeExecuted),true);
     await waitForVisibleCount(row.locator('.markdown-code-copy'),3);
   } else if(caseName.startsWith('search results highlight')) {
     await page.goto(base+'/searches?q=HighlightSearchExample');
@@ -62,13 +62,13 @@ export async function codeHighlighting({author:page,recipient,caseName,fixture,b
   } else if(caseName.startsWith('code and copying')) {
     await page.evaluate(()=>{window.Worker=class {constructor() {window.highlighterWorkerFailed=true;throw new Error('Worker unavailable');}};});
     const row=await post(code_source);
-    await waitForVisibility(row.locator('pre code.language-ts').filter({hasText:'const value: string = "hello";'}));
+    await waitForVisibility(filterVisibleText(row.locator('pre code.language-ts'),'const value: string = "hello";'));
     assert.equal((await row.locator('pre code.language-ts').textContent()).trim(),'const value: string = "hello";');
     await copy(row,'const value: string = "hello";\n');assert.equal(await page.evaluate(()=>window.highlighterWorkerFailed),true);
     await waitForVisibleCount(row.locator('pre code[data-highlighted],pre .code-token'),0);await field(page,'');
   } else if(caseName.startsWith('editing a code block')) {
     const row=await post(code_source);await highlight(marked(row,'ts'),'const');const id=await row.getAttribute('data-message-id');
-    await openEdit(page,row);await page.getByRole('combobox',{name:'Write a message',exact:true}).fill(code_replacement);await page.getByRole('button',{name:'Send Message',exact:true}).click();
+    await openEdit(page,row);await actOnVisible(page.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},[code_replacement]);await actOnVisible(page.getByRole('button',{name:'Send Message',exact:true}),'click',{});
     const replacement=page.locator(`.message[data-message-id="${id}"]`);await highlight(marked(replacement,'python'),'def');
     await waitForVisibleCount(replacement.locator('code.language-ts'),0);await waitForVisibleCount(replacement.locator('.markdown-code-copy'),1);
     await copy(replacement,'def greet(name):\n    return "Hello " + name\n');

@@ -1,7 +1,7 @@
 // Behaviour equivalents of message_interactions, message_toolbar and
 // message_actions_mobile at d7c7de92. No screenshots or pixel comparisons.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty,actOnVisible} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty,actOnVisible,filterVisibleText} from './behavior-visibility.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT} from './behavior-deadlines.mjs';
 export const originalMessage=page=>page.locator('.message[data-message-id="607264868"]');
 export async function assertMenuOpen(page) {
@@ -19,7 +19,7 @@ export async function openMenu(page) {
   await waitForVisibility(page.getByRole('menuitem',{name:'Copy text',exact:true}));
 }
 export async function closedMenu(page) {
-  await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'detached'});
+  await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'hidden'});
 }
 export async function menuGeometry(page,{metadata=false}={}) {
   if(metadata) await waitForVisibility(page.locator('#message-actions-menu .message__edit-action'),{timeout:DELIVERY_WAIT});
@@ -53,7 +53,7 @@ export async function mobileActions({author:page,caseName}) {
   }
 }
 async function longPress(page,move=false) {
-  const row=originalMessage(page);await row.scrollIntoViewIfNeeded();
+  const row=originalMessage(page);await actOnVisible(row,'scrollIntoViewIfNeeded',{});
   const b=await row.boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;
   const cdp=await page.context().newCDPSession(page);
   try {
@@ -72,14 +72,14 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     // including opacity inherited from the menu's reaction container.
     await waitForVisibleCount(page.locator('#message-actions-menu .message__quick-reaction'),fixture.reaction_count,{timeout:CAPYBARA_DEFAULT});
     await page.keyboard.press('Escape');await closedMenu(page);
-    await row.click();await row.dispatchEvent('keydown',{key:'F10',shiftKey:true,bubbles:true,cancelable:true});
+    await actOnVisible(row,'click',{});await row.dispatchEvent('keydown',{key:'F10',shiftKey:true,bubbles:true,cancelable:true});
     await assertMenuOpen(page);
     await page.keyboard.press('Escape');await page.waitForFunction(id=>document.activeElement?.id===id,await row.getAttribute('id'));
     await page.setViewportSize({width:390,height:844});await longPress(page,true);await closedMenu(page);
     await longPress(page);await assertMenuOpen(page);
     const g=await menuGeometry(page);
     assert.ok(g.menu.left>=0&&g.menu.top>=0&&g.menu.right<=g.viewport.width&&g.menu.bottom<=g.viewport.height);
-    page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('menuitem',{name:'Delete message',exact:true}).click();
+    page.once('dialog',dialog=>dialog.dismiss());await actOnVisible(page.getByRole('menuitem',{name:'Delete message',exact:true}),'click',{});
     await waitForVisibility(page.locator('#message-actions-menu .message__delete-action'));await waitForVisibility(row);
   } else if(caseName.startsWith('a release click')) {
     await page.setViewportSize({width:390,height:844});await longPress(page);
@@ -97,10 +97,10 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
       await page.keyboard.press('Escape');await closedMenu(page);
     }
   } else if(caseName.startsWith('edits through')) {
-    await editor.fill('A draft that must survive editing');await openEdit(page,row,{contextTimeout:DELIVERY_WAIT});
-    await field(page,"Third time's a charm.");await page.getByRole('button',{name:'Cancel message context',exact:true}).click();
+    await actOnVisible(editor,'fill',{},['A draft that must survive editing']);await openEdit(page,row,{contextTimeout:DELIVERY_WAIT});
+    await field(page,"Third time's a charm.");await actOnVisible(page.getByRole('button',{name:'Cancel message context',exact:true}),'click',{});
     await field(page,'A draft that must survive editing');await openEdit(page,row);
-    await send(page,'Saved through the main composer');await text(recipient,'Saved through the main composer',1,{timeout:DELIVERY_WAIT});
+    await send(page,'Saved through the main composer',{timeout:DELIVERY_WAIT});await text(recipient,'Saved through the main composer',1,{timeout:DELIVERY_WAIT});
     await waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});
     await field(page,'A draft that must survive editing');
   } else if(caseName.startsWith('a duplicate delivery')) {
@@ -121,55 +121,55 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     });
     await waitForVisibility(page.locator('html[data-duplicate-delivery-rendered]'),{timeout:DELIVERY_WAIT});
     assert.equal(await page.evaluate(()=>window.originalDeliveredMessage.isConnected),true,'redelivery preserves active controls');
-    await page.getByRole('menuitem',{name:'Edit message',exact:true}).click();await field(page,"Third time's a charm.");
+    await actOnVisible(page.getByRole('menuitem',{name:'Edit message',exact:true}),'click',{});await field(page,"Third time's a charm.");
   } else if(caseName.startsWith('keeps newer typing')) {
-    await openEdit(page,row,{contextTimeout:DELIVERY_WAIT});await editor.fill('First edit request');
+    await openEdit(page,row,{contextTimeout:DELIVERY_WAIT});await actOnVisible(editor,'fill',{},['First edit request']);
     // Same original deterministic PATCH gate/failure, isolated from the
     // separate real-write edit case and its database assertions.
     await page.evaluate(()=>{
       window.originalInteractionsFetch=window.fetch;
       window.fetch=(input,options={})=>options.method==='PATCH'?new Promise(resolve=>{window.resolveInteractionsEdit=resolve;}):window.originalInteractionsFetch(input,options);
     });
-    await page.getByRole('button',{name:'Send Message',exact:true}).click();
+    await actOnVisible(page.getByRole('button',{name:'Send Message',exact:true}),'click',{});
     await page.waitForFunction(()=>typeof window.resolveInteractionsEdit==='function');
-    await editor.fill('A newer draft typed while saving');
+    await actOnVisible(editor,'fill',{},['A newer draft typed while saving']);
     await page.evaluate(()=>window.resolveInteractionsEdit(new Response('{}',{status:200})));
     await field(page,'A newer draft typed while saving',{timeout:DELIVERY_WAIT});
     await waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});
     await page.evaluate(()=>{
       window.fetch=(input,options={})=>options.method==='PATCH'?Promise.resolve(new Response(JSON.stringify({error:'The message could not be saved'}),{status:422,headers:{'Content-Type':'application/json'}})):window.originalInteractionsFetch(input,options);
     });
-    await openEdit(page,row);await editor.fill('Failed edit');await page.getByRole('button',{name:'Send Message',exact:true}).click();
-    await waitForVisibility(page.locator('#composer [data-composer-target="feedback"]').filter({hasText:'The message could not be saved'}),{timeout:DELIVERY_WAIT});
+    await openEdit(page,row);await actOnVisible(editor,'fill',{},['Failed edit']);await actOnVisible(page.getByRole('button',{name:'Send Message',exact:true}),'click',{});
+    await waitForVisibility(filterVisibleText(page.locator('#composer [data-composer-target="feedback"]'),'The message could not be saved'),{timeout:DELIVERY_WAIT});
     await waitForVisibility(page.locator('#composer [data-composer-target="context"]:not([hidden])'));
-    await page.getByRole('button',{name:'Cancel message context',exact:true}).click();
+    await actOnVisible(page.getByRole('button',{name:'Cancel message context',exact:true}),'click',{});
   } else if(caseName.startsWith('replies with notify')) {
-    await openMenu(page);await page.getByRole('menuitem',{name:'Reply',exact:true}).click();
-    await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'}),{timeout:DELIVERY_WAIT});
+    await openMenu(page);await actOnVisible(page.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
+    await waitForVisibility(filterVisibleText(page.locator('#composer [data-composer-target="contextLabel"]'),'Replying to JZ'),{timeout:DELIVERY_WAIT});
     await waitForVisibleProperty(page.getByLabel('Notify author',{exact:true}),'checked',true);
-    await page.getByLabel('Notify author',{exact:true}).uncheck();await send(page,'A reply without a notification');
-    for(const browser of [page,recipient]) await waitForVisibility(browser.locator('.message__reply-preview').filter({hasText:'Replying to JZ'}),{timeout:DELIVERY_WAIT});
-    await openMenu(page);page.once('dialog',dialog=>dialog.accept());await page.getByRole('menuitem',{name:'Delete message',exact:true}).click();
-    await waitForVisibility(row,{state:'detached'});await page.reload();
-    await waitForVisibility(page.locator('.message__reply-preview').filter({hasText:'Replying to a deleted message'}),{timeout:DELIVERY_WAIT});
+    await actOnVisible(page.getByLabel('Notify author',{exact:true}),'uncheck',{});await send(page,'A reply without a notification');
+    for(const browser of [page,recipient]) await waitForVisibility(filterVisibleText(browser.locator('.message__reply-preview'),'Replying to JZ'),{timeout:DELIVERY_WAIT});
+    await openMenu(page);page.once('dialog',dialog=>dialog.accept());await actOnVisible(page.getByRole('menuitem',{name:'Delete message',exact:true}),'click',{});
+    await waitForVisibility(row,{state:'hidden'});await page.reload();
+    await waitForVisibility(filterVisibleText(page.locator('.message__reply-preview'),'Replying to a deleted message'),{timeout:DELIVERY_WAIT});
   } else if(caseName.startsWith('copies message')) {
     await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:text=>{window.interactionsCopied=text;return Promise.resolve();}}}));
-    await openMenu(page);await page.getByRole('menuitem',{name:'Copy text',exact:true}).click();
+    await openMenu(page);await actOnVisible(page.getByRole('menuitem',{name:'Copy text',exact:true}),'click',{});
     assert.equal(await page.evaluate(()=>window.interactionsCopied),"Third time's a charm.");
-    await openMenu(page);await page.getByRole('menuitem',{name:'Copy link',exact:true}).click();
+    await openMenu(page);await actOnVisible(page.getByRole('menuitem',{name:'Copy link',exact:true}),'click',{});
     assert.ok((await page.evaluate(()=>window.interactionsCopied)).includes(fixture.message_permalink));
-    await openMenu(page);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
+    await openMenu(page);await actOnVisible(page.getByRole('menuitem',{name:'Forward',exact:true}),'click',{});
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:DELIVERY_WAIT});
-    await actOnVisible(dialog.locator('.message-forward-dialog__destination').filter({hasText:'Forward destination'}),'click',{timeout:DELIVERY_WAIT});
-    await dialog.getByLabel('Add a note (optional)',{exact:true}).fill('Forwarded from the interaction test');
-    await dialog.getByRole('button',{name:'Forward',exact:true}).click();
-    await waitForVisibility(page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}),{timeout:DELIVERY_WAIT});
+    await actOnVisible(filterVisibleText(dialog.locator('.message-forward-dialog__destination'),'Forward destination'),'click',{timeout:DELIVERY_WAIT});
+    await actOnVisible(dialog.getByLabel('Add a note (optional)',{exact:true}),'fill',{},['Forwarded from the interaction test']);
+    await actOnVisible(dialog.getByRole('button',{name:'Forward',exact:true}),'click',{});
+    await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),'Forwarded to 1 destination'),{timeout:DELIVERY_WAIT});
   } else if(caseName.startsWith('forwarding twice')) {
-    await openMenu(page);await page.getByRole('menuitem',{name:'Forward',exact:true}).click();
+    await openMenu(page);await actOnVisible(page.getByRole('menuitem',{name:'Forward',exact:true}),'click',{});
     await waitForVisibility(page.locator('dialog[open]'),{timeout:DELIVERY_WAIT});await actOnVisible(page.locator('.message-forward-dialog__destination input').first(),'check',{timeout:DELIVERY_WAIT});
     const requests=[];page.on('request',request=>{if(request.method()==='POST'&&/\/forwards(?:\.json)?$/.test(new URL(request.url()).pathname)) requests.push(request);});
-    const submit=page.locator('[data-message-actions-target="forwardSubmit"]');await submit.click();
-    await waitForVisibility(page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'}),{timeout:DELIVERY_WAIT});
+    const submit=page.locator('[data-message-actions-target="forwardSubmit"]');await actOnVisible(submit,'click',{});
+    await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),'Forwarded to 1 destination'),{timeout:DELIVERY_WAIT});
     await waitForVisibility(submit.locator(':scope:disabled'));
     assert.equal(await submit.isDisabled(),true);
     // A real second click is suppressed by the disabled control, not a
@@ -179,15 +179,12 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
   } else if(caseName.startsWith('groups emoji reactions')) {
     async function reaction(browser,count,active) {
       const chip=originalMessage(browser).locator('.reaction-chip[data-reaction="👍"]');
-      await waitForVisibility(chip.locator('.reaction-chip__count').filter({hasText:new RegExp(`^${count}$`)}),{timeout:DELIVERY_WAIT});
-      await browser.waitForFunction(({count,active})=>{
-        const chip=document.querySelector('.message[data-message-id="607264868"] .reaction-chip[data-reaction="👍"]');
-        return chip&&window.__ws8bmSeleniumVisible(chip)&&chip.querySelector('.reaction-chip__count')?.textContent.trim()===String(count)&&chip.classList.contains('reaction-chip--active')===active;
-      },{count,active});
+      await waitForVisibility(filterVisibleText(chip.locator('.reaction-chip__count'),new RegExp(`^${count}$`)),{timeout:DELIVERY_WAIT});
+      await waitForVisibility(chip.locator(':scope.reaction-chip--active'),{state:active?'visible':'hidden',timeout:CAPYBARA_DEFAULT});
     }
     async function quick(browser) {await openMenu(browser);await actOnVisible(browser.locator('.message__quick-reaction[title="Thumbs up"]'),'click');}
     await quick(recipient);await reaction(recipient,1,true);await reaction(page,1,false);
     await quick(page);await reaction(page,2,true);await reaction(recipient,2,true);
-    await row.locator('.reaction-chip[data-reaction="👍"]').click();await reaction(page,1,false);await reaction(recipient,1,true);
+    await actOnVisible(row.locator('.reaction-chip[data-reaction="👍"]'),'click',{});await reaction(page,1,false);await reaction(recipient,1,true);
   } else throw new Error(`unimplemented interaction case ${caseName}`);
 }

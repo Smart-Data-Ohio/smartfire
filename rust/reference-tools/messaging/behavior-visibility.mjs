@@ -2,23 +2,31 @@
 // overflow, closed details, image maps and shadow-tree visibility.
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
+import {textBootstrap,textSelectorEngine} from './behavior-text.mjs';
+export {filterVisibleText,byVisibleText} from './behavior-text.mjs';
 import {CAPYBARA_DEFAULT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
-const {errors}=require('playwright');
+const {errors,selectors}=require('playwright');
+let registered;
 const atom=readFileSync(new URL('./selenium/isDisplayed.js',import.meta.url),'utf8');
 const defaults=new WeakMap();
 
 export async function installVisibility(context) {
-  await context.addInitScript({content:`window.__ws8bmSeleniumVisible = element => element.isConnected && (${atom})(element, false);`});
+  registered??=selectors.register('capybara-text',textSelectorEngine,{contentScript:false});
+  await registered;
+  await context.addInitScript({content:`window.__ws8bmSeleniumVisible = element => element.isConnected && (${atom})(element, false); ${textBootstrap}`});
 }
 export function setVisibilityTimeout(page,timeout) {defaults.set(page,timeout);}
 async function visibleIndices(locator,condition=null) {
   return locator.evaluateAll((elements,condition)=>elements.flatMap((element,index)=>{
     if(!window.__ws8bmSeleniumVisible(element)) return [];
     if(condition) {
-      if(condition.kind==='descendant-text') {
+      if(condition.kind==='visible-text') {
+        const text=window.__ws8bmVisibleText(element);
+        if(condition.exact?text!==condition.value:!text.includes(condition.value)) return [];
+      } else if(condition.kind==='descendant-text') {
         const child=element.querySelector(condition.selector);
-        if(!child||!window.__ws8bmSeleniumVisible(child)||child.textContent.trim()!==condition.value) return [];
+        if(!child||!window.__ws8bmSeleniumVisible(child)||!window.__ws8bmVisibleText(child).includes(condition.value)) return [];
       } else {
         const actual=condition.kind==='attribute'?element.getAttribute(condition.name):element[condition.name];
         if(actual!==condition.value) return [];
@@ -31,14 +39,14 @@ export async function visibleCount(locator) {return (await visibleIndices(locato
 export async function isSeleniumVisible(locator) {return (await visibleCount(locator))>0;}
 
 async function waitForMatches(locator,accept,options,description,condition=null) {
-  const timeout=options.timeout??defaults.get(locator.page())??30000;
+  const timeout=options.timeout??defaults.get(locator.page())??CAPYBARA_DEFAULT;
   const started=Date.now();let count;
   do {
     const indices=await visibleIndices(locator,condition);count=indices.length;
     if(accept(count)&&(timeout===0||Date.now()-started<=timeout)) return indices;
     const remaining=timeout-(Date.now()-started);
     if(timeout!==0&&remaining<=0) break;
-    await new Promise(resolve=>setTimeout(resolve,timeout===0?16:Math.min(16,remaining)));
+    await new Promise(resolve=>setTimeout(resolve,timeout===0?10:Math.min(10,remaining)));
   } while(true);
   throw new errors.TimeoutError(`Selenium visibility ${description} timed out after ${timeout}ms: ${locator}; last visible count: ${count}`);
 }
@@ -62,6 +70,8 @@ export async function waitForVisibleProperty(locator,name,value,options={}) {
 export async function waitForVisibleAttribute(locator,name,value,options={}) {
   await waitForMatches(locator,count=>count>0,{timeout:CAPYBARA_DEFAULT,...options},`${name}=${JSON.stringify(value)}`,{kind:'attribute',name,value});
 }
+// Negative queries retry while forbidden matches remain, exactly as Capybara
+// Node::Base#synchronize; successful absence returns without a fixed sleep.
 // Explicit Capybara find/find_field/click_link queries are visibility scoped.
 // Share their deadline with the action instead of adding a second full wait.
 export async function actOnVisible(locator,action,options={},args=[]) {
@@ -69,7 +79,7 @@ export async function actOnVisible(locator,action,options={},args=[]) {
   const match=await visibleMatch(locator,{timeout});
   const remaining=timeout-(Date.now()-started);
   if(remaining<=0) throw new errors.TimeoutError(`Visible ${action} timed out after ${timeout}ms: ${locator}`);
-  return match[action](...args,{...options,timeout:remaining});
+  return match.locator('capybara-text={"mode":"visible"}')[action](...args,{...options,timeout:remaining});
 }
 export async function waitForVisibility(locator,options={}) {
   const state=options.state??'visible';
@@ -77,4 +87,32 @@ export async function waitForVisibility(locator,options={}) {
   if(state==='attached'||state==='detached') return locator.waitFor(options);
   if(state!=='visible'&&state!=='hidden') throw new Error(`Unsupported visibility state: ${state}`);
   await waitForMatches(locator,count=>state==='visible'?count>0:count===0,options,state);
+}
+
+export async function waitForVisibleText(locator,value,options={}) {
+  await waitForMatches(locator,count=>count>0,{timeout:CAPYBARA_DEFAULT,...options},`text=${JSON.stringify(value)}`,{kind:'visible-text',value,exact:!!options.exact});
+}
+export async function visibleText(locator,options={}) {
+  const match=await visibleMatch(locator,{timeout:CAPYBARA_DEFAULT,...options});
+  return match.evaluate(element=>window.__ws8bmVisibleText(element));
+}
+// Explicit visible: :all assertions retry counts without excluding hidden nodes.
+export async function waitForDomCount(locator,count,options={}) {
+  const timeout=options.timeout??CAPYBARA_DEFAULT,started=Date.now();
+  do {
+    if(await locator.count()===count) return;
+    if(Date.now()-started>=timeout) break;
+    await new Promise(resolve=>setTimeout(resolve,10));
+  } while(true);
+  throw new errors.TimeoutError(`DOM count=${count} timed out after ${timeout}ms: ${locator}`);
+}
+
+export async function waitForCondition(predicate,options={}) {
+  const timeout=options.timeout??CAPYBARA_DEFAULT,started=Date.now();
+  do {
+    if(await predicate()) return;
+    if(Date.now()-started>=timeout) break;
+    await new Promise(resolve=>setTimeout(resolve,10));
+  } while(true);
+  throw new errors.TimeoutError(`Condition timed out after ${timeout}ms`);
 }

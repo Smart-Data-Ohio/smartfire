@@ -18,3 +18,11 @@ The helper counts visible locator matches and polls within the existing
 assertion deadline. Explicit `attached`/`detached` checks retain DOM-presence
 semantics. JavaScript geometry probes copied from the original Rails tests
 retain those tests' own `getClientRects()` measurements.
+
+`visibleText.js` contains the unmodified visible-text routines from
+`javascript/atoms/dom.js` at Selenium's `selenium-4.35.0` tag, matching the
+installed reference version. `behavior-text.mjs` supplies their Closure
+array/string/DOM dependencies and delegates `isShown` to the pinned atom above
+with opacity respected. The routines preserve Selenium's whitespace, text
+transform, table-cell and composed shadow-DOM behavior.
+Source: https://github.com/SeleniumHQ/selenium/blob/selenium-4.35.0/javascript/atoms/dom.js

@@ -1,6 +1,6 @@
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
-import {waitForVisibility,isSeleniumVisible,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,visibleMatch,waitForVisibleProperty,waitForVisibleAttribute,waitForVisibleContentCount} from './behavior-visibility.mjs';
+import {waitForVisibility,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,waitForVisibleProperty,waitForVisibleAttribute,waitForVisibleContentCount,actOnVisible,filterVisibleText,visibleText,waitForDomCount} from './behavior-visibility.mjs';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
@@ -15,7 +15,7 @@ import {boosts} from './behavior-boosts.mjs';
 import {interactions,mobileActions,assertMenuOpen} from './behavior-actions.mjs';
 import {toolbar} from './behavior-toolbar.mjs';
 import {codeHighlighting} from './behavior-code.mjs';
-import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT,REVIEW_GROUPS} from './behavior-deadlines.mjs';
+import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
@@ -41,12 +41,10 @@ async function acceptance(base,caseName,probe={},variant='default') {
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
       const page=await context.newPage();
-      if(REVIEW_GROUPS.has(file)) {
-        page.setDefaultTimeout(CAPYBARA_DEFAULT);
-        setVisibilityTimeout(page,CAPYBARA_DEFAULT);
-        // Capybara visit/page-load is separate from selector assertions.
-        page.setDefaultNavigationTimeout(30000);
-      }
+      page.setDefaultTimeout(CAPYBARA_DEFAULT);
+      setVisibilityTimeout(page,CAPYBARA_DEFAULT);
+      // Capybara visit/page-load is separate from selector assertions.
+      page.setDefaultNavigationTimeout(30000);
       if(file==='threads') page.on('response',async response=>{
         const url=new URL(response.url());
         if(!/^\/rooms\/654632876\/threads(?:\.json)?(?:\/|$)/.test(url.pathname)) return;
@@ -70,40 +68,34 @@ async function acceptance(base,caseName,probe={},variant='default') {
       assert.equal(response.status(),200);
       assert.equal(new URL(page.url()).pathname,'/rooms/654632876');
       assert.equal(await page.locator('#composer').count(),1,'real room composer is present');
-      try {await page.waitForFunction(()=>window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('composer'),'composer'));}
+      try {await page.waitForFunction(()=>window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('composer'),'composer'),null,{timeout:CABLE_WAIT});}
       catch(error) {console.error('WS8bm browser startup:',await page.evaluate(()=>({url:location.href,title:document.title,stimulus:!!window.Stimulus,controllers:document.getElementById('composer')?.dataset.controller,scripts:[...document.scripts].map(s=>s.src||s.type)})));throw error;}
-      await waitForVisibility(page.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]'),{state:'attached',...(REVIEW_GROUPS.has(file)?{timeout:CABLE_WAIT}:{})});
+      await waitForVisibility(page.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]'),{state:'attached',timeout:CABLE_WAIT});
       return page;
     }
     const profileActors=file==='message_list_a11y'&&caseName==='profile message and ban buttons have accessible names';
     const author=await viewer('JZ'),recipient=await viewer(profileActors||file==='message_interactions'?'David':'Kevin');
     // Startup errors are never accepted as proof of assertion discrimination.
     probe.ready=true;
-    if(negative&&!REVIEW_GROUPS.has(file)) {
-      // Older groups retain their existing failure-only probes. The audited
-      // thirty use the original Rails budgets identically in both modes.
-      author.setDefaultTimeout(3000);recipient.setDefaultTimeout(3000);
-      setVisibilityTimeout(author,3000);setVisibilityTimeout(recipient,3000);
-    }
     const messages=page=>page.locator('.message[data-message-id]');
     async function text(page,value,count=1,options={}) {
       await waitForVisibleContentCount(page.locator('.message[data-message-id] .message__body'),'[data-reply-target="body"]',value,count,options);
     }
-    async function send(page,value) {
-      await page.getByRole('combobox',{name:'Write a message',exact:true}).fill(value);
-      await page.getByRole('button',{name:'Send Message',exact:true}).click();
-      await text(page,value,1,REVIEW_GROUPS.has(file)?{timeout:DELIVERY_WAIT}:{});
+    async function send(page,value,options={}) {
+      await actOnVisible(page.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},[value]);
+      await actOnVisible(page.getByRole('button',{name:'Send Message',exact:true}),'click',{});
+      await text(page,value,1,options);
     }
     async function submit(page,value) {
-      await page.getByRole('combobox',{name:'Write a message',exact:true}).fill(value);
-      await page.getByRole('button',{name:'Send Message',exact:true}).click();
+      await actOnVisible(page.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},[value]);
+      await actOnVisible(page.getByRole('button',{name:'Send Message',exact:true}),'click',{});
     }
     async function openEdit(page,message,{contextTimeout}={}) {
-      await message.click({button:'right'});
+      await actOnVisible(message.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
       await assertMenuOpen(page);
-      await page.getByRole('menuitem',{name:'Edit message',exact:true}).click();
-      if(contextTimeout) await waitForVisibility(page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}),{timeout:contextTimeout});
-      else if(!REVIEW_GROUPS.has(file)) await waitForVisibility(page.locator('#composer').filter({hasText:'Editing Message'}));
+      await actOnVisible(page.getByRole('menuitem',{name:'Edit message',exact:true}),'click',{});
+      if(contextTimeout) await waitForVisibility(filterVisibleText(page.locator('#composer [data-composer-target="contextLabel"]'),'Editing Message'),{timeout:contextTimeout});
+      else if(file==='sending_messages'||file==='boosting_messages'||file==='workspace_markdown') await waitForVisibility(filterVisibleText(page.locator('#composer'),'Editing Message'));
     }
     async function field(page,value,options={}) {
       await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value',value,options);
@@ -150,14 +142,14 @@ async function acceptance(base,caseName,probe={},variant='default') {
       return;
     }
     if(file==='threads'&&caseName==='discusses a pull request from its card') {
-      const card=()=>author.locator('.github-pr-card').filter({has:author.locator('.github-pr-card__title').filter({hasText:'Fix login'})});
-      await card().getByRole('button',{name:'Discuss',exact:true}).click();
-      await waitForVisibility(author.locator('.github-pr-thread-header .github-pr-card__title').filter({hasText:'Fix login'}));
-      await waitForVisibility(author.locator('.github-pr-files__heading').filter({hasText:'Files changed'}));
-      await waitForVisibility(author.locator('.github-pr-files__path').filter({hasText:'app/models/user.rb'}));
+      const card=()=>author.locator('.github-pr-card').filter({has:filterVisibleText(author.locator('.github-pr-card__title'),'Fix login')});
+      await actOnVisible(card().getByRole('button',{name:'Discuss',exact:true}),'click',{});
+      await waitForVisibility(filterVisibleText(author.locator('.github-pr-thread-header .github-pr-card__title'),'Fix login'));
+      await waitForVisibility(filterVisibleText(author.locator('.github-pr-files__heading'),'Files changed'));
+      await waitForVisibility(filterVisibleText(author.locator('.github-pr-files__path'),'app/models/user.rb'));
       const threadPath=new URL(author.url()).pathname;assert.match(threadPath,/^\/rooms\/654632876\/threads\/\d+$/);
-      await author.goto(base+'/rooms/654632876');await card().getByRole('link',{name:'Discuss',exact:true}).click();
-      await waitForVisibility(author.locator('.github-pr-thread-header .github-pr-card__title').filter({hasText:'Fix login'}));
+      await author.goto(base+'/rooms/654632876');await actOnVisible(card().getByRole('link',{name:'Discuss',exact:true}),'click',{});
+      await waitForVisibility(filterVisibleText(author.locator('.github-pr-thread-header .github-pr-card__title'),'Fix login'));
       assert.equal(new URL(author.url()).pathname,threadPath,'the second discussion opens the existing thread');
       return;
     }
@@ -168,33 +160,33 @@ async function acceptance(base,caseName,probe={},variant='default') {
         if(parent) {
           const root=page.locator('.message[data-message-id="607264868"]');
           await waitForVisibility(page.locator('.message[data-message-id="607264868"][aria-haspopup="menu"]'));
-          await root.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
-          await page.getByRole('menuitem',{name:'Create thread',exact:true}).click();
+          await actOnVisible(root.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
+          await actOnVisible(page.getByRole('menuitem',{name:'Create thread',exact:true}),'click',{});
         } else {
-          await (await visibleMatch(page.locator('[data-thread-panel-target="browserToggle"]'))).click();
+          await actOnVisible(page.locator('[data-thread-panel-target="browserToggle"]'),'click');
           // Match the pinned open_threads helper's actual open-state assertion.
-          await waitForVisibility(panel.locator(':scope[aria-hidden="false"]'));
-          await panel.getByRole('button',{name:'New thread',exact:true}).click();
+          await waitForVisibility(panel.locator(':scope[aria-hidden="false"]'),{timeout:DELIVERY_WAIT});
+          await actOnVisible(panel.getByRole('button',{name:'New thread',exact:true}),'click',{});
         }
-        await waitForVisibility(panel.locator('[data-thread-panel-target="create"]'));
+        await waitForVisibility(panel.locator('[data-thread-panel-target="create"]'),{timeout:DELIVERY_WAIT});
         // beginCreate hands focus to First message on the next animation
         // frame. Wait for that observable open-state transition before
         // typing the name, so insertText cannot land in the other field.
         await page.waitForFunction(()=>document.activeElement===document.querySelector('[data-thread-panel-target="createMessage"]'));
         const nameField=panel.locator('[data-thread-panel-target="createName"]');
         assert.match(await nameField.evaluate(input=>input.closest('label')?.textContent||''),/Thread name/);
-        await nameField.fill(name);
+        await actOnVisible(nameField,'fill',{},[name]);
         const firstField=panel.locator('[data-thread-panel-target="createMessage"]');
         assert.match(await firstField.evaluate(input=>input.closest('label')?.textContent||''),/First message/);
-        await firstField.fill(first);
+        await actOnVisible(firstField,'fill',{},[first]);
       }
       async function finishCreate(name,page=author) {
         const panel=page.locator('#thread-panel');
         assert.equal(await panel.locator('[data-thread-panel-target="createName"]').inputValue(),name,`${base}: ${caseName}: the completed name must survive until submission`);
-        await panel.locator('[data-thread-panel-target="createSubmit"]').click();
+        await actOnVisible(panel.locator('[data-thread-panel-target="createSubmit"]'),'click',{});
         try {
           await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'),{timeout:DELIVERY_WAIT});
-          await waitForVisibility(panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}),{timeout:DELIVERY_WAIT});
+          await waitForVisibility(filterVisibleText(panel.locator('[data-thread-panel-target="conversationTitle"]'),name),{timeout:DELIVERY_WAIT});
         }
         catch(error) {
           console.error('WS8bm thread create diagnostics:',base,caseName,
@@ -206,13 +198,13 @@ async function acceptance(base,caseName,probe={},variant='default') {
         }
         await waitForVisibility(panel.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]'),{state:'attached'});
       }
-      const threadMessage=value=>panel.locator('.message[data-message-id]').filter({has:author.locator('[data-reply-target="body"]').filter({hasText:value})});
+      const threadMessage=value=>panel.locator('.message[data-message-id]').filter({has:filterVisibleText(author.locator('[data-reply-target="body"]'),value)});
       async function assertThreadMessage(value) {
-        await waitForVisibility(panel.locator('.thread-panel__thread-content .message__body').filter({hasText:value}),{timeout:DELIVERY_WAIT});
+        await waitForVisibility(filterVisibleText(panel.locator('.thread-panel__thread-content .message__body'),value),{timeout:DELIVERY_WAIT});
       }
       async function reply(value) {
-        await panel.getByRole('combobox',{name:'Write a thread reply',exact:true}).fill(value);
-        await panel.getByRole('button',{name:'Send Reply',exact:true}).click();
+        await actOnVisible(panel.getByRole('combobox',{name:'Write a thread reply',exact:true}),'fill',{},[value]);
+        await actOnVisible(panel.getByRole('button',{name:'Send Reply',exact:true}),'click',{});
         await assertThreadMessage(value);
       }
       async function threadMenu(value) {
@@ -224,12 +216,12 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await waitForVisibility(message,{timeout:DELIVERY_WAIT});
         const id=await message.getAttribute('id');
         await waitForVisibility(author.locator(`[id="${id}"][aria-haspopup="menu"]`),{state:'attached',timeout:DELIVERY_WAIT});
-        await message.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
-        await waitForVisibility(author.locator('#message-actions-menu:not([hidden])'));
+        await actOnVisible(message.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
+        await waitForVisibility(author.locator('#message-actions-menu:not([hidden])'),{timeout:10000});
       }
       async function close(page) {
-        await page.getByRole('button',{name:'Close threads',exact:true}).click();
-        await page.waitForFunction(()=>!document.body.classList.contains('thread-panel-open'));
+        await actOnVisible(page.getByRole('button',{name:'Close threads',exact:true}),'click',{});
+        await page.waitForFunction(()=>!document.body.classList.contains('thread-panel-open'),null,{timeout:DELIVERY_WAIT});
       }
       if(caseName==='rejects an external thread deep link before fetching it') {
         const external='https://attacker.invalid/rooms/1/threads/999';
@@ -237,8 +229,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
         author.on('request',request=>requests.push(request.url()));
         const response=await author.goto(base+'/rooms/654632876?thread='+encodeURIComponent(external));
         assert.equal(response.status(),200);
-        await waitForVisibility(author.locator('#thread-panel[aria-hidden="false"]'));
-        await waitForVisibility(panel.locator('[data-thread-panel-target="threadStatus"]').filter({hasText:'This thread link is invalid.'}));
+        await waitForVisibility(author.locator('#thread-panel[aria-hidden="false"]'),{timeout:DELIVERY_WAIT});
+        await waitForVisibility(filterVisibleText(panel.locator('[data-thread-panel-target="threadStatus"]'),'This thread link is invalid.'));
         await waitForVisibleCount(panel.locator('.thread-panel__thread-content .message'),0);
         assert.equal(requests.some(url=>url.startsWith('https://attacker.invalid/')),false);
         assert.equal(await author.evaluate(()=>performance.getEntriesByType('resource').some(entry=>entry.name.startsWith('https://attacker.invalid/'))),false);
@@ -246,7 +238,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         const malicious='<img src=x onerror="window.__threadXss = true">';
         await create(malicious,'A safe thread body.',false);await finishCreate(malicious);
         const title=panel.locator('[data-thread-panel-target="conversationTitle"]');
-        assert.equal((await title.textContent()).trim(),malicious);
+        assert.equal((await visibleText(title)).trim(),malicious);
         await waitForVisibleCount(title.locator('img'),0);
         assert.equal(await author.evaluate(()=>window.__threadXss),undefined);
         await assertThreadMessage('A safe thread body.');
@@ -255,26 +247,28 @@ async function acceptance(base,caseName,probe={},variant='default') {
         const david=await viewer('David');
         await create('Closed planning thread','The closed planning conversation.',false,david);await finishCreate('Closed planning thread',david);
         const other=david.locator('#thread-panel');
-        await other.locator('[data-thread-panel-target="manage"] summary').click();
-        await other.locator('[data-thread-panel-target="closeThread"]').click();
-        await waitForVisibility(other.locator('[data-thread-panel-target="threadStatus"]').filter({hasText:/Closed thread/}));
+        await actOnVisible(other.locator('[data-thread-panel-target="manage"] summary'),'click',{});
+        await waitForVisibility(other.locator('[data-thread-panel-target="closeThread"]'),{timeout:DELIVERY_WAIT});
+        await actOnVisible(other.locator('[data-thread-panel-target="closeThread"]'),'click',{});
+        await waitForVisibility(filterVisibleText(other.locator('[data-thread-panel-target="threadStatus"]'),/Closed thread/),{timeout:DELIVERY_WAIT});
         await close(david);
-        await (await visibleMatch(author.locator('[data-thread-panel-target="browserToggle"]'))).click();
+        await actOnVisible(author.locator('[data-thread-panel-target="browserToggle"]'),'click');
         await waitForVisibility(panel.locator('[data-thread-panel-target="browser"]'));
         const items=panel.locator('[data-thread-panel-target="browserList"] .thread-panel__thread-item');
-        await waitForVisibility(items.filter({hasText:'Active planning thread'}));
-        await waitForVisibleCount(items.filter({hasText:'Closed planning thread'}),0);
-        await panel.locator('[data-thread-panel-target="filter"]').selectOption('closed');
-        await items.filter({hasText:'Closed planning thread'}).click();
-        await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'));
-        await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'));
-        assert.equal(await isSeleniumVisible(panel.locator('[data-thread-panel-target="leave"]')),false);
-        await panel.getByRole('button',{name:'Join',exact:true}).click();
-        await waitForVisibility(panel.locator('[data-thread-panel-target="leave"]'));
-        assert.equal(await isSeleniumVisible(panel.locator('[data-thread-panel-target="join"]')),false);
-        await panel.getByRole('button',{name:'Leave',exact:true}).click();
-        await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'));
-        assert.equal(await isSeleniumVisible(panel.locator('[data-thread-panel-target="leave"]')),false);
+        await waitForVisibility(filterVisibleText(items,'Active planning thread'),{timeout:DELIVERY_WAIT});
+        await waitForVisibleCount(filterVisibleText(items,'Closed planning thread'),0);
+        await actOnVisible(panel.locator('[data-thread-panel-target="filter"]'),'selectOption',{},['closed']);
+        await waitForVisibility(filterVisibleText(items,'Closed planning thread'),{timeout:DELIVERY_WAIT});
+        await actOnVisible(filterVisibleText(items,'Closed planning thread'),'click',{});
+        await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'),{timeout:DELIVERY_WAIT});
+        await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'),{timeout:DELIVERY_WAIT});
+        await waitForVisibility(panel.locator('[data-thread-panel-target="leave"]'),{state:'hidden'});
+        await actOnVisible(panel.getByRole('button',{name:'Join',exact:true}),'click',{});
+        await waitForVisibility(panel.locator('[data-thread-panel-target="leave"]'),{timeout:DELIVERY_WAIT});
+        await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'),{state:'hidden'});
+        await actOnVisible(panel.getByRole('button',{name:'Leave',exact:true}),'click',{});
+        await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'),{timeout:DELIVERY_WAIT});
+        await waitForVisibility(panel.locator('[data-thread-panel-target="leave"]'),{state:'hidden'});
       } else if(caseName==='a stray create re-entry does not wipe the half-filled thread name') {
         await create('Survives a stray reset','The name survives the re-entry.',false);
         await author.evaluate(()=>window.dispatchEvent(new CustomEvent('message:thread',{detail:{}})));
@@ -285,41 +279,42 @@ async function acceptance(base,caseName,probe={},variant='default') {
         const root=author.locator('.message[data-message-id="607264868"]');
         const indicatorId='thread_indicator_'+await root.getAttribute('id');
         for(const page of [author,recipient]) {
-          await waitForVisibility(page.locator(`[id="${indicatorId}"][aria-label="Open thread, 1 reply"]`));
-          assert.equal((await page.locator(`[id="${indicatorId}"]`).textContent()).trim(),'1 reply');
+          await waitForVisibility(page.locator(`[id="${indicatorId}"][aria-label="Open thread, 1 reply"]`),{timeout:CABLE_WAIT});
+          assert.equal((await visibleText(page.locator(`[id="${indicatorId}"]`))).trim(),'1 reply');
           await waitForVisibility(page.locator(`[id="${indicatorId}"] img.colorize--black`));
         }
         await reply('A second reply.');
-        for(const page of [author,recipient]) await waitForVisibility(page.locator(`[id="${indicatorId}"][aria-label="Open thread, 2 replies"]`));
+        for(const page of [author,recipient]) await waitForVisibility(page.locator(`[id="${indicatorId}"][aria-label="Open thread, 2 replies"]`),{timeout:CABLE_WAIT});
         for(const value of ['A second reply.','The only reply.']) {
           await threadMenu(value);author.once('dialog',dialog=>dialog.accept());
-          await author.getByRole('menuitem',{name:'Delete message',exact:true}).click();
-          await waitForVisibility(threadMessage(value),{state:'detached'});
+          await actOnVisible(author.getByRole('menuitem',{name:'Delete message',exact:true}),'click',{});
+          await waitForVisibility(threadMessage(value),{state:'hidden',timeout:DELIVERY_WAIT});
         }
+        for(const page of [author,recipient]) await waitForVisibility(page.locator(`[id="${indicatorId}"]`),{state:'hidden',timeout:CABLE_WAIT});
         for(const page of [author,recipient]) await waitForVisibility(page.locator(`[id="${indicatorId}"][hidden]`),{state:'attached'});
       } else if(caseName==='creates a thread from a channel message and keeps the channel draft separate') {
         const first='Let’s keep the design review focused here.';
         await create('Design review thread',first);await finishCreate('Design review thread');
-        await waitForVisibility(panel.locator('[data-thread-panel-target="parent"]').filter({hasText:"Third time's a charm."}));
+        await waitForVisibility(filterVisibleText(panel.locator('[data-thread-panel-target="parent"]'),"Third time's a charm."),{timeout:DELIVERY_WAIT});
         await assertThreadMessage(first);
-        await panel.locator('[data-thread-panel-target="preferences"] summary').click();
-        await panel.locator('[data-thread-panel-target="involvement"]').selectOption('nothing');
-        await panel.locator('[data-thread-panel-target="manage"] summary').click();
-        await panel.locator('[data-thread-panel-target="autoArchive"]').selectOption('1440');
-        await author.getByRole('combobox',{name:'Write a message',exact:true}).fill('A channel draft stays here.');
+        await actOnVisible(panel.locator('[data-thread-panel-target="preferences"] summary'),'click',{});
+        await actOnVisible(panel.locator('[data-thread-panel-target="involvement"]'),'selectOption',{},['nothing']);
+        await actOnVisible(panel.locator('[data-thread-panel-target="manage"] summary'),'click',{});
+        await actOnVisible(panel.locator('[data-thread-panel-target="autoArchive"]'),'selectOption',{},['1440']);
+        await actOnVisible(author.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},['A channel draft stays here.']);
         await reply('A reply from the thread drawer.');await field(author,'A channel draft stays here.');
         await threadMenu('A reply from the thread drawer.');
-        await author.getByRole('menuitem',{name:'Reply',exact:true}).click();
-        await waitForVisibility(panel.locator('[data-composer-target="contextLabel"]').filter({hasText:'Replying to'}));
+        await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
+        await waitForVisibility(filterVisibleText(panel.locator('[data-composer-target="contextLabel"]'),'Replying to'),{timeout:DELIVERY_WAIT});
         await reply('A reply to the drawer message.');
-        await waitForVisibility(panel.locator('.message__reply-preview').filter({hasText:'A reply from the thread drawer.'}));
-        await threadMenu(first);await author.getByRole('menuitem',{name:'Edit message',exact:true}).click();
-        await waitForVisibility(panel.locator('[data-composer-target="contextLabel"]').filter({hasText:'Editing Message'}));
+        await waitForVisibility(filterVisibleText(panel.locator('.message__reply-preview'),'A reply from the thread drawer.'),{timeout:DELIVERY_WAIT});
+        await threadMenu(first);await actOnVisible(author.getByRole('menuitem',{name:'Edit message',exact:true}),'click',{});
+        await waitForVisibility(filterVisibleText(panel.locator('[data-composer-target="contextLabel"]'),'Editing Message'),{timeout:DELIVERY_WAIT});
         await reply('The edited thread starter.');
-        await waitForVisibility(panel.locator('[data-thread-panel-target="parent"]').filter({hasText:"Third time's a charm."}));
+        await waitForVisibility(filterVisibleText(panel.locator('[data-thread-panel-target="parent"]'),"Third time's a charm."),{timeout:DELIVERY_WAIT});
         await threadMenu('A reply to the drawer message.');
-        await author.locator('.message__quick-reaction[title="Thumbs up"]').click();
-        await waitForVisibility(panel.locator('.boosts__reactions').filter({hasText:'👍'}));
+        await actOnVisible(author.locator('.message__quick-reaction[title="Thumbs up"]'),'click',{});
+        await waitForVisibility(filterVisibleText(panel.locator('.boosts__reactions'),'👍'),{timeout:DELIVERY_WAIT});
         await field(author,'A channel draft stays here.');
       } else {throw new Error(`unimplemented case ${caseName}`);}
       return;
@@ -332,27 +327,27 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await submit(author,markdown);
         async function content(page,id,initial=false) {
           const message=page.locator(`.message[data-message-id="${id}"]`);
-          if(initial) await waitForVisibility(message.locator('h2').filter({hasText:/^Design review$/}),{timeout:CAPYBARA_DEFAULT});
+          if(initial) await waitForVisibility(filterVisibleText(message.locator('h2'),/^Design review$/),{timeout:CAPYBARA_DEFAULT});
           for(const [selector,value] of [['strong','Ready for review'],['em','clear ownership'],['del','old assumptions'],['blockquote','Keep the conversation close to the work.'],['ul li','Check the channel layout'],['table td','Markdown']]) {
-            await waitForVisibility(message.locator(selector).filter({hasText:value}));
+            await waitForVisibility(filterVisibleText(message.locator(selector),value));
           }
           await waitForVisibleCount(message.locator('input[type="checkbox"][disabled]'),2);
-          const code=message.locator('pre code').filter({hasText:'const message = "<script>literal code</script>";'});
+          const code=filterVisibleText(message.locator('pre code'),'const message = "<script>literal code</script>";');
           await waitForVisibility(code,{timeout:CAPYBARA_DEFAULT});
-          assert.ok((await code.textContent()).includes('const message = "<script>literal code</script>";'));
-          await waitForVisibility(message.locator('pre code.language-javascript[data-highlighted="yes"] .code-token').filter({hasText:'const'}),{timeout:20000});
+          assert.ok((await visibleText(code)).includes('const message = "<script>literal code</script>";'));
+          await waitForVisibility(filterVisibleText(message.locator('pre code.language-javascript[data-highlighted="yes"] .code-token'),'const'),{timeout:20000});
           await waitForVisibleCount(message.locator('.markdown-code-copy'),1);
           await waitForVisibleAttribute(message.getByRole('link',{name:'Project notes',exact:true}),'href','https://example.com/notes');
         }
-        const message=messages(author).filter({has:author.locator('h2').filter({hasText:/^Design review$/})});
-        await waitForVisibility(message.locator('h2').filter({hasText:/^Design review$/}),{timeout:CAPYBARA_DEFAULT});
+        const message=messages(author).filter({has:filterVisibleText(author.locator('h2'),/^Design review$/)});
+        await waitForVisibility(filterVisibleText(message.locator('h2'),/^Design review$/),{timeout:CAPYBARA_DEFAULT});
         const id=await message.getAttribute('data-message-id');
         await content(author,id,true);await content(recipient,id,true);
         await openEdit(author,message);await field(author,markdown);
         const edited=markdown.replace('Design review','Review complete');
         await submit(author,edited);
         for(const page of [author,recipient]) {
-          await waitForVisibility(page.locator(`.message[data-message-id="${id}"] h2`).filter({hasText:/^Review complete$/}));
+          await waitForVisibility(filterVisibleText(page.locator(`.message[data-message-id="${id}"] h2`),/^Review complete$/));
           await content(page,id);
         }
         await author.reload();
@@ -361,25 +356,25 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await field(author,edited);
       } else if (caseName==='desktop keyboard composition keeps line breaks and sends once after composition ends') {
         const editor=author.getByRole('combobox',{name:'Write a message',exact:true});
-        await editor.fill('First line');await editor.press('Shift+Enter');await editor.pressSequentially('Second line');
+        await actOnVisible(editor,'fill',{},['First line']);await actOnVisible(editor,'press',{},['Shift+Enter']);await actOnVisible(editor,'pressSequentially',{},['Second line']);
         await field(author,'First line\nSecond line');
         const before=await visibleCount(messages(author));
         await editor.evaluate(editor=>editor.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,isComposing:true,bubbles:true,cancelable:true})));
         await field(author,'First line\nSecond line');assert.equal(await visibleCount(messages(author)),before);
-        await editor.press('Enter');
+        await actOnVisible(editor,'press',{},['Enter']);
         for(const page of [author,recipient]) await text(page,'First line\nSecond line');
         await field(author,'');
-        await editor.press('ArrowUp');
-        await waitForVisibility(author.locator('#composer').filter({hasText:'Editing Message'}));
+        await actOnVisible(editor,'press',{},['ArrowUp']);
+        await waitForVisibility(filterVisibleText(author.locator('#composer'),'Editing Message'));
         await field(author,'First line\nSecond line');
       } else if (caseName==='untrusted markup stays inert in the delivered message') {
         const payload=heredoc("payload = <<~'MARKDOWN'\n",4);
         await submit(author,payload);
         for(const page of [author,recipient]) {
-          const message=messages(page).filter({has:page.locator('p').filter({hasText:/^Safety check$/})});
-          await waitForVisibility(message.locator('.message__body').filter({hasText:'Safety check'}),{timeout:CAPYBARA_DEFAULT});
-          await waitForVisibility(message.locator('pre code').filter({hasText:'<img onerror="literal code">'}));
-          assert.equal(await message.locator('script, img[onerror], a[href^="javascript:"]').count(),0);
+          const message=messages(page).filter({has:filterVisibleText(page.locator('p'),/^Safety check$/)});
+          await waitForVisibility(filterVisibleText(message.locator('.message__body'),'Safety check'),{timeout:CAPYBARA_DEFAULT});
+          await waitForVisibility(filterVisibleText(message.locator('pre code'),'<img onerror="literal code">'));
+          await waitForDomCount(message.locator('script, img[onerror], a[href^="javascript:"]'),0);
           assert.equal(await page.evaluate(()=>window.markdownPayloadExecuted===true),false);
         }
       } else if(caseName==='Markdown replies and file attachments remain usable') {
@@ -389,19 +384,19 @@ async function acceptance(base,caseName,probe={},variant='default') {
         });
         const source='**A useful point** with `inline code`.';
         await submit(author,source);
-        const parent=messages(author).filter({has:author.locator('strong').filter({hasText:'A useful point'})});
-        await waitForVisibility(parent.locator('.message__body').filter({hasText:'A useful point'}),{timeout:CAPYBARA_DEFAULT});
-        await parent.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
-        await author.getByRole('menuitem',{name:'Reply',exact:true}).click();
-        await waitForVisibility(author.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'}));
-        await waitForVisibility(author.locator('#composer [data-composer-target="contextPreview"]').filter({hasText:'A useful point'}));
-        await field(author,'');await author.getByLabel('Notify author',{exact:true}).uncheck();
+        const parent=messages(author).filter({has:filterVisibleText(author.locator('strong'),'A useful point')});
+        await waitForVisibility(filterVisibleText(parent.locator('.message__body'),'A useful point'),{timeout:CAPYBARA_DEFAULT});
+        await actOnVisible(parent.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
+        await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
+        await waitForVisibility(filterVisibleText(author.locator('#composer [data-composer-target="contextLabel"]'),'Replying to JZ'));
+        await waitForVisibility(filterVisibleText(author.locator('#composer [data-composer-target="contextPreview"]'),'A useful point'));
+        await field(author,'');await actOnVisible(author.getByLabel('Notify author',{exact:true}),'uncheck',{});
         await author.locator('#composer input[type="file"]').setInputFiles({name:'markdown-workspace-attachment.txt',mimeType:'text/plain',buffer:Buffer.from('An attachment sent from the Markdown composer.\n')});
-        await waitForVisibility(author.locator('#composer').filter({hasText:'markdown-workspace-attachment'}));
-        await author.getByRole('button',{name:'Send Message',exact:true}).click();
+        await waitForVisibility(filterVisibleText(author.locator('#composer'),'markdown-workspace-attachment'));
+        await actOnVisible(author.getByRole('button',{name:'Send Message',exact:true}),'click',{});
         for(const page of [author,recipient]) {
-          const attachment=messages(page).filter({has:page.locator('.message__reply-preview').filter({hasText:'A useful point'})});
-          try {await waitForVisibility(attachment.locator('.message__reply-preview').filter({hasText:'A useful point'}),{timeout:DELIVERY_WAIT});}
+          const attachment=messages(page).filter({has:filterVisibleText(page.locator('.message__reply-preview'),'A useful point')});
+          try {await waitForVisibility(filterVisibleText(attachment.locator('.message__reply-preview'),'A useful point'),{timeout:DELIVERY_WAIT});}
           catch(error) {
             console.error('WS8bm attachment preview diagnostics:',base,uploadResponses,
               await page.locator('.message[data-message-id]').evaluateAll(rows=>rows.map(row=>({id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,body:row.querySelector('[data-reply-target="body"]')?.textContent}))),
@@ -415,13 +410,13 @@ async function acceptance(base,caseName,probe={},variant='default') {
       } else if(caseName==='mention suggestions select a room member without sending the unfinished message') {
         const editor=author.getByRole('combobox',{name:'Write a message',exact:true});
         const before=await visibleCount(messages(author));
-        await editor.fill('@Kev');await waitForVisibility(author.locator('suggestion-option').filter({hasText:'Kevin'}));
-        await editor.press('Enter');await field(author,'@[Kevin] ');
+        await actOnVisible(editor,'fill',{},['@Kev']);await waitForVisibility(filterVisibleText(author.locator('suggestion-option'),'Kevin'));
+        await actOnVisible(editor,'press',{},['Enter']);await field(author,'@[Kevin] ');
         assert.equal(await visibleCount(messages(author)),before);
         await submit(author,'@[Kevin] please review **the layout**.');
         for(const page of [author,recipient]) {
-          const message=messages(page).filter({has:page.locator('strong').filter({hasText:'the layout'})});
-          await waitForVisibility(message.locator('.mention').filter({hasText:'Kevin'}));
+          const message=messages(page).filter({has:filterVisibleText(page.locator('strong'),'the layout')});
+          await waitForVisibility(filterVisibleText(message.locator('.mention'),'Kevin'));
           assert.equal(await message.locator('.mention').getAttribute('data-user-id'),String(sessions.find(session=>session.user_name==='Kevin').user_id));
           if(page===recipient) await waitForVisibility(message.locator(':scope.message--mentioned'));
         }
@@ -433,17 +428,17 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await author.locator('#composer textarea').evaluate((editor,value)=>{
           editor.removeAttribute('maxlength');editor.value=value;editor.dispatchEvent(new Event('input',{bubbles:true}));
         },invalid);
-        await author.getByRole('button',{name:'Send Message',exact:true}).click();
+        await actOnVisible(author.getByRole('button',{name:'Send Message',exact:true}),'click',{});
         await waitForVisibility(author.locator('.message--failed'));
         // Clearing the still-present failed input proves Restore draft reads
         // the saved submission, rather than passing on an unchanged editor.
-        await author.getByRole('combobox',{name:'Write a message',exact:true}).fill('');
-        await author.getByRole('button',{name:'Restore draft',exact:true}).click();await field(author,invalid);
+        await actOnVisible(author.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},['']);
+        await actOnVisible(author.getByRole('button',{name:'Restore draft',exact:true}),'click',{});await field(author,invalid);
         await submit(author,'**Recovered** after correcting the draft.');
-        for(const page of [author,recipient]) await waitForVisibility(messages(page).locator('strong').filter({hasText:'Recovered'}));
+        for(const page of [author,recipient]) await waitForVisibility(filterVisibleText(messages(page).locator('strong'),'Recovered'));
       } else if(caseName==='sending preserves the submitted source and a newer draft') {
         const first='**First message** stays exact.',second='A newer draft is still here.';
-        await author.getByRole('combobox',{name:'Write a message',exact:true}).fill(first);
+        await actOnVisible(author.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},[first]);
         await author.evaluate(second=>{
           document.querySelector('#composer button[name="send"]').click();
           const editor=document.querySelector('#composer textarea[name="message[markdown_source]"]');
@@ -451,8 +446,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
         },second);
         for(const page of [author,recipient]) await text(page,'First message stays exact.');
         await field(author,second);
-        await waitForVisibleCount(messages(recipient).filter({hasText:second}),0);
-        await author.getByRole('button',{name:'Send Message',exact:true}).click();
+        await waitForVisibleCount(filterVisibleText(messages(recipient),second),0);
+        await actOnVisible(author.getByRole('button',{name:'Send Message',exact:true}),'click',{});
         for(const page of [author,recipient]) await text(page,second);
         await field(author,'');
       } else {throw new Error(`unimplemented case ${caseName}`);}
@@ -466,11 +461,11 @@ async function acceptance(base,caseName,probe={},variant='default') {
     } else {
       const original=author.locator('.message[data-message-id="607264868"]');
       await text(recipient,"Third time's a charm.");
-      await original.click({button:'right'});
-      await waitForVisibility(author.locator('#message-actions-menu:not([hidden])'));
+      await actOnVisible(original.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
+      await waitForVisibility(author.locator('#message-actions-menu:not([hidden])'),{timeout:10000});
       if (caseName==='editing messages') {
-        await author.getByRole('menuitem',{name:'Edit message',exact:true}).click();
-        await waitForVisibility(author.locator('#composer').filter({hasText:'Editing Message'}));
+        await actOnVisible(author.getByRole('menuitem',{name:'Edit message',exact:true}),'click',{});
+        await waitForVisibility(filterVisibleText(author.locator('#composer'),'Editing Message'));
         await send(author,'Redacted!');
         await text(recipient,'Redacted!');
         await text(recipient,"Third time's a charm.",0);
@@ -478,9 +473,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await text(recipient,'Redacted!');
       } else if (caseName==='deleting messages') {
         author.once('dialog',dialog=>dialog.accept());
-        await author.getByRole('menuitem',{name:'Delete message',exact:true}).click();
+        await actOnVisible(author.getByRole('menuitem',{name:'Delete message',exact:true}),'click',{});
         await text(recipient,"Third time's a charm.",0);
-        await waitForVisibleCount(messages(author).filter({hasText:"Third time's a charm."}),0);
+        await waitForVisibleCount(filterVisibleText(messages(author),"Third time's a charm."),0);
       } else {throw new Error(`unimplemented case ${caseName}`);}
     }
   } catch(error) {

@@ -240,6 +240,23 @@ export const hiddenScopeProbes=new Map([
     ['hidden-open-message-toolbar',opacity('.message[data-message-actions-open] .message__toolbar { display: none !important; }')],
   ])],
 ]);
+export const categoryMutations=new Map([
+  ['deleting the focused message moves focus to the surviving tab stop',new Map([
+    ['delayed-negative-removal',[list,'connect() {','connect() { document.addEventListener("turbo:before-stream-render", event => { if (event.target.getAttribute("action") === "remove") { const render = event.detail.render; event.detail.render = async stream => { await new Promise(resolve => setTimeout(resolve, 4000)); await render(stream); }; } });']],
+  ])],
+  ['editing to add a URL renders its card live and the edited marker on load',new Map([
+    ['hidden-url-loading-text',opacity('.x-post-card__loading { visibility: hidden !important; }')],
+    ['transparent-url-editor',opacity(`${editor} { opacity: 0 !important; }`)],
+    ['delayed-url-edited-marker',opacity('.message[data-message-id="935962058"] .message__edited { opacity: 0; animation: ws8bmMarker 0.001s linear 4s forwards !important; } @keyframes ws8bmMarker { to { opacity: 1; } }')],
+  ])],
+  ['the emoji picker searches and reacts',new Map([
+    ['transparent-picker-fill',opacity('#emoji-picker-panel input[aria-label="Search emoji and icons"] { opacity: 0 !important; }')],
+  ])],
+]);
+for(const [name,variants] of categoryMutations) {
+  if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
+  for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
+}
 export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
   const variants=[...(mutations.has(caseName)?['default']:[]),...(reviewMutations.get(caseName)?.keys()||[])];

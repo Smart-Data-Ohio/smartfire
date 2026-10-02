@@ -158,13 +158,13 @@ parser.add_argument("--case", help="run one exact pinned declaration from the se
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 parser.add_argument("--mutant", help="select one served mutant variant; without --negative, diagnose its acceptance on both apps (not parity credit)")
-parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes", "hidden-scopes"], help="diagnose all new visibility assertion mutants without parity credit")
+parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes", "hidden-scopes", "categories"], help="diagnose all new visibility assertion mutants without parity credit")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
 if args.mutant_set:
-    assert not args.mutant and not args.case and (not args.negative or args.mutant_set == "element-scopes"), "only element-scopes supports a negative mutant-set run"
-    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations", "hidden-scopes": "hiddenScopeProbes"}.get(args.mutant_set, "visibilityAssertionMutations")
+    assert not args.mutant and not args.case and (not args.negative or args.mutant_set in {"element-scopes", "categories"}), "only element-scopes/categories support a negative mutant-set run"
+    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations", "hidden-scopes": "hiddenScopeProbes", "categories": "categoryMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
     diagnostic_variants = json.loads(subprocess.check_output([
         "node", "--input-type=module", "-e",
         f"import {{{diagnostic_export}}} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
