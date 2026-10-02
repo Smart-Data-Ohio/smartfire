@@ -14,22 +14,22 @@
         {
           "name": "boosting a message",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "deleting a boost",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "message update preserves the input state",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "boost by another user preserves the input state",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -40,27 +40,27 @@
         {
           "name": "language fences highlight common code without changing its text",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "unlabelled code is detected while text unknown languages and inline code stay literal",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "search results highlight code on initial load and after returning to the channel",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "code and copying remain available when the highlighter cannot load",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "editing a code block replaces its language colors and copied source",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "thread code stays readable in both themes and scrolls within a narrow screen",
@@ -76,17 +76,17 @@
         {
           "name": "sending messages between two users",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "editing messages",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-positive-retry-1.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "deleting messages",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -97,23 +97,23 @@
         {
           "name": "creates a thread from a channel message and keeps the channel draft separate",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-thread-menu.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the thread root counts its replies live and hides the count when none remain",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-thread-indicator.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a stray create re-entry does not wipe the half-filled thread name",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit.",
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit.",
           "prior_evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
         },
         {
           "name": "browses active and closed threads and can join or leave a closed one",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "tracks work, assigns an owner, completes and reopens it without losing the conversation",
@@ -148,12 +148,12 @@
         {
           "name": "rejects an external thread deep link before fetching it",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "renders untrusted thread metadata as text",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "opens a shared thread message link around an older post",
@@ -180,17 +180,17 @@
         {
           "name": "Markdown messages reach other users and editing preserves the original source",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "desktop keyboard composition keeps line breaks and sends once after composition ends",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "untrusted markup stays inert in the delivered message",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "Markdown replies and file attachments remain usable",
@@ -203,17 +203,17 @@
         {
           "name": "mention suggestions select a room member without sending the unfinished message",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a rejected message can be recovered corrected and sent",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "sending preserves the submitted source and a newer draft",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "workspace follows the system theme and mobile navigation remains reachable",
@@ -229,57 +229,57 @@
         {
           "name": "blurring an open autocomplete does not leave a zombie that swallows Enter",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a stale icon response does not poison the suggestion commit",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "mention queries are URL-encoded",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "composer autocomplete exposes combobox semantics over a polite listbox",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "composing text does not commit a suggestion or send the message",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "clicking a reply preview scrolls to the loaded message instead of navigating",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "clicking a reply preview falls back to the permalink when the target is not loaded",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "deleting a replied-to message turns open reply previews into a tombstone",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "two typers with the same name do not merge",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "composer drafts persist per room and clear on send",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "thread drafts persist per thread without touching the channel draft",
           "status": "passed",
-          "evidence": "Fresh source clone 8b0c5e628dff8e67e79ac36da658fc9dcd3d085d: paired behaviour and persisted-row checks pass with the unchanged pinned Selenium atom. Asserted-element visibility audit E1\u2013E17; all seventeen served probes escaped unchanged 70d325c5 assertions and are rejected after the fix on both apps. Full reviewed/affected check set has 88 distinct paired rejection proofs across 43 named checks; failed startup/network attempts are retained separately, never credited. Raw results/original lines in ws8bm-report.md and ws8bm-visibility-audit.md. No pixels or new declaration credit."
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -290,12 +290,12 @@
         {
           "name": "+ shows both attach options when Drive is available",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "From this device triggers the file input",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "From Google Drive starts the legacy picker flow",
@@ -310,27 +310,27 @@
         {
           "name": "+ opens the file picker directly without Drive",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "arrow keys move between items and Escape closes back onto +",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a tap outside closes the menu",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "phone layout keeps the menu above the composer with no horizontal overflow",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "device files, paste, and drag-and-drop still preview uploads",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -341,7 +341,7 @@
         {
           "name": "opens message actions from context menu and keyboard, and cancels a moving long press",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a release click landing on the just-opened menu does not activate it",
@@ -352,42 +352,42 @@
         {
           "name": "shows the message action menu as a bottom sheet on phones",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "edits through the normal composer and restores the saved draft on cancel and success",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a duplicate delivery does not replace the message while its actions are open",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "keeps newer typing through an asynchronous edit and leaves failures in edit mode",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "replies with notify off and renders a tombstone when the target is deleted",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "copies message text and link and forwards to a server-provided thread destination",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "forwarding twice in a row submits only once",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "groups emoji reactions, updates the live count, and highlights the current user",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -398,12 +398,12 @@
         {
           "name": "message action menu is a bottom sheet with touch-sized targets on phones",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "message action menu stays a floating popover on desktop",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -414,67 +414,67 @@
         {
           "name": "the toolbar stays hidden until hover or focus and labels every action",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "quick-react creates a boost from the toolbar",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "reply and thread buttons drive the composer and the thread panel",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the more button opens the shared menu for its message",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "keyboard users reach the toolbar from a focused message",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the emoji picker searches and reacts",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the picker shows category tabs and switches between them",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the picker loads its emoji data only on first open",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the picker remembers recent reactions",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the picker Custom tab reacts with a workspace icon",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the picker reacts with a brand icon shortcode",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "picker arrows move through options, Enter selects, and Escape returns focus",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "picker tabs move with arrow keys and switch the grid",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-reviewed-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-thirty.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -485,127 +485,127 @@
         {
           "name": "the message list is a single tab stop with a roving tabindex",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "arrow keys move between messages",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a stream replacing the focused message keeps focus and the tab stop on its replacement",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "deleting the focused message moves focus to the surviving tab stop",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "deleting an older focused message hands focus to its neighbour, not the newest",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a focus move during a stream render survives Turbo's focus restore",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a no-change room refresh does not yank focus back to the composer",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the ContextMenu key opens the shared menu and Escape returns focus",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a late composer autofocus does not steal focus from a message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "up arrow from an empty composer still edits my last message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "up-arrow-to-edit shows an error when the actions endpoint fails",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "forward reuses the menu-open metadata request instead of fetching again",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "a menu opened while an action waits does not redirect the pending action",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the menu closes before Turbo caches the page",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-cache-menu.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the main message list is a live log",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-live-log.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "paginated history stays quiet past the insert, then the live region comes back",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "an edit replacement is not announced as an addition",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "an own message is not re-announced when its broadcast replaces the pending copy",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "search results keep their menus and focusability",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the message-list top padding does not apply to search results",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the standalone thread page keeps menus and focusability",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the standalone message page keeps its menu and focusability",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the viewport allows pinch zoom",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-viewport.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "text fields stay at 16px on touch devices without changing the desktop look",
@@ -616,17 +616,17 @@
         {
           "name": "profile message and ban buttons have accessible names",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "flash persists its 5-second minimum under reduced motion",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "flash dismisses on demand under reduced motion",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -658,27 +658,27 @@
         {
           "name": "few unread render the divider above the first new message and keep the bottom scroll",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "many unread scroll the room to the divider",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "the jump pill shows while the divider is off-screen and returns to it",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "unread older than the last page keeps the last page and the pill links to the first unread",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "mark unread from the message menu points the divider at that message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         }
       ]
     },
@@ -689,17 +689,17 @@
         {
           "name": "search tolerates operators, shows an empty state and pages older results",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-search-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "forwarded Markdown keeps tables and code blocks",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-search-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit"
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
         },
         {
           "name": "editing to add a URL renders its card live and the edited marker on load",
           "status": "passed",
-          "evidence": "e703cad5 fresh clone: .scratch/ws8bm-hidden-scope-review/fresh-search-paired.log; live Rails/Rust browser flow and persisted rows PASS; no new declaration credit",
+          "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit. Two paired URL isolations pass; the third times out on Rails Loading post at the unchanged 15-second wait, retained in the report. Original Ruby case not executed.",
           "diagnostic": "Old port added a body-text wait and a sequential peer Loading post assertion absent from pinned Rails :74-78. Corrected to immediate author-only loading at the unchanged 15-second wait. Full search batch plus three isolated paired repeats pass. Prior 63-74 ms reference/check observations do not establish original Ruby flakiness."
         }
       ]
