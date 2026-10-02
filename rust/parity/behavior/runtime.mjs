@@ -13,7 +13,18 @@ export const visible = (locator, timeout = 2_000) => locator.waitFor({ state: "v
 export const scheduled = page => page.goto(new URL("/scheduled_messages", DEFAULT_ORIGIN).href)
 export const notice = (page, text) => visible(page.getByText(text, { exact: true }))
 
-export async function runSuite(suite, makeCases) {
+export async function waitForComposer(page) {
+  // Cable can connect before the lazily imported input controllers. Playwright's
+  // atomic fill then emits its only input event before Stimulus can observe it.
+  // This is a setup precondition; selector and application waits remain 2s.
+  await page.waitForFunction(() => ["composer", "markdown-editor", "markdown-autocomplete"]
+    .every(identifier => {
+      const element = document.querySelector(`[data-controller~="${identifier}"]`)
+      return element && window.Stimulus?.getControllerForElementAndIdentifier(element, identifier)
+    }))
+}
+
+export async function runSuite(suite, makeCases, setup = {}) {
   const { values } = parseArgs({ options: {
     target: { type: "string" }, name: { type: "string" }, labels: { type: "string" },
   } })
@@ -53,6 +64,7 @@ export async function runSuite(suite, makeCases) {
     page.setDefaultNavigationTimeout(30_000)
     page.on("dialog", dialog => dialog.accept())
     try {
+      await setup.beforeVisit?.(page)
       const response = await page.goto(new URL(`/rooms/${roomId}`, DEFAULT_ORIGIN).href)
       assert.equal(response?.status(), 200, "room setup HTTP status")
       assert.equal(new URL(page.url()).pathname, `/rooms/${roomId}`, "room setup final URL")
@@ -66,6 +78,8 @@ export async function runSuite(suite, makeCases) {
       }, undefined, { timeout: 15_000 })
       const pwa = page.locator("[data-pwa-install-target~='dialog']")
       if (await pwa.isVisible()) await pwa.getByRole("button", { name: "Close", exact: true }).click()
+      await setup.afterJoinRoom?.(page)
+      if (!setup.legacyComposerSetup) await waitForComposer(page)
       return { page, context }
     } catch (error) { await context.close(); throw error }
   }

@@ -73,3 +73,15 @@ real users and checks the lazy frame's private chip versus the member's full car
 selector default and the source cases' explicit ten-second waits are retained. The
 source's intentional two-second delayed fetch remains an interleaving stimulus. There
 are no timing retries, altered application assets, or skipped browser assertions.
+
+The driver also waits (under its existing two-second setup bound) for the lazy
+`composer`, `markdown-editor` and `markdown-autocomplete` controllers to connect before
+emitting its first input. Cable readiness alone does not imply input-handler readiness.
+The identical reference autocomplete controller installs handlers on connect but does
+not search content filled before that connect; the one input event is lost.
+
+`picker-readiness` holds the autocomplete module until the cable barrier is complete.
+With `--legacy-setup`, it fills before releasing the module: both Rails and Rust fail
+at the unchanged 2,000 ms picker assertion with no autocomplete request. Without that
+flag, it releases the module, waits for controller readiness and fills: both pass. This
+regression changes no application assets and does not retry or lengthen the picker wait.
