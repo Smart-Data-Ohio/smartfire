@@ -1,6 +1,6 @@
 //! Human workspace work and handoff endpoints; use the shared WS12 model writers.
 use crate::app::AppCtx;
-use crate::concerns::{Before, before_actions, require_current_user};
+use crate::concerns::{Before, before_actions, head, require_current_user};
 use crate::controllers::{
     messages,
     presenters::{board_posts, page, page::db_error},
@@ -186,13 +186,13 @@ pub(super) async fn scope(c: &mut Ctx, manager: bool) -> Result<(Room, ChannelTh
         .await
         .map_err(db_error)?;
     let Some((room, thread, tracked, manageable)) = facts else {
-        return halt(c.head(StatusCode::NOT_FOUND));
+        return halt(head(StatusCode::NOT_FOUND));
     };
     if !tracked {
-        return halt(c.head(StatusCode::UNPROCESSABLE_ENTITY));
+        return halt(head(StatusCode::UNPROCESSABLE_ENTITY));
     }
     if manager && !manageable {
-        return halt(c.head(StatusCode::FORBIDDEN));
+        return halt(head(StatusCode::FORBIDDEN));
     }
     Ok((room, thread))
 }

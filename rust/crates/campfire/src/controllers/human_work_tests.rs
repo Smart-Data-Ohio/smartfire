@@ -387,6 +387,7 @@ async fn human_work_http_matches_complete_rails_responses() {
             response.text()
         );
         assert_eq!(response.location(), row["location"].as_str(), "{name}");
+        assert_eq!(response.header("content-type"), row["content_type"].as_str(), "{name}");
         assert_eq!(
             response.header("cache-control"),
             row["cache_control"].as_str(),
