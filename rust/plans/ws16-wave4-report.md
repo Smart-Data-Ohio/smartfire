@@ -1,100 +1,158 @@
-# WS16 PR #195 review fixes — complete
+# WS16 PR #195 enrollment boundaries — complete
 
-Tested executable source: `3159d48a00365d6baf334c25b414317bde89cf26`. Branch: `rust/ws16-placeholder-claim`. The final reply carries the report-only pushed SHA. Requested P2 fixes and gates are complete; no WS16 item remains from this review.
+Tested executable and test source: `0d94b6a345163aed38d6fd463537679cf2d5530c`. Branch: `rust/ws16-placeholder-claim`. The final reply identifies the report-only pushed SHA. This report supersedes the prior PR #195 review report for this bounded follow-up.
 
-## Fixes and failing-first evidence
+## Changes and exact Rails boundaries
 
-Merged origin/main `7c23b097885101b39e432e8628ab9ebb1251d9be` (#187) using merge commit `c55c48ec4f455880e38808c7b10668f7805b1408`. No stash or rebase. Tests/oracle arrived in `98be16e11` with test API corrections in `c0f3978e1`, before production fixes. The baseline fresh clone checked out exact reviewed production `d98df3e53a10f452311c581ddbc1bf7d4ca758bd`, with only the new test/producer/vector patch applied. All seven focused regressions then failed through libtest assertions, not compilation failures. The clone was restored and fast-forwarded from GitHub before final gates.
+`crates/campfire/src/authentication.rs::enroll` now orchestrates separate database writes; `controllers/two_factor.rs::setup_create` calls that domain operation and retains the separate audit write. It shares the app's existing encryption handle across writes. No rendering, request or cookie logic enters the domain layer.
 
-1. **Google account selection** (`f0b4a3f6a`): `GoogleIdentity::resolve`, hosted-domain normalization and the deactivated-predecessor pattern use `rails_compat::unicode::downcase`. SQLite `LOWER` and `LIKE` retain Rails' ASCII semantics. Real RS256-signed, verified Google callbacks prove `ΟΣ@smartdata.net` claims `οσ@smartdata.net`, both alone and with an eligible `ος@smartdata.net` administrator; it also rejects the matching rewritten deactivated email. The original 30-response claim interaction is unchanged.
+Pinned `TwoFactor::SetupsController#create` has no enclosing action transaction. The Rails SQL notification trace records these mutation groups, with BEGIN/COMMIT or BEGIN/ROLLBACK around each:
 
-   Audit: Slack email matching, claimable-domain lookup, room matching and group sorting already use pinned Ruby casing (`slack::payload::downcase`) plus SQLite SQL where Rails does. Google subjects and Slack IDs remain exact opaque comparisons; workspace metadata updates retain exact equality. Google domain verification's remaining Rust lowercase operates on domain eligibility only: accepted hostnames are ASCII, and it returns the original verified email to account selection. It does not choose users or normalize their saved email. Profile normalization already uses the shared Ruby helper. No further identity comparison defect was found.
+| Group | Statements sharing the transaction | Effect of a later failure |
+| --- | --- | --- |
+| Pending credential creation | One credential INSERT, when absent (`create_or_find_by!`) | The unconfirmed credential remains after confirmation failure. |
+| Confirmation | Credential UPDATE (secret, confirmation, replay stamp, timestamp) and current setup-secret DELETE (`with_lock`) | Both roll back together; pending credential creation remains. |
+| Backup replacement | Delete the old code set and INSERT all ten digests | A rejected fourth INSERT rolls back the three tentative codes and restores an existing old set. Confirmation remains. |
+| Verification | Current session UPDATE (`update!`) | Enrollment and all ten codes remain if verification fails. |
+| Each other session | Huddle callback, dependent presence/setup-secret DELETEs, session DELETE (`destroy_all` calls individual `destroy`) | A failed deletion rolls back that session's dependents; earlier session destructions remain committed. Durable jobs remain atomic with their individual triggering destruction. |
+| Enable audit | Audit INSERT (`record!`) | Enrollment, codes, verification and successful destructions remain after audit failure. |
 
-2. **Slack preview reads** (`096d97d48`): batch mapping keys in one scoped `SlackImport::Record` relation and eligible emails in one `User` relation. Deduplicate raw emails before Ruby downcase; preserve id-ascending user indexing so the last duplicate match wins. Dry previews include blank-id candidates while preparing the email index, as Rails does; empty pages return immediately. The existing mapping relation's bind/inlined-literal shape and lack of ORDER BY are preserved, including its analyzed-database group-order regression. Hash maps/sets here feed key lookups only, never output iteration. SQLite trace counts at 10 and 200 fresh members are now **2 and 2**, versus baseline **20 and 400**, using expectations and actual SQL recorded from Rails.
+None of these Rails mutation statements autocommits on its own outside a model transaction. Controller relation reads run without an action transaction; model validation/lock reads belong to their model transaction. The best-effort cable disconnect is outside the persisted mutation groups. Rust uses one write per group; the disconnect runs separately after persisted steps and cannot undo them. Empty/read-only transactions do not count as mutation groups in the differential.
 
-3. **Enrollment audit failure** (`3159d48a0`): confirmed enrollment, ten backup codes, verified session, other-session revocation and its durable jobs commit before the separate `two_factor.enable` audit write. A rejected audit still produces HTTP 500. This changes only the enable audit boundary; durable jobs still commit or roll back with their domain transaction. The Rails differential signs in through the actual Google callback, starts with an unverified session, enrolls with real TOTP and CSRF, and rejects the audit with a SQLite trigger. It compares the complete 500 body/status/Location/Content-Type, all six retained-state counts, and the next setup redirect. The older enrollment rollback test was corrected to the Rails retention expectation. No new authentication or entropy seam was added.
+`crates/db/src/models/two_factor.rs::extend_expiry` also skips an unchanged expiry, matching Active Record's dirty tracking. The wrong-code retry otherwise issued an UPDATE and timestamp touch that Rails skipped at the same frozen time.
 
-Baseline and corrected controls were executed as follows, through `.scratch/pinned-p2.sh` (wrapper below); baseline uses the d98df3e5 checkout, controls use the tested source:
+## Differential and failing-first evidence
+
+New `app/google_tests/slack_claim/boundaries.rs` and `reference-tools/slack/google_enrollment_boundaries.rb` exercise actual signed Google callbacks, first-factor sessions, real TOTP, real CSRF verification and real SQLite triggers. The helper is loaded by the existing Google claim review producer. Its six pinned source hashes and thirteen scenarios are stored in `vectors/slack/google_enrollment_boundaries.json`.
+
+The cases reject: credential insertion; confirmation; current setup-secret consumption; old-code deletion; fourth new-code insertion with and without an old set; session verification; first and second other-session destruction; the second session's setup-secret deletion; and the audit. Success and wrong-code retry also compare mutation groups. Each case compares the complete response body, status, Location and Content-Type, retained credential timestamps/replay stamp and decrypted fixture properties, full backup digests, session verification/activity, pending secret expiries, audit details, and the next setup response. Two extra sessions deliberately expose partial `destroy_all` completion and dependent-deletion rollback. New random unconfirmed secret ciphertext is not a stable oracle field; the test checks decryptability/presence, confirmed setup secret and preservation of the existing fixture secret.
+
+The recorder uses SQLite STMT/PROFILE events to capture one client SQL call, equivalent to Rails' `sql.active_record` notification. Foreign-key/trigger subprograms can repeat the parent's STMT event; these are not extra client calls. Separate backup INSERTs remain separate, including the fourth rejected insert. No response rewrite, mask, allowlist or new authentication/entropy seam was added. Existing rendering/auth-input fixtures are reused; each independent Rails scenario clears fixture cache state, matching a fresh Rust app while retaining the rate-limit callbacks.
+
+The final recorder was rerun against exact reviewed production `d8dcb3951e14b9c235a3de6bd67ac22a4129f65a` in the fresh clone with only the test/producer/vector patch applied. Production files were checked pristine. Nine cases fail retained-state assertions; success, audit failure and wrong-code retry fail transaction-group assertions. The early credential-insert failure is an already-correct control. All twelve discriminating cases fail before the fix, and all thirteen pass afterward.
+
+Executed baseline and corrected commands through the pinned wrapper below:
 
 ```sh
-cargo test --offline --locked -p campfire google_sigma_ -- --test-threads=2 --nocapture
-cargo test --offline --locked -p campfire slack_preview_reads_match_rails_ -- --test-threads=2 --nocapture
-cargo test --offline --locked -p campfire google_enrollment_audit_failure_ -- --test-threads=2 --nocapture
-cargo test --offline --locked -p campfire enrollment_keeps_confirmed_state_if_the_audit_cannot_be_saved -- --test-threads=2 --nocapture
-# Corrected controls:
-cargo test --offline --locked -p campfire google_tests::slack_claim -- --test-threads=2 --nocapture
-cargo test --offline --locked -p campfire slack_preview_reads_match_rails_ -- --test-threads=2 --nocapture
-cargo test --offline --locked -p campfire app::two_factor_tests:: -- --test-threads=2 --nocapture
+# Fresh clone checked out d8dcb3951, with only the test/producer/vector patch:
+.scratch/pinned-boundary.sh ws16-boundary-baseline cargo test --offline --locked -p campfire google_enrollment_boundary_ -- --test-threads=2 --nocapture
+# Fresh clone restored, then fast-forwarded from GitHub to the tested source:
+.scratch/pinned-boundary.sh ws16-boundary-controls cargo test --offline --locked -p campfire google_tests::slack_claim -- --test-threads=2 --nocapture
+.scratch/pinned-boundary.sh ws16-boundary-two-factor cargo test --offline --locked -p campfire app::two_factor_tests:: -- --test-threads=2
 ```
 
-Raw failing-first summaries and observed divergence:
+Raw failing-first evidence:
 
 ```text
-Baseline production source: d98df3e53a10f452311c581ddbc1bf7d4ca758bd
-sigma: test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 2100 filtered out; finished in 2.18s
-Google identity unicode_other_user: owner=administrator; users=2; sessions=1
-Google identity unicode_sigma: owner=new_user; users=2; sessions=1
-preview: test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 2101 filtered out; finished in 0.56s
-Slack preview members=200: SELECTs=400; Rails=2
-Slack preview members=10: SELECTs=20; Rails=2
-enrollment: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2102 filtered out; finished in 3.48s
-Google enrollment audit failure: {"enrolled":false,"backups":0,"pending_secrets":1,"verified_sessions":0,"sessions":1,"audits":0}
-enrollment-existing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2102 filtered out; finished in 1.08s
-d98df3e5 failing-first proof: all three P2s reproduced
+Baseline production source: d8dcb3951e14b9c235a3de6bd67ac22a4129f65a; only test module/producer registrations changed; production pristine
+Rust enrollment boundary audit: status=500; credentials=1; backups=10; pending=0; verified=1; sessions=1; write transactions=2
+assertion `left == right` failed: audit: write transaction boundaries
+Rust enrollment boundary backup_delete: status=500; credentials=1; backups=2; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: backup_delete: retained rows
+Rust enrollment boundary backup_insert: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: backup_insert: retained rows
+Rust enrollment boundary backup_replace_insert: status=500; credentials=1; backups=2; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: backup_replace_insert: retained rows
+Rust enrollment boundary confirm_update: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: confirm_update: retained rows
+Rust enrollment boundary credential_insert: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+Rust enrollment boundary session_destroy_first: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: session_destroy_first: retained rows
+Rust enrollment boundary session_destroy_second: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: session_destroy_second: retained rows
+Rust enrollment boundary session_setup_delete_second: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: session_setup_delete_second: retained rows
+Rust enrollment boundary session_verify: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: session_verify: retained rows
+Rust enrollment boundary success: status=200; credentials=1; backups=10; pending=0; verified=1; sessions=1; write transactions=2
+assertion `left == right` failed: success: write transaction boundaries
+Rust enrollment boundary setup_delete: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+assertion `left == right` failed: setup_delete: retained rows
+Rust enrollment boundary wrong_code: status=422; credentials=1; backups=0; pending=3; verified=0; sessions=3; write transactions=2
+assertion `left == right` failed: wrong_code: write transaction boundaries
+test result: FAILED. 1 passed; 12 failed; 0 ignored; 0 measured; 2132 filtered out; finished in 3.88s
 ```
 
 Raw corrected controls:
 
 ```text
-Google enrollment audit failure: {"enrolled":true,"backups":10,"pending_secrets":0,"verified_sessions":1,"sessions":1,"audits":0}
+Rust enrollment boundary backup_delete: status=500; credentials=1; backups=2; pending=2; verified=0; sessions=3; write transactions=2
+Rust enrollment boundary audit: status=500; credentials=1; backups=10; pending=0; verified=1; sessions=1; write transactions=7
+Rust enrollment boundary backup_insert: status=500; credentials=1; backups=0; pending=2; verified=0; sessions=3; write transactions=3
+Rust enrollment boundary backup_replace_insert: status=500; credentials=1; backups=2; pending=2; verified=0; sessions=3; write transactions=2
+Rust enrollment boundary credential_insert: status=500; credentials=0; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+Rust enrollment boundary confirm_update: status=500; credentials=1; backups=0; pending=3; verified=0; sessions=3; write transactions=2
+Rust enrollment boundary session_destroy_second: status=500; credentials=1; backups=10; pending=1; verified=1; sessions=2; write transactions=6
+Rust enrollment boundary session_destroy_first: status=500; credentials=1; backups=10; pending=2; verified=1; sessions=3; write transactions=5
+Rust enrollment boundary session_verify: status=500; credentials=1; backups=10; pending=2; verified=0; sessions=3; write transactions=4
+Rust enrollment boundary session_setup_delete_second: status=500; credentials=1; backups=10; pending=1; verified=1; sessions=2; write transactions=6
+Rust enrollment boundary setup_delete: status=500; credentials=1; backups=0; pending=3; verified=0; sessions=3; write transactions=2
+Rust enrollment boundary success: status=200; credentials=1; backups=10; pending=0; verified=1; sessions=1; write transactions=7
+Rust enrollment boundary wrong_code: status=422; credentials=1; backups=0; pending=3; verified=0; sessions=3; write transactions=1
 Google → Slack claim HTTP parity: 30 responses; 2 Google verifications; 2 personal jobs; 9 ownership tables; 0 byte mismatches
-Google identity unicode_other_user: owner=placeholder; users=2; sessions=1
-Google identity unicode_sigma: owner=placeholder; users=1; sessions=1
-Google identity unicode_predecessor: owner=none; users=1; sessions=0
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2127 filtered out; finished in 2.26s
-Slack preview members=200: SELECTs=2; Rails=2
-Slack preview members=10: SELECTs=2; Rails=2
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2130 filtered out; finished in 0.59s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 2124 filtered out; finished in 3.65s
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 2281 filtered out; finished in 5.18s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 2291 filtered out; finished in 2.69s
 ```
 
-## Reference, fresh clone and final gates
+## Main, reference and fresh-clone gates
 
-All verification uses a fresh GitHub clone at `.scratch/ws16-p2-final`, fast-forwarded to the executable SHA above, with its own Cargo target. Rails reference is exact `d7c7de9264c63015be398001d7a1094e7695a6db`, archived into that clone's `rust/parity/.ci/reference`. Default and first_run seeds were built afresh from the pure pin and validated by Rails. Google/claim and admin-run body producers use only the common brief's approved application-layout / people.css / profile_card_controller.js drift in `ws16-reference:d7c7de92-layout-2e20b24c`; setup/connection uses the pure pin image. No Rails application source was edited.
+Merged main `573762b5987522edadbdb855532c5dc14a88b526` (#188) with merge commit `37f5d755576876e3c7b69d7e14f23b4bd77efa32`, then main `056ab49acffd52007334356ada0bdba3774c0fe2` (#191) with merge commit `d816ef164b47088808e18a8aa9352a0493024c84`. Locked metadata succeeded after both merges. Main was fetched again before the final suite and was still at 056ab49ac. No stash, rebase or Rails app edit.
 
-Executed seed/replay commands (namespace `ws16-p2` for seeds, `ws16-p2-replay` for replay; `PARITY_OWNER=ws16`; `CAMPFIRE_REFERENCE` set to the absolute archived pin):
+Verification runs from a fresh GitHub clone in `.scratch/ws16-boundary-final`, restored after the baseline experiment and fast-forwarded to the tested source. It has its own target. Exact Rails pin `d7c7de9264c63015be398001d7a1094e7695a6db` was archived into its `rust/parity/.ci/reference`. All three seeds (`default`, `first_run`, `agents_ui`) were built fresh and validated by Rails. The Google/claim and admin-run producers use only the common brief's approved layout/assets drift in `ws16-reference:d7c7de92-layout-2e20b24c`; connection/setup uses the pure pin image. Enrollment's six source hashes match the pure pin.
+
+Seed commands from the clone's `rust/`, with `PARITY_OWNER=ws16`, an isolated `ws16-` namespace, the pure pinned image and the absolute archived `CAMPFIRE_REFERENCE`:
 
 ```sh
-parity/bin/seed build default first_run
-# Each validation uses PARITY_IMAGE=ws16-reference:d7c7de92:
-parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws16/.scratch/ws16-p2-final/rust/reference-tools/campfire/verify_parity_seed.rb default
-parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws16/.scratch/ws16-p2-final/rust/reference-tools/campfire/verify_parity_seed.rb first_run
-python3 .scratch/p2-reference-check.py
-python3 .scratch/p2-replay.py
+parity/bin/seed build default first_run agents_ui
+parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze "$PWD/reference-tools/campfire/verify_parity_seed.rb" default
+parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze "$PWD/reference-tools/campfire/verify_parity_seed.rb" first_run
+parity/bin/reference runner --seed agents_ui --time 2026-03-02T16:00:00Z --freeze "$PWD/reference-tools/campfire/verify_parity_seed.rb" agents_ui
 ```
 
-Replay calls `parity/bin/reference runner --seed <seed> --time 2026-03-02T16:00:00Z --freeze <absolute producer>` for `google_claim_http.rb` (default), `connections_http.rb` (first_run) and `runs_http.rb` (first_run), then checks `git diff --exit-code -- rust/vectors/slack` in the clone. All three vectors regenerate byte-identically, without masks. They contain the original 186 response records plus five review responses (three signed callbacks and enrollment's failure/next-request), alongside the two preview query observations. Rails uses actual router/controller Rack HTTP sessions; Rust uses its real Axum TCP router. Google token verification, real sessions/CSRF and TOTP remain active. Provider transports are recorded/local fixtures only; no real Google or Slack call, request/config authentication bypass, pixel work, or extra seam was introduced.
+Executed `python3 .scratch/boundary-reference-check.py` and `python3 .scratch/boundary-replay.py`. Replay runs `parity/bin/reference runner --seed <seed> --time 2026-03-02T16:00:00Z --freeze <absolute producer>` for `google_claim_http.rb` (default), `connections_http.rb` and `runs_http.rb` (first_run), followed by `git diff --exit-code -- rust/vectors/slack` in the clone. All three existing producers and the new fourth vector regenerate byte-identically, including 217 complete response records. Recorded/local providers only; no real Google or Slack calls or pixel work.
 
-Raw seed/source/replay summaries:
+Raw seed/source/oracle summaries:
 
 ```text
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
+seed: building agents_ui
+seed: agents_ui -> parity/.seed/agents_ui (6.1M)
   "passed": 29,
   "failed": 0
+WS16 fresh seed validated: default
   "passed": 4,
   "failed": 0
+WS16 fresh seed validated: first_run
+  "passed": 40,
+  "failed": 0
+WS16 fresh seed validated: agents_ui
 Rails source check: 10 controller/model hashes match d7c7de92; 30 responses; 13 provider calls
+Rails enrollment source check: 6 pinned source hashes; 13 cases; 26 complete responses
 Google claim review oracle: 3 signed callback cases; preview SELECTs 10=2, 200=2; enrollment audit failure {enrolled: true, backups: 10, pending_secrets: 0, verified_sessions: 1, sessions: 1, audits: 0}
+Rails enrollment boundary credential_insert: status=500; credentials=0; confirmed=false; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+Rails enrollment boundary confirm_update: status=500; credentials=1; confirmed=false; backups=0; pending=3; verified=0; sessions=3; write transactions=2
+Rails enrollment boundary setup_delete: status=500; credentials=1; confirmed=false; backups=0; pending=3; verified=0; sessions=3; write transactions=2
+Rails enrollment boundary backup_delete: status=500; credentials=1; confirmed=true; backups=2; pending=2; verified=0; sessions=3; write transactions=2
+Rails enrollment boundary backup_insert: status=500; credentials=1; confirmed=true; backups=0; pending=2; verified=0; sessions=3; write transactions=3
+Rails enrollment boundary backup_replace_insert: status=500; credentials=1; confirmed=true; backups=2; pending=2; verified=0; sessions=3; write transactions=2
+Rails enrollment boundary session_verify: status=500; credentials=1; confirmed=true; backups=10; pending=2; verified=0; sessions=3; write transactions=4
+Rails enrollment boundary session_destroy_first: status=500; credentials=1; confirmed=true; backups=10; pending=2; verified=1; sessions=3; write transactions=5
+Rails enrollment boundary session_destroy_second: status=500; credentials=1; confirmed=true; backups=10; pending=1; verified=1; sessions=2; write transactions=6
+Rails enrollment boundary session_setup_delete_second: status=500; credentials=1; confirmed=true; backups=10; pending=1; verified=1; sessions=2; write transactions=6
+Rails enrollment boundary audit: status=500; credentials=1; confirmed=true; backups=10; pending=0; verified=1; sessions=1; write transactions=7
+Rails enrollment boundary success: status=200; credentials=1; confirmed=true; backups=10; pending=0; verified=1; sessions=1; write transactions=7
+Rails enrollment boundary wrong_code: status=422; credentials=1; confirmed=false; backups=0; pending=3; verified=0; sessions=3; write transactions=1
+Rails enrollment boundary oracle: 13 cases; literal HTTP responses, retained rows and write transaction groups
 Google → Slack claim Rails oracle: 30 HTTP responses; 2 Google verifications; personal preview/import completed; 9 ownership tables per stage
 Slack connection HTTP oracle: 37 real Rails callback/disconnect/setup/remove cases generated
 Slack run HTTP oracle: 119 real Rails action cases with signed sessions and verified CSRF generated
-Fresh Rails HTTP replay: 3 producers; 191 recorded responses (186 original + 5 review responses); committed vectors byte-identical
+Fresh Rails HTTP replay: 3 producers; 217 recorded responses (186 original + 5 prior review + 26 enrollment boundary responses); committed vectors byte-identical
 ```
 
-Pinned wrapper (all Cargo commands run from `/src/rust`, in the fresh clone):
+Pinned container wrapper (Cargo runs from `/src/rust` in the clone):
 
 ```sh
 #!/bin/bash
@@ -102,7 +160,7 @@ set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 name="$1"; shift
 docker run --rm --name "$name" --network none --cpus 4 --user 1000:1000 \
-  -v "$root/.scratch/ws16-p2-final:/src" \
+  -v "$root/.scratch/ws16-boundary-final:/src" \
   -v "$root/.scratch/rustc-wrapper.sh:/rustc-wrapper:ro" \
   -v /tmp/rust-port-rustc-slots:/rustc-slots \
   -v /home/riels/.cache/rust-port/rustc-slots:/slot-count:ro \
@@ -117,70 +175,62 @@ docker run --rm --name "$name" --network none --cpus 4 --user 1000:1000 \
   sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2 "$@"
 ```
 
-The wrapper uses the unchanged host rustc slot loop (currently four slots), `CARGO_BUILD_JOBS=2`, four CPUs, network none and CI. Focused tests use two test threads; the full workspace uses four. Every rustc compile waits for a host slot. The local model server was not touched.
+The wrapper uses the existing host slot loop and its configured four slots, CARGO_BUILD_JOBS=2, four CPUs and network none. Focused checks use two test threads and the workspace uses four. No extra rustc jobs/slot changes, external workers or model-server interaction.
 
-Raw runtime versions:
-
-```text
-rustc 1.98.1 (48a229cea 2026-09-01)
-libvips 8.16.1
-ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers
-```
-
-Executed gates:
+Executed final gates:
 
 ```sh
-bash .scratch/pinned-p2.sh ws16-p2-metadata cargo metadata --offline --locked --format-version 1
-bash .scratch/pinned-p2.sh ws16-p2-workspace cargo test --offline --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=4
-python3 .scratch/summarize-suite.py .scratch/p2-workspace.log
-bash .scratch/pinned-p2.sh ws16-p2-clippy cargo clippy --offline --locked --workspace --all-targets -- -D warnings
-bash .scratch/pinned-p2.sh ws16-p2-release bash ci/with-release-inputs.sh cargo build --offline --locked --workspace --bins
+.scratch/pinned-boundary.sh ws16-boundary-metadata cargo metadata --offline --locked --format-version 1
+.scratch/pinned-boundary.sh ws16-boundary-workspace cargo test --offline --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=4
+python3 .scratch/summarize-suite.py .scratch/boundary-workspace.log
+.scratch/pinned-boundary.sh ws16-boundary-clippy cargo clippy --offline --locked --workspace --all-targets -- -D warnings
+.scratch/pinned-boundary.sh ws16-boundary-release bash ci/with-release-inputs.sh cargo build --offline --locked --workspace --bins
 ```
 
-`cargo metadata --offline --locked` decoded successfully with 13 workspace members. No dependency/lockfile change. Release inputs contain only Cargo files and crates plus the explicit asset build context; no production source requires vectors, tools or files outside crates. The full suite has no failures, measured/filtered cases or silent missing-seed skips. Existing ignored cases are listed verbatim below and are not counted as passes.
+Locked metadata decoded successfully with 13 workspace members; no lockfile change. The workspace uses rust/AGENTS.md's documented vendored html5ever exclusion. The release-input build exposes only Cargo files/crates plus the explicit asset context. No production source requires vectors/reference tools or files outside crates. Full suite totals, raw summaries and existing ignored cases follow; ignored tests are not counted as passes. No missing-seed skips, measured or filtered cases in the workspace run.
 
-Raw complete workspace summaries and ignored cases:
+Raw workspace summaries and ignored cases:
 
 ```text
-Pinned workspace totals: 59 summary blocks; 4098 passed; 0 failed; 14 ignored
+Pinned workspace totals: 59 summary blocks; 4276 passed; 0 failed; 14 ignored
 Raw libtest summaries:
-test result: ok. 2127 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 634.64s
+test result: ok. 2294 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 549.05s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.86s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.29s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
-test result: ok. 1253 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 147.77s
-test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.74s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 1254 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 134.12s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.54s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
 test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.01s
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
-test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.31s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.70s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.20s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.15s
 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.68s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.93s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.23s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.57s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.20s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.85s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.18s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.12s
-test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.31s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
@@ -190,8 +240,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
-test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.53s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.64s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -220,44 +270,20 @@ test crates/kit/src/error.rs - error::halt (line 91) ... ignored
 test crates/kit/src/lib.rs - (line 7) ... ignored
 ```
 
-Raw strict-clippy and release-input build summaries, respectively:
+Raw strict clippy and release-input build summaries:
 
 ```text
-    Finished `dev` profile [unoptimized] target(s) in 1m 36s
-    Finished `dev` profile [unoptimized] target(s) in 1m 26s
+    Finished `dev` profile [unoptimized] target(s) in 4m 31s
+    Finished `dev` profile [unoptimized] target(s) in 1m 47s
 ```
 
-Raw final source-integrity check:
+## Ownership, remaining work and cleanup
+
+This is the authorized two-factor boundary correction in the Google → Slack claim flow: it touches the WS9 authentication domain/controller and setup-secret model, plus WS16 test/oracle/report files. No WS14g seam was needed. The four #187 board N+1 paths identified by Astra were not edited by this fix; they remain WS12/WS14g's responsibility. No WS16-owned item remains from this review after these gates; this slice is complete.
+
+The scratch target was cleaned with `.scratch/pinned-boundary.sh ws16-boundary-clean cargo clean --target-dir /src/rust/target`; the empty directory was then removed. Primary rust/target is preserved. Raw cleanup:
 
 ```text
-Fresh clone unchanged: Rails vectors, locked dependencies and source match 3159d48a00365d6baf334c25b414317bde89cf26
-All requested P2 gates passed
+     Removed 20314 files, 13.1GiB total
+WS16 cleanup: 0 scratch Cargo targets; 0 boundary-check containers; 0 listeners in 53300-53399; primary rust/target preserved
 ```
-
-## Changed files, cross-workstream scope and remaining work
-
-- `crates/db/src/models/google_identity.rs`: the three Google normalization sites (WS14g identity path).
-- `crates/campfire/src/integrations/slack/users.rs`: batched page-level mapping-key and email relations; existing users_for SQL shape preserved.
-- `crates/campfire/src/authentication.rs` and `controllers/two_factor.rs`: the enable audit is recorded after the enrollment transaction (WS9 boundary). Domain writes stay separate from rendering.
-- `crates/campfire/src/app/google_tests/slack_claim/review.rs` and module registration in `slack_claim.rs`: three signed Unicode callback cases and the real Google → TOTP enrollment audit-failure differential; response fields and resulting account/session state checked.
-- `crates/campfire/src/integrations/slack/users/tests.rs`: traced read-count regressions at two sizes, using Rails-generated observations.
-- `crates/campfire/src/app/two_factor_tests.rs`: corrected the old rollback expectation to Rails' retained enrollment, codes, current session and revoked-other-session state.
-- `reference-tools/slack/google_claim_review.rb`, `google_claim_http.rb`, and `vectors/slack/google_claim_http.json`: append the six reviewed scenarios without changing the original 30-response comparison or its 13 provider calls. Three callbacks + two previews + one enrollment failure are the six scenarios; the enrollment scenario records both failure and next response.
-
-No new dependency, schema/migration, route, Rails application change, auth bypass, ignore annotation or production fixture-input path. WS14g/WS9 touches above are limited to the explicitly requested fixes, with no extra seams. No open question or owner-blocked WS16 item remains in this review. Existing manually driven reference/export checks, ACME infrastructure/docs/measurements and WS11-API polling comparisons remain the unchanged ignored cases listed above; this run does not claim they passed.
-
-Executed cleanup:
-
-```sh
-bash .scratch/pinned-p2.sh ws16-p2-clean cargo clean --target-dir /src/rust/target
-python3 .scratch/p2-cleanup-check.py
-```
-
-Raw cleanup:
-
-```text
-     Removed 20021 files, 12.6GiB total
-WS16 cleanup: 0 scratch Cargo targets; 0 P2-check containers; 0 listeners in 53300-53399; primary rust/target preserved
-```
-
-Primary `rust/target` is preserved. Only regenerable scratch Cargo output was removed; logs and the fresh reference/seed evidence remain under `.scratch/`. The final report commit changes only `rust/plans/ws16-wave4-report.md` after the tested source; the shared external report is byte-identical. No further source changes follow the gates.
