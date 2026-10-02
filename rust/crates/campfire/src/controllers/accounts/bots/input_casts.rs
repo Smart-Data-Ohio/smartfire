@@ -226,10 +226,26 @@ fn boundary_offset(zone: &Zone, seconds: i64, local: bool) -> Option<i64> {
         return Some(offset);
     }
     let delta = |offset: Option<i64>| if local { offset.unwrap_or(0) } else { 0 };
-    if seconds < boundary.first_at? + delta(boundary.first_offset.zip(boundary.first_next_offset).map(|(a,b)|a.min(b))) {
+    if seconds
+        < boundary.first_at?
+            + delta(
+                boundary
+                    .first_offset
+                    .zip(boundary.first_next_offset)
+                    .map(|(a, b)| a.min(b)),
+            )
+    {
         return boundary.first_offset;
     }
-    if seconds >= boundary.last_at? + delta(boundary.last_offset.zip(boundary.last_previous_offset).map(|(a,b)|a.max(b))) {
+    if seconds
+        >= boundary.last_at?
+            + delta(
+                boundary
+                    .last_offset
+                    .zip(boundary.last_previous_offset)
+                    .map(|(a, b)| a.max(b)),
+            )
+    {
         return boundary.last_offset;
     }
     None

@@ -42,7 +42,7 @@ fn month(s: &str) -> String {
     (MONTHS
         .iter()
         .position(|m| s.eq_ignore_ascii_case(m))
-        .unwrap()
+        .unwrap_or(MONTHS.len())
         + 1)
     .to_string()
 }
@@ -99,16 +99,16 @@ fn s3e(
     {
         y = d.take();
     }
-    if let Some(year) = &y {
-        if let Some(start) = year.find(|c: char| c.is_ascii_digit() || c == '-' || c == '+') {
-            let s = &year[start..];
-            let skip = usize::from(s.starts_with(['-', '+']));
-            let end = skip + s[skip..].bytes().take_while(u8::is_ascii_digit).count();
-            if end < s.len() {
-                let day = s[..end].to_owned();
-                y = d.take();
-                d = Some(day);
-            }
+    if let Some(year) = &y
+        && let Some(start) = year.find(|c: char| c.is_ascii_digit() || c == '-' || c == '+')
+    {
+        let s = &year[start..];
+        let skip = usize::from(s.starts_with(['-', '+']));
+        let end = skip + s[skip..].bytes().take_while(u8::is_ascii_digit).count();
+        if end < s.len() {
+            let day = s[..end].to_owned();
+            y = d.take();
+            d = Some(day);
         }
     }
     if m.as_ref()
@@ -236,7 +236,8 @@ fn date(s: &mut String, p: &mut Parts) {
             "t" => 1911,
             "s" => 1925,
             "h" => 1988,
-            _ => 2018,
+            "r" => 2018,
+            _ => 0,
         };
         p.year = c[2]
             .as_deref()

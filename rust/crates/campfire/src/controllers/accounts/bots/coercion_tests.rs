@@ -117,6 +117,19 @@ fn pr196_generated_date_casts_match_pinned_model() {
         "../../../../../../vectors/bot-ui-generated-casts.json"
     ))
     .unwrap();
+    generated_date_cases(&oracle);
+}
+
+#[test]
+fn pr196_unicode_date_regexes_match_pinned_ascii_lookups() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/bot-ui-unicode-dates.json"
+    ))
+    .unwrap();
+    generated_date_cases(&oracle);
+}
+
+fn generated_date_cases(oracle: &Value) {
     let now = campfire_db::Timestamp::parse_db("2026-03-02 16:00:00").unwrap();
     let mut failures = Vec::new();
     let cases = oracle["expiry"].as_array().unwrap();
