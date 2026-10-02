@@ -15,6 +15,7 @@ async fn prepare(c: &mut Ctx) -> Result<()> {
     features::active_human(c)?;
     c.no_store();
     c.set_header("Pragma", "no-cache");
+    c.start_action();
     Ok(())
 }
 async fn pending(c: &Ctx) -> Result<ScheduledMessage> {

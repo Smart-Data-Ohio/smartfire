@@ -9,6 +9,8 @@ mod scheduled_tests;
 mod tests;
 #[cfg(test)]
 mod review_tests;
+#[cfg(test)]
+mod rescue_format_tests;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, cast_integer, require_current_user};

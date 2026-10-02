@@ -42,6 +42,7 @@ pub struct Ctx {
     flash: Option<Flash>,
     kit: Kit,
     extensions: Extensions,
+    action_started: bool,
     marked_for_same_origin_verification: bool,
     /// `request.env["action_controller.csrf_token"]`: the session's CSRF token once read (or
     /// generated), stored into the session when the request commits.
@@ -112,6 +113,7 @@ impl Ctx {
             flash: None,
             kit,
             extensions: Extensions::new(),
+            action_started: false,
             marked_for_same_origin_verification: false,
             csrf_token: None,
             csp_nonce: None,
@@ -498,8 +500,15 @@ impl Ctx {
 
     /// Controller-level `rescue_from ActiveRecord::RecordNotFound { head :not_found }`.
     /// Routing errors and controllers without this rescue retain PublicExceptions rendering.
+    /// Call [`Ctx::start_action`] after the controller's before-actions have succeeded.
     pub fn rescue_not_found(&mut self) {
         self.extensions.insert(RescueNotFound);
+    }
+
+    /// End the before-action chain. Rails' Rendering#process_action selects request
+    /// formats here, inside AbstractController::Callbacks; an earlier rescue uses HTML.
+    pub fn start_action(&mut self) {
+        self.action_started = true;
     }
 
     /// `head status, location: url`
@@ -709,11 +718,19 @@ impl Ctx {
     /// Turn the action's result into the response Rails would send: halts and errors resolved,
     /// flash and session committed into cookies, cache headers, ETag and 304, HEAD bodies dropped.
     pub(crate) fn finish(mut self, result: Result<Response>) -> Response {
+        let mut rescued = false;
         let mut response = match result {
             Ok(response) => response,
             Err(Error::Halt(response)) => *response,
             Err(Error::NotFound) if self.extensions.get::<RescueNotFound>().is_some() => {
-                self.head(StatusCode::NOT_FOUND)
+                // Rescue#process_action runs outside the callback chain. Exceptions
+                // unwind its after-actions, including JavaScript same-origin verification.
+                rescued = true;
+                if self.action_started {
+                    self.head(StatusCode::NOT_FOUND)
+                } else {
+                    Response::new(StatusCode::NOT_FOUND).content_type(format::HTML.string)
+                }
             }
             Err(error) => return self.error_response(error),
         };
@@ -724,7 +741,7 @@ impl Ctx {
             }
         }
 
-        if let Err(error) = self.verify_same_origin_request(&response) {
+        if !rescued && let Err(error) = self.verify_same_origin_request(&response) {
             return self.error_response(error);
         }
         self.commit_flash();

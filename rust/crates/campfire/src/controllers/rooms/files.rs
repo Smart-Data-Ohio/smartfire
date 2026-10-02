@@ -1,12 +1,12 @@
 //! Rooms::FilesController: bounded upload/blob and picker-only Drive reads, authorized first.
 use crate::app::AppCtx;
-use crate::concerns::{self, Before, before_actions, require_current_user};
+use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::{
     message_features as features,
     presenters::{accounts, page, storage_error},
 };
 use campfire_db::{User, room_files};
-use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
+use campfire_kit::{Ctx, Result, StatusCode, format};
 use campfire_storage::{Blob, paths};
 fn string(c: &Ctx, key: &str) -> String {
     c.param(key).map(features::param_string).unwrap_or_default()
@@ -18,14 +18,9 @@ fn message_path(room_id: i64, id: i64, thread: Option<i64>) -> String {
     )
 }
 pub async fn index(c: &mut Ctx) -> Result {
-    match render(c).await {
-        Err(Error::NotFound) => halt(concerns::head(StatusCode::NOT_FOUND)),
-        result => result,
-    }
-}
-async fn render(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = features::room(c).await?;
+    c.start_action();
     let viewer = require_current_user(c)?.id;
     c.respond_to(&[&format::HTML])?;
     let file_type = room_files::file_type(&string(c, "type")).to_string();

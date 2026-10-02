@@ -11,6 +11,7 @@ async fn prepare(c: &mut Ctx) -> Result<()> {
     before_actions(c, Before::default()).await?;
     c.no_store();
     c.set_header("Pragma", "no-cache");
+    c.start_action();
     Ok(())
 }
 fn filter(c: &Ctx) -> String {

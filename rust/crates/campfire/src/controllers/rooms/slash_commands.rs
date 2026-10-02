@@ -33,6 +33,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = features::room(c).await?;
     features::active_human(c)?;
+    c.start_action();
     let thread_id = thread_id(c, &room).await?;
     let context = Context {
         user_id: require_current_user(c)?.id,

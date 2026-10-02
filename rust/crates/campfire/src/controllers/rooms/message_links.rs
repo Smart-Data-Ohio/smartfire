@@ -1,22 +1,17 @@
 //! Per-viewer cross-room quote frame. Same-room root/card cache integration remains WS8b-m.
 use crate::app::AppCtx;
-use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
+use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::{
     message_features as features,
     presenters::{Presenter, page},
 };
 use askama::Template;
 use campfire_db::{Room, User, message_quote};
-use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
+use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 pub async fn show(c: &mut Ctx) -> Result {
-    match render(c).await {
-        Err(Error::NotFound) => halt(concerns::head(StatusCode::NOT_FOUND)),
-        result => result,
-    }
-}
-async fn render(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = features::room(c).await?;
+    c.start_action();
     let viewer = require_current_user(c)?.id;
     let id = c
         .param_str("id")
