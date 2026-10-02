@@ -13,8 +13,6 @@ pub mod sidebar_composition;
 pub use sidebar::*;
 mod summary;
 pub use summary::*;
-mod agent_profile;
-pub use agent_profile::*;
 mod people;
 pub use people::*;
 mod settings;
@@ -97,11 +95,18 @@ pub struct Show<'a> {
     /// `user.transfer_id`, for `users/profiles/_transfer` (shown to administrators).
     pub transfer_id: String,
     pub profile_status: Option<statuses::ProfileStatus>,
-    pub agent_profile: Option<AgentProfile>,
-    pub can_manage_bot: bool,
+    pub agent_profile: Option<crate::agents::Profile>,
+    pub now: jiff::Timestamp,
 }
 
 impl Show<'_> {
+    fn agent_details(&self, profile: &crate::agents::Profile) -> askama::Result<h::Html> {
+        crate::agents::ProfileDetails {ctx: self.ctx, profile, now: self.now}.render().map(h::raw)
+    }
+    fn manage_bot(&self) -> bool {
+        self.ctx.can_administer() || self.agent_profile.as_ref().is_some_and(|p| p.management.is_some())
+    }
+
     fn status_section(&self, status: &statuses::ProfileStatus) -> h::Html {
         h::raw(
             statuses::ProfileStatusSection { status }
@@ -309,3 +314,7 @@ pub struct SidebarCalls<'a> {
     pub rows: &'a [crate::rooms::calls::CallRow],
     pub can_create: bool,
 }
+
+#[derive(Template)]
+#[template(path = "users/sidebars/_workspace_destinations.html")]
+pub struct WorkspaceDestinations<'a> { pub ctx: &'a ViewContext<'a> }

@@ -23,21 +23,22 @@ use crate::layouts::Page;
 use crate::messages::support::epoch_ms;
 use crate::messages::{MessageItem, RoomKind, UserView, room_dom_id};
 
-/// `room_display_name(room, for_user:)`: a direct room is named after its other members
-/// (`room.users.without(for_user).pluck(:name).to_sentence`), falling back to the user's own
-/// name when they're alone in it.
-pub fn room_display_name(
-    name: Option<&str>,
-    direct: bool,
-    other_member_names: &[String],
-    for_user_name: Option<&str>,
-) -> String {
+/// `Rooms::Direct#direct_display_name`: named rooms keep their name; unnamed
+/// groups preview three first names. The caller supplies ordered other members.
+pub fn room_display_name(name: Option<&str>, direct: bool, other_member_names: &[String], for_user_name: Option<&str>) -> String {
     if direct {
-        let sentence = h::to_sentence(other_member_names, " and ");
-        if sentence.trim().is_empty() {
-            for_user_name.unwrap_or_default().to_string()
-        } else {
-            sentence
+        if let Some(name) = h::presence(name) { return name.to_owned(); }
+        match other_member_names {
+            [] => for_user_name.unwrap_or_default().to_owned(),
+            [name] => name.clone(),
+            names => {
+                let firsts = names.iter().take(3).map(|name| {
+                    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c'])
+                        .find(|s| !s.is_empty()).unwrap_or_default()
+                }).collect::<Vec<_>>().join(", ");
+                let remaining = names.len().saturating_sub(3);
+                if remaining > 0 { format!("{firsts} +{remaining}") } else { firsts }
+            }
         }
     } else {
         name.unwrap_or_default().to_string()
@@ -186,12 +187,8 @@ impl Page for Show<'_> {
 }
 
 impl Show<'_> {
-    fn multi_select_bar(&self) -> h::Html {
-        h::raw(
-            crate::shared::MultiSelectBar { exit_button: true }
-                .render()
-                .expect("member selection bar renders"),
-        )
+    fn member_panel(&self) -> askama::Result<h::Html> {
+        Ok(h::raw(MemberPanel { ctx: self.ctx, room_id: self.show.room.id }.render()?))
     }
 
     fn jump_to_unread(&self, url: Option<&str>) -> h::Html {
@@ -223,6 +220,32 @@ impl Show<'_> {
             .render()
             .expect("OOO notices"),
         )
+    }
+}
+
+/// The member-panel control in `rooms/show/_nav`.
+#[derive(Template)]
+#[template(path = "rooms/show/_member_panel_toggle.html")]
+pub struct MemberPanelToggle<'a> {
+    pub ctx: &'a ViewContext<'a>,
+}
+
+/// The lazy member panel. Domain data comes from Rooms::MembersController's JSON;
+/// this partial holds only URLs and a request-bound selection form.
+#[derive(Template)]
+#[template(path = "rooms/show/_member_panel.html")]
+pub struct MemberPanel<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub room_id: i64,
+}
+
+impl MemberPanel<'_> {
+    fn members_path(&self) -> String {
+        campfire_routes::ROOM_MEMBERS.path_with(&[&self.room_id], Some("json"), &[])
+    }
+
+    fn selection_bar(&self) -> askama::Result<h::Html> {
+        Ok(h::raw(crate::shared::MultiSelectBar { exit_button: true }.render()?))
     }
 }
 

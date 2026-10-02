@@ -40,8 +40,8 @@ pub struct FormWith {
     /// `html:`, merged after the options Rails slices out (`id`, `class`, `data`).
     html: Attrs,
     authenticity_token: bool,
-    field_errors: Vec<String>,
     multipart: Rc<Cell<bool>>,
+    error_fields: Vec<String>,
 }
 
 pub fn form_with(url: impl std::fmt::Display) -> FormWith {
@@ -55,22 +55,23 @@ pub fn form_with(url: impl std::fmt::Display) -> FormWith {
         data: attrs(),
         html: attrs(),
         authenticity_token: true,
-        field_errors: Vec::new(),
         multipart: Rc::new(Cell::new(false)),
+        error_fields: Vec::new(),
     }
 }
 
 impl FormWith {
+    /// ActiveModelHelper's field_error_proc wraps inputs and labels with model errors.
+    pub fn errors(mut self, fields: &[String]) -> Self {
+        self.error_fields = fields.to_vec();
+        self
+    }
+
     /// WS8br seam: the default Rails field_error_proc for fields bound to a record
     /// with validation errors. Existing owner forms keep their default empty list.
     pub fn field_errors(mut self, attributes: Vec<String>) -> Self {
-        self.field_errors = attributes;
+        self.error_fields = attributes;
         self
-    }
-    fn with_field_error(&self, method: &str, field: Html) -> Html {
-        if self.field_errors.iter().any(|attribute| attribute == method) {
-            super::tag::content_tag("div", attrs().class("field_with_errors"), &field.0)
-        } else { field }
     }
     /// Rails PR #148 uses `authenticity_token: false` in shared message fragments.
     pub fn authenticity_token(mut self, include: bool) -> Self {
@@ -137,6 +138,7 @@ impl FormWith {
             object_name: self.object_name.clone().unwrap_or_default(),
             namespace: self.namespace.clone(),
             multipart: self.multipart.clone(),
+            error_fields: self.error_fields.clone(),
         }
     }
 
@@ -192,12 +194,62 @@ impl FormWith {
     }
 
     pub fn text_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
-        self.with_field_error(method, self.builder().input_field("text", method, value, options))
+        self.builder().input_field("text", method, value, options)
     }
 
     /// `Tags::DateField#render`, with the caller's canonical Date value.
     pub fn date_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
         self.builder().input_field("date", method, value, options)
+    }
+
+    pub fn number_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
+        self.builder().input_field("number", method, value, options)
+    }
+
+    pub fn datetime_local_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
+        self.builder().input_field(
+            "datetime-local",
+            method,
+            None,
+            options.attr_opt("value", value),
+        )
+    }
+
+    pub fn submit(&self, value: &str, options: Attrs) -> Html {
+        legacy_tag(
+            "input",
+            attrs()
+                .type_("submit")
+                .name("commit")
+                .value(value)
+                .merge(options)
+                .data("disable_with", value),
+        )
+    }
+
+    pub fn select(
+        &self,
+        method: &str,
+        choices: &[(String, String)],
+        prompt: &str,
+        selected: Option<&str>,
+        mut options: Attrs,
+    ) -> Html {
+        let builder = self.builder();
+        builder.add_default_name_and_id(method, &mut options);
+        let mut contents = Vec::new();
+        if selected.is_none_or(str::is_empty) {
+            contents.push(content_tag("option", attrs().value(""), &escape(prompt)).0);
+        }
+        for (label, value) in choices {
+            let mut attributes = attrs();
+            if selected == Some(value) {
+                attributes = attributes.attr("selected", "selected");
+            }
+            attributes = attributes.value(value);
+            contents.push(content_tag("option", attributes, &escape(label)).0);
+        }
+        builder.wrap_error(method, content_tag("select", options, &contents.join("\n")))
     }
 
     pub fn email_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -215,7 +267,10 @@ impl FormWith {
         let builder = self.builder();
         let mut options = options;
         options.fetch_or_set("for", Some(builder.tag_id(method).into()));
-        self.with_field_error(method, super::tag::content_tag_text("label", &options, text))
+        builder.wrap_error(
+            method,
+            super::tag::content_tag_text("label", &options, text),
+        )
     }
 
     pub fn url_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -272,9 +327,18 @@ struct FormBuilder {
     object_name: String,
     namespace: Option<String>,
     multipart: Rc<Cell<bool>>,
+    error_fields: Vec<String>,
 }
 
 impl FormBuilder {
+    fn wrap_error(&self, method: &str, field: Html) -> Html {
+        if self.error_fields.iter().any(|name| name == method) {
+            content_tag("div", attrs().class("field_with_errors"), &field.0)
+        } else {
+            field
+        }
+    }
+
     /// `Tags::Base#tag_name`; a model-less `form_with` names fields after the method alone.
     fn tag_name(&self, method: &str) -> String {
         if self.object_name.is_empty() {
@@ -316,7 +380,12 @@ impl FormBuilder {
             options.fetch_or_set("value", value.map(Into::into));
         }
         self.add_default_name_and_id(method, &mut options);
-        legacy_tag("input", &options)
+        let field = legacy_tag("input", &options);
+        if field_type == "hidden" {
+            field
+        } else {
+            self.wrap_error(method, field)
+        }
     }
 
     /// `Tags::TextArea#render`: the value is the element's content, after a newline.
@@ -326,7 +395,7 @@ impl FormBuilder {
             Some(value) => escape(&value_to_string(&value)),
             None => value.map(escape).unwrap_or_default(),
         };
-        content_tag("textarea", &options, &content)
+        self.wrap_error(method, content_tag("textarea", &options, &content))
     }
 
     /// `Tags::CheckBox#render`: a hidden unchecked value, then the checkbox.
@@ -394,6 +463,44 @@ pub fn hidden_field_tag(name: &str, value: Option<&str>, options: Attrs) -> Html
         .id(sanitize_to_id(name))
         .attr_opt("value", value);
     legacy_tag("input", base.merge(options))
+}
+
+/// Model-less `text_field_tag`, including the Rails tag attribute order.
+pub fn text_field_tag(name: &str, value: Option<&str>, options: Attrs) -> Html {
+    legacy_tag(
+        "input",
+        attrs()
+            .type_("text")
+            .name(name)
+            .id(sanitize_to_id(name))
+            .attr_opt("value", value)
+            .merge(options),
+    )
+}
+
+/// `select_tag` with `options_for_select`; every supplied option is retained.
+pub fn select_tag(
+    name: &str,
+    choices: &[(String, String)],
+    selected: Option<&str>,
+    options: Attrs,
+) -> Html {
+    let contents = choices
+        .iter()
+        .map(|(label, value)| {
+            let mut options = attrs();
+            if selected == Some(value) {
+                options = options.attr("selected", "selected");
+            }
+            content_tag("option", options.value(value), &escape(label)).0
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    content_tag(
+        "select",
+        attrs().name(name).id(sanitize_to_id(name)).merge(options),
+        &contents,
+    )
 }
 
 /// `sanitize_to_id`: `]` removed, other non-id characters become "_".

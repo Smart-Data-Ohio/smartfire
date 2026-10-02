@@ -4,7 +4,7 @@
 {% endblock %}
 {% block nav %}{% let room = &board.room %}{% include "rooms/boards/_nav.html" %}{% endblock %}
 {% block sidebar %}{{ h::sidebar_turbo_frame_tag(Some(h::routes::user_sidebar().as_str()), "") }}{% endblock %}
-{% block member_panel %}{% let room = &board.room %}  {% include "rooms/show/_member_panel.html" %}
+{% block member_panel %}  {{ self.member_panel()? }}
 {% endblock %}
 {% block content %}{{ "  \n" }}
 

@@ -94,10 +94,10 @@ mod tests {
             fill("<meta property=\"og:title\" content=\"", &|_| "&amp;é".to_string(), "\">"),
         ];
         for page in pages {
-            let started = crate::test_support::cpu_time();
+            let started = std::time::Instant::now();
             let found = opengraph_attributes(Some(page.as_bytes()));
             assert_eq!(found[0].0, "title");
-            assert!((crate::test_support::cpu_time() - started) < std::time::Duration::from_secs(1), "{:?} for {}…", (crate::test_support::cpu_time() - started), &page[..60]);
+            assert!(started.elapsed() < std::time::Duration::from_secs(1), "{:?} for {}…", started.elapsed(), &page[..60]);
         }
     }
 }

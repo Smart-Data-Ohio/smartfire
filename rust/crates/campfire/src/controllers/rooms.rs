@@ -28,6 +28,7 @@ pub mod pins;
 pub mod polls;
 pub mod reads;
 pub mod refreshes;
+
 pub mod slash_commands;
 
 use askama::Template;

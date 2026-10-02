@@ -804,7 +804,14 @@ impl Ctx {
         if !matches!(self.request.method, Method::GET | Method::HEAD) || response.status != StatusCode::OK {
             return;
         }
-        if is_fresh(&self.request, response.get_header(header::ETAG), response.get_header(header::LAST_MODIFIED)) {
+        // Rack::ConditionalGet compares one exact ETag, unlike Rails' request.fresh?
+        // used by fresh_when above (which accepts wildcard/list validators).
+        let fresh = if let Some(validator) = self.request.header("if-none-match") {
+            response.get_header(header::ETAG) == Some(validator)
+        } else {
+            is_fresh(&self.request, None, response.get_header(header::LAST_MODIFIED))
+        };
+        if fresh {
             response.status = StatusCode::NOT_MODIFIED;
             response.headers.remove(header::CONTENT_TYPE);
             response.headers.remove(header::CONTENT_LENGTH);
@@ -824,10 +831,8 @@ impl Ctx {
     }
 }
 
-/// `request.fresh?(response)` with `strict_freshness` (the 8.0 default), which `fresh_when` and
-/// `Rack::ConditionalGet` both go by here: an `If-None-Match` list naming the ETag (or `*`), or
-/// else an `If-Modified-Since` no earlier than `Last-Modified`. (Rack's own check wants the whole
-/// `If-None-Match` to equal the ETag.)
+/// `request.fresh?(response)` with `strict_freshness` (the 8.0 default), used by
+/// `fresh_when`: an ETag list or wildcard, else an If-Modified-Since date.
 fn is_fresh(request: &Request, etag: Option<&str>, last_modified: Option<&str>) -> bool {
     if let Some(if_none_match) = request.header("if-none-match") {
         let Some(etag) = etag else { return false };

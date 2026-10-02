@@ -1,0 +1,17 @@
+<li class="flex flex-column gap flush fill-shade border-radius pad-block pad-inline-double">
+  <div class="flex align-center gap">
+    <div class="min-width flex-item-grow">
+      <div class="overflow-ellipsis txt-large"><strong>{{ grant.capability }}</strong></div>
+      <div class="overflow-ellipsis txt-small">
+        {{ grant.room_name }}
+        · granted by {{ grant.granted_by }}
+        · {{ self.datetime() }}
+        · enforced
+      </div>
+    </div>
+
+{% if grant.revoked %}      <span class="txt-small">Revoked</span>
+{% else %}      {% filter button_to(h::routes::account_bot_grant(bot_id, grant.id), h::attrs().method("delete").class("btn txt--small btn--negative").data("turbo_confirm", self.confirm())) %}
+        Revoke
+{% endfilter %}{% endif %}  </div>
+</li>{{ "\n" }}

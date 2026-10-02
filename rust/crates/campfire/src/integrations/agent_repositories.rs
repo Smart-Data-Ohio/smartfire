@@ -1,5 +1,5 @@
 //! Live owner-specific PR access, resolved without holding a database connection.
-//! Delegates refresh/cache/401 policy to WS15g's existing Accounts domain.
+//! Boot installs WS15g Accounts::can_read_repository (refresh/cache/401 policy).
 use super::net::BoxFuture;
 use campfire_db::models::agent_payloads::{RepositoryAccess, RepositoryEntry};
 use campfire_db::{Agent, Connection, Database, Result};
@@ -38,13 +38,10 @@ enum Surface {
     Both,
 }
 impl State {
-    pub fn live(db: Database, crypto: Arc<rails_compat::ar_encryption::ArEncryption>) -> Self {
+    /// Share the booted owner service, including its configured network.
+    pub fn live(accounts: super::github::accounts::Accounts) -> Self {
         let state = Self::default();
-        state.install(Arc::new(super::github::accounts::Accounts::new(
-            db,
-            crypto,
-            super::github::client::AppClient::from_env(),
-        )));
+        state.install(Arc::new(accounts));
         state
     }
     #[cfg(test)]
@@ -169,6 +166,8 @@ impl State {
             .unwrap_or_else(|p| p.into_inner())
             .clone();
         let Some(reader) = reader else {
+            // Explicitly detached test states remain fail-closed. Production boot
+            // installs the owner service before handling requests or jobs.
             return Ok(RepositoryAccess::default());
         };
         let mut access = RepositoryAccess::batch();
@@ -353,9 +352,10 @@ mod tests {
         let db = &test.booted.app.db;
         let (agent, thread) = setup(db, test.booted.app.ar_encryption.clone()).await;
         let state = &test.booted.app.agent_repositories;
-        let uninstalled = State::default();
+        // Explicitly detached registries still deny without external calls.
+        let detached = State::default();
         assert!(
-            uninstalled
+            detached
                 .resolve_threads(db, agent, vec![thread])
                 .await
                 .unwrap()

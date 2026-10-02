@@ -1,0 +1,54 @@
+{% extends "layouts/application.html" %}
+{%- block head %}{% endblock %}
+
+{% block nav %}  <div class="flex-item-justify-start">
+    {{ h::link_back_to(ctx, self.back()) }}
+  </div>
+{% endblock %}
+{% block content %}
+
+<section class="panel panel--wide txt-align-center flex flex-column gap">
+  <div class="pad-inline-double center">
+    <h1 class="margin-none">Grants for {{ bot_name }}</h1>
+    <p class="margin-none-block-start">
+      Room-scoped or workspace-wide capabilities. Revocation takes effect immediately.
+      Every capability is enforced.
+    </p>
+{% if legacy %}      <p class="txt-small">Legacy access: with no grants ever created, this agent can read and post in rooms it belongs to.</p>
+{% endif %}  </div>
+
+{% if ctx.can_administer() %}  <div class="pad-inline pad-block-start txt-align-start">
+    <h2 class="txt-large margin-none">New grant</h2>
+
+    {% let form = h::form_with(h::routes::account_bot_grants(bot_id)).model("agent_grant").class("flex flex-column gap margin-block-start").errors(&grant.error_fields) %}{% filter form_with(form) %}
+{% if let Some(errors) = grant.errors %}        <div class="txt-small" style="color: var(--color-negative)">
+          {{ errors }}
+        </div>
+{% endif %}
+      <div class="flex align-center gap">
+        <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+          {{ form.select("capability", &self.capabilities(), "Capability", grant.capability.as_deref(), h::attrs().required(true).class("input")) }}
+        </label>
+      </div>
+
+      <div class="flex align-center gap">
+        <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+          {{ form.select("room_id", &rooms, "Workspace-wide (all rooms)", grant.room_id.as_deref(), h::attrs().class("input")) }}
+        </label>
+        <span class="txt-small">Room membership still applies</span>
+      </div>
+
+      <div>
+        {{ form.submit("Grant capability", h::attrs().class("btn btn--reversed")) }}
+      </div>
+{% endfilter %}  </div>
+{% else %}    <p class="txt-small">Only an administrator can grant capabilities. You can revoke grants below.</p>
+{% endif %}
+  <div class="pad-inline pad-block-start">
+    <menu class="flex flex-column gap margin-none pad txt-align-start">
+{% if !grants.is_empty() %}        {{ self.rows()? }}
+{% else %}        <li class="txt-small">No grants yet.</li>
+{% endif %}    </menu>
+  </div>
+</section>
+{% endblock %}
