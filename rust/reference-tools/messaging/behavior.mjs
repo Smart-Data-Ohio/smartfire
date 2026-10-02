@@ -362,7 +362,11 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await editor.evaluate(editor=>editor.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,isComposing:true,bubbles:true,cancelable:true})));
         await field(author,'First line\nSecond line');assert.equal(await visibleCount(messages(author)),before);
         await actOnVisible(editor,'press',{},['Enter']);
-        for(const page of [author,recipient]) await text(page,'First line\nSecond line');
+        for(const page of [author,recipient]) {
+          // workspace_markdown :107-108 asserts each visible line separately;
+          // the exact two-line saved source remains checked in SQLite.
+          await text(page,'First line');await text(page,'Second line');
+        }
         await field(author,'');
         await actOnVisible(editor,'press',{},['ArrowUp']);
         await waitForVisibility(filterVisibleText(author.locator('#composer'),'Editing Message'));
