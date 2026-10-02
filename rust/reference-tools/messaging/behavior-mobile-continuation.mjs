@@ -34,7 +34,7 @@ export async function mobileContinuation({author:page,base,caseName,fixture}) {
   } else if(caseName.startsWith('headers outside')) {
     for(const [width,height] of [[1400,1000],[375,812]]) {
       await page.setViewportSize({width,height});
-      for(const path of [profile,account,'/rooms/699448332/edit']) {
+      for(const path of [profile,account,'/rooms/opens/201306877/edit']) {
         await visit(path);await waitForVisibility(page.locator('#main-content .panel'));
         const layout=await page.evaluate(()=>{const nav=document.querySelector('#nav').getBoundingClientRect(),main=document.querySelector('#main-content'),r=main.getBoundingClientRect(),panel=document.querySelector('#main-content .panel').getBoundingClientRect(),probe=document.elementFromPoint(r.right-3,nav.bottom+2);return{navBottom:nav.bottom,mainTop:r.top,panelTop:panel.top,scrollbarHit:!!probe&&main.contains(probe)};});
         assert.ok(layout.panelTop>=layout.navBottom-.5,JSON.stringify(layout));assert.ok(layout.mainTop>=layout.navBottom-.5,JSON.stringify(layout));assert.ok(layout.scrollbarHit);
