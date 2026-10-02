@@ -238,6 +238,8 @@ async fn run_browser(real_livekit:bool) {
         .arg(image)
         .arg("node")
         .args(["--test", "--test-concurrency=8"])
+        // Isolation for timing investigations; unset runs every declaration.
+        .args(std::env::var("WS13_SYSTEM_TEST_NAME").ok().map(|name|format!("--test-name-pattern={name}")))
         .arg(root.join(if real_livekit {"parity/system/ws13-livekit-stage.test.mjs"} else if std::env::var_os("WS13_BOARD_REVIEW_ONLY").is_some() {"parity/system/ws13-board-review.test.mjs"} else if std::env::var_os("WS13_INVITATIONS_ONLY").is_some() {"parity/system/ws13-invitations.cases.mjs"} else {"parity/system/ws13-stage.test.mjs"}))
         .kill_on_drop(true)
         .status()
