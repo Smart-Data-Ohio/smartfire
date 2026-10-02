@@ -9,7 +9,7 @@ use askama::Template;
 #[derive(Clone, Debug)]
 pub enum CredentialExpiry {
     Time(jiff::Timestamp),
-    Extended { datetime: String, microseconds: i64 },
+    Extended { datetime: String, expired: bool },
 }
 #[derive(Clone, Debug)]
 pub struct Credential {
@@ -66,9 +66,7 @@ impl CredentialRow<'_> {
             .as_ref()
             .is_some_and(|at| match at {
                 CredentialExpiry::Time(at) => *at <= self.now,
-                CredentialExpiry::Extended { microseconds, .. } => {
-                    *microseconds <= self.now.as_microsecond()
-                }
+                CredentialExpiry::Extended { expired, .. } => *expired,
             })
     }
     fn ago(&self, at: &jiff::Timestamp) -> String {

@@ -63,6 +63,11 @@ async fn expiry_cases(oracle: Value, expected_count: usize) {
         let name = format!("Expiry input {index}");
         let mut fields = attributes.as_object().unwrap().clone();
         fields.entry("name").or_insert_with(|| json!(name));
+        let name = fields
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
         let before = t
             .db()
             .read(|conn| {
@@ -136,7 +141,9 @@ fn generated_date_cases(oracle: &Value) {
     for case in cases {
         let zone = campfire_views::time::Zone::for_user(case["zone"].as_str());
         let input = campfire_kit::Param::from_json(case["input"].clone());
-        let actual = super::input_casts::datetime(Some(&input), &zone, now).map(|t| t.to_db());
+        let actual = super::input_casts::datetime(Some(&input), &zone, now)
+            .unwrap()
+            .map(|t| t.to_db());
         let expected = case["stored"].as_str().map(str::to_owned);
         if actual != expected {
             failures.push(format!(
@@ -195,16 +202,22 @@ fn pr196_generated_floats_match_ruby_shortest_format() {
     );
 }
 
-
 fn extreme_inputs() -> Value {
     use std::io::Read;
-    let bytes = include_bytes!("../../../../../..//reference-tools/views/agents_ui/extreme_cast_inputs.json.gz");
+    let bytes = include_bytes!(
+        "../../../../../../reference-tools/views/agents_ui/extreme_cast_inputs.json.gz"
+    );
     let mut text = String::new();
-    flate2::read::GzDecoder::new(&bytes[..]).read_to_string(&mut text).unwrap();
+    flate2::read::GzDecoder::new(&bytes[..])
+        .read_to_string(&mut text)
+        .unwrap();
     serde_json::from_str(&text).unwrap()
 }
 fn extreme_oracle() -> Value {
-    serde_json::from_str(include_str!("../../../../../../vectors/bot-ui-extreme-casts.json")).unwrap()
+    serde_json::from_str(include_str!(
+        "../../../../../../vectors/bot-ui-extreme-casts.json"
+    ))
+    .unwrap()
 }
 #[test]
 fn pr196_r2_extreme_date_components_match_pinned_model() {
@@ -217,12 +230,37 @@ fn pr196_r2_extreme_date_components_match_pinned_model() {
         let index = case["input_index"].as_u64().unwrap() as usize;
         let input = campfire_kit::Param::Str(inputs["expiry"][index].as_str().unwrap().into());
         let zone = campfire_views::time::Zone::for_user(case["zone"].as_str());
-        let actual = json!({"stored":super::input_casts::datetime(Some(&input), &zone, now).map(|t|t.to_db())});
-        let expected = if case.get("error").is_some() {json!({"error":case["error"]})} else {json!({"stored":case["stored"]})};
-        if actual != expected {failures.push(json!({"input":inputs["expiry"][index],"zone":case["zone"],"actual":actual,"expected":expected}));}
+        let actual = match super::input_casts::datetime(Some(&input), &zone, now) {
+            Ok(t) => json!({"stored":t.map(|t|t.to_db())}),
+            Err(error) => json!({"error":error.to_string()}),
+        };
+        let expected = if case.get("error").is_some() {
+            json!({"error":case["error"]})
+        } else {
+            json!({"stored":case["stored"]})
+        };
+        if actual != expected {
+            failures.push(json!({"input":inputs["expiry"][index],"zone":case["zone"],"actual":actual,"expected":expected}));
+        }
     }
-    println!("Extreme expiry differential: {} compared; {} mismatches; {} value differences; {} exception differences", cases.len(), failures.len(), failures.iter().filter(|v|v["expected"].get("stored").is_some()).count(), failures.iter().filter(|v|v["expected"].get("error").is_some()).count());
-    assert!(failures.is_empty(), "{:?}", &failures[..failures.len().min(20)]);
+    println!(
+        "Extreme expiry differential: {} compared; {} mismatches; {} value differences; {} exception differences",
+        cases.len(),
+        failures.len(),
+        failures
+            .iter()
+            .filter(|v| v["expected"].get("stored").is_some())
+            .count(),
+        failures
+            .iter()
+            .filter(|v| v["expected"].get("error").is_some())
+            .count()
+    );
+    assert!(
+        failures.is_empty(),
+        "{:?}",
+        &failures[..failures.len().min(20)]
+    );
 }
 #[test]
 fn pr196_r2_raw_numeric_tokens_match_pinned_json() {
@@ -233,18 +271,136 @@ fn pr196_r2_raw_numeric_tokens_match_pinned_json() {
     for case in cases {
         let index = case["input_index"].as_u64().unwrap() as usize;
         let raw = inputs["tokens"][index].as_str().unwrap();
-        let actual = match campfire_kit::params::from_json_body(format!("{{\"access_token\":{raw}}}").as_bytes()) {
-            Ok(params) => json!({"string": super::input_casts::token_string(params.get("access_token").unwrap())}),
+        let actual = match super::github_connections::json_body_params(
+            &Method::POST,
+            "/account/bots/1/github_connection",
+            format!("{{\"access_token\":{raw}}}").as_bytes(),
+        ) {
+            Ok(params) => {
+                json!({"string": super::input_casts::token_string(params.get("access_token").unwrap())})
+            }
             Err(_) => json!({"error":true}),
         };
-        let expected = if case.get("error").is_some() {json!({"error":true})} else {json!({"string":case["string"]})};
-        if actual != expected {failures.push(json!({"raw":raw,"actual":actual,"expected":expected}));}
+        let expected = if case.get("error").is_some() {
+            json!({"error":true})
+        } else {
+            json!({"string":case["string"]})
+        };
+        if actual != expected {
+            failures.push(json!({"raw":raw,"actual":actual,"expected":expected}));
+        }
     }
-    println!("Extreme token differential: {} compared; {} mismatches", cases.len(), failures.len());
+    println!(
+        "Extreme token differential: {} compared; {} mismatches",
+        cases.len(),
+        failures.len()
+    );
     assert!(failures.is_empty(), "{failures:?}");
 }
 
 #[tokio::test]
 async fn pr196_r2_extreme_expiry_http_save_and_error_boundaries() {
-    expiry_cases(serde_json::from_str(include_str!("../../../../../../vectors/bot-ui-extreme-http.json")).unwrap(), 56).await;
+    expiry_cases(
+        serde_json::from_str(include_str!(
+            "../../../../../../vectors/bot-ui-extreme-http.json"
+        ))
+        .unwrap(),
+        56,
+    )
+    .await;
+}
+
+#[test]
+fn pr196_r2_generated_extreme_components_and_numeric_lexemes_match_rails() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/bot-ui-generated-extremes.json"
+    ))
+    .unwrap();
+    let now = campfire_db::Timestamp::parse_db("2026-03-02 16:00:00").unwrap();
+    let mut date_failures = Vec::new();
+    for case in oracle["expiry"].as_array().unwrap() {
+        let input = campfire_kit::Param::Str(case["input"].as_str().unwrap().into());
+        let zone = campfire_views::time::Zone::for_user(case["zone"].as_str());
+        let actual = match super::input_casts::datetime(Some(&input), &zone, now) {
+            Ok(t) => json!({"stored":t.map(|t|t.to_db())}),
+            Err(e) => json!({"error":e.to_string()}),
+        };
+        let expected = if case.get("error").is_some() {
+            json!({"error":case["error"]})
+        } else {
+            json!({"stored":case["stored"]})
+        };
+        if actual != expected {
+            date_failures.push(json!({"input":case["input"],"zone":case["zone"],"actual":actual,"expected":expected}));
+        }
+    }
+    let mut token_failures = Vec::new();
+    for case in oracle["tokens"].as_array().unwrap() {
+        let raw = case["raw"].as_str().unwrap();
+        let params = super::github_connections::json_body_params(
+            &Method::POST,
+            "/account/bots/1/github_connection",
+            format!("{{\"access_token\":{raw}}}").as_bytes(),
+        )
+        .unwrap();
+        let actual = super::input_casts::token_string(params.get("access_token").unwrap());
+        if actual != case["string"].as_str().unwrap() {
+            token_failures.push(raw);
+        }
+    }
+    println!(
+        "Generated extreme differential: {} dates, {} tokens; {} date mismatches; {} token mismatches",
+        oracle["expiry"].as_array().unwrap().len(),
+        oracle["tokens"].as_array().unwrap().len(),
+        date_failures.len(),
+        token_failures.len()
+    );
+    assert!(
+        date_failures.is_empty(),
+        "{:?}",
+        &date_failures[..date_failures.len().min(30)]
+    );
+    assert!(token_failures.is_empty(), "{token_failures:?}");
+}
+
+#[test]
+fn pr196_r2_parser_keeps_bounded_work_and_never_panics() {
+    use std::time::{Duration, Instant};
+    let inputs = extreme_inputs();
+    let now = campfire_db::Timestamp::parse_db("2026-03-02 16:00:00").unwrap();
+    let zone = campfire_views::time::Zone::utc();
+    for s in ["1 Jan 2026 12:00:00Z", "bad", "--0101", "01.02.03"] {
+        let _ = super::input_casts::datetime(Some(&campfire_kit::Param::Str(s.into())), &zone, now);
+    }
+    let mut count = 0;
+    let mut panics = 0;
+    let mut worst = Duration::ZERO;
+    let mut long_worst = Duration::ZERO;
+    for input in inputs["expiry"].as_array().unwrap() {
+        let text = input.as_str().unwrap();
+        let param = campfire_kit::Param::Str(text.into());
+        let start = Instant::now();
+        for _ in 0..50 {
+            if std::panic::catch_unwind(|| super::input_casts::datetime(Some(&param), &zone, now))
+                .is_err()
+            {
+                panics += 1;
+            }
+            count += 1;
+        }
+        worst = worst.max(start.elapsed() / 50);
+        if text.len() > 128 {
+            let start = Instant::now();
+            for _ in 0..10000 {
+                let _ =
+                    std::hint::black_box(super::input_casts::datetime(Some(&param), &zone, now));
+                count += 1;
+            }
+            long_worst = long_worst.max(start.elapsed() / 10000);
+        }
+    }
+    println!(
+        "Extreme parser stress: {count} calls; {panics} panics; worst warm 50-call mean={worst:?}; over-128-byte worst mean={long_worst:?}"
+    );
+    assert_eq!(panics, 0);
 }

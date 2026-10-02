@@ -6,6 +6,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+bnum.workspace = true
 campfire_richtext.workspace = true
 rails_compat.workspace = true
 campfire_storage.workspace = true

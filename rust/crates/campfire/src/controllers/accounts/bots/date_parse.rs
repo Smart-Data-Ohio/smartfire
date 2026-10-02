@@ -1,22 +1,24 @@
 //! Ruby date 3.4.1's non-TIGHT Date._parse passes, in their original order.
 //! Source: ruby/date v3.4.1 ext/date/date_parse.c (BSD-2-Clause / Ruby).
 //! Time.zone.parse passes comp=false and ignores week/ordinal/weekday fields.
+use bnum::types::I512;
 use regex::Regex;
 use std::sync::LazyLock;
 
 #[derive(Debug, Default)]
 pub(super) struct Parts {
-    pub year: Option<i64>,
-    pub mon: Option<i64>,
-    pub mday: Option<i64>,
-    pub hour: Option<i64>,
-    pub min: Option<i64>,
-    pub sec: Option<i64>,
+    pub year: Option<I512>,
+    pub mon: Option<I512>,
+    pub mday: Option<I512>,
+    pub hour: Option<I512>,
+    pub min: Option<I512>,
+    pub sec: Option<I512>,
     pub nanosecond: i64,
     pub offset_nanoseconds: Option<i64>,
     pub present: bool,
     zone: Option<String>,
     bc: bool,
+    pub range_error: bool,
 }
 
 fn regex(pattern: &str) -> Regex {
@@ -46,14 +48,14 @@ fn month(s: &str) -> String {
         + 1)
     .to_string()
 }
-fn number(s: &str) -> Option<i64> {
+fn number(s: &str) -> Option<I512> {
     let start = s.find(|c: char| c.is_ascii_digit() || c == '-' || c == '+')?;
     let s = &s[start..];
     let skip = usize::from(s.starts_with(['-', '+']));
     let len = skip + s[skip..].bytes().take_while(u8::is_ascii_digit).count();
     s[..len].parse().ok()
 }
-fn unsigned(s: &str) -> Option<i64> {
+fn unsigned(s: &str) -> Option<I512> {
     number(s.trim_start_matches(|c: char| !c.is_ascii_digit()))
 }
 fn nanos(s: &str) -> i64 {
@@ -149,15 +151,21 @@ pub(super) fn parse(input: &str) -> Option<Parts> {
     re!(FRAG, r"\A\s*(\d{1,2})\s*\z");
     if let Some(c) = take(&mut text, &FRAG, None) {
         let n = number(c[1].as_deref().unwrap());
-        if p.hour.is_some() && p.mday.is_none() && n.is_some_and(|n| (1..=31).contains(&n)) {
+        if p.hour.is_some()
+            && p.mday.is_none()
+            && n.is_some_and(|n| i32::try_from(n).is_ok_and(|n| (1..=31).contains(&n)))
+        {
             p.mday = n;
         }
-        if p.mday.is_some() && p.hour.is_none() && n.is_some_and(|n| (0..=24).contains(&n)) {
+        if p.mday.is_some()
+            && p.hour.is_none()
+            && n.is_some_and(|n| i32::try_from(n).is_ok_and(|n| (0..=24).contains(&n)))
+        {
             p.hour = n;
         }
     }
     if p.bc {
-        p.year = p.year.and_then(|y| 1_i64.checked_sub(y));
+        p.year = p.year.and_then(|y| I512::ONE.checked_sub(y));
     }
     if p.offset_nanoseconds.is_none() {
         p.offset_nanoseconds = p.zone.as_deref().and_then(zone_offset);
@@ -179,12 +187,13 @@ fn time(s: &mut String, p: &mut Parts) {
     let clock = CLOCK.captures(c[1].as_deref().unwrap()).unwrap();
     let mut hour = number(&clock[1]);
     if let Some(ap) = clock.get(5) {
+        p.range_error = hour.is_some_and(|h| i32::try_from(h).is_err());
         hour = hour.map(|h| {
-            h % 12
+            h % I512::from(12)
                 + if ap.as_str().eq_ignore_ascii_case("p") {
-                    12
+                    I512::from(12)
                 } else {
-                    0
+                    I512::ZERO
                 }
         });
     }
@@ -242,7 +251,7 @@ fn date(s: &mut String, p: &mut Parts) {
         p.year = c[2]
             .as_deref()
             .and_then(number)
-            .and_then(|y| y.checked_add(era));
+            .and_then(|y| y.checked_add(I512::from(era)));
         p.mon = c[3].as_deref().and_then(number);
         p.mday = c[4].as_deref().and_then(number);
         p.present = true;
@@ -383,10 +392,10 @@ fn ddd(s: &mut String, p: &mut Parts) {
             p.mon = n(len - 10, 2);
         }
         if len == 12 {
-            p.year = n(0, 2).map(|n| n * sign);
+            p.year = n(0, 2).map(|n| n * I512::from(sign));
         }
         if len == 14 {
-            p.year = n(0, 4).map(|n| n * sign);
+            p.year = n(0, 4).map(|n| n * I512::from(sign));
         }
     } else {
         match len {
@@ -396,12 +405,12 @@ fn ddd(s: &mut String, p: &mut Parts) {
                 p.mday = n(2, 2);
             }
             6 => {
-                p.year = n(0, 2).map(|n| n * sign);
+                p.year = n(0, 2).map(|n| n * I512::from(sign));
                 p.mon = n(2, 2);
                 p.mday = n(4, 2);
             }
             8 | 10 | 12 | 14 => {
-                p.year = n(0, 4).map(|n| n * sign);
+                p.year = n(0, 4).map(|n| n * I512::from(sign));
                 p.mon = n(4, 2);
                 p.mday = n(6, 2);
                 if len >= 10 {
@@ -414,8 +423,8 @@ fn ddd(s: &mut String, p: &mut Parts) {
                     p.sec = n(12, 2);
                 }
             }
-            5 => p.year = n(0, 2).map(|n| n * sign),
-            7 => p.year = n(0, 4).map(|n| n * sign),
+            5 => p.year = n(0, 2).map(|n| n * I512::from(sign)),
+            7 => p.year = n(0, 4).map(|n| n * I512::from(sign)),
             _ => (),
         }
     }
@@ -508,12 +517,18 @@ fn zone_offset(zone: &str) -> Option<i64> {
     };
     let digits = &zone[1..];
     let first = digits.bytes().take_while(u8::is_ascii_digit).count();
-    let hour = digits.get(..first)?.parse::<i64>().ok()?;
+    let hour = digits.get(..first)?.parse::<i64>().unwrap_or(i64::MAX);
     let rest = &digits[first..];
     let seconds = if let Some(rest) = rest.strip_prefix(':') {
         let mut fields = rest.split(':');
-        let min = fields.next().and_then(unsigned).unwrap_or(0);
-        let sec = fields.next().and_then(unsigned).unwrap_or(0);
+        let min = fields
+            .next()
+            .and_then(unsigned)
+            .map_or(0, |n| i64::try_from(n).unwrap_or(i64::MAX));
+        let sec = fields
+            .next()
+            .and_then(unsigned)
+            .map_or(0, |n| i64::try_from(n).unwrap_or(i64::MAX));
         if hour > 23 || min > 59 || sec > 59 {
             return None;
         }
@@ -540,11 +555,17 @@ fn zone_offset(zone: &str) -> Option<i64> {
             + (i128::from(n) * 3_600_000_000_000 / 10_i128.pow(count as u32)) as i64
     } else if digits.len() > 2 {
         let width = 2 - digits.len() % 2;
-        let hour = digits.get(..width).and_then(unsigned).unwrap_or(0);
-        let min = digits.get(width..width + 2).and_then(unsigned).unwrap_or(0);
+        let hour = digits
+            .get(..width)
+            .and_then(|s| unsigned(s).and_then(|n| i64::try_from(n).ok()))
+            .unwrap_or(0);
+        let min = digits
+            .get(width..width + 2)
+            .and_then(|s| unsigned(s).and_then(|n| i64::try_from(n).ok()))
+            .unwrap_or(0);
         let sec = digits
             .get(width + 2..width + 4)
-            .and_then(unsigned)
+            .and_then(|s| unsigned(s).and_then(|n| i64::try_from(n).ok()))
             .unwrap_or(0);
         (hour * 3600 + min * 60 + sec) * 1_000_000_000
     } else {

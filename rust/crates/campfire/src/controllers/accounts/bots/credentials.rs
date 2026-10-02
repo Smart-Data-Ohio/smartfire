@@ -34,7 +34,8 @@ pub async fn create(c: &mut Ctx) -> Result {
         raw_expires_at,
         &zone,
         campfire_db::Timestamp::from_jiff(c.now()),
-    );
+    )
+    .map_err(Error::internal)?;
     let non_time = matches!(raw_expires_at, Some(Param::Number(_) | Param::Bool(true)));
     let actor = concerns::require_current_user(c)?.id;
     let context = super::audit_context(c)?;
@@ -155,13 +156,17 @@ async fn render_index(
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
     let zone = super::viewer_zone(c).await?;
+    let now = c.now();
+    let expires_now = campfire_db::Timestamp::from_jiff(now);
     let credentials = c
         .app()
         .db
-        .read(move |conn| presenters::accounts::bot_access::credentials(conn, agent_id, &zone))
+        .read(move |conn| {
+            presenters::accounts::bot_access::credentials(conn, agent_id, &zone, expires_now)
+        })
         .await
         .map_err(Error::internal)?;
-    let (bot_id, bot_name, now) = (bot.id, bot.name.clone(), c.now());
+    let (bot_id, bot_name) = (bot.id, bot.name.clone());
     framed_page!(c, status, |ctx| {
         campfire_views::accounts::bot_access::Credentials {
             ctx,

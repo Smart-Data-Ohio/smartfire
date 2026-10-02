@@ -50,6 +50,18 @@ where
 pub struct ActionHandler<F> {
     action: F,
     parse_body: bool,
+    json_body_parser: Option<JsonBodyParser>,
+}
+
+/// A request-specific JSON cast, after the ordinary body-size bound. Forms and
+/// multipart uploads retain the standard parser. Other actions can keep it too.
+pub type JsonBodyParser =
+    fn(&Method, &str, &[u8]) -> std::result::Result<ParamMap, params::ParamError>;
+impl<F> ActionHandler<F> {
+    pub fn json_body_parser(mut self, parser: JsonBodyParser) -> Self {
+        self.json_body_parser = Some(parser);
+        self
+    }
 }
 
 /// Wrap an action for `axum::routing` (`get(action(rooms::show))`).
@@ -57,7 +69,7 @@ pub fn action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, parse_body: true }
+    ActionHandler { action: f, parse_body: true, json_body_parser: None }
 }
 
 /// [`action`] for one that reads its own body ([`Ctx::read_body`]) and has no body params: the
@@ -68,7 +80,7 @@ pub fn unparsed_action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, parse_body: false }
+    ActionHandler { action: f, parse_body: false, json_body_parser: None }
 }
 
 #[doc(hidden)]
@@ -81,7 +93,7 @@ where
     type Future = Pin<Box<dyn Future<Output = axum::response::Response> + Send>>;
 
     fn call(self, req: axum::extract::Request, kit: Kit) -> Self::Future {
-        Box::pin(async move { dispatch(kit, req, self.action, self.parse_body).await })
+        Box::pin(async move { dispatch(kit, req, self.action, self.parse_body, self.json_body_parser).await })
     }
 }
 
@@ -107,7 +119,7 @@ pub struct OriginalMethod(pub Method);
 #[derive(Debug, Clone)]
 pub struct RequestId(pub String);
 
-async fn dispatch<F>(kit: Kit, req: axum::extract::Request, action: F, parse_body: bool) -> axum::response::Response
+async fn dispatch<F>(kit: Kit, req: axum::extract::Request, action: F, parse_body: bool, json_body_parser: Option<JsonBodyParser>) -> axum::response::Response
 where
     F: for<'a> ActionFn<'a>,
 {
@@ -117,7 +129,7 @@ where
     });
     let original_method = parts.extensions.get::<OriginalMethod>().map(|m| m.0.clone()).unwrap_or(parts.method.clone());
     let mut unread = None;
-    let parsed = match parts.extensions.remove::<ParsedBody>() {
+    let mut parsed = match parts.extensions.remove::<ParsedBody>() {
         Some(parsed) => Ok(parsed),
         None if !parse_body => {
             match body::validate_unparsed(body, kit.config().max_body_bytes).await {
@@ -130,6 +142,13 @@ where
         }
         None => body::parse(&original_method, &parts.headers, body, kit.config().max_body_bytes).await,
     };
+    if let Some(parser) = json_body_parser
+        && let Ok(parsed) = &mut parsed
+        && !parsed.raw.is_empty()
+        && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON)
+    {
+        parsed.params = parser(&original_method, parts.uri.path(), &parsed.raw);
+    }
     let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip());
     let head = parts.method == Method::HEAD;
 

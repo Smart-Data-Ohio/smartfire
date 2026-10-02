@@ -1,79 +1,116 @@
 //! Request-only Ruby coercions; writes and validation remain with the model owners.
+use bnum::types::I512;
 use campfire_db::{Timestamp, slash_commands::time_parser};
 use campfire_kit::Param;
 use campfire_views::time::Zone;
 
-pub(super) fn datetime(param: Option<&Param>, zone: &Zone, now: Timestamp) -> Option<Timestamp> {
-    let Param::Str(value) = param? else {
-        return None;
+#[derive(Debug, thiserror::Error)]
+#[error("RangeError")]
+pub(super) struct DateRangeError;
+
+/// TimeZoneConverter rescues ArgumentError (nil), but propagates RangeError.
+/// Ruby Time.new converts components through NUM2INT and unsigned bit fields
+/// in this order, before validating the combined date and clock.
+pub(super) fn datetime(
+    param: Option<&Param>,
+    zone: &Zone,
+    now: Timestamp,
+) -> Result<Option<Timestamp>, DateRangeError> {
+    let Some(Param::Str(value)) = param else {
+        return Ok(None);
     };
-    let parts = super::date_parse::parse(value)?;
+    let Some(parts) = super::date_parse::parse(value) else {
+        return Ok(None);
+    };
+    if parts.range_error {
+        return Err(DateRangeError);
+    }
     if !parts.present {
-        return None;
+        return Ok(None);
     }
     let current = now.jiff().to_zoned(zone.tz().clone());
-    let year = parts.year.unwrap_or(i64::from(current.year()));
-    let proxy_year = if (-9998..=9998).contains(&year) {
-        year
-    } else {
-        2000 + year.rem_euclid(400)
-    };
-    let mon = i8::try_from(parts.mon.unwrap_or(i64::from(current.month()))).ok()?;
-    let day = parts
-        .mday
-        .unwrap_or(if parts.year.is_some() || parts.mon.is_some() {
-            1
-        } else {
-            i64::from(current.day())
+    let year = parts.year.unwrap_or(I512::from(current.year()));
+    let proxy_year = i16::try_from(year)
+        .ok()
+        .filter(|y| (-9998..=9998).contains(y))
+        .unwrap_or_else(|| {
+            2000 + i16::try_from(year.rem_euclid(I512::from(400))).expect("Gregorian remainder")
         });
-    let hour = parts.hour.unwrap_or(0);
-    let min = parts.min.unwrap_or(0);
-    let sec = parts.sec.unwrap_or(0);
-    if !(1..=31).contains(&day)
+    let component =
+        |value: Option<I512>, default: i64, bits: u32| -> Result<Option<i64>, DateRangeError> {
+            let n =
+                i32::try_from(value.unwrap_or(I512::from(default))).map_err(|_| DateRangeError)?;
+            Ok((n >= 0 && n < (1 << bits)).then_some(i64::from(n)))
+        };
+    let Some(mon) = component(parts.mon, i64::from(current.month()), 4)? else {
+        return Ok(None);
+    };
+    let default_day = if parts.year.is_some() || parts.mon.is_some() {
+        1
+    } else {
+        i64::from(current.day())
+    };
+    let Some(day) = component(parts.mday, default_day, 5)? else {
+        return Ok(None);
+    };
+    let Some(hour) = component(parts.hour, 0, 5)? else {
+        return Ok(None);
+    };
+    let Some(min) = component(parts.min, 0, 6)? else {
+        return Ok(None);
+    };
+    let Some(sec) = component(parts.sec, 0, 6)? else {
+        return Ok(None);
+    };
+    if !(1..=12).contains(&mon)
+        || !(1..=31).contains(&day)
         || !(0..=24).contains(&hour)
         || !(0..=59).contains(&min)
         || !(0..=60).contains(&sec)
         || (hour == 24 && (min != 0 || sec != 0))
     {
-        return None;
+        return Ok(None);
     }
-    // Time.new normalizes month-end days, hour 24, and leap seconds.
-    let date = jiff::civil::Date::new(i16::try_from(proxy_year).ok()?, mon, 1)
-        .ok()?
-        .checked_add(jiff::Span::new().days(day - 1))
-        .ok()?;
-    let dt = date
-        .at(0, 0, 0, 0)
-        .checked_add(
-            jiff::Span::new()
-                .hours(hour)
-                .minutes(min)
-                .seconds(sec)
-                .nanoseconds(parts.nanosecond),
-        )
-        .ok()?;
-    let naive = Timestamp::from_shifted_jiff(
-        dt.to_zoned(jiff::tz::TimeZone::UTC).ok()?.timestamp(),
-        year.checked_sub(proxy_year)?,
-    )?;
-    let offset = parts
-        .offset_nanoseconds
-        .or_else(|| boundary_offset(zone, naive.as_second(), true).map(|s| s * 1_000_000_000));
-    if let Some(offset) = offset {
-        if offset.abs() >= 86_400_000_000_000 {
-            return None;
-        }
-        let utc = dt
-            .to_zoned(jiff::tz::TimeZone::UTC)
+    Ok((|| {
+        // Time.new normalizes month-end days, hour 24, and leap seconds.
+        let date = jiff::civil::Date::new(proxy_year, mon as i8, 1)
             .ok()?
-            .timestamp()
-            .checked_sub(jiff::SignedDuration::from_nanos(offset))
+            .checked_add(jiff::Span::new().days(day - 1))
             .ok()?;
-        Timestamp::from_shifted_jiff(utc, year.checked_sub(proxy_year)?)
-    } else {
-        let local = time_parser::local_datetime(dt, zone.tz())?;
-        Timestamp::from_shifted_jiff(local.jiff(), year.checked_sub(proxy_year)?)
-    }
+        let dt = date
+            .at(0, 0, 0, 0)
+            .checked_add(
+                jiff::Span::new()
+                    .hours(hour)
+                    .minutes(min)
+                    .seconds(sec)
+                    .nanoseconds(parts.nanosecond),
+            )
+            .ok()?;
+        let shift = year - I512::from(proxy_year);
+        let naive = Timestamp::from_wide_shifted_jiff(
+            dt.to_zoned(jiff::tz::TimeZone::UTC).ok()?.timestamp(),
+            shift,
+        )?;
+        let offset = parts.offset_nanoseconds.or_else(|| {
+            boundary_offset(zone, naive.transition_second(), true).map(|s| s * 1_000_000_000)
+        });
+        if let Some(offset) = offset {
+            if offset.abs() >= 86_400_000_000_000 {
+                return None;
+            }
+            let utc = dt
+                .to_zoned(jiff::tz::TimeZone::UTC)
+                .ok()?
+                .timestamp()
+                .checked_sub(jiff::SignedDuration::from_nanos(offset))
+                .ok()?;
+            Timestamp::from_wide_shifted_jiff(utc, shift)
+        } else {
+            let local = time_parser::local_datetime(dt, zone.tz())?;
+            Timestamp::from_wide_shifted_jiff(local.jiff(), shift)
+        }
+    })())
 }
 
 /// GithubConnectionsController calls `params[:access_token].to_s.strip` before
@@ -85,6 +122,87 @@ pub(super) fn token_string(input: &Param) -> String {
         Param::Array(_) => inspect(input, true),
         _ => inspect(input, false),
     }
+}
+
+/// RawValue checks JSON syntax without rounding an Integer to f64 or rejecting
+/// an overflowing exponent. Recursion and body bytes are bounded by the kit.
+pub(super) fn json_token_string(raw: &serde_json::value::RawValue) -> serde_json::Result<String> {
+    match raw.get().as_bytes().first() {
+        Some(b'n') => Ok(String::new()),
+        Some(b'"') => serde_json::from_str(raw.get()),
+        Some(b'[') => json_inspect(raw, true, 0),
+        _ => json_inspect(raw, false, 0),
+    }
+}
+fn json_inspect(
+    raw: &serde_json::value::RawValue,
+    parameters: bool,
+    depth: usize,
+) -> serde_json::Result<String> {
+    use serde_json::value::RawValue;
+    let text = raw.get();
+    if depth >= 128 {
+        return Err(serde::de::Error::custom(
+            "JSON nesting exceeds parameter limit",
+        ));
+    }
+    Ok(match text.as_bytes().first() {
+        Some(b'n') => "nil".into(),
+        Some(b't' | b'f') => text.into(),
+        Some(b'"') => ruby_string(&serde_json::from_str::<String>(text)?),
+        Some(b'[') => {
+            let values: Vec<Box<RawValue>> = serde_json::from_str(text)?;
+            let body = values
+                .iter()
+                .filter(|v| v.get() != "null")
+                .map(|v| json_inspect(v, parameters, depth + 1))
+                .collect::<serde_json::Result<Vec<_>>>()?
+                .join(", ");
+            format!("[{body}]")
+        }
+        Some(b'{') => {
+            let values: indexmap::IndexMap<String, Box<RawValue>> = serde_json::from_str(text)?;
+            let body = values
+                .iter()
+                .map(|(k, v)| {
+                    Ok(format!(
+                        "{} => {}",
+                        ruby_string(k),
+                        json_inspect(v, false, depth + 1)?
+                    ))
+                })
+                .collect::<serde_json::Result<Vec<_>>>()?
+                .join(", ");
+            let body = format!("{{{body}}}");
+            if parameters {
+                format!("#<ActionController::Parameters {body} permitted: false>")
+            } else {
+                body
+            }
+        }
+        _ if !text.contains(['.', 'e', 'E']) => {
+            // JSON's sole signed-zero Integer spelling is -0; Ruby normalizes it.
+            if text == "-0" {
+                "0".into()
+            } else {
+                text.into()
+            }
+        }
+        _ => {
+            let value = text.parse::<f64>().map_err(serde::de::Error::custom)?;
+            if value.is_infinite() {
+                if value.is_sign_negative() {
+                    "-Infinity".into()
+                } else {
+                    "Infinity".into()
+                }
+            } else {
+                ruby_number(
+                    &serde_json::Number::from_f64(value).expect("JSON finite or infinite float"),
+                )
+            }
+        }
+    })
 }
 
 fn inspect(input: &Param, parameters: bool) -> String {
@@ -253,14 +371,14 @@ fn boundary_offset(zone: &Zone, seconds: i64, local: bool) -> Option<i64> {
 /// Extended-year rendering uses the same pinned zone periods as the request cast.
 pub(crate) fn extended_datetime(at: Timestamp, zone: &Zone, suffix: bool) -> String {
     let (proxy, shift) = at.calendar_proxy();
-    let offset = boundary_offset(zone, at.as_second(), false)
+    let offset = boundary_offset(zone, at.transition_second(), false)
         .unwrap_or_else(|| i64::from(zone.tz().to_offset_info(proxy).offset().seconds()));
     let local = proxy
         .checked_add(jiff::SignedDuration::from_secs(offset))
         .expect("bounded zone offset")
         .to_zoned(jiff::tz::TimeZone::UTC);
-    let year = i64::from(local.year()) + shift;
-    let year = if year < 0 {
+    let year = I512::from(local.year()) + shift;
+    let year = if year.is_negative() {
         format!("-{:04}", year.unsigned_abs())
     } else {
         format!("{year:04}")

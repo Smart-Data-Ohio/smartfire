@@ -150,3 +150,40 @@ fn redirect(c: &mut Ctx, bot_id: i64, message: &str, notice: bool) -> Result {
     }
     c.redirect_to(&c.url_for(&campfire_routes::edit_account_bot(bot_id)))
 }
+
+/// Preserve numeric JSON lexemes solely for this controller's token `.to_s`.
+/// All other routes and attributes retain the kit's ordinary parameter parser.
+pub(crate) fn json_body_params(
+    method: &campfire_kit::Method,
+    path: &str,
+    raw: &[u8],
+) -> std::result::Result<campfire_kit::ParamMap, campfire_kit::params::ParamError> {
+    use campfire_kit::params::{self, ParamError};
+    use campfire_kit::{Param, ParamMap};
+    let is_token = crate::controllers::recognize(method, path)
+        .ok()
+        .flatten()
+        .is_some_and(|(route, _)| route.endpoint == "accounts/bots/github_connections#create");
+    if !is_token {
+        return params::from_json_body(raw);
+    }
+    let value: Box<serde_json::value::RawValue> =
+        serde_json::from_slice(raw).map_err(|_| ParamError::Parse)?;
+    if !value.get().starts_with('{') {
+        return params::from_json_body(raw);
+    }
+    let fields: indexmap::IndexMap<String, Box<serde_json::value::RawValue>> =
+        serde_json::from_str(value.get()).map_err(|_| ParamError::Parse)?;
+    let mut result = ParamMap::new();
+    for (key, value) in fields {
+        let param = if key == "access_token" {
+            Param::Str(
+                super::input_casts::json_token_string(&value).map_err(|_| ParamError::Parse)?,
+            )
+        } else {
+            Param::from_json(serde_json::from_str(value.get()).map_err(|_| ParamError::Parse)?)
+        };
+        result.insert(key, param);
+    }
+    Ok(result)
+}
