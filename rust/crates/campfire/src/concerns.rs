@@ -309,6 +309,12 @@ pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
     let Some(token) = c.cookies.signed("session_token") else {
         return Ok(false);
     };
+    let now = c.now();
+    let preload_layout = matches!(
+        c.request.method,
+        campfire_kit::Method::GET | campfire_kit::Method::HEAD
+    ) && (c.request.path().starts_with("/agents")
+        || c.request.path().starts_with("/account/bots"));
     let found = c
         .app()
         .db
@@ -316,13 +322,26 @@ pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
             let Some(session) = Session::find_by_token(conn, &token)? else {
                 return Ok(None);
             };
-            let user = User::find_by_id(conn, session.user_id)?;
+            let user = User::find_by_id_with(conn, session.user_id, |row| {
+                if preload_layout {
+                    crate::controllers::presenters::layout_preferences::LoadedPreferences::from_row(
+                        row, now,
+                    )
+                    .map(Some)
+                } else {
+                    Ok(None)
+                }
+            })?;
             Ok(Some((session, user)))
         })
         .await
         .map_err(Error::internal)?;
     let Some((session, user)) = found else {
         return Ok(false);
+    };
+    let (user, preferences) = match user {
+        Some((user, preferences)) => (Some(user), preferences),
+        None => (None, None),
     };
     let now = campfire_db::Timestamp::from_jiff(c.now());
     if user.as_ref().is_some_and(|user| {
@@ -340,6 +359,9 @@ pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
             .map_err(Error::internal)?;
         c.cookies.delete("session_token");
         return Ok(false);
+    }
+    if let Some(preferences) = preferences {
+        c.set_current(preferences);
     }
     resume_session(c, session, user).await?;
     enforce_two_factor_for_restored_session(c).await?;

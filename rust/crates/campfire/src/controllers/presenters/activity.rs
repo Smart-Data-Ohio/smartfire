@@ -6,12 +6,22 @@ use std::collections::HashMap;
 
 /// Request-local association preload, after the owner's accessibility query.
 pub struct MessageSources {
+    sessions: HashMap<i64, campfire_db::Session>,
     saved: HashMap<i64, i64>,
     messages: HashMap<i64, campfire_db::Message>,
     rooms: HashMap<i64, campfire_db::Room>,
 }
 impl MessageSources {
     pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        let session_ids: Vec<_> = rows
+            .iter()
+            .filter(|row| row.source_type == "Session")
+            .map(|row| row.source_id)
+            .collect();
+        let sessions = campfire_db::Session::for_ids(conn, &session_ids)?
+            .into_iter()
+            .map(|session| (session.id, session))
+            .collect();
         let saved_ids: Vec<_> = rows
             .iter()
             .filter(|row| row.source_type == "SavedItem")
@@ -40,10 +50,16 @@ impl MessageSources {
             .map(|room| (room.id, room))
             .collect();
         Ok(Self {
+            sessions,
             saved,
             messages,
             rooms,
         })
+    }
+    fn session(&self, id: i64) -> Result<&campfire_db::Session> {
+        self.sessions
+            .get(&id)
+            .ok_or(campfire_db::Error::RecordNotFound("Session"))
     }
     fn room(&self, id: i64) -> Result<&campfire_db::Room> {
         self.rooms
@@ -335,10 +351,10 @@ pub fn item(
             result.body = "Several wrong sign-in codes were entered for your account.".into();
         }
         "Session" => {
-            let session = campfire_db::Session::find(conn, item.source_id)?;
+            let session = messages.session(item.source_id)?;
             result.created_at = Some(session.created_at.jiff());
             result.title = "Account security".into();
-            result.body = session_body(item.created_at, &session);
+            result.body = session_body(item.created_at, session);
         }
         other => {
             return Err(campfire_db::Error::Other(format!(
@@ -519,8 +535,8 @@ pub fn payload_with_sources(
             Some(source)
         }
         "Session" => {
-            let session = campfire_db::Session::find(conn, row.source_id)?;
-            source.body = session_body(row.created_at, &session);
+            let session = messages.session(row.source_id)?;
+            source.body = session_body(row.created_at, session);
             source.path = "/users/me/sessions".into();
             Some(source)
         }

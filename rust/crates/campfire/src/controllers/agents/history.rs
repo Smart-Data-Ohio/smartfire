@@ -23,7 +23,7 @@ pub async fn approvals(c: &mut Ctx) -> Result {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
     let user = viewer.clone();
-    let Some((agent, bot)) = c
+    let Some((_agent, bot)) = c
         .app()
         .db
         .read(move |conn| {
@@ -51,21 +51,62 @@ pub async fn approvals(c: &mut Ctx) -> Result {
     let page = page(c);
     let offset = offset(page)?;
     let status = filter.clone();
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    let mut rows = c
+        .app()
+        .db
+        .read(move |conn| AgentApproval::history_page(conn, id, status.as_deref(), now, offset))
+        .await
+        .map_err(Error::internal)?;
+    // The page normally stays on pooled readers. Only selected overdue rows need
+    // WS11's guarded expiry write; it reloads them inside the real writer queue.
+    if rows
+        .iter()
+        .any(|row| row.status == "pending" && row.expires_at <= now)
+    {
+        rows = c
+            .app()
+            .db
+            .write(move |tx| {
+                for row in &mut rows {
+                    if row.status == "pending" && row.expires_at <= now {
+                        row.expire_if_due(tx)?;
+                    }
+                }
+                Ok(rows)
+            })
+            .await
+            .map_err(Error::internal)?;
+    }
+    if let Some(status) = filter
+        .as_deref()
+        .filter(|status| matches!(*status, "pending" | "expired"))
+    {
+        rows.retain(|row| row.effective_status(now) == status);
+    }
     let secrets = c.app().secrets.clone();
-    let (approvals,has_next) = c.app().db.write(move |tx| {
-        // The effective-status predicate is the same as WS11's API list. The
-        // HTML controller adds Rails' 50+1 page window before lazy expiry.
-        let ids = query_ids(tx.conn(), "SELECT id FROM agent_approvals WHERE agent_id=?1 AND (?2 IS NULL OR (?2='pending' AND status='pending' AND expires_at>?3) OR (?2='expired' AND (status='expired' OR (status='pending' AND expires_at<=?3))) OR (?2 NOT IN ('pending','expired') AND status=?2)) ORDER BY id DESC LIMIT 51 OFFSET ?4", rusqlite::params![agent.id,status,tx.now(),offset])?;
-        let mut approvals=Vec::new();
-        for id in ids {
-            let mut approval=AgentApproval::find(tx.conn(),id)?.expect("selected approval");
-            approval.expire_if_due(tx)?;
-            if status.as_deref().is_some_and(|s| matches!(s,"pending"|"expired") && approval.effective_status(tx.now())!=s) { continue; }
-            approvals.push(presenters::agents::history::approval(tx.conn(),&secrets,&approval,&viewer,tx.now())?);
-        }
-        let has_next=approvals.len()>50; if has_next {approvals.pop();}
-        Ok((approvals,has_next))
-    }).await.map_err(Error::internal)?;
+    let rendered_bot = bot.clone();
+    let (approvals, has_next) = c
+        .app()
+        .db
+        .read(move |conn| {
+            let mut approvals = presenters::agents::history::approvals(
+                conn,
+                &secrets,
+                &rows,
+                &rendered_bot,
+                &viewer,
+                now,
+            )?;
+            let has_next = approvals.len() > 50;
+            if has_next {
+                approvals.pop();
+            }
+            Ok((approvals, has_next))
+        })
+        .await
+        .map_err(Error::internal)?;
+    presenters::view_context::omit_unused_room_back_link(c);
     c.respond_to(&[&format::HTML])?;
     let now = c.now();
     let (bot_id, bot_name) = (bot.id, bot.name);
@@ -104,12 +145,28 @@ pub async fn ledger(c: &mut Ctx) -> Result {
     let page = page(c);
     let offset = offset(page)?;
     let rich_text = c.app().db.env().rich_text.clone();
-    let (bot,events,has_next)=c.app().db.read(move |conn| {
-        let bot=User::find(conn,agent.user_id)?;
-        let ids=query_ids(conn,"SELECT id FROM agent_events WHERE agent_id=? AND (? IS NULL OR outcome=?) ORDER BY id DESC LIMIT 51 OFFSET ?",rusqlite::params![id,status,status,offset])?;
-        let mut events=Vec::new(); for id in ids {events.push(presenters::agents::history::event(conn,id,&agent,&viewer,&*rich_text)?);}
-        let has_next=events.len()>50;if has_next{events.pop();} Ok((bot,events,has_next))
-    }).await.map_err(Error::internal)?;
+    let (bot, events, has_next) = c
+        .app()
+        .db
+        .read(move |conn| {
+            let bot = User::find(conn, agent.user_id)?;
+            let rows = campfire_db::models::agent_delivery::AgentEvent::history_page(
+                conn,
+                id,
+                status.as_deref(),
+                offset,
+            )?;
+            let mut events =
+                presenters::agents::history::events(conn, rows, &agent, &viewer, &*rich_text)?;
+            let has_next = events.len() > 50;
+            if has_next {
+                events.pop();
+            }
+            Ok((bot, events, has_next))
+        })
+        .await
+        .map_err(Error::internal)?;
+    presenters::view_context::omit_unused_room_back_link(c);
     c.respond_to(&[&format::HTML])?;
     let (bot_id, bot_name) = (bot.id, bot.name);
     framed_page!(c, StatusCode::OK, |ctx| Ledger {
@@ -139,15 +196,4 @@ fn offset(page: i64) -> Result<i64> {
     (page - 1)
         .checked_mul(50)
         .ok_or_else(|| Error::internal(anyhow::anyhow!("page offset out of range")))
-}
-
-fn query_ids(
-    conn: &campfire_db::Connection,
-    sql: &str,
-    params: impl rusqlite::Params,
-) -> campfire_db::Result<Vec<i64>> {
-    let mut statement = conn.prepare(sql)?;
-    Ok(statement
-        .query_map(params, |r| r.get(0))?
-        .collect::<rusqlite::Result<_>>()?)
 }

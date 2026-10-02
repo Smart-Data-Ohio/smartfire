@@ -74,6 +74,22 @@ impl Session {
         )
     }
 
+    /// Request-local source preload; missing/deleted sessions are omitted.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM sessions WHERE id IN ({})",
+                sql::placeholders(ids.len())
+            ),
+            rusqlite::params_from_iter(ids),
+            Self::from_row,
+        )
+    }
+
     pub fn for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
         query_all(
             conn,

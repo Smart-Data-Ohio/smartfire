@@ -543,13 +543,16 @@ impl Config {
 
 type Job = Box<dyn FnOnce(&Connection, &Env) + Send>;
 
+#[cfg(feature = "test-support")]
+type QueryLog = Arc<Mutex<Vec<String>>>;
+
 /// The database handle. Cheap to clone.
 #[derive(Clone)]
 pub struct Database {
     writer: mpsc::Sender<Job>,
     readers: Arc<ReaderPool>,
     #[cfg(feature = "test-support")]
-    writer_query_log: Arc<Mutex<Option<Arc<Mutex<Vec<String>>>>>>,
+    writer_query_log: Arc<Mutex<Option<QueryLog>>>,
     env: Env,
     path: PathBuf,
 }
@@ -822,7 +825,7 @@ fn open_connection(path: &Path, reader: bool) -> Result<Connection> {
 
 struct ReaderPool {
     #[cfg(feature = "test-support")]
-    query_log: Mutex<Option<Arc<Mutex<Vec<String>>>>>,
+    query_log: Mutex<Option<QueryLog>>,
     idle: Mutex<Vec<Connection>>,
     available: Condvar,
 }
@@ -867,7 +870,7 @@ thread_local! {
 }
 
 #[cfg(feature = "test-support")]
-struct QueryTrace<'a>(&'a Connection, Option<Arc<Mutex<Vec<String>>>>);
+struct QueryTrace<'a>(&'a Connection, Option<QueryLog>);
 
 #[cfg(feature = "test-support")]
 impl<'a> QueryTrace<'a> {
@@ -917,6 +920,40 @@ impl Drop for Checkout<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "test-support")]
+    #[tokio::test]
+    async fn query_capture_includes_writer_and_reader_statements_and_can_stop() {
+        let dir = tempfile::tempdir().unwrap();
+        let db =
+            Database::open(Config::new(dir.path().join("test.sqlite3")), Env::default()).unwrap();
+        let log = db.capture_queries();
+        db.write(|tx| {
+            Ok(tx
+                .conn()
+                .query_row("SELECT 11", [], |row| row.get::<_, i64>(0))?)
+        })
+        .await
+        .unwrap();
+        db.read(|conn| Ok(conn.query_row("SELECT 22", [], |row| row.get::<_, i64>(0))?))
+            .await
+            .unwrap();
+        db.stop_capturing_queries();
+        let before = log.lock().unwrap().clone();
+        assert!(before.iter().any(|sql| sql == "SELECT 11"));
+        assert!(before.iter().any(|sql| sql == "SELECT 22"));
+        db.write(|tx| {
+            Ok(tx
+                .conn()
+                .query_row("SELECT 33", [], |row| row.get::<_, i64>(0))?)
+        })
+        .await
+        .unwrap();
+        db.read(|conn| Ok(conn.query_row("SELECT 44", [], |row| row.get::<_, i64>(0))?))
+            .await
+            .unwrap();
+        assert_eq!(*log.lock().unwrap(), before);
+    }
 
     fn main_file_len(path: &Path) -> u64 {
         std::fs::metadata(path).unwrap().len()
