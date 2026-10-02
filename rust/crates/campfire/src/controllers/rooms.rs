@@ -49,6 +49,8 @@ pub enum Scope {
     WithoutDirects,
     /// `Current.user.rooms.directs` (directs)
     Directs,
+    Voices,
+    Stages,
     Boards,
 }
 
@@ -58,6 +60,8 @@ impl Scope {
             Scope::All => true,
             Scope::WithoutDirects => matches!(room.room_type, RoomType::Open | RoomType::Closed),
             Scope::Directs => room.room_type == RoomType::Direct,
+            Scope::Voices => room.room_type == RoomType::Voice,
+            Scope::Stages => room.room_type == RoomType::Stage,
             Scope::Boards => room.room_type == RoomType::Board,
         }
     }
@@ -137,6 +141,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
     ensure_can_delete(c, &room).await?;
+    if room.voice() || room.stage() { return call_channels::destroy(c, room).await; }
     destroy_room(c, room).await
 }
 
@@ -781,6 +786,64 @@ mod queue_recovery_tests;
 
 #[cfg(test)]
 mod review_cache_tests;
+
+#[cfg(test)]
+mod public_huddle_tests;
+
+#[cfg(test)]
+mod huddle_declaration_tests;
+
+#[cfg(test)]
+mod call_channel_tests;
+#[cfg(test)]
+mod review_tests;
+
+#[cfg(test)]
+mod call_channel_declaration_tests;
+
+#[cfg(test)]
+mod call_page_tests;
+
+pub(crate) mod call_navigation;
+
+pub(crate) mod shell;
+
+#[cfg(test)]
+mod stream_controller_tests;
+
+#[cfg(test)]
+mod stage_page_tests;
+
+#[cfg(test)]
+mod remaining_call_tests;
+
+#[cfg(test)]
+mod remaining_query_tests;
+
+#[cfg(test)]
+mod remaining_presence_tests;
+
+#[cfg(test)]
+mod room_composition_tests;
+
+#[cfg(test)]
+mod room_shell_tests;
+
+#[cfg(test)]
+mod full_room_tests;
+
+#[cfg(test)]
+mod row_broadcast_tests;
+
+#[cfg(test)]
+mod system_browser_tests;
+
+#[cfg(test)]
+pub(super) mod call_channel_broadcast_tests;
+
+pub mod call_channels;
+
+pub mod huddles;
 #[cfg(test)]
 mod boards_read_tests;
 #[cfg(test)]

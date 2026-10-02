@@ -1,0 +1,7 @@
+{% if !notices.is_empty() %}  <div id="ooo-notices" class="ooo-notices">
+{% for user in notices %}      {{ h::turbo_stream_from_streamables(ctx,[h::gid_param("User",user.id).as_str(),"ooo_notice"].as_slice()) }}
+      <div id="ooo_notice_user_{{ user.id }}">
+        {{ self.line(user)|safe }}
+      </div>
+{% endfor %}  </div>
+{% endif %}{{ "" }}

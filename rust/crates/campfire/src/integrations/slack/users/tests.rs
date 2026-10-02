@@ -1,6 +1,96 @@
 use super::super::jobs::tests::{run, setup, start};
 use super::*;
 
+thread_local! {
+    static PREVIEW_SELECTS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+struct PreviewTrace<'a>(&'a Connection);
+impl<'a> PreviewTrace<'a> {
+    fn start(conn: &'a Connection) -> Self {
+        fn record(event: rusqlite::trace::TraceEvent<'_>) {
+            if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event
+                && sql.trim_start().to_ascii_uppercase().starts_with("SELECT ")
+            {
+                PREVIEW_SELECTS.with(|queries| queries.borrow_mut().push(sql.into()));
+            }
+        }
+        PREVIEW_SELECTS.with(|queries| queries.borrow_mut().clear());
+        conn.trace_v2(
+            rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
+            Some(record),
+        );
+        Self(conn)
+    }
+}
+impl Drop for PreviewTrace<'_> {
+    fn drop(&mut self) {
+        self.0
+            .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+    }
+}
+async fn preview_read_count(size: usize) {
+    use campfire_db::models::slack_import::{Kind, Mode, NewImport};
+    let expected: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/google_claim_http.json"
+    ))
+    .unwrap();
+    let expected = expected["review"]["preview_queries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["size"] == size)
+        .unwrap()
+        .clone();
+    let (db, _, _dir) = setup().await;
+    let run = db
+        .write(|tx| {
+            SlackImport::create(
+                tx,
+                NewImport {
+                    workspace_id: 1,
+                    connection_id: None,
+                    user_id: 1,
+                    kind: Kind::Workspace,
+                    mode: Mode::DryRun,
+                    options: json!({}),
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let members: Value = (0..size).map(|i| json!({"id":format!("UREVIEW{size}_{i}"),"profile":{"email":format!("preview-{size}-{i}@smartdata.net")}})).collect::<Vec<_>>().into();
+    let (delta, queries) = db
+        .write(move |tx| {
+            let _trace = PreviewTrace::start(tx.conn());
+            let delta = map_page(tx, &run, &members, true, &HashSet::new())?;
+            Ok((
+                delta,
+                PREVIEW_SELECTS.with(|queries| queries.borrow().clone()),
+            ))
+        })
+        .await
+        .unwrap();
+    println!(
+        "Slack preview members={size}: SELECTs={}; Rails={}",
+        queries.len(),
+        expected["selects"]
+    );
+    assert_eq!(delta, expected["delta"], "preview {size}: Rails decisions");
+    assert_eq!(
+        json!(queries.len()),
+        expected["selects"],
+        "preview {size}: SELECT count"
+    );
+}
+#[tokio::test]
+async fn slack_preview_reads_match_rails_at_10_members() {
+    preview_read_count(10).await;
+}
+#[tokio::test]
+async fn slack_preview_reads_match_rails_at_200_members() {
+    preview_read_count(200).await;
+}
+
 #[tokio::test]
 async fn slack_users_preview_import_repeat_match_pinned_rails_fixture_rows() {
     let (db, _, _dir) = setup().await;

@@ -119,6 +119,13 @@ impl SignIn {
         random.fill_bytes(&mut state);
         random.fill_bytes(&mut nonce);
         random.fill_bytes(&mut verifier);
+        // WS16 flagged test-only input seam; verification and state signing stay real.
+        #[cfg(test)]
+        if let Some(bytes) = crate::test_support::oauth_entropy() {
+            state.copy_from_slice(&bytes[..16]);
+            nonce.copy_from_slice(&bytes[16..32]);
+            verifier.copy_from_slice(&bytes[32..]);
+        }
         let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
         let (state, nonce, verifier) = (hex(&state), hex(&nonce), URL_SAFE_NO_PAD.encode(verifier));
         let challenge = pkce_challenge(&verifier);

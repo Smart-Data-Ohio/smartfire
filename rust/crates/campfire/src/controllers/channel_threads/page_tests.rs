@@ -185,7 +185,7 @@ async fn complete_standalone_thread_templates_match_rails_layout_bytes() {
                 };
                 h::request_forgery::rendering_with(h::request_forgery::RequestSecrets {tokens: Box::new(Tokens), csp_nonce: Some("NONCE".into())}, || {
                     let body = h::raw(campfire_views::channel_threads::Show {ctx: &ctx, name: &thread.name, status: thread.status(conn, campfire_db::Timestamp::from_jiff(p.now)).unwrap().name(),
-                        count: thread.message_count(conn).unwrap(), pull_request_header: &header, parent: parent.as_ref(), messages: &items}.render().unwrap());
+                        count: thread.message_count(conn).unwrap(), pull_request_header: &header, parent: parent.as_ref(), messages: &items, work: None}.render().unwrap());
                     if frame {layouts::FrameLayout {ctx: &ctx, head: h::empty(), content: body}.render().unwrap()}
                     else {let mut page = layouts::Application::new(&ctx, body);page.page_title = Some(thread.name.clone());page.render().unwrap()}
                 })
@@ -197,12 +197,12 @@ async fn complete_standalone_thread_templates_match_rails_layout_bytes() {
 }
 
 #[tokio::test]
-async fn ordinary_work_html_remains_pending_and_board_posts_render() {
+async fn ordinary_work_and_board_posts_render_through_authorized_routes() {
     let (app, _, threads) = fixture().await;
     assert_eq!(app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_FOUND);
-    assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::OK);
     assert_eq!(app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/threads/{}/content", threads[5])).await.status, StatusCode::NOT_FOUND);
-    assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}/content", threads[5])).await.status, StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}/content", threads[5])).await.status, StatusCode::OK);
     let (room, thread) = app.db().write(|tx| {
         let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Board, Some("Board seam"), DAVID, &[DAVID])?;
         let thread = ChannelThread::create(tx, NewChannelThread {room_id: room.id, creator_id: DAVID, name: Some("Board post".into()), work_status: Some("planned".into()), ..Default::default()})?;

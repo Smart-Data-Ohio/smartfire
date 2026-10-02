@@ -207,6 +207,40 @@ impl Membership {
         )
     }
 
+    /// `room.memberships.includes(:user)`: retain membership order and missing-user rows.
+    pub fn for_room_with_users(conn: &Connection, room_id: i64) -> Result<Vec<(Self, Option<User>)>> {
+        let memberships = Self::for_room(conn, room_id)?;
+        if memberships.is_empty() {
+            return Ok(Vec::new());
+        }
+        let ids = memberships
+            .iter()
+            .map(|member| member.user_id)
+            .collect::<Vec<_>>();
+        let mut users = User::where_ids(conn, &ids)?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect::<std::collections::HashMap<_, _>>();
+        Ok(memberships
+            .into_iter()
+            .map(|member| {
+                let user = users.remove(&member.user_id);
+                (member, user)
+            })
+            .collect())
+    }
+
+    pub fn for_rooms(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM memberships WHERE room_id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
     /// `room.memberships.find_by(user:)` / `user.memberships.find_by(room_id:)`
     pub fn find_by_room_and_user(
         conn: &Connection,

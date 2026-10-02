@@ -74,7 +74,13 @@ pub async fn start(c: &mut Ctx) -> Result {
             Some("Set up the Slack app credentials first."),
         );
     };
-    let raw = rand::random::<[u8; 16]>()
+    let bytes = rand::random::<[u8; 16]>();
+    // WS16 flagged test-only input seam for complete OAuth redirect bytes.
+    #[cfg(test)]
+    let bytes = crate::test_support::oauth_entropy()
+        .map(|entropy| entropy[..16].try_into().unwrap())
+        .unwrap_or(bytes);
+    let raw = bytes
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect::<String>();

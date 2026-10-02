@@ -205,7 +205,7 @@ async fn google_disconnect_publishes_complete_rails_badges_and_ooo_notices_after
     {
         let (a, _) = fixture(case).await;
         let mut listener = None;
-        for port in 53100..=53199 {
+        for port in super::google_test_support::socket_ports() {
             match tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
                 Ok(l) => {
                     listener = Some(l);

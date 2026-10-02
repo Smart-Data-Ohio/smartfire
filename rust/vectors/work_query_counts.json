@@ -1,0 +1,53 @@
+{
+  "reference": "d7c7de92 plus approved board drift",
+  "rows": [
+    {
+      "surface": "index",
+      "size": 10,
+      "queries": 25,
+      "cached": 14
+    },
+    {
+      "surface": "json-index",
+      "size": 10,
+      "queries": 38,
+      "cached": 50
+    },
+    {
+      "surface": "ordinary-history",
+      "size": 10,
+      "queries": 24,
+      "cached": 12
+    },
+    {
+      "surface": "board-history",
+      "size": 10,
+      "queries": 27,
+      "cached": 17
+    },
+    {
+      "surface": "index",
+      "size": 100,
+      "queries": 113,
+      "cached": 104
+    },
+    {
+      "surface": "json-index",
+      "size": 100,
+      "queries": 308,
+      "cached": 500
+    },
+    {
+      "surface": "ordinary-history",
+      "size": 100,
+      "queries": 24,
+      "cached": 102
+    },
+    {
+      "surface": "board-history",
+      "size": 100,
+      "queries": 27,
+      "cached": 107
+    }
+  ]
+}

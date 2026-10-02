@@ -64,6 +64,8 @@ pub mod messages;
 pub mod presenters;
 #[cfg(test)]
 mod activity_domain_tests;
+#[cfg(test)]
+mod human_work_tests;
 pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
@@ -83,7 +85,10 @@ pub mod welcome;
 pub mod internal_huddle;
 #[cfg(test)]
 mod internal_huddle_tests;
+#[cfg(test)]
+mod internal_huddle_declaration_tests;
 pub mod workspace_icons;
+pub mod work_threads;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -180,6 +185,26 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "rooms/voices#show" => arc(rooms::call_channels::show),
+        "rooms/voices#new" => arc(rooms::call_channels::new),
+        "rooms/voices#create" => arc(rooms::call_channels::create),
+        "rooms/voices#edit" => arc(rooms::call_channels::edit),
+        "rooms/voices#update" => arc(rooms::call_channels::update),
+        "rooms/voices#index" => arc(rooms::index),
+        "rooms/voices#destroy" => arc(rooms::destroy_without_room),
+        "rooms/stages#show" => arc(rooms::call_channels::show),
+        "rooms/stages#new" => arc(rooms::call_channels::new),
+        "rooms/stages#create" => arc(rooms::call_channels::create),
+        "rooms/stages#edit" => arc(rooms::call_channels::edit),
+        "rooms/stages#update" => arc(rooms::call_channels::update),
+        "rooms/stages#index" => arc(rooms::index),
+        "rooms/stages#destroy" => arc(rooms::destroy_without_room),
+
+        "rooms/huddles#show" => arc(rooms::huddles::show),
+        "rooms/huddles#create" => arc(rooms::huddles::create),
+        "rooms/huddles#participants" => arc(rooms::huddles::participants),
+        "rooms/huddles#leave" => arc(rooms::huddles::leave),
+        "users/huddle_presence#show" => arc(rooms::huddles::presence),
         "rooms/stage/roles#update" => arc(rooms::stage_participation::role),
         "rooms/stage/hands#create" => arc(rooms::stage_participation::raise),
         "rooms/stage/hands#destroy" => arc(rooms::stage_participation::lower),
@@ -384,6 +409,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "channel_threads#join" => arc(channel_threads::join),
         "channel_threads#leave" => arc(channel_threads::leave),
         "channel_threads#read" => arc(channel_threads::read),
+        "work_threads#index" => arc(work_threads::index),
+        "threads/work/handoffs#new" => arc(work_threads::new_handoff),
+        "threads/work/handoffs#create" => arc(work_threads::create_handoff),
+        "threads/work/links#index" => arc(work_threads::links_index),
+        "threads/work/links#create" => arc(work_threads::create_link),
+        "threads/work/links#destroy" => arc(work_threads::destroy_link),
         "message_forwards#create" => arc(message_forwards::create),
         "message_forwards#destinations" => arc(message_forwards::destinations),
         "message_forward_sources#forward_source" => arc(message_forwards::forward_source),
@@ -830,6 +861,21 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "rooms/voices#index",
+        "rooms/voices#show",
+        "rooms/voices#new",
+        "rooms/voices#create",
+        "rooms/voices#edit",
+        "rooms/voices#update",
+        "rooms/voices#destroy",
+        "rooms/stages#index",
+        "rooms/stages#show",
+        "rooms/stages#new",
+        "rooms/stages#create",
+        "rooms/stages#edit",
+        "rooms/stages#update",
+        "rooms/stages#destroy",
+        "rooms/huddles#show", "rooms/huddles#create", "rooms/huddles#participants", "rooms/huddles#leave", "users/huddle_presence#show",
         "accounts/slack_import_runs#index",
         "accounts/slack_import_runs#create",
         "accounts/slack_import_runs#show",

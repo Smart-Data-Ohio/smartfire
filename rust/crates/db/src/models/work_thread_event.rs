@@ -57,6 +57,18 @@ impl WorkThreadEvent {
             Self::from_row,
         )
     }
+    /// `ActivityItem.preload(:source)`: load only the authorized inbox page's sources.
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM work_thread_events WHERE id IN (SELECT value FROM json_each(?))",
+            [json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
     pub fn for_thread(conn: &Connection, thread_id: i64) -> Result<Vec<Self>> {
         query_all(
             conn,
@@ -113,6 +125,30 @@ impl WorkThreadEvent {
             owner.as_ref(),
             owner.as_ref(),
             json!({"excerpt":excerpt,"actor":snapshot(Some(actor))}),
+        )
+    }
+    pub fn create_for_handoff(
+        tx: &mut Tx<'_>,
+        before: &ChannelThread,
+        after: &ChannelThread,
+        actor: &User,
+        handoff: &crate::WorkHandoff,
+    ) -> Result<Self> {
+        let from = owner(tx.conn(), before.work_owner_id)?;
+        let to = owner(tx.conn(), after.work_owner_id)?;
+        let metadata = json!({"before":{"status":after.work_status,"owner":snapshot(from.as_ref())},
+            "after":{"status":after.work_status,"owner":snapshot(to.as_ref())},"actor":snapshot(Some(actor)),
+            "handoff_id":handoff.id,"handoff_summary":campfire_richtext::ruby::truncate(&handoff.summary,200,"..."),
+            "handoff_links_count":handoff.links.len(),"handoff_questions_count":handoff.open_questions.len()});
+        Self::insert(
+            tx,
+            after,
+            Some(actor),
+            "work_handoff",
+            after.work_status.as_deref(),
+            from.as_ref(),
+            to.as_ref(),
+            metadata,
         )
     }
     #[allow(clippy::too_many_arguments)]
