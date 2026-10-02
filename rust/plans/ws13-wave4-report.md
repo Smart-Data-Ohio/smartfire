@@ -1,4 +1,6 @@
-# WS13 — PR #185 second Astra recheck
+# WS13 — historical PR #185 second Astra recheck
+
+This is the preceding P2 review record. PR #188 has since merged: both inbox invitation cases now run unconditionally, and all ten pass from a fresh clone. The two deferrals below describe that earlier baseline and are closed. Current verification and raw summaries are in the delegation report `wave4/ws13-report.md`; the declaration catalogue and route dependency record are updated alongside this note.
 
 Verified implementation: `52b338b9e0a1f715ba22bf379e55c0536edb5e6b` on `rust/ws13-huddles`; the report-only commit follows. The two remaining P2 findings are addressed. No new main merge was requested or performed; main's viewer-zone behavior, the original Astra fixes, CI's four-job default, and WS13b/WS17 APIs remain unchanged.
 

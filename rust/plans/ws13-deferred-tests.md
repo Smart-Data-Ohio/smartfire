@@ -2,7 +2,7 @@
 
 All 548 pinned Rails titles remain inventoried across 33 files. WS13 owns 332 controller, integration and system declarations; WS13b owns 216 model, job and service declarations and reports their results separately. No historical WS13b pass counts are carried here.
 
-WS13 owns 330 assertion-covered declarations and two original invitation declarations deferred to WS11-UI. Main's WS13b APIs are merged; the overlay script and private cfg are removed completely. All ten invitation titles remain in the ordinary browser suite. The eight independent cases run by default; the two inbox cases retain their original assertions and enable with WS13_ENABLE_INBOX_CASES=1 after WS11-UI's public routes land. Final fresh-clone counts and raw summaries are in ws13-wave4-report.md.
+WS13 owns 332 assertion-covered declarations with none deferred. Main's WS13b APIs and WS11-UI's public inbox routes (PR #188) are merged; the overlay script and private cfg are removed completely. All ten invitation declarations run by default with their complete original assertions and pass from a fresh clone. Current raw summaries are in the delegation report `wave4/ws13-report.md`; the preceding P2 regression evidence is retained in `ws13-wave4-report.md`.
 
 The fixture routes are test-only. Backend grant, sighting, broadcast, membership/session revocation and reconnect effects call main's production APIs. Native WebRTC transport, tracks, decode and RTP statistics remain real. No external LiveKit/TURN endpoints or pixel comparisons are used. WS13b and WS17 production seams stay unchanged.
 
@@ -31,7 +31,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/system/stage_test.rb` | 15 | 15 | 0 |
 | `test/models/huddle/join_pusher_test.rb` | 13 | WS13b | WS13b |
 | `test/system/voice_channels_test.rb` | 12 | 12 | 0 |
-| `test/system/huddle_invitations_test.rb` | 10 | 8 | 2 |
+| `test/system/huddle_invitations_test.rb` | 10 | 10 | 0 |
 | `test/models/huddle/invitation_resolver_test.rb` | 9 | WS13b | WS13b |
 | `test/models/huddle_revocation_test.rb` | 9 | WS13b | WS13b |
 | `test/models/huddle/ring_policy_test.rb` | 8 | WS13b | WS13b |
@@ -45,7 +45,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | WS13b | WS13b |
 | `test/services/huddle/reconciler_test.rb` | 4 | WS13b | WS13b |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | WS13b | WS13b |
-| **WS13 total** | **332** | **330** | **2** |
+| **WS13 total** | **332** | **332** | **0** |
 | **WS13b owned (unscored)** | **216** | — | — |
 | **Catalogue total** | **548** | — | — |
 
@@ -631,10 +631,10 @@ Owner: WS13. Complete: 8/8 original declarations passed against the actual seede
 
 ## test/system/huddle_invitations_test.rb
 
-Owner: WS13. Eight of ten declarations pass in a fresh clone through main's merged WS13b APIs, without an overlay. The two inbox declarations remain deferred to WS11-UI: the public ActivityItemsController count/read/handled endpoints return 501. Their complete assertions can be enabled with WS13_ENABLE_INBOX_CASES=1. Exact routes and ownership evidence are in ws13-inbox-route-dependencies.md. No domain or foreign-owner controller implementation was copied into WS13.
+Owner: WS13. Complete: 10/10 declarations pass by default in a fresh clone through main's merged WS13b and WS11-UI APIs, without an overlay. PR #188 supplies the public ActivityItemsController count/read/handled endpoints. Both previously deferred declarations retain their complete original assertions. Exact routes and ownership evidence are in ws13-inbox-route-dependencies.md. No domain or foreign-owner controller implementation was copied into WS13.
 
-- the recipient sees an incoming huddle banner and dismissing it marks the item read
-- joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel
+- **Passed:** the recipient sees an incoming huddle banner and dismissing it marks the item read
+- **Passed:** joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel
 - **Passed:** the banner flips to caller-left when the starter hangs up, then dismisses
 - **Passed:** a ring stops itself after the ring timeout
 - **Passed:** a banner-only ring stops itself after the ring timeout
@@ -769,6 +769,6 @@ Ordinary system acceptance: `rust/parity/system/ws13`.
 Real local media acceptance: `rust/parity/system/ws13-livekit`.
 Invitations: `WS13_INVITATIONS_ONLY=1 rust/parity/system/ws13`. Main's `publish_queued_ring(tx, id)` and `publish_ring_with_policy(tx, &request, quiet_check)` run directly. No source replacement or custom compile cfg remains.
 
-Deferred to WS11-UI: `the recipient sees an incoming huddle banner and dismissing it marks the item read` (GET /activity/unread_count.json and PATCH /activity/:id/read) and `joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel` (PATCH /activity/:id/handled). Both are nonblocking by the lead's ruling. Set WS13_ENABLE_INBOX_CASES=1 to run their complete assertions.
+No WS13 declarations remain deferred. The two original inbox-dependent invitation declarations now run unconditionally against WS11-UI's merged endpoints; there is no inbox opt-in flag.
 
 All 38 complete room-page goldens, including Designers, and the approved #163 layout reconciliation are complete. Controller/integration title coverage is established by full original assertions, not inferred from render-vector counts.
