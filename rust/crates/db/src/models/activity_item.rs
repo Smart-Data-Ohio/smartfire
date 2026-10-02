@@ -255,16 +255,25 @@ impl ActivityItem {
     }
 
     fn broadcast_item(tx: &mut Tx<'_>, user_id: i64, item: &Self) -> Result<()> {
-        if let Some(user) = User::find_by_id(tx.conn(), user_id)? { Self::broadcast_item_for_user(tx,&user,item)?; }
+        if let Some(user) = User::find_by_id(tx.conn(), user_id)? {
+            Self::broadcast_item_for_user(tx, &user, item)?;
+        }
         Ok(())
     }
 
     fn broadcast_item_for_user(tx: &mut Tx<'_>, user: &User, item: &Self) -> Result<()> {
         if user.is_active() && !user.is_bot() {
-            if crate::models::huddle_invitations::enqueue_item_ring(tx, item)? { return Ok(()); }
-            tx.emit_broadcast_once("activity_items",item.id,&Broadcast::Cable {
-                stream:format!("user_{}_activity",user.id),payload:serde_json::json!({"activityItemId":item.id}),
-            });
+            if crate::models::huddle_invitations::enqueue_item_ring(tx, item)? {
+                return Ok(());
+            }
+            tx.emit_broadcast_once(
+                "activity_items",
+                item.id,
+                &Broadcast::Cable {
+                    stream: format!("user_{}_activity", user.id),
+                    payload: serde_json::json!({ "activityItemId": item.id }),
+                },
+            );
         }
         Ok(())
     }
