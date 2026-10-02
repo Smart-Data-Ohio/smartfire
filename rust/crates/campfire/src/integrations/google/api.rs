@@ -288,6 +288,15 @@ impl Api {
             .read(move |c| GoogleAccount::for_user(c, user_id))
             .await?
             .ok_or_else(|| Error::Unauthorized("Google rejected the connection".into()))?;
+        self.credentials_from_account(db, secrets, account).await
+    }
+    /// Use a Rails-preloaded account snapshot without repeating its association SELECT.
+    pub(crate) async fn credentials_from_account(
+        &self,
+        db: &Database,
+        secrets: &Secrets,
+        account: GoogleAccount,
+    ) -> Result<Credentials> {
         let enc = ArEncryption::new(secrets);
         match (account.access_token(&enc), account.refresh_token(&enc)) {
             (Ok(access_token), Ok(refresh_token)) => Ok(Credentials {

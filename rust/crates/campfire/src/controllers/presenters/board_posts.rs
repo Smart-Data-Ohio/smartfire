@@ -31,7 +31,7 @@ pub fn post(
     records: &[Message],
     picker: bool,
 ) -> Result<Post> {
-    let row = super::boards::rows(p, room.id, std::slice::from_ref(thread))?.remove(0);
+    let row = super::boards::rows(p, room, std::slice::from_ref(thread))?.remove(0);
     let choices = new_post(p, room, viewer)?;
     let result = thread
         .result_markdown

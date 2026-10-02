@@ -58,7 +58,10 @@ pub fn complete(
     }) {
         return Ok(());
     }
-    tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,NULL,STRFTIME('%Y-%m-%d %H:%M:%f','NOW'),STRFTIME('%Y-%m-%d %H:%M:%f','NOW')) ON CONFLICT(user_id) DO UPDATE SET busy_intervals=excluded.busy_intervals,ooo_intervals=excluded.ooo_intervals,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at,refresh_pending_at=NULL,updated_at=excluded.updated_at",params![user_id,busy.to_string(),ooo.to_string(),error,fetched_at])?;
+    // Rails' SQL-generated upsert timestamps have millisecond precision.
+    // Honor the injected process clock while preserving explicit fetched_at's microseconds.
+    let written_at = Timestamp::from_microsecond(tx.now().jiff().as_millisecond() * 1000);
+    tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,refresh_pending_at,created_at,updated_at) VALUES(?,?,?,?,?,NULL,?,?) ON CONFLICT(user_id) DO UPDATE SET busy_intervals=excluded.busy_intervals,ooo_intervals=excluded.ooo_intervals,fetch_error=excluded.fetch_error,fetched_at=excluded.fetched_at,refresh_pending_at=NULL,updated_at=excluded.updated_at",params![user_id,busy.to_string(),ooo.to_string(),error,fetched_at,written_at,written_at])?;
     Ok(())
 }
 pub fn follow_up(tx: &mut Tx<'_>, user_id: i64, now: Timestamp) -> Result<bool> {
@@ -154,9 +157,70 @@ mod tests {
     use super::*;
     use crate::{NewUser, tests::TestDb};
     #[test]
+    fn google_cache_upsert_precision_matches_pinned_rails_sql_clock() {
+        let v: Value =
+            serde_json::from_str(include_str!("../../../../vectors/google_cache_clock.json"))
+                .unwrap();
+        for row in v["rows"].as_array().unwrap() {
+            let now = Timestamp::from_jiff(row["now"].as_str().unwrap().parse().unwrap());
+            let db = TestDb::with_clock(crate::TestClock::frozen_at(now), 4);
+            let id = db.write(|tx| {
+                Ok(User::create(
+                    tx,
+                    NewUser {
+                        name: "Clock member".into(),
+                        ..Default::default()
+                    },
+                )?
+                .id)
+            });
+            db.write(move |tx| complete(tx, id, Some(json!([])), Some(json!([])), None, now));
+            let (fetched,created,updated)=db.read(move |c|Ok(c.query_row("SELECT fetched_at,created_at,updated_at FROM calendar_meeting_caches WHERE user_id=?",[id],|r|Ok((r.get::<_,Timestamp>(0)?,r.get::<_,Timestamp>(1)?,r.get::<_,Timestamp>(2)?)))?));
+            for (key, at) in [
+                ("fetched_at", fetched),
+                ("created_at", created),
+                ("updated_at", updated),
+            ] {
+                assert_eq!(
+                    json!(format!("{:.6}", at.jiff())),
+                    row[key],
+                    "{key}: injected clock {}",
+                    row["now"]
+                );
+            }
+            db.write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE calendar_meeting_caches SET updated_at=? WHERE user_id=?",
+                    params![now.ago(jiff::SignedDuration::from_secs(300)), id],
+                )?;
+                complete(tx, id, Some(json!([])), Some(json!([])), None, now)
+            });
+            let updated = db.read(move |c| {
+                Ok(c.query_row(
+                    "SELECT updated_at FROM calendar_meeting_caches WHERE user_id=?",
+                    [id],
+                    |r| r.get::<_, Timestamp>(0),
+                )?)
+            });
+            assert_eq!(
+                json!(format!("{:.6}", updated.jiff())),
+                row["after_repeat"]["updated_at"],
+                "unchanged upsert preserves the Rails timestamp"
+            );
+        }
+        println!(
+            "Pinned Rails cache clock: 3 fractional observations; microsecond fetch time and millisecond upsert timestamps; 0 skipped"
+        );
+    }
+    #[test]
     fn google_meeting_cache_creation_validates_user_and_uniqueness() {
+        let oracle: Value = serde_json::from_str(include_str!(
+            "../../../../vectors/google_named_intervals.json"
+        ))
+        .unwrap();
+        assert_eq!(oracle["cache_uniqueness"]["test"], "one cache per user");
         let db = TestDb::new();
-        db.write(|tx| {
+        db.write(move |tx| {
             let user = User::create(
                 tx,
                 NewUser {
@@ -174,6 +238,14 @@ mod tests {
                 create(tx, user.id),
                 Err(crate::Error::RecordInvalid(_))
             ));
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM calendar_meeting_caches WHERE user_id=?",
+                    [user.id],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                oracle["cache_uniqueness"]["rows"].as_i64().unwrap()
+            );
             Ok(())
         });
     }
@@ -188,5 +260,29 @@ mod tests {
             assert_eq!(busy, case["busy"], "{}", case["name"]);
             assert_eq!(ooo, case["ooo"], "{}", case["name"]);
         }
+    }
+    #[test]
+    fn google_named_meeting_and_ooo_intervals_match_original_rails_declarations() {
+        let v: Value = serde_json::from_str(include_str!(
+            "../../../../vectors/google_named_intervals.json"
+        ))
+        .unwrap();
+        let rows = v["rows"].as_array().unwrap();
+        assert_eq!(rows.len(), 16);
+        for row in rows {
+            let calls = row["calls"].as_array().unwrap();
+            assert!(
+                !calls.is_empty(),
+                "original Rails test must call the model: {row}"
+            );
+            for call in calls {
+                let (busy, ooo) = intervals(&call["items"], call["zone"].as_str().unwrap());
+                let actual = if call["kind"] == "meeting" { busy } else { ooo };
+                assert_eq!(actual, call["result"], "{}", row["test"]);
+            }
+        }
+        println!(
+            "Pinned Rails named intervals: 16 declarations; 26 original assertions; 0 skipped"
+        );
     }
 }
