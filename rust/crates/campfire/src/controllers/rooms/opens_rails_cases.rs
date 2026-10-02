@@ -46,6 +46,14 @@ pub(super) async fn stream_for(
     browser: &Browser<'_>,
     segments: &[&str],
 ) -> (Client, Server) {
+    stream_for_channel(app, browser, segments, "Turbo::StreamsChannel").await
+}
+pub(super) async fn stream_for_channel(
+    app: &TestApp,
+    browser: &Browser<'_>,
+    segments: &[&str],
+    channel: &str,
+) -> (Client, Server) {
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     let listener = crate::channels::tests::support::bind_listener().await;
     let addr = listener.local_addr().unwrap();
@@ -69,7 +77,7 @@ pub(super) async fn stream_for(
     let signed = rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, segments);
     client
         .confirm(&identifier(
-            serde_json::json!({"channel":"Turbo::StreamsChannel","signed_stream_name":signed}),
+            serde_json::json!({"channel":channel,"signed_stream_name":signed}),
         ))
         .await;
     (client, server)

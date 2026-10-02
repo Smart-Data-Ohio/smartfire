@@ -14,6 +14,7 @@ pub mod stage_streams;
 pub mod stage_participation;
 pub mod categories;
 pub mod closeds;
+pub mod boards;
 pub mod directs;
 pub mod events;
 pub mod favorites;
@@ -48,6 +49,7 @@ pub enum Scope {
     WithoutDirects,
     /// `Current.user.rooms.directs` (directs)
     Directs,
+    Boards,
 }
 
 impl Scope {
@@ -56,6 +58,7 @@ impl Scope {
             Scope::All => true,
             Scope::WithoutDirects => matches!(room.room_type, RoomType::Open | RoomType::Closed),
             Scope::Directs => room.room_type == RoomType::Direct,
+            Scope::Boards => room.room_type == RoomType::Board,
         }
     }
 }
@@ -629,6 +632,7 @@ pub(crate) async fn render_membership_sidebar(
 
 /// `rooms/show` with `find_messages`: the page around `params[:message_id]`, else the last page.
 async fn render_show(c: &mut Ctx, room: Room) -> Result {
+    if room.board() { return boards::render_index(c, room).await; }
     let app = c.app().clone();
     let user = require_current_user(c)?.clone();
     let message_id = c.param_str("message_id").and_then(cast_integer);
@@ -777,3 +781,9 @@ mod queue_recovery_tests;
 
 #[cfg(test)]
 mod review_cache_tests;
+#[cfg(test)]
+mod boards_read_tests;
+#[cfg(test)]
+mod boards_domain_tests;
+#[cfg(test)]
+mod boards_rails_cases;

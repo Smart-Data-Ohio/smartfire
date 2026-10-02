@@ -3,12 +3,11 @@
 //! the parent's thread indicator, and destroy. `channel_thread/message_pusher.rb` is
 //! [`ChannelThread::push_recipients`].
 //!
-//! Boards and work tracking (WS12) keep their state in this model, so the struct carries every
-//! column and the validations that only read columns are here. What WS12 adds, it adds at the
-//! points marked `WS12:` below: the board-post announcements and row broadcasts
-//! (`announce_board_post`, `broadcast_board_row_*`), tag auto-assignment, the work-status stamp
-//! for updates, `work_owner_must_be_eligible` for agents, the work update, result and handoff
-//! methods, and the deleted-work webhooks.
+//! Boards and work tracking keep their state in this model. Human work/result writes,
+//! fresh-owner policy, board creation and agent-assignment ledger integration live in
+//! `channel_thread/work`. WS12's tag auto-assignment, handoffs and agent write services
+//! remain at their marked seams.
+//! Board listings, post/row broadcasts and their commit callbacks live in `channel_thread/board`.
 
 use std::collections::{HashMap, HashSet};
 
@@ -27,6 +26,11 @@ use crate::models::{
 use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
+
+mod board;
+mod work;
+pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, board_page_number};
+pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
 pub const AUTO_ARCHIVE_OPTIONS: [i64; 4] = [60, 1_440, 4_320, 10_080];
@@ -86,6 +90,8 @@ pub struct NewChannelThread {
     pub work_status: Option<String>,
     /// `tag_names=`: normalised (stripped, downcased, deduplicated, blanks dropped).
     pub tag_names: Option<Vec<String>>,
+    pub work_owner_id: Option<i64>,
+    pub run_url: Option<String>,
 }
 
 /// `ChannelThread::LockedError`, raised by `post_message!` into a locked thread.
@@ -203,9 +209,18 @@ impl ChannelThread {
 
     /// Preload the forward picker's threads in one query, retaining each room's ordering.
     pub fn for_rooms(conn: &Connection, room_ids: &[i64]) -> Result<Vec<Self>> {
-        if room_ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn, &format!("SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC", placeholders(room_ids.len())),
-            rusqlite::params_from_iter(room_ids), Self::from_row)
+        if room_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC",
+                placeholders(room_ids.len())
+            ),
+            rusqlite::params_from_iter(room_ids),
+            Self::from_row,
+        )
     }
 
     /// `room.channel_threads.active.ordered`: neither closed nor locked (stale ones included:
@@ -253,7 +268,8 @@ impl ChannelThread {
     /// (`apply_pending_tag_names`), with `work_status_changed_at` stamped when a work status is
     /// set (`stamp_work_status_changed_at`).
     ///
-    /// WS12: `announce_board_post` and `apply_board_tag_auto_assign_on_create` run after commit.
+    /// `announce_board_post` broadcasts the rows and marks the board unread after commit.
+    /// WS12: tag auto-assignment remains with the automation domain.
     pub fn create(tx: &mut Tx<'_>, attributes: NewChannelThread) -> Result<Self> {
         let now = tx.now();
         let room = Room::find(tx.conn(), attributes.room_id)?;
@@ -286,19 +302,19 @@ impl ChannelThread {
             result_markdown: None,
             result_updated_at: None,
             result_updated_by_id: None,
-            run_url: None,
-            work_owner_id: None,
+            run_url: attributes.run_url,
+            work_owner_id: attributes.work_owner_id,
             work_status_changed_at: work_status.is_some().then_some(now),
             work_status,
             created_at: now,
             updated_at: now,
         };
         thread
-            .validate(tx.conn(), &room, tag_names.as_deref())?
+            .validate_for_save(tx.conn(), &room, tag_names.as_deref(), true)?
             .into_result()?;
 
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "channel_threads" ("auto_archive_after_minutes", "created_at", "creator_id", "last_activity_at", "name", "parent_message_id", "room_id", "updated_at", "work_status", "work_status_changed_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            r#"INSERT INTO "channel_threads" ("auto_archive_after_minutes", "created_at", "creator_id", "last_activity_at", "name", "parent_message_id", "room_id", "updated_at", "work_status", "work_status_changed_at", "work_owner_id", "run_url") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
             params![
                 thread.auto_archive_after_minutes,
                 now,
@@ -309,25 +325,36 @@ impl ChannelThread {
                 thread.room_id,
                 now,
                 thread.work_status,
-                thread.work_status_changed_at
+                thread.work_status_changed_at,
+                thread.work_owner_id,
+                thread.run_url
             ],
             |r| r.get(0),
         )?;
         tx.register_record("channel_threads", id);
+        Self::register_board_creation(tx, id, &room);
         for name in tag_names.unwrap_or_default() {
             ThreadTag::create(tx, id, &name)?;
         }
         Self::find(tx.conn(), id)
     }
 
-    /// The validations of `app/models/channel_thread.rb`, for this thread as it would be saved
-    /// with `tag_names` (when they're being assigned). `work_owner_must_be_eligible` is ported for
-    /// human owners; agent owners are WS12's (`agent_work_owner_eligible?`).
+    /// The validations of `app/models/channel_thread.rb`, including new owner eligibility.
     pub fn validate(
         &self,
         conn: &Connection,
         room: &Room,
         tag_names: Option<&[String]>,
+    ) -> Result<Errors> {
+        self.validate_for_save(conn, room, tag_names, self.id == 0)
+    }
+
+    fn validate_for_save(
+        &self,
+        conn: &Connection,
+        room: &Room,
+        tag_names: Option<&[String]>,
+        owner_changed: bool,
     ) -> Result<Errors> {
         let mut errors = Errors::default();
         if self.name.trim().is_empty() {
@@ -366,6 +393,9 @@ impl ChannelThread {
         // work_owner_requires_work
         if self.work_owner_id.is_some() && self.work_status.as_deref().is_none_or(str::is_empty) {
             errors.add("work_owner", "requires work tracking");
+        }
+        if owner_changed {
+            errors.0.extend(self.validate_work_owner(conn)?.0);
         }
         // room_cannot_be_direct
         if room.direct() {
@@ -431,7 +461,20 @@ impl ChannelThread {
             return Ok(());
         }
         let room = Room::find(tx.conn(), changed.room_id)?;
-        changed.validate(tx.conn(), &room, None)?.into_result()?;
+        if let Err(error) = changed
+            .validate_for_save(
+                tx.conn(),
+                &room,
+                None,
+                changed.work_owner_id != self.work_owner_id,
+            )?
+            .into_result()
+        {
+            // Like Active Record, the operation instance retains assigned values
+            // after a validation failure while its transaction rolls back the rows.
+            *self = changed;
+            return Err(error);
+        }
         let now = tx.now();
         let mut changed = changed;
         // WS12: `stamp_work_status_changed_at` on an update that changes the work status.
@@ -439,21 +482,45 @@ impl ChannelThread {
             changed.work_status_changed_at = Some(now);
         }
         changed.updated_at = now;
-        tx.conn().execute_cached(
-            r#"UPDATE "channel_threads" SET "auto_archive_after_minutes" = ?, "closed_at" = ?, "last_activity_at" = ?, "locked_at" = ?, "name" = ?, "work_status" = ?, "work_status_changed_at" = ?, "updated_at" = ? WHERE "channel_threads"."id" = ?"#,
-            params![
-                changed.auto_archive_after_minutes,
-                changed.closed_at,
-                changed.last_activity_at,
-                changed.locked_at,
-                changed.name,
-                changed.work_status,
-                changed.work_status_changed_at,
-                now,
-                self.id
-            ],
+        // Active Record writes dirty columns only. In particular, a stale settings
+        // instance must not overwrite an owner, result or status saved by another caller.
+        let mut fields: Vec<(&str, &dyn rusqlite::ToSql)> = Vec::new();
+        macro_rules! dirty { ($($field:ident),+ $(,)?) => { $(
+            if changed.$field != self.$field { fields.push((stringify!($field), &changed.$field)); }
+        )+ }; }
+        dirty!(
+            auto_archive_after_minutes,
+            closed_at,
+            last_activity_at,
+            locked_at,
+            name,
+            work_status,
+            work_status_changed_at,
+            work_owner_id,
+            result_markdown,
+            result_updated_at,
+            result_updated_by_id,
+            run_url
+        );
+        fields.push(("updated_at", &now));
+        let assignments = fields
+            .iter()
+            .map(|(column, _)| format!("\"{column}\"=?"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let mut values = fields.iter().map(|(_, value)| *value).collect::<Vec<_>>();
+        values.push(&self.id);
+        tx.conn().execute(
+            &format!("UPDATE channel_threads SET {assignments} WHERE id=?"),
+            values.as_slice(),
         )?;
+        let status_changed = changed.work_status != self.work_status;
+        let row_changed = status_changed
+            || changed.name != self.name
+            || changed.work_owner_id != self.work_owner_id
+            || changed.last_activity_at != self.last_activity_at;
         *self = changed;
+        self.register_board_update(tx, &room, row_changed, status_changed)?;
         Ok(())
     }
 
@@ -476,24 +543,46 @@ impl ChannelThread {
 
     /// The ordinary thread metadata update with Rails' pending tag set. WS12's board
     /// auto-assignment/row callbacks remain at its existing seam; this caller handles channels.
-    pub fn update_metadata(&mut self, tx: &mut Tx<'_>, name: Option<&str>, minutes: Option<i64>, tags: Option<&[String]>) -> Result<()> {
+    pub fn update_metadata(
+        &mut self,
+        tx: &mut Tx<'_>,
+        name: Option<&str>,
+        minutes: Option<i64>,
+        tags: Option<&[String]>,
+    ) -> Result<()> {
         let mut changed = self.clone();
-        if let Some(name) = name { changed.name = name.into(); }
-        if let Some(minutes) = minutes { changed.auto_archive_after_minutes = minutes; }
+        if let Some(name) = name {
+            changed.name = name.into();
+        }
+        if let Some(minutes) = minutes {
+            changed.auto_archive_after_minutes = minutes;
+        }
         let names = tags.map(normalize_tag_names);
         let room = Room::find(tx.conn(), self.room_id)?;
-        changed.validate(tx.conn(), &room, names.as_deref())?.into_result()?;
+        if let Err(error) = changed
+            .validate(tx.conn(), &room, names.as_deref())?
+            .into_result()
+        {
+            *self = changed;
+            return Err(error);
+        }
         // Remove obsolete tags before save's stored-tag validation, then add only missing
         // names. A metadata no-op or unchanged tag retains its existing row/timestamp.
         if let Some(names) = &names {
             for tag in self.tags(tx.conn())? {
-                if !names.contains(&tag.name) { tag.destroy(tx)?; }
+                if !names.contains(&tag.name) {
+                    tag.destroy(tx)?;
+                }
             }
         }
         self.save(tx, changed)?;
         if let Some(names) = names {
             let existing = self.tag_names(tx.conn())?;
-            for name in names { if !existing.contains(&name) { ThreadTag::create(tx, self.id, &name)?; } }
+            for name in names {
+                if !existing.contains(&name) {
+                    ThreadTag::create(tx, self.id, &name)?;
+                }
+            }
         }
         Ok(())
     }
@@ -514,9 +603,13 @@ impl ChannelThread {
 
     /// Same lifecycle read with the already-preloaded parent room (destination pickers).
     pub fn status_in_room(&self, room: &Room, now: Timestamp) -> ThreadStatus {
-        if self.locked_at.is_some() { ThreadStatus::Locked }
-        else if self.closed_at.is_some() || (!room.board() && self.auto_archive_at() <= now) { ThreadStatus::Closed }
-        else { ThreadStatus::Active }
+        if self.locked_at.is_some() {
+            ThreadStatus::Locked
+        } else if self.closed_at.is_some() || (!room.board() && self.auto_archive_at() <= now) {
+            ThreadStatus::Closed
+        } else {
+            ThreadStatus::Active
+        }
     }
 
     /// `auto_archive_at`
@@ -801,9 +894,11 @@ impl ChannelThread {
         tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
         crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
-        for tag in ThreadTag::for_thread(tx.conn(), self.id)? {
-            tag.destroy(tx)?;
-        }
+        // Rails suppresses a dependent tag's row replacement while its parent is destroyed.
+        tx.conn().execute_cached(
+            "DELETE FROM thread_tags WHERE channel_thread_id=?",
+            [self.id],
+        )?;
         for message in Message::in_thread(tx.conn(), self.id)? {
             if importing {
                 message.destroy_imported_with_conversation(tx)?;
@@ -841,6 +936,7 @@ impl ChannelThread {
                 params![tx.now(), parent_id],
             )?;
         }
+        fresh.register_board_destruction(tx)?;
         if !importing {
             let parent_message_id = self.parent_message_id;
             // Keep main's callback order and record identity; Slack undo suppresses delivery.
