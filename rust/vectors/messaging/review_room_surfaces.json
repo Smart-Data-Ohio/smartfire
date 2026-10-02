@@ -1,0 +1,67 @@
+[
+  {
+    "type": "Rooms::Open",
+    "room_id": 699448326,
+    "param_key": "rooms_open",
+    "status": 200,
+    "reply_control": true,
+    "reply_label": true,
+    "pin_count": true,
+    "pin_frame": true,
+    "board_index": false,
+    "board_filters": false,
+    "composer": true
+  },
+  {
+    "type": "Rooms::Closed",
+    "room_id": 699448326,
+    "param_key": "rooms_closed",
+    "status": 200,
+    "reply_control": true,
+    "reply_label": true,
+    "pin_count": true,
+    "pin_frame": true,
+    "board_index": false,
+    "board_filters": false,
+    "composer": true
+  },
+  {
+    "type": "Rooms::Voice",
+    "room_id": 699448326,
+    "param_key": "rooms_voice",
+    "status": 200,
+    "reply_control": true,
+    "reply_label": true,
+    "pin_count": true,
+    "pin_frame": true,
+    "board_index": false,
+    "board_filters": false,
+    "composer": true
+  },
+  {
+    "type": "Rooms::Stage",
+    "room_id": 699448326,
+    "param_key": "rooms_stage",
+    "status": 200,
+    "reply_control": true,
+    "reply_label": true,
+    "pin_count": true,
+    "pin_frame": true,
+    "board_index": false,
+    "board_filters": false,
+    "composer": true
+  },
+  {
+    "type": "Rooms::Board",
+    "room_id": 699448326,
+    "param_key": "rooms_board",
+    "status": 200,
+    "reply_control": false,
+    "reply_label": false,
+    "pin_count": false,
+    "pin_frame": false,
+    "board_index": true,
+    "board_filters": true,
+    "composer": false
+  }
+]

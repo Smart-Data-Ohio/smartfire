@@ -100,20 +100,20 @@ async fn room_composer_registry_reads_agent_metadata_and_is_outside_shared_fragm
 }
 
 #[tokio::test]
-async fn room_http_preserves_each_sti_composer_reply_identifier() {
+async fn room_http_uses_rails_sti_composer_surfaces() {
+    let surfaces: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/review_room_surfaces.json"
+    ))
+    .unwrap();
     let app = super::quote_integration_tests::app_rows(serde_json::json!({})).await;
     let mut browser = app.david();
-    for (kind, param) in [
-        ("Rooms::Open", "rooms_open"),
-        ("Rooms::Closed", "rooms_closed"),
-        ("Rooms::Voice", "rooms_voice"),
-        ("Rooms::Stage", "rooms_stage"),
-        ("Rooms::Board", "rooms_board"),
-    ] {
+    for row in surfaces.as_array().unwrap() {
+        let kind = row["type"].as_str().unwrap().to_owned();
+        let param = row["param_key"].as_str().unwrap();
         app.db()
             .write(move |tx| {
                 tx.conn()
-                    .execute("UPDATE rooms SET type=? WHERE id=?", (kind, QUIET_CORNER))?;
+                    .execute("UPDATE rooms SET type=? WHERE id=?", (&kind, QUIET_CORNER))?;
                 Ok(())
             })
             .await
@@ -122,23 +122,40 @@ async fn room_http_preserves_each_sti_composer_reply_identifier() {
         assert_eq!(
             response.status,
             StatusCode::OK,
-            "{kind}: {}",
+            "{param}: {}",
             response.text()
         );
-        assert!(
+        assert_eq!(
             response
                 .text()
                 .contains(&format!("id=\"reply_notify_{param}_{QUIET_CORNER}\"")),
-            "{kind}"
+            row["reply_control"].as_bool().unwrap(),
+            "{param}"
         );
-        assert!(
+        assert_eq!(
             response
                 .text()
                 .contains(&format!("for=\"reply_notify_{param}_{QUIET_CORNER}\"")),
-            "{kind}"
+            row["reply_label"].as_bool().unwrap(),
+            "{param}"
         );
+        let html = response.text();
+        for (field, needle) in [
+            ("composer", "<form id=\"composer\""),
+            (
+                "board_index",
+                "<main class=\"board\" aria-labelledby=\"board-title\">",
+            ),
+            ("board_filters", "class=\"board__filters\""),
+        ] {
+            assert_eq!(
+                html.contains(needle),
+                row[field].as_bool().unwrap(),
+                "{param} {field}"
+            );
+        }
     }
     println!(
-        "WS8bm2 STI composer HTTP: 5/5 room types preserve Rails reply-control ids and labels"
+        "WS8bm2 STI composer HTTP: 5/5 Rails room surfaces; four chat composers and one board index"
     );
 }
