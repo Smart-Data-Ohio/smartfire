@@ -1,0 +1,196 @@
+{
+  "ok": true,
+  "members": [
+    {
+      "id": "UADMIN",
+      "team_id": "T123",
+      "name": "ada",
+      "deleted": false,
+      "real_name": "Ada Admin",
+      "tz": "America/New_York",
+      "tz_label": "Eastern Daylight Time",
+      "tz_offset": -14400,
+      "profile": {
+        "title": "CTO",
+        "real_name": "Ada Admin",
+        "display_name": "ada",
+        "email": "ada@example.com"
+      },
+      "is_admin": true,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "U001",
+      "team_id": "T123",
+      "name": "jane",
+      "deleted": false,
+      "real_name": "Jane Doe",
+      "tz": "Mars/Olympus",
+      "tz_label": "Mars Time",
+      "tz_offset": 0,
+      "profile": {
+        "title": "Engineer",
+        "real_name": "Jane Doe",
+        "display_name": "jane",
+        "email": "jane@example.com"
+      },
+      "is_admin": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "U002",
+      "team_id": "T123",
+      "name": "kevin",
+      "deleted": false,
+      "real_name": "Kevin",
+      "tz": "",
+      "tz_label": "",
+      "tz_offset": 0,
+      "profile": {
+        "title": "",
+        "real_name": "Kevin",
+        "display_name": "kev",
+        "email": "kevin@37signals.com"
+      },
+      "is_admin": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "U003",
+      "team_id": "T123",
+      "name": "jane2",
+      "deleted": false,
+      "real_name": "Jane Doe",
+      "tz": "UTC",
+      "tz_label": "Coordinated Universal Time",
+      "tz_offset": 0,
+      "profile": {
+        "title": "",
+        "real_name": "Jane Doe",
+        "display_name": "jane2",
+        "email": "jane@other.org"
+      },
+      "is_admin": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "URET",
+      "team_id": "T123",
+      "name": "returning",
+      "deleted": false,
+      "real_name": "Robin Returner",
+      "tz": "UTC",
+      "tz_label": "Coordinated Universal Time",
+      "tz_offset": 0,
+      "profile": {
+        "title": "",
+        "real_name": "Robin Returner",
+        "display_name": "robin",
+        "email": "returning@example.com"
+      },
+      "is_admin": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "UGUEST1",
+      "team_id": "T123",
+      "name": "guestie",
+      "deleted": false,
+      "real_name": "Guest User",
+      "tz": "UTC",
+      "tz_label": "Coordinated Universal Time",
+      "tz_offset": 0,
+      "profile": {
+        "title": "Contractor",
+        "real_name": "Guest User",
+        "display_name": "guestie",
+        "email": "guest@example.com"
+      },
+      "is_admin": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": true,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "UDEL1",
+      "team_id": "T123",
+      "name": "gone",
+      "deleted": true,
+      "real_name": "Gone User",
+      "tz": null,
+      "tz_label": null,
+      "tz_offset": 0,
+      "profile": {
+        "title": "",
+        "real_name": "Gone User",
+        "display_name": "gone",
+        "email": "gone@example.com"
+      },
+      "is_admin": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "UBOT1",
+      "team_id": "T123",
+      "name": "buildbot",
+      "deleted": false,
+      "real_name": "Build Bot",
+      "tz": null,
+      "tz_label": null,
+      "tz_offset": 0,
+      "profile": {
+        "title": "CI",
+        "real_name": "Build Bot",
+        "display_name": "buildbot",
+        "email": ""
+      },
+      "is_admin": false,
+      "is_bot": true,
+      "is_app_user": true,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    },
+    {
+      "id": "USLACKBOT",
+      "team_id": "T123",
+      "name": "slackbot",
+      "deleted": false,
+      "real_name": "slackbot",
+      "tz": null,
+      "tz_label": null,
+      "tz_offset": 0,
+      "profile": {
+        "title": "",
+        "real_name": "slackbot",
+        "display_name": "slackbot",
+        "email": ""
+      },
+      "is_admin": false,
+      "is_bot": false,
+      "is_app_user": false,
+      "is_restricted": false,
+      "is_ultra_restricted": false
+    }
+  ],
+  "cache_ts": 1700000000,
+  "response_metadata": { "next_cursor": "" }
+}

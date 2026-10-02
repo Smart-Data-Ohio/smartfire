@@ -49,6 +49,7 @@ pub struct AppState {
     pub github_app: crate::integrations::github::client::AppClient,
     pub github_read: crate::integrations::github::client::ReadClient,
     pub subscription_network: crate::integrations::net::Network,
+    pub slack_network: crate::integrations::net::Network,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
     /// and every render outside one.
     pub fragment_cache: Arc<FragmentCache>,
@@ -215,6 +216,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         github_read,
         github_app,
         github_accounts,
+        slack_network: subscription_network.clone(),
         subscription_network,
         fragment_cache,
     });
@@ -247,6 +249,7 @@ async fn open_database(
         default_url_origin: config.mail.url_origin().to_owned(),
         message_reference_syncs: vec![crate::integrations::github::references::sync],
         user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
+        ..Default::default()
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }

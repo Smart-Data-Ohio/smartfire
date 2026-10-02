@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U001",
+      "text": "Old project kickoff",
+      "ts": "1700000020.000020"
+    }
+  ],
+  "has_more": false,
+  "response_metadata": { "next_cursor": "" }
+}

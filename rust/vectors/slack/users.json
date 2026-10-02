@@ -1,0 +1,116 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "preview": {
+    "matched": 2,
+    "placeholders": 3,
+    "deactivated": 2,
+    "bots": 2,
+    "total": 9
+  },
+  "stats": {
+    "matched": 2,
+    "placeholders": 3,
+    "deactivated": 2,
+    "bots": 2,
+    "total": 9
+  },
+  "users": [
+    {
+      "key": "U001",
+      "created": true,
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "status": "active",
+      "bio": "Engineer",
+      "zone": null,
+      "claimable": true
+    },
+    {
+      "key": "U002",
+      "created": false,
+      "name": "Existing Kevin",
+      "email": "kevin@37signals.com",
+      "status": "deactivated",
+      "bio": "Programmer",
+      "zone": null,
+      "claimable": true
+    },
+    {
+      "key": "U003",
+      "created": true,
+      "name": "Jane Doe",
+      "email": "jane@other.org",
+      "status": "active",
+      "bio": null,
+      "zone": "UTC",
+      "claimable": false
+    },
+    {
+      "key": "UADMIN",
+      "created": false,
+      "name": "Run owner",
+      "email": null,
+      "status": "active",
+      "bio": null,
+      "zone": null,
+      "claimable": false
+    },
+    {
+      "key": "UBOT1",
+      "created": true,
+      "name": "Build Bot",
+      "email": null,
+      "status": "deactivated",
+      "bio": null,
+      "zone": null,
+      "claimable": false
+    },
+    {
+      "key": "UDEL1",
+      "created": true,
+      "name": "Gone User",
+      "email": null,
+      "status": "deactivated",
+      "bio": null,
+      "zone": null,
+      "claimable": false
+    },
+    {
+      "key": "UGUEST1",
+      "created": true,
+      "name": "Guest User",
+      "email": null,
+      "status": "deactivated",
+      "bio": null,
+      "zone": null,
+      "claimable": false
+    },
+    {
+      "key": "URET",
+      "created": true,
+      "name": "Robin Returner",
+      "email": "returning@example.com",
+      "status": "active",
+      "bio": null,
+      "zone": "UTC",
+      "claimable": true
+    },
+    {
+      "key": "USLACKBOT",
+      "created": true,
+      "name": "Slackbot",
+      "email": null,
+      "status": "deactivated",
+      "bio": null,
+      "zone": null,
+      "claimable": false
+    }
+  ],
+  "repeat": {
+    "matched": 0,
+    "placeholders": 0,
+    "deactivated": 0,
+    "bots": 0,
+    "total": 0
+  }
+}
