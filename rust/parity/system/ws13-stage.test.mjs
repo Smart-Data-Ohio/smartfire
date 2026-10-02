@@ -8,6 +8,7 @@ import { fixture, text, absent, emptyStackShown, panel, row, controls } from './
 import './ws13-audio.cases.mjs';
 import './ws13-roster.cases.mjs';
 import './ws13-voice.cases.mjs';
+import './ws13-board-review.test.mjs';
 
 test('stage rooms list in their own section with distinct creation controls and a stage panel',async t => {
   const f=await fixture(t,['jason']); const p=f.pages.jason;

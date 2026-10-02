@@ -93,6 +93,8 @@ async fn run_browser(real_livekit:bool) {
                         Room::find(tx.conn(),186869642)?
                     } else if options["kind"] == "group" {
                         Room::create_for(tx,RoomType::Direct,None,DAVID,&[DAVID,JASON,KEVIN])?
+                    } else if options["kind"] == "board" {
+                        Room::create_for(tx,RoomType::Board,Some("Review Board"),DAVID,&[DAVID,JASON,KEVIN])?
                     } else {
                         Room::create_for(tx,RoomType::Stage,Some("Town Hall"),DAVID,&[DAVID,JASON,KEVIN])?
                     };
@@ -236,7 +238,7 @@ async fn run_browser(real_livekit:bool) {
         .arg(image)
         .arg("node")
         .args(["--test", "--test-concurrency=8"])
-        .arg(root.join(if real_livekit {"parity/system/ws13-livekit-stage.test.mjs"} else if std::env::var_os("WS13_INVITATIONS_ONLY").is_some() {"parity/system/ws13-invitations.cases.mjs"} else {"parity/system/ws13-stage.test.mjs"}))
+        .arg(root.join(if real_livekit {"parity/system/ws13-livekit-stage.test.mjs"} else if std::env::var_os("WS13_BOARD_REVIEW_ONLY").is_some() {"parity/system/ws13-board-review.test.mjs"} else if std::env::var_os("WS13_INVITATIONS_ONLY").is_some() {"parity/system/ws13-invitations.cases.mjs"} else {"parity/system/ws13-stage.test.mjs"}))
         .kill_on_drop(true)
         .status()
         .await

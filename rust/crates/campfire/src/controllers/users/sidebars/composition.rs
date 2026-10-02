@@ -219,13 +219,15 @@ fn direct_members(
             Ok((r.get::<_, i64>("room_id")?, r.get::<_, i64>("user_id")?))
         })?
         .collect::<Result<Vec<_>, _>>()?;
-    let mut users = std::collections::BTreeMap::new();
+    // Preload users as Rails' includes(:user) does. Reassemble in the membership
+    // query's order, so batching cannot change the group avatar order.
+    let ids = pairs.iter().map(|(_, id)| *id).collect::<std::collections::BTreeSet<_>>();
+    let users = User::where_ids(conn, &ids.into_iter().collect::<Vec<_>>())?
+        .into_iter().map(|user| (user.id, user)).collect::<std::collections::BTreeMap<_, _>>();
     let mut grouped = std::collections::BTreeMap::<i64, Vec<User>>::new();
     for (room_id, id) in pairs {
-        if let std::collections::btree_map::Entry::Vacant(entry) = users.entry(id) {
-            entry.insert(User::find(conn, id)?);
-        }
-        grouped.entry(room_id).or_default().push(users[&id].clone());
+        let user = users.get(&id).ok_or(campfire_db::Error::RecordNotFound("User"))?;
+        grouped.entry(room_id).or_default().push(user.clone());
     }
     Ok(grouped)
 }

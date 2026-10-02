@@ -13,6 +13,106 @@ fn oracle() -> serde_json::Value {
     .unwrap()
 }
 
+fn recheck_oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/huddle_review_recheck.json"
+    ))
+    .unwrap()
+}
+
+#[tokio::test]
+async fn review_dm_peers_do_not_grow_total_sidebar_selects() {
+    use campfire_db::{NewUser, User};
+    let test = TestApp::boot_with_huddle(configured())
+        .await
+        .expect("seed")
+        .without_job_runner()
+        .await;
+    let mut browser = test.david();
+    assert_eq!(
+        browser.get("/users/me/sidebar").await.status,
+        StatusCode::OK
+    );
+    let mut counts = Vec::new();
+    for added in [false, true] {
+        if added {
+            test.db()
+                .write(|tx| {
+                    for i in 0..5 {
+                        let peer = User::create(
+                            tx,
+                            NewUser {
+                                name: format!("Review peer {i}"),
+                                email_address: Some(format!("ws13-review-peer-{i}@example.test")),
+                                ..Default::default()
+                            },
+                        )?;
+                        Room::create_for(
+                            tx,
+                            RoomType::Direct,
+                            Some(&format!("Review group {i}")),
+                            DAVID,
+                            &[DAVID, KEVIN, peer.id],
+                        )?;
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
+        let probe = SqlProbe::start(test.db(), test.booted.app.config.db_readers, None).await;
+        let response = browser.get("/users/me/sidebar").await;
+        let statements = probe.finish().await;
+        assert_eq!(response.status, StatusCode::OK);
+        if added {
+            assert!(response.text().contains("Review group 4"));
+        }
+        counts.push(
+            statements
+                .iter()
+                .filter(|s| s.sql.trim_start().to_uppercase().starts_with("SELECT"))
+                .count(),
+        );
+    }
+    let rails = &recheck_oracle()["direct_sidebar"];
+    println!(
+        "DM sidebar total SELECTs: Rust {} -> {}; Rails {} -> {} after five new peers/group DMs",
+        counts[0], counts[1], rails["before_selects"], rails["after_selects"]
+    );
+    assert_eq!(
+        counts[1] as i64 - counts[0] as i64,
+        rails["after_selects"].as_i64().unwrap() - rails["before_selects"].as_i64().unwrap(),
+        "total query growth must match Rails, including user reads (Astra full-request measurement: 20 -> 20; independent recorded sidebar-frame measurement below)"
+    );
+}
+
+#[tokio::test]
+async fn review_board_navigation_matches_rails_with_huddles_configured_or_not() {
+    let oracle = recheck_oracle();
+    for config in [crate::huddle::Config::default(), configured()] {
+        let test = TestApp::boot_with_huddle(config).await.expect("seed");
+        let room_id = oracle["board"]["room_id"].as_i64().unwrap();
+        let response = test.david().get(&format!("/rooms/{room_id}")).await;
+        assert_eq!(
+            response.status.as_u16(),
+            oracle["board"]["status"].as_u64().unwrap() as u16
+        );
+        let text = response.text();
+        // Compare the complete nav contributed by the actual HTTP page, including
+        // the overflow menu and notification frame; only shared asset digests vary.
+        let start = text.find("  <div class=\"room-header__identity").unwrap();
+        let end = start + text[start..].find("<div id=\"global-search\"").unwrap();
+        let region = &text[start..end];
+        let close = region.rfind("  </div>\n").unwrap() + "  </div>\n".len();
+        let actual = &region[..close];
+        let expected = oracle["board"]["nav_html"].as_str().unwrap();
+        assert!(
+            crate::app::asset_goldens::compare("board-navigation", actual, expected),
+            "Board must retain Rails' separate navigation"
+        );
+    }
+}
+
 #[tokio::test]
 async fn review_audit_failure_preserves_committed_call_room_deletion() {
     let test = TestApp::boot()

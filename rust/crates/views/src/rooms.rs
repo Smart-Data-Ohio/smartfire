@@ -66,6 +66,9 @@ pub struct RoomView {
 }
 
 impl RoomView {
+    pub fn is_board(&self) -> bool {
+        self.header.as_ref().is_some_and(|h| h.param_key == "rooms_board")
+    }
     pub fn is_stage(&self) -> bool {
         self.header
             .as_ref()
@@ -95,7 +98,10 @@ impl RoomView {
         header_identity(ctx, header)
     }
     pub fn dom_id(&self, prefix: &str) -> String {
-        room_dom_id(self.kind, self.id, prefix)
+        self.header.as_ref().map_or_else(
+            || room_dom_id(self.kind, self.id, prefix),
+            |header| format!("{prefix}_{}_{}", header.param_key, self.id),
+        )
     }
 
     pub fn is_direct(&self) -> bool {
@@ -104,6 +110,9 @@ impl RoomView {
 
     /// `edit_polymorphic_path(room)`: `/rooms/opens/1/edit` and so on.
     pub fn edit_path(&self) -> String {
+        if self.is_board() {
+            return format!("/rooms/boards/{}/edit", self.id);
+        }
         match self.kind {
             RoomKind::Open => campfire_routes::edit_rooms_open(self.id),
             RoomKind::Closed => campfire_routes::edit_rooms_closed(self.id),
