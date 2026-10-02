@@ -185,13 +185,7 @@ impl ChannelThread {
                     if membership.involvement == Some(crate::Involvement::Everything)
                         || Some(user.id) == thread.work_owner_id
                     {
-                        crate::ActivityItem::record(
-                            tx,
-                            user.id,
-                            crate::models::activity_item::ActivitySource::Message(message.id),
-                            "thread_activity",
-                            true,
-                        )?;
+                        crate::ActivityItem::record_authorized_board_opener(tx, &user, &message)?;
                     }
                 }
             }

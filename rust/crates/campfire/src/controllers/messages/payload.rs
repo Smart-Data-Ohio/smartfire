@@ -1,5 +1,6 @@
 //! `MessagePayloadHelper`: request-specific JSON, never a shared fragment-cache value.
 use campfire_db::{ChannelThread, Message, MessagePin, SavedItem, Timestamp, User};
+use campfire_db::channel_thread::{WorkReadFacts, WorkReadPermissions};
 use campfire_views::helpers::{AvatarIcon, IconSource};
 use campfire_views::messages::support::json_time;
 use serde_json::{Value, json};
@@ -103,15 +104,111 @@ fn permalink(message: &Message, base: &str) -> String {
 }
 
 fn user(p: &Presenter<'_>, user: &User, base: &str) -> Result<Value> {
-    let icon: Option<String> = p.conn.query_row("SELECT icon_name FROM users WHERE id = ?", [user.id], |row| row.get(0))?;
-    let icon_url = icon.as_deref().and_then(|name| p.resolve_avatar_icon(name)).and_then(|icon| match icon {
-        AvatarIcon::Image {url, ..} => Some(url), _ => None,
-    });
-    Ok(json!({"id": user.id, "name": user.name, "role": user.role.name(),
-        "avatar_url": format!("{base}{}", avatar_path(p.secrets, user)), "icon_name": icon, "icon_avatar_url": icon_url}))
+    let icon: Option<String> = p.conn.query_row(
+        "SELECT icon_name FROM users WHERE id = ?",
+        [user.id],
+        |row| row.get(0),
+    )?;
+    let icon_url = icon
+        .as_deref()
+        .and_then(|name| p.resolve_avatar_icon(name))
+        .and_then(|icon| match icon {
+            AvatarIcon::Image { url, .. } => Some(url),
+            _ => None,
+        });
+    Ok(user_with_icon(p, user, base, icon.as_deref(), icon_url))
 }
 
-pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, base: &str) -> Result<Value> {
+fn user_with_icon(
+    p: &Presenter<'_>,
+    user: &User,
+    base: &str,
+    icon: Option<&str>,
+    icon_url: Option<String>,
+) -> Value {
+    json!({"id": user.id, "name": user.name, "role": user.role.name(),
+        "avatar_url": format!("{base}{}", avatar_path(p.secrets, user)), "icon_name": icon, "icon_avatar_url": icon_url})
+}
+
+fn work_user(p: &Presenter<'_>, user: &User, base: &str, facts: &WorkReadFacts) -> Value {
+    let icon_url = user.icon_name.as_deref().and_then(|name| {
+        let icon = campfire_views::messages::reactions::static_icon(name);
+        match icon {
+            Some(AvatarIcon::Image {
+                brand: true, url, ..
+            }) => Some(url),
+            _ if facts.custom_icon(name) => Some(format!("/icons/{name}")),
+            Some(AvatarIcon::Image { url, .. }) => Some(url),
+            _ => None,
+        }
+    });
+    user_with_icon(p, user, base, user.icon_name.as_deref(), icon_url)
+}
+
+struct ThreadPayloadFacts<'a> {
+    room: &'a campfire_db::Room,
+    member: Option<&'a campfire_db::ThreadMembership>,
+    creator: Value,
+    owner: Option<Value>,
+    owner_active: bool,
+    permissions: WorkReadPermissions,
+    message_count: i64,
+    member_count: i64,
+    now: Timestamp,
+}
+
+fn owner_user(mut value: Value, owner: &User) -> Value {
+    value["active"] = owner.is_active().into();
+    value["human"] = (!owner.is_bot()).into();
+    value["agent"] = owner.is_bot().into();
+    value
+}
+
+/// Work index JSON uses one association snapshot for the entire page. The serializer
+/// below is shared with ordinary thread reads so their response shapes stay identical.
+pub(crate) fn work_threads(
+    p: &Presenter<'_>,
+    threads: &[ChannelThread],
+    viewer: &User,
+    base: &str,
+) -> Result<Vec<Value>> {
+    let facts = ChannelThread::work_read_facts(p.conn, threads, viewer)?;
+    threads
+        .iter()
+        .map(|thread| {
+            let creator = facts.user(thread.creator_id)?;
+            let owner = thread
+                .work_owner_id
+                .map(|id| -> Result<Value> {
+                    let owner = facts.user(id)?;
+                    Ok(owner_user(work_user(p, owner, base, &facts), owner))
+                })
+                .transpose()?;
+            Ok(thread_with_facts(
+                thread,
+                base,
+                ThreadPayloadFacts {
+                    room: facts.room(thread)?,
+                    member: facts.membership(thread),
+                    creator: work_user(p, creator, base, &facts),
+                    owner,
+                    owner_active: facts.owner_active(thread),
+                    permissions: facts.permissions(thread)?,
+                    message_count: facts.message_count(thread),
+                    member_count: facts.member_count(thread),
+                    now: Timestamp::from_jiff(p.now),
+                },
+            ))
+        })
+        .collect()
+}
+
+pub(crate) fn thread(
+    p: &Presenter<'_>,
+    thread: &ChannelThread,
+    viewer: &User,
+    base: &str,
+) -> Result<Value> {
     let member = thread.membership_for(p.conn, viewer.id)?;
     let room = thread.room(p.conn)?;
     let settings = thread.settings_manageable_by(p.conn, viewer)?;
@@ -120,19 +217,69 @@ pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, b
     let work_manageable = thread.work_manageable_by(p.conn, viewer)?;
     let owner = thread.work_owner_id.map(|id| p.user(id)).transpose()?;
     let owner_active = match &owner {
-        Some(owner) if owner.is_active() && campfire_db::Membership::find_by_room_and_user(p.conn, room.id, owner.id)?.is_some() => {
-            if owner.is_bot() { agent_may_post(p, owner.id, &room)? } else { true }
+        Some(owner)
+            if owner.is_active()
+                && campfire_db::Membership::find_by_room_and_user(p.conn, room.id, owner.id)?
+                    .is_some() =>
+        {
+            if owner.is_bot() {
+                agent_may_post(p, owner.id, &room)?
+            } else {
+                true
+            }
         }
         _ => false,
     };
-    let owner = owner.map(|owner| -> Result<Value> {
-        let mut value = user(p, &owner, base)?;
-        value["active"] = owner.is_active().into(); value["human"] = (!owner.is_bot()).into(); value["agent"] = owner.is_bot().into();
-        Ok(value)
-    }).transpose()?;
-    let member_count: i64 = p.conn.query_row("SELECT count(*) FROM thread_memberships WHERE thread_id = ?", [thread.id], |row| row.get(0))?;
-    Ok(json!({
-        "id": thread.id, "name": thread.name, "status": thread.status(p.conn, Timestamp::from_jiff(p.now))?.name(),
+    let owner = owner
+        .map(|owner| user(p, &owner, base).map(|value| owner_user(value, &owner)))
+        .transpose()?;
+    let member_count: i64 = p.conn.query_row(
+        "SELECT count(*) FROM thread_memberships WHERE thread_id = ?",
+        [thread.id],
+        |row| row.get(0),
+    )?;
+    Ok(thread_with_facts(
+        thread,
+        base,
+        ThreadPayloadFacts {
+            room: &room,
+            member: member.as_ref(),
+            creator: user(p, &p.user(thread.creator_id)?, base)?,
+            owner,
+            owner_active,
+            permissions: WorkReadPermissions {
+                settings,
+                lifecycle,
+                assignment: work_assignment,
+                manageable: work_manageable,
+            },
+            message_count: thread.message_count(p.conn)?,
+            member_count,
+            now: Timestamp::from_jiff(p.now),
+        },
+    ))
+}
+
+fn thread_with_facts(thread: &ChannelThread, base: &str, facts: ThreadPayloadFacts<'_>) -> Value {
+    let ThreadPayloadFacts {
+        room,
+        member,
+        creator,
+        owner,
+        owner_active,
+        permissions,
+        message_count,
+        member_count,
+        now,
+    } = facts;
+    let WorkReadPermissions {
+        settings,
+        lifecycle,
+        assignment: work_assignment,
+        manageable: work_manageable,
+    } = permissions;
+    json!({
+        "id": thread.id, "name": thread.name, "status": thread.status_in_room(room, now).name(),
         "room_id": thread.room_id, "parent_message_id": thread.parent_message_id,
         "last_activity_at": json_time(thread.last_activity_at.jiff()),
         "closed_at": thread.closed_at.map(|time| json_time(time.jiff())), "locked_at": thread.locked_at.map(|time| json_time(time.jiff())),
@@ -141,14 +288,14 @@ pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, b
         "work_history": Value::Null, "work_owner_options": Value::Null,
         "joined": member.is_some(), "unread": member.as_ref().map(|member| member.unread()),
         "involvement": member.as_ref().map(|member| member.involvement.name()),
-        "message_count": thread.message_count(p.conn)?, "member_count": member_count,
-        "creator": user(p, &p.user(thread.creator_id)?, base)?, "url": format!("{base}/rooms/{}/threads/{}", thread.room_id, thread.id),
+        "message_count": message_count, "member_count": member_count,
+        "creator": creator, "url": format!("{base}/rooms/{}/threads/{}", thread.room_id, thread.id),
         "permalink_url": format!("{base}/rooms/{}?thread={}", thread.room_id, thread.id),
         "permissions": {"can_rename": settings, "can_close": settings, "can_reopen": if thread.locked_at.is_some() {lifecycle} else {member.is_some()},
             "can_lock": lifecycle, "can_unlock": lifecycle, "can_delete": lifecycle, "can_convert_work": !thread.work() && work_assignment,
             "can_manage_work": thread.work() && work_manageable, "can_update_work_status": thread.work() && work_manageable,
             "can_assign_work": thread.work() && work_assignment, "can_remove_work": thread.work() && work_assignment && !room.board()}
-    }))
+    })
 }
 
 /// ChannelThreadsController#show asks for these two additional read-only facts. Keep the

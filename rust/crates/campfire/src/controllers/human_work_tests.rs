@@ -6,6 +6,7 @@ use serde_json::Value;
 mod query_tests;
 mod query_round_two;
 mod query_board_followup;
+mod query_read_growth;
 
 #[tokio::test]
 async fn human_pr_link_and_fetch_claim_roll_back_when_the_durable_job_is_rejected() {

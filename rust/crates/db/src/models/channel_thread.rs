@@ -35,6 +35,7 @@ mod work_listing;
 pub use agent_work::{AgentWorkChanges, tag_names_from_value};
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_page_number};
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
+pub use work_listing::{WorkReadFacts, WorkReadPermissions};
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
 pub const AUTO_ARCHIVE_OPTIONS: [i64; 4] = [60, 1_440, 4_320, 10_080];

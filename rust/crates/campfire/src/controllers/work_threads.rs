@@ -109,7 +109,9 @@ pub async fn index(c: &mut Ctx) -> Result {
     let viewer = require_current_user(c)?.clone();
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         let base = c.url_for("");
-        let payload=messages::present(c,move |p|Ok(json!({"threads":threads.iter().map(|thread|messages::payload::thread(p,thread,&viewer,&base)).collect::<campfire_db::Result<Vec<_>>>()?}))).await?;
+        let payload = messages::present(c, move |p| {
+            Ok(json!({"threads": messages::payload::work_threads(p, &threads, &viewer, &base)?}))
+        }).await?;
         return super::channel_threads::render_json(c, StatusCode::OK, &payload);
     }
     let rows = messages::present(c, move |p| {

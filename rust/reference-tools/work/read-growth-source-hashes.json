@@ -1,0 +1,9 @@
+{
+  "app/controllers/work_threads_controller.rb": "600133f42dbdc26c48a09ec2ff2d1f32edb0095247e827236f8adb29fafe477e",
+  "app/helpers/icons_avatar_helper.rb": "ce502650a22dfe059f3fb17bcfc56fd94361c8ba98c3e55e9055e1560d10329c",
+  "app/helpers/message_payload_helper.rb": "728121ceb137285ada8b98671077b5917ca513cba00606e1b74897a47a29353e",
+  "app/models/activity_item.rb": "2e6d1915f243be790d6b82dedbdd7525fda0d849d705935bb9ffae38de69eb29",
+  "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
+  "app/models/icons.rb": "8b3169741b9569e8a56b0b634d1cd9907b08312b42844b2327bf5d751fd97df8",
+  "app/services/activity_items/recorder.rb": "cc8edf555e5e0b337e0f54e6c333a61865a38516e605dfa7387053802917fdac"
+}
