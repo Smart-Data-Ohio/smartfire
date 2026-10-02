@@ -959,3 +959,6 @@ async fn google_sessions_rejection_log_names_reason_without_token_or_authorizati
 mod parity_cases;
 
 mod security_cases;
+
+// WS16 owner comparison uses WS14g's real verifier and signing/JWKS fixtures.
+mod slack_claim;

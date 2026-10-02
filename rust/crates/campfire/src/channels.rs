@@ -25,6 +25,7 @@ mod room;
 mod room_messages;
 mod rooms_directory;
 pub mod sink;
+mod room_composition;
 pub mod threads;
 mod typing_notifications;
 pub mod unread_threads;

@@ -3,13 +3,16 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod github;
+#[cfg(test)]
+mod message_links;
+pub mod status_settings;
 pub mod activity;
 pub mod agents;
 pub mod agent_payload;
 pub mod attachments;
 pub mod events;
 pub mod fizzy_cards;
-pub mod github;
 mod layout_preferences;
 pub mod link_embeds;
 mod message_cache;
@@ -25,7 +28,6 @@ pub mod room_shell;
 pub mod rooms_directory;
 pub mod boards;
 pub mod board_posts;
-pub mod status_settings;
 pub mod switcher;
 #[cfg(test)]
 pub mod test_support;
@@ -98,9 +100,8 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
         RoomType::Open => RoomKind::Open,
         RoomType::Closed => RoomKind::Closed,
         RoomType::Direct => RoomKind::Direct,
-        // The views' RoomKind has no voice, stage or board rooms yet (their screens aren't
-        // ported); they're explicit-membership rooms like closed ones.
-        RoomType::Voice | RoomType::Stage => RoomKind::Closed,
+        RoomType::Voice => RoomKind::Voice,
+        RoomType::Stage => RoomKind::Stage,
         RoomType::Board => RoomKind::Board,
     }
 }
@@ -1336,6 +1337,13 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+pub(crate) mod sql_probe;
+
+#[cfg(test)]
+mod chrome_tests;
+
+pub(crate) mod runtime_chrome;
 pub(crate) mod profile_sections;
 
 pub mod fizzy_profile;

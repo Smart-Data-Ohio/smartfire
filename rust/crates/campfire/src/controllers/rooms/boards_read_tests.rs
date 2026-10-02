@@ -3,6 +3,79 @@ use crate::controllers::presenters::{boards, page, test_support::*};
 use askama::Template;
 
 #[tokio::test]
+async fn board_rows_reuse_the_loaded_room_for_aged_posts() {
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/boards_lifecycle_queries.json"
+    ))
+    .unwrap();
+    let mut measured = Vec::new();
+    let mut expected = Vec::new();
+    for row in oracle["rows"].as_array().unwrap() {
+        let count = row["posts"].as_i64().unwrap();
+        let app = TestApp::boot_frozen()
+            .await
+            .unwrap()
+            .without_job_runner()
+            .await;
+        let (room, posts) = app.db().write(move |tx| {
+            let room = campfire_db::Room::find(tx.conn(), 699448332)?;
+            let mut posts = Vec::new();
+            for n in 0..count {
+                tx.conn().execute("INSERT INTO channel_threads(room_id,creator_id,name,work_status,last_activity_at,created_at,updated_at) VALUES(699448332,127326141,?,'planned',?,?,?)", rusqlite::params![format!("Query probe {n}"),tx.now().ago(jiff::SignedDuration::from_hours(168)),tx.now(),tx.now()])?;
+                posts.push(campfire_db::ChannelThread::find(tx.conn(), tx.conn().last_insert_rowid())?);
+            }
+            Ok((room, posts))
+        }).await.unwrap();
+        assert_eq!(
+            app.booted.app.clock.now().to_string(),
+            oracle["now"]
+                .as_str()
+                .unwrap()
+                .parse::<jiff::Timestamp>()
+                .unwrap()
+                .to_string()
+        );
+        let probe =
+            super::query_probe::SqlProbe::start(app.db(), app.booted.app.config.db_readers).await;
+        let state = app.booted.app.clone();
+        let states = app
+            .db()
+            .read(move |conn| {
+                let presenter = crate::controllers::presenters::Presenter::new(conn, &state, None);
+                Ok(boards::rows(&presenter, &room, &posts)?
+                    .into_iter()
+                    .map(|row| row.lifecycle)
+                    .collect::<Vec<_>>())
+            })
+            .await
+            .unwrap();
+        let queries = probe.finish().await;
+        assert_eq!(
+            serde_json::json!(states),
+            row["states"],
+            "aged board posts must remain open"
+        );
+        let reads = queries
+            .iter()
+            .filter(|q| {
+                let sql = q.sql.to_ascii_uppercase().replace('"', "");
+                sql.trim_start().starts_with("SELECT") && sql.contains("FROM ROOMS")
+            })
+            .count();
+        println!(
+            "Board lifecycle: {count} aged posts; {reads} Room SELECTs; Rails {}",
+            row["room_reads"]
+        );
+        measured.push(reads);
+        expected.push(row["room_reads"].as_u64().unwrap() as usize);
+    }
+    assert_eq!(
+        measured, expected,
+        "reuse the parent loaded by the board association"
+    );
+}
+
+#[tokio::test]
 async fn board_rows_match_both_rails_renderings() {
     let oracle: serde_json::Value =
         serde_json::from_str(include_str!("../../../../../vectors/boards_read.json")).unwrap();
@@ -18,8 +91,9 @@ async fn board_rows_match_both_rails_renderings() {
             .db()
             .read(move |conn| {
                 let thread = campfire_db::ChannelThread::find(conn, id)?;
+                let room = campfire_db::Room::find(conn, thread.room_id)?;
                 let presenter = crate::controllers::presenters::Presenter::new(conn, &state, None);
-                let facts = boards::rows(&presenter, thread.room_id, &[thread])?;
+                let facts = boards::rows(&presenter, &room, &[thread])?;
                 page::render_detached_at(&state, None, "http://campfire.test", |ctx| {
                     campfire_views::rooms::boards::RowPartial {
                         ctx,

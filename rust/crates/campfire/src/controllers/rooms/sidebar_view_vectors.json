@@ -1,0 +1,365 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "quiet_open_127326141",
+      "input": {
+        "actor_id": 127326141,
+        "can_create": true,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New voice channel\" title=\"New voice channel\" href=\"/rooms/voices/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New stage channel\" title=\"New stage channel\" href=\"/rooms/stages/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\"></span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody on stage\"\n      title=\"Nobody on stage\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    },
+    {
+      "name": "quiet_open_712064548",
+      "input": {
+        "actor_id": 712064548,
+        "can_create": true,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New voice channel\" title=\"New voice channel\" href=\"/rooms/voices/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New stage channel\" title=\"New stage channel\" href=\"/rooms/stages/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\"></span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody on stage\"\n      title=\"Nobody on stage\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    },
+    {
+      "name": "quiet_restricted_127326141",
+      "input": {
+        "actor_id": 127326141,
+        "can_create": true,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New voice channel\" title=\"New voice channel\" href=\"/rooms/voices/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New stage channel\" title=\"New stage channel\" href=\"/rooms/stages/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\"></span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody on stage\"\n      title=\"Nobody on stage\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    },
+    {
+      "name": "quiet_restricted_712064548",
+      "input": {
+        "actor_id": 712064548,
+        "can_create": false,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\"></span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody on stage\"\n      title=\"Nobody on stage\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    },
+    {
+      "name": "live_open_127326141",
+      "input": {
+        "actor_id": 127326141,
+        "can_create": true,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+              }
+            ],
+            "live": true,
+            "live_name": "David",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New voice channel\" title=\"New voice channel\" href=\"/rooms/voices/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New stage channel\" title=\"New stage channel\" href=\"/rooms/stages/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\">\n    <span class=\"stage-live-dot__pip\" role=\"img\" aria-label=\"Live now: David\"></span>\n</span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 on stage: David\"\n      title=\"1 on stage: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    },
+    {
+      "name": "live_open_712064548",
+      "input": {
+        "actor_id": 712064548,
+        "can_create": true,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+              }
+            ],
+            "live": true,
+            "live_name": "David",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New voice channel\" title=\"New voice channel\" href=\"/rooms/voices/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New stage channel\" title=\"New stage channel\" href=\"/rooms/stages/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\">\n    <span class=\"stage-live-dot__pip\" role=\"img\" aria-label=\"Live now: David\"></span>\n</span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 on stage: David\"\n      title=\"1 on stage: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    },
+    {
+      "name": "live_restricted_127326141",
+      "input": {
+        "actor_id": 127326141,
+        "can_create": true,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+              }
+            ],
+            "live": true,
+            "live_name": "David",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": true
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New voice channel\" title=\"New voice channel\" href=\"/rooms/voices/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n            <a class=\"btn sidebar-section__add\" aria-label=\"New stage channel\" title=\"New stage channel\" href=\"/rooms/stages/new\">\n              <img aria-hidden=\"true\" src=\"/assets/add-f232d8a6.svg\" width=\"16\" height=\"16\" />\n</a>        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\">\n    <span class=\"stage-live-dot__pip\" role=\"img\" aria-label=\"Live now: David\"></span>\n</span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 on stage: David\"\n      title=\"1 on stage: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    },
+    {
+      "name": "live_restricted_712064548",
+      "input": {
+        "actor_id": 712064548,
+        "can_create": false,
+        "rows": [
+          {
+            "id": 699448330,
+            "name": "Team lounge",
+            "stage": false,
+            "icon": null,
+            "participants": [],
+            "live": false,
+            "live_name": "",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          },
+          {
+            "id": 699448331,
+            "name": "Release stage",
+            "stage": true,
+            "icon": null,
+            "participants": [
+              {
+                "id": 127326141,
+                "name": "David",
+                "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+              }
+            ],
+            "live": true,
+            "live_name": "David",
+            "unread": false,
+            "muted": false,
+            "membership": true,
+            "favorited": false,
+            "favorite_position": null,
+            "category_id": null,
+            "can_delete": false
+          }
+        ]
+      },
+      "html": "      <section class=\"sidebar-section sidebar-section--voice rooms\" aria-labelledby=\"voice-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"voice-heading\">Voice</h2>\n        </header>\n\n        <div id=\"voice_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n            <a id=\"list_rooms_voice_699448330\" data-rooms-list-target=\"room\" data-room-id=\"699448330\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Team lounge\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448330/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Team lounge\" class=\"sidebar-item room btn voice-room\" href=\"/rooms/699448330\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Team lounge</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_voice_participants_rooms_voice_699448330\"\n      class=\"voice-stack\"\n      role=\"group\"\n      aria-label=\"Nobody in voice\"\n      title=\"Nobody in voice\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448330/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in voice\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448330\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n      <section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">\n        <header class=\"sidebar-section__header\">\n          <h2 id=\"stage-heading\">Stage</h2>\n        </header>\n\n        <div id=\"stage_rooms\" class=\"sidebar-list\" data-controller=\"sorted-list\">\n              <a id=\"list_rooms_stage_699448331\" data-rooms-list-target=\"room\" data-room-id=\"699448331\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Release stage\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448331/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Release stage\" class=\"sidebar-item room btn voice-room stage-room\" href=\"/rooms/699448331\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Release stage</span>\n  <span class=\"voice-room__trailing\">\n    <span id=\"sidebar_stage_live_rooms_stage_699448331\" class=\"stage-live-dot\" data-live-stream-dot=\"true\" data-room-id=\"699448331\">\n    <span class=\"stage-live-dot__pip\" role=\"img\" aria-label=\"Live now: David\"></span>\n</span>\n    <span id=\"sidebar_voice_participants_rooms_stage_699448331\"\n      class=\"voice-stack voice-stack--live\"\n      role=\"group\"\n      aria-label=\"1 on stage: David\"\n      title=\"1 on stage: David\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/699448331/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"on stage\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"699448331\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n      <span class=\"voice-stack__trigger profile-card-trigger\" tabindex=\"0\" role=\"button\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <img alt=\"\" title=\"David\" class=\"voice-stack__avatar\" data-user-id=\"127326141\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</span>  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" >1</span>\n</span>\n\n  </span>\n</a>\n        </div>\n      </section>\n\n"
+    }
+  ]
+}

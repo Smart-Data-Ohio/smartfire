@@ -2,7 +2,7 @@
 {% block head %}<meta name="turbo-cache-control" content="no-preview">{{ "  \n" }}  <meta name="current-room-id" content="{{ show.room.id }}">
   {{ h::first_paint_controller_preloads(ctx) }}
 {% endblock %}
-{% block nav %}{% let room = &show.room %}{% include "rooms/show/_nav.html" %}{% endblock %}
+{% block nav %}{% let room = &show.room %}{% if room.is_board() %}{% include "rooms/boards/_nav.html" %}{% else if let Some(nav) = show.navigation.as_ref() %}{{ nav.render(ctx)|safe }}{% else %}{% include "rooms/show/_nav.html" %}{% endif %}{% endblock %}
 {% block sidebar %}{{ h::sidebar_turbo_frame_tag(Some(h::routes::user_sidebar().as_str()), "") }}{% endblock %}
 {% block member_panel %}{% let room = &show.room %}  {{ self.member_panel()? }}
 {% endblock %}

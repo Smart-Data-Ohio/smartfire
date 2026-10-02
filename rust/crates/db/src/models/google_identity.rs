@@ -1,6 +1,7 @@
 //! `app/models/google_identity.rb` and `google/sign_in/account_linker.rb`.
 //! Only verified OIDC claims belong here. Calendar grants are never sign-in identities.
 use campfire_richtext::ruby::{is_blank, json_value_to_s, strip};
+use rails_compat::unicode::downcase;
 use rusqlite::{OptionalExtension, Row, params};
 use serde_json::{Map, Value};
 
@@ -113,7 +114,7 @@ impl GoogleIdentity {
             .conn()
             .prepare("SELECT * FROM users WHERE LOWER(email_address)=?")?;
         let users = query
-            .query_map([email.to_lowercase()], User::from_row)?
+            .query_map([downcase(&email)], User::from_row)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         drop(query);
         if users.len() > 1 {
@@ -194,7 +195,7 @@ fn claim(claims: &Map<String, Value>, key: &str) -> String {
 fn fields(claims: &Map<String, Value>) -> Result<(String, String, String)> {
     let subject = claim(claims, "sub");
     let email = strip(&claim(claims, "email")).to_owned();
-    let domain = strip(&claim(claims, "hd")).to_lowercase();
+    let domain = downcase(strip(&claim(claims, "hd")));
     if is_blank(&subject) || is_blank(&email) {
         return reject("bad_token");
     }
@@ -224,7 +225,7 @@ fn deactivated_predecessor(conn: &Connection, email: &str) -> Result<bool> {
         return Ok(false);
     }
     let escape = |s: &str| {
-        s.to_lowercase()
+        downcase(s)
             .replace('\\', "\\\\")
             .replace('%', "\\%")
             .replace('_', "\\_")

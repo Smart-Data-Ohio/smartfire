@@ -1,0 +1,130 @@
+
+    <div class="composer position-relative"
+      data-controller="typing-notifications"
+      data-typing-notifications-active-class="typing-indicator--active"
+      data-typing-notifications-room-id-value="{{ room.id }}"
+      data-typing-notifications-thread-id-value="">
+    <turbo-frame id="composer-frame" class="composer__frame min-width">
+      <form id="composer" class="margin-block flex-item-grow contain" data-controller="composer drop-target" data-action="dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop drop-target:drop@window-&gt;composer#dropFiles trix-file-accept-&gt;composer#preventAttachment refresh-room:online@window-&gt;composer#online submit-&gt;typing-notifications#stop paste-&gt;composer#pasteFiles turbo:submit-end-&gt;composer#submitEnd refresh-room:offline@window-&gt;composer#offline turbo:before-fetch-request-&gt;composer#prepareRequest messages:recover@window-&gt;composer#recover" data-composer-messages-outlet="#message-area" data-composer-room-id-value="{{ room.id }}" data-composer-thread-mode-value="false" data-composer-slash-commands-url-value="/rooms/{{ room.id }}/slash_commands" data-composer-slash-commands-value="[&quot;huddle&quot;,&quot;event&quot;,&quot;poll&quot;,&quot;remind&quot;,&quot;status&quot;,&quot;dnd&quot;,&quot;ooo&quot;,&quot;shrug&quot;,&quot;me&quot;,&quot;play&quot;]" data-composer-slash-commands-list-url-value="/autocompletable/slash_commands?room_id={{ room.id }}" action="/rooms/{{ room.id }}/messages" accept-charset="UTF-8" method="post">{{ h::token_tag(self.form_action("messages").as_str(), "post") }}
+        <fieldset data-composer-target="fields" contents>
+          <div class="composer__stack">
+            <div class="composer__context" hidden aria-live="polite" data-composer-target="context">
+              <div class="composer__context-copy min-width">
+                <span class="composer__context-label" data-composer-target="contextLabel"></span>
+                <span class="composer__context-preview overflow-ellipsis" data-composer-target="contextPreview"></span>
+                <span class="composer__feedback" role="alert" data-composer-target="feedback" hidden></span>
+              </div>
+
+              <label class="composer__reply-notify" for="{{ room.dom_id("reply_notify") }}" hidden data-composer-target="notifyControl">
+                <input id="{{ room.dom_id("reply_notify") }}" type="checkbox" name="message[reply_notify_author]" value="1" checked disabled data-composer-target="replyNotify"
+                       data-action="change->composer#notifyChanged" />
+                <span>Notify author</span>
+              </label>
+
+              <button type="button" class="btn btn--borderless composer__context-cancel"
+                      aria-label="Cancel message context" title="Cancel"
+                      data-action="composer#cancelContext">
+                <img class="colorize--black" aria-hidden="true" src="{{ ctx.asset("remove.svg") }}" width="18" height="18" />
+              </button>
+            </div>
+
+            <input data-composer-target="replyTo" autocomplete="off" type="hidden" name="message[reply_to_message_id]" id="message_reply_to_message_id" />
+            <div class="composer__filelist flex flex--align-center gap flex-wrap" data-composer-target="fileList"></div>
+            <div class="composer__drive-attachments" aria-live="polite"></div>
+
+            <div class="composer__surface flex align-end gap">
+              <div class="composer__attach flex-item-no-shrink" data-controller="attach-menu">
+                <button type="button" class="btn btn--borderless composer__attachment-btn"
+                        title="Attach a file" aria-label="Attach a file"
+                        aria-haspopup="menu" aria-expanded="false" aria-controls="attach-menu"
+                        data-attach-menu-target="button"
+                        data-action="click->attach-menu#toggle keydown->attach-menu#buttonKeydown">
+                  <span class="composer__attachment-mark" aria-hidden="true">+</span>
+                </button>
+                <input type="file" class="attach-menu__file" tabindex="-1" aria-hidden="true" multiple
+                       data-attach-menu-target="fileInput" data-action="composer#filePicked" />
+                  <div id="attach-menu" class="room-menu attach-menu" popover="manual"
+                       role="menu" aria-label="Attach a file" hidden data-attach-menu-target="menu">
+                    <button type="button" class="btn room-menu__item attach-menu__item" role="menuitem"
+                            data-action="attach-menu#chooseDevice">
+                      From this device
+                    </button>
+                    <button type="button" class="btn room-menu__item attach-menu__item" role="menuitem"
+                            data-action="attach-menu#chooseDrive">
+                      From Google Drive
+                    </button>
+                  </div>
+              </div>
+
+                <div class="drive-share flex-item-no-shrink" data-controller="drive-share"
+                     data-drive-share-room-id-value="{{ room.id }}"
+                     data-drive-share-thread-id-value="">
+                  <div class="drive-share__panel" role="dialog" aria-label="Share a Drive file" hidden
+                       data-drive-share-target="panel" data-action="keydown->drive-share#panelKey"></div>
+                </div>
+
+              <div class="composer__editor min-width flex-item-grow" data-controller="markdown-editor">
+                <textarea rows="1" maxlength="50000" class="composer__textarea input" placeholder="Message #{{ room.display_name }}" role="combobox" aria-multiline="true" aria-label="Write a message" aria-autocomplete="list" aria-expanded="false" data-controller="markdown-autocomplete" data-action="input-&gt;markdown-editor#resize input-&gt;markdown-autocomplete#search input-&gt;typing-notifications#start input-&gt;composer#saveDraft focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur keydown-&gt;markdown-editor#shortcut keydown-&gt;composer#submitByKeyboard" data-markdown-autocomplete-url-value="/autocompletable/users?room_id={{ room.id }}" data-markdown-autocomplete-icons-url-value="/autocompletable/icons" data-markdown-autocomplete-slash-commands-url-value="/autocompletable/slash_commands?room_id={{ room.id }}" data-markdown-editor-target="source" data-composer-target="markdown" data-suggestion-results-placement="above" name="message[markdown_source]" id="message_markdown_source">
+</textarea>
+              </div>
+
+              <span class="schedule-send" data-controller="schedule-send"
+    data-schedule-send-url-value="/rooms/{{ room.id }}/scheduled_messages"
+    data-schedule-send-thread-id-value=""
+    data-schedule-send-dialog-id-value="schedule-send">
+  <button type="button" class="btn btn--borderless composer__schedule-btn flex-item-no-shrink"
+      title="Schedule send" aria-label="Schedule send" aria-haspopup="dialog"
+      data-action="schedule-send#open">
+    <img aria-hidden="true" src="{{ ctx.asset("calendar.svg") }}" width="17" height="17" />
+  </button>
+
+  <dialog id="schedule-send" class="schedule-send__dialog" aria-labelledby="schedule-send-title">
+    <div class="schedule-send__panel">
+      <div class="schedule-send__header">
+        <h2 id="schedule-send-title">Schedule send</h2>
+        <button type="button" class="btn btn--borderless" data-action="schedule-send#close" aria-label="Close schedule send">✕</button>
+      </div>
+
+      <p class="txt-small schedule-send__hint">Times are in your time zone.</p>
+      <p class="schedule-send__status txt-small" role="alert" hidden data-schedule-send-target="status"></p>
+
+      <div class="schedule-send__presets">
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="hour">In 1 hour</button>
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="tomorrow">Tomorrow at 9 AM</button>
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="monday">Next Monday at 9 AM</button>
+      </div>
+
+      <div class="schedule-send__custom">
+        <label for="schedule-send-custom">Custom time</label>
+        <div class="schedule-send__custom-row">
+          <input type="datetime-local" id="schedule-send-custom" class="input"
+              data-schedule-send-target="custom"
+              data-action="keydown->schedule-send#customEnter">
+          <button type="button" class="btn btn--primary btn--small" data-action="schedule-send#scheduleCustom">Schedule</button>
+        </div>
+      </div>
+
+      <p class="schedule-send__footer txt-small">
+        <a target="_top" href="/scheduled_messages">View scheduled messages</a>
+      </p>
+    </div>
+  </dialog>
+</span>
+
+
+              <button name="send" type="submit" data-action="composer#submit" data-composer-target="send" class="composer__send btn btn--reversed flex-item-no-shrink">
+                <img aria-hidden="true" src="{{ ctx.asset("arrow-up.svg") }}" width="17" height="17" />
+                <span class="for-screen-reader">Send Message</span>
+</button>            </div>
+          </div>
+        </fieldset>
+
+        <div class="typing-indicator gap txt-small align-center flex-inline" data-typing-notifications-target="indicator">
+          <div class="typing-indicator__author spinner" data-typing-notifications-target="author"></div>
+        </div>
+
+        <input data-composer-target="clientid" type="hidden" name="message[client_message_id]" id="message_client_message_id" />
+</form>    </turbo-frame>
+  </div>
+
+{{ "" }}

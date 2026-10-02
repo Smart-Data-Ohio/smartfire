@@ -15,6 +15,14 @@ pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     c.respond_to(&[&format::HTML])?;
     let user = concerns::require_current_user(c)?.clone();
+    if c.app().config.huddle.configured() {
+        let app=c.app().clone();let actor=user.clone();
+        let (sidebar,_)=c.app().db.read(move |conn|composition::load(&app,conn,&actor)).await.map_err(Error::internal)?;
+        return view_context::page_or_frame(c,StatusCode::OK,|ctx|users::sidebar_composition::Show{ctx,sidebar:&sidebar}.render(),|ctx|{
+            let p=users::sidebar_composition::Show{ctx,sidebar:&sidebar};
+            campfire_views::layouts::frame(ctx,p.as_head(),p.as_content())
+        }).await;
+    }
     let secrets = c.app().secrets.clone();
     let (sidebar, restricted) = {
         let (user, secrets, fragments) = (user.clone(), secrets.clone(), c.app().fragment_cache.clone());
@@ -80,3 +88,8 @@ impl SidebarData {
 #[cfg(test)]
 #[path = "sidebars_tests.rs"]
 mod tests;
+
+pub(crate) mod composition;
+#[cfg(test)]
+#[path="sidebars/tests.rs"]
+mod composition_tests;

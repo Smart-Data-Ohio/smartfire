@@ -250,6 +250,9 @@ async fn open_database(
     db_config.readers = config.db_readers;
     db_config.environment = config.environment.clone();
     let env = campfire_db::Env {
+        // WS16 flagged, per-database entropy seam for real first-login enrollment.
+        #[cfg(test)]
+        fixture_auth_inputs: crate::test_support::auth_inputs(),
         clock: Arc::new(DbClock(clock)),
         sink: Arc::new(jobs),
         rich_text,
@@ -596,6 +599,10 @@ mod google_drive_tests;
 
 #[cfg(test)]
 mod google_calendar_job_tests;
+#[cfg(test)]
+mod google_meeting_refresh_tests;
+#[cfg(test)]
+mod google_push_channel_tests;
 
 #[cfg(test)]
 mod google_test_support;

@@ -3,7 +3,7 @@ use crate::helpers as h;
 use askama::Template;
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Participant {
     pub id: i64,
     pub name: String,
