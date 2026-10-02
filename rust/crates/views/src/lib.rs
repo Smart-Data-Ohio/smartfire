@@ -20,6 +20,8 @@ pub mod two_factor;
 pub mod first_runs;
 pub mod users;
 pub mod accounts;
+pub mod activity;
+pub mod agents;
 pub mod welcome;
 pub mod pwa;
 pub mod autocompletable;

@@ -326,10 +326,12 @@ async fn conditional_get_on_body_etag() {
     assert!(second.body.is_empty());
     assert_eq!(second.header("content-type"), None);
 
-    // Lists and `*` count, as they do for `fresh_when` (RFC 9110).
+    // Pinned Rack::ConditionalGet compares one exact string; lists and `*`
+    // differ from Rails' controller-level fresh_when checks.
     for if_none_match in [format!("\"other\", {etag}"), "*".to_string()] {
         let listed = send(&app, get("/rooms/5").header(header::IF_NONE_MATCH, &if_none_match).body(AxumBody::empty()).unwrap()).await;
-        assert_eq!(listed.status, StatusCode::NOT_MODIFIED, "{if_none_match}");
+        assert_eq!(listed.status, StatusCode::OK, "{if_none_match}");
+        assert_eq!(listed.text(), first.text());
     }
     let other = send(&app, get("/rooms/5").header(header::IF_NONE_MATCH, "\"other\"").body(AxumBody::empty()).unwrap()).await;
     assert_eq!(other.status, StatusCode::OK);

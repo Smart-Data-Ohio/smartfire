@@ -11,7 +11,7 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_clock};
+use crate::app::Booted;
 use crate::config::Config;
 use crate::controllers::presenters::test_support::{masked_session_token, seed_clock, seed_dir};
 
@@ -19,6 +19,31 @@ const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 const HOST: &str = "campfire.test";
 const PASSWORD: &str = "secret123456";
 const CHROME: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+
+#[path = "tests/github_connections.rs"]
+mod github_connections;
+#[path = "tests/owner_inputs.rs"]
+mod owner_inputs;
+#[path = "tests/bot_mutations.rs"]
+mod bot_mutations;
+#[path = "tests/bot_access.rs"]
+mod bot_access;
+#[path = "tests/approval_decisions.rs"]
+mod approval_decisions;
+#[path = "tests/agent_histories.rs"]
+mod agent_histories;
+#[path = "tests/agent_broadcasts.rs"]
+mod agent_broadcasts;
+#[path = "tests/webhook_secrets.rs"]
+mod webhook_secrets;
+#[path = "tests/kill_switch.rs"]
+mod kill_switch;
+#[path = "tests/navigation_inbox.rs"]
+mod navigation_inbox;
+#[path = "tests/member_panel.rs"]
+mod member_panel;
+#[path = "tests/member_polling.rs"]
+mod member_polling;
 
 #[test]
 fn unicode_parity_sidebar_direct_names_use_ruby_sort_order() {
@@ -62,6 +87,14 @@ struct Test {
 }
 
 async fn boot_seed(name: &str) -> Option<Test> {
+    boot_seed_with_clock(name, seed_clock()).await
+}
+
+async fn boot_seed_with_clock(name: &str, clock: campfire_kit::SharedClock) -> Option<Test> {
+    boot_seed_with_network(name, clock, crate::integrations::net::Network::system()).await
+}
+
+async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, network: crate::integrations::net::Network) -> Option<Test> {
     let seed = seed_dir(name)?;
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -88,7 +121,7 @@ async fn boot_seed(name: &str) -> Option<Test> {
     })
     .unwrap();
     Some(Test {
-        booted: boot_with_clock(config, seed_clock()).await.unwrap(),
+        booted: crate::app::boot_with_network(config, clock, network).await.unwrap(),
         labels,
         _dir: dir,
     })
@@ -287,6 +320,20 @@ impl Browser<'_> {
     }
 
 
+    // Rails test helper's grant_sudo_access: authenticate the real encrypted cookie,
+    // preserve its CSRF state, and add the same verified-at epoch value.
+    fn grant_sudo_access(&mut self) {
+        use campfire_kit::Crypto;
+        let key = campfire_kit::session::SESSION_KEY;
+        let crypto = campfire_kit::RailsCrypto::new(self.test.booted.app.secrets.clone());
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
+        let now = self.test.booted.app.clock.now();
+        let mut data = crypto.decrypt_cookie(key, &raw, now).unwrap();
+        data["sudo_verified_at"] = now.as_second().into();
+        let cookie = crypto.encrypt_cookie(key, &data, None);
+        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&cookie));
+    }
+
     async fn sign_in(&mut self, email: &str) {
         let page = self.get("/session/new").await;
         assert_eq!(page.status, StatusCode::OK, "{}", page.text());
@@ -346,6 +393,27 @@ impl Browser<'_> {
             "http://campfire.test/",
         );
     }
+}
+
+
+
+#[test]
+fn browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature() {
+    use campfire_kit::Crypto;
+    let secrets = std::sync::Arc::new(rails_compat::Secrets::new(&parity_env("SECRET_KEY_BASE").unwrap()));
+    let crypto = campfire_kit::RailsCrypto::new(secrets);
+    let (token, signed) = (0..20_000).find_map(|i| {
+        let token = format!("fixture-browser-session-{i}");
+        let signed = crypto.sign_cookie("session_token", &token, None);
+        signed.contains("1970").then_some((token, signed))
+    }).expect("deterministic signed-cookie fixture contains epoch digits");
+    assert_eq!(crypto.verify_signed_cookie("session_token", &signed, seed_clock().now()), Some(token));
+    let header = format!("session_token={signed}; Path=/; HttpOnly; SameSite=Lax");
+    assert!(!cookie_tombstone(&header), "valid signature digits are not an expiry attribute");
+    assert!(!cookie_tombstone("session_token=fixture; Path=/1970; Expires=Mon, 02 Mar 2046 16:00:00 GMT"));
+    assert!(cookie_tombstone("session_token=fixture; Max-Age=0; Path=/"));
+    assert!(cookie_tombstone("session_token=fixture; max-age=-1; Path=/"));
+    assert!(cookie_tombstone("session_token=fixture; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"));
 }
 
 fn encode(value: &str) -> String {
@@ -815,7 +883,12 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     let value = html.split("aria-label=\"Bot key\"").next().unwrap();
     let new_key = value.rsplit("value=\"").next().unwrap().split('"').next().unwrap().to_string();
     assert_ne!(new_key, old_key);
-    let (new_valid, old_valid, plaintext, audit) = test.booted.app.db.read({let new_key=new_key.clone(); move |conn| Ok((
+    assert!(!html.contains(&old_key), "rotation response shows the retired key");
+    // Rails reveals it in this one response's input, copy button and curl URL.
+    assert_eq!(html.matches(&new_key).count(), 3, "all key controls must use the new key");
+    assert!(html.contains(&format!("data-copy-to-clipboard-content-value=\"{new_key}\"")));
+    assert!(html.contains(&format!("/rooms/ROOM_ID/{new_key}/messages")));
+    let (new_valid, old_valid, plaintext, audit) = test.booted.app.db.read({let new_key=new_key.clone(); let old_key=old_key.clone(); move |conn| Ok((
         campfire_db::User::authenticate_bot(conn,&new_key)?.is_some(),
         campfire_db::User::authenticate_bot(conn,&old_key)?.is_some(),
         conn.query_row("SELECT bot_token FROM users WHERE id=?",[bot_id],|r|r.get::<_,Option<String>>(0))?,
@@ -825,7 +898,18 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     assert!(!old_valid);
     assert_eq!(plaintext,None);
     assert_eq!(audit,1);
-    assert!(!admin.get("/account/bots").await.text().contains(&new_key));
+    for page in [
+        "/account/bots".to_string(),
+        format!("/account/bots/{bot_id}/edit"),
+        format!("/account/bots/{bot_id}/credentials"),
+        format!("/account/bots/{bot_id}/grants"),
+    ] {
+        let response = admin.get(&page).await;
+        assert_eq!(response.status, StatusCode::OK, "{page}");
+        for secret in [&old_key, &new_key] {
+            assert!(!response.text().contains(secret), "{page} reveals a bot key after rotation");
+        }
+    }
 }
 
 #[tokio::test]
@@ -843,17 +927,10 @@ async fn manages_bots() {
 
     let new = admin.get("/account/bots/new").await;
     new.assert_form("/account/bots");
-    let reply = admin
-        .form(
-            "post",
-            "/account/bots",
-            &[
-                ("user[name]", "Robo"),
-                ("user[webhook_url]", "https://example.com/robo"),
-            ],
-        )
-        .await;
-    assert_redirect(&reply, "http://campfire.test/account/bots");
+    admin.grant_sudo_access();
+    let reply = admin.form("post", "/account/bots", &[("user[name]", "Robo"), ("user[webhook_url]", "https://example.com/robo")]).await;
+    assert_eq!(reply.status, StatusCode::CREATED);
+    assert_eq!(reply.header("cache-control"), Some("no-store"));
     assert!(admin.get("/account/bots").await.text().contains("Robo"));
 
     let bender = test.label("users.bender");
@@ -874,7 +951,11 @@ async fn manages_bots() {
     admin.confirm_sudo().await;
     let bender_id: i64 = bender.parse().unwrap();
     let old_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
-    assert_eq!(admin.form("put", &key_action, &[]).await.status, StatusCode::OK);
+    let reset = admin.form("put", &key_action, &[]).await;
+    assert_eq!(reset.status, StatusCode::OK);
+    assert_eq!(reset.header("cache-control"), Some("no-store"));
+    assert!(!reset.text().contains(&test.label("bot_keys.bender")), "manages_bots still shows the retired key");
+    assert!(!admin.get("/account/bots").await.text().contains(&test.label("bot_keys.bender")));
     let new_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
     assert_ne!(old_digest, new_digest);
     assert!(admin.get("/account/bots").await.text().contains(campfire_db::user::BOT_KEY_PLACEHOLDER));
@@ -1132,6 +1213,102 @@ async fn qr_codes_and_the_pwa() {
         (worker.status, worker.header("content-type")),
         (StatusCode::OK, Some("text/javascript; charset=utf-8"))
     );
+}
+
+#[tokio::test]
+async fn bot_edit_pages_follow_admin_owner_and_legacy_access() {
+    let Some(test) = boot_seed("default").await else { return };
+    let bot_id: i64 = test.label("users.bender").parse().unwrap();
+    let owner_id: i64 = test.label("users.kevin").parse().unwrap();
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE agents SET owner_id=? WHERE user_id=?", [owner_id, bot_id])?;
+        Ok(())
+    }).await.unwrap();
+    let mut owner = test.browser("198.51.100.91");
+    owner.sign_in(&test.label("emails.kevin")).await;
+    let edit = format!("/account/bots/{bot_id}/edit");
+    let response = owner.get(&edit).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.text().contains("name=\"agent[provider]\""));
+    assert!(response.text().contains("disabled=\"disabled\""));
+    assert!(!response.text().contains("Delete this chat bot"));
+    assert!(!response.text().contains("Generate a new key"));
+    assert_eq!(owner.get("/account/bots").await.status, StatusCode::FORBIDDEN);
+    assert_eq!(owner.get("/account/bots/999999999/edit").await.status, StatusCode::NOT_FOUND);
+
+    let mut member = test.browser("198.51.100.92");
+    member.sign_in(&test.label("emails.jz")).await;
+    assert_eq!(member.get(&edit).await.status, StatusCode::FORBIDDEN);
+    let legacy_id = test.booted.app.db.write(|tx| {
+        Ok(campfire_db::User::create_bot(tx, "Legacy UI fixture", None)?.id)
+    }).await.unwrap();
+    let legacy = format!("/account/bots/{legacy_id}/edit");
+    assert_eq!(owner.get(&legacy).await.status, StatusCode::FORBIDDEN);
+    let mut admin = test.browser("198.51.100.93");
+    admin.sign_in(&test.label("emails.david")).await;
+    let response = admin.get(&legacy).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(!response.text().contains("name=\"agent[provider]\""));
+    let count = test.booted.app.db.read(move |conn| {
+        Ok(conn.query_row("SELECT COUNT(*) FROM agents WHERE user_id=?", [legacy_id], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    assert_eq!(count, 0);
+}
+
+#[tokio::test]
+async fn agent_directory_rejects_credentials_bots_and_unsigned_visitors() {
+    let Some(test) = boot_seed("default").await else { return };
+    let mut browser = test.browser("198.51.100.94");
+    assert_redirect(&browser.get("/agents").await, "http://campfire.test/session/new");
+    let secret = test.booted.app.db.write(|tx| {
+        let id = tx.conn().query_row("SELECT id FROM agents LIMIT 1", [], |r| r.get(0))?;
+        Ok(campfire_db::models::agent_credential::AgentCredential::create_with_secret(tx, id, "directory-denial", 127326141, None)?.1)
+    }).await.unwrap();
+    let authorization = format!("{} {}", "Bearer", secret);
+    let response = browser.request(Method::GET, "/agents", &[("authorization", &authorization)], None).await;
+    assert_eq!(response.status, StatusCode::FORBIDDEN);
+    let path = format!("/agents?bot_key={}", encode(&test.label("bot_keys.bender")));
+    assert_eq!(browser.get(&path).await.status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn agent_directory_lists_active_then_inactive_without_private_facts() {
+    let Some(test) = boot_seed("default").await else { return };
+    let bot_id: i64 = test.label("users.bender").parse().unwrap();
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE agents SET status='working', status_note='<working & now>', last_seen_at=?, webhook_signing_secret='private-directory-fixture' WHERE user_id=?", rusqlite::params![tx.now(), bot_id])?;
+        for name in ["ΟΣ", "Ος"] {
+            let bot = campfire_db::User::create_bot(tx, name, None)?;
+            tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,created_at,updated_at) VALUES(?,?,'workspace',?,?)", rusqlite::params![bot.id, 127326141, tx.now(), tx.now()])?;
+        }
+        let suspended = campfire_db::User::create_bot(tx, "Aaron Suspended", None)?;
+        tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,suspended_at,created_at,updated_at) VALUES(?,?,'workspace',?,?,?)", rusqlite::params![suspended.id, 127326141, tx.now(), tx.now(), tx.now()])?;
+        Ok(())
+    }).await.unwrap();
+    let mut human = test.browser("198.51.100.95");
+    human.sign_in(&test.label("emails.kevin")).await;
+    let response = human.get("/agents").await;
+    assert_eq!(response.status, StatusCode::OK);
+    let html = response.text();
+    assert!(html.find("Bender Bot").unwrap() < html.find("Aaron Suspended").unwrap());
+    assert!(html.find("Ος").unwrap() < html.find("ΟΣ").unwrap(), "Ruby lowercases Σ without Rust's final-sigma context rule");
+    assert!(html.contains("Workspace agent, managed by David"));
+    assert!(html.contains("&lt;working &amp; now&gt;"));
+    assert!(html.contains("agent-status-badge--working"));
+    assert!(html.contains("last seen less than a minute ago"));
+    assert!(!html.contains("private-directory-fixture"));
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE users SET status=1 WHERE id=?", [bot_id])?;
+        Ok(())
+    }).await.unwrap();
+    assert!(!human.get("/agents").await.text().contains("Bender Bot"));
+}
+
+#[tokio::test]
+async fn agent_directory_bot_session_is_forbidden() {
+    let Some(app) = crate::controllers::presenters::test_support::TestApp::boot().await else { return };
+    let mut bot = app.sign_in(crate::controllers::presenters::test_support::BENDER).await;
+    assert_eq!(bot.get("/agents").await.status, StatusCode::FORBIDDEN);
 }
 
 // Set-Cookie values are opaque; only attributes determine deletion.

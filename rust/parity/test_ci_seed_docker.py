@@ -25,7 +25,7 @@ class SeedGateTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, result.stdout)
 
     def test_corrupt_cached_seed_is_rejected_by_rails(self):
-        for name in ("default", "first_run"):
+        for name in ("default", "first_run", "agents_ui"):
             shutil.copytree(ROOT / "parity/.seed" / name, self.root / name)
         database = self.root / "default/db/production.sqlite3"
         with sqlite3.connect(database) as connection:

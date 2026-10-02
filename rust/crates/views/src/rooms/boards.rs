@@ -111,12 +111,14 @@ impl Page for Index<'_> {
     }
 }
 impl Index<'_> {
-    fn multi_select_bar(&self) -> h::Html {
-        h::raw(
-            crate::shared::MultiSelectBar { exit_button: true }
-                .render()
-                .expect("member selection bar"),
-        )
+    fn member_panel(&self) -> askama::Result<h::Html> {
+        Ok(h::raw(
+            super::MemberPanel {
+                ctx: self.ctx,
+                room_id: self.board.room.id,
+            }
+            .render()?,
+        ))
     }
     fn view(&self) -> &'static str {
         if self.board.board_view {
