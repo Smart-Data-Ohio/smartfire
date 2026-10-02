@@ -1,0 +1,1003 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "now": "2026-03-02T16:00:00Z",
+  "setup": [
+    "DELETE FROM workspace_presence_leases",
+    "DELETE FROM user_stars",
+    "DELETE FROM calendar_meeting_caches",
+    "UPDATE users SET presence_setting='auto',custom_status_emoji=NULL,custom_status_text=NULL,custom_status_expires_at=NULL,dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_note=NULL,ooo_calendar_enabled=0,time_zone='UTC',updated_at='2026-03-02 16:00:00'",
+    "UPDATE agents SET status='idle',status_note=NULL,last_seen_at=NULL,suspended_at=NULL,working_presence=NULL,working_presence_expires_at=NULL WHERE user_id=394959859",
+    "INSERT INTO rooms(id,name,type,creator_id,created_at,updated_at) VALUES(96000000,'Poll corpus','Rooms::Closed',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO memberships(id,room_id,user_id,created_at,updated_at) VALUES(96000000,96000000,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO memberships(id,room_id,user_id,created_at,updated_at) VALUES(96000001,96000000,149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO memberships(id,room_id,user_id,created_at,updated_at) VALUES(96000002,96000000,712064548,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO memberships(id,room_id,user_id,created_at,updated_at) VALUES(96000003,96000000,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO memberships(id,room_id,user_id,created_at,updated_at) VALUES(96000004,96000000,394959859,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+    "INSERT INTO memberships(id,room_id,user_id,created_at,updated_at) VALUES(96000005,96000000,773523957,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+  ],
+  "cases": [
+    {
+      "name": "baseline",
+      "sql": [],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "active_custom",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET custom_status_emoji='🚂',custom_status_text='On a train' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"online\",\"status\":\"🚂 On a train\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"771a08f8db3490d319d8111c9e458b97\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "custom_expired",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET custom_status_emoji='🚂',custom_status_text='Expired',custom_status_expires_at='2026-03-02 16:00:00' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"online\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"a23ac581b4498de46c3c935359e96b6c\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "custom_untrimmed",
+      "sql": [
+        "UPDATE users SET custom_status_emoji='  🚂  ',custom_status_text=' On a train '  WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"  🚂    On a train \",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"9812a6d4deb36bd94efe2dd113b29bd8\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "html_escaping_and_id_order",
+      "sql": [
+        "UPDATE users SET name='same <>&  ' WHERE id IN (712064548,773523953)",
+        "UPDATE users SET custom_status_text='<&>  ' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"<&>  \",\"starred\":false},{\"id\":712064548,\"name\":\"same <>&  \",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"same <>&  \",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"9d7ad1779b829a8dfc42715939cb4511\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "meeting",
+      "sql": [
+        "INSERT INTO calendar_meeting_caches(id,user_id,busy_intervals,ooo_intervals,fetched_at,created_at,updated_at) VALUES(96002000,149087659,'[[\"2026-03-02T15:55:00Z\",\"2026-03-02T16:55:00Z\"]]','[]','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET meeting_status_enabled=1 WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"📅 In a meeting\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"f207a46e9053dfc4e03a8ceee743ec93\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "meeting_custom",
+      "sql": [
+        "INSERT INTO calendar_meeting_caches(id,user_id,busy_intervals,ooo_intervals,fetched_at,created_at,updated_at) VALUES(96002000,149087659,'[[\"2026-03-02T15:55:00Z\",\"2026-03-02T16:55:00Z\"]]','[]','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET meeting_status_enabled=1,custom_status_text='Busy coding' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"Busy coding\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"d865fb5a9220467482c87a8b900bde39\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "meeting_dnd",
+      "sql": [
+        "INSERT INTO calendar_meeting_caches(id,user_id,busy_intervals,ooo_intervals,fetched_at,created_at,updated_at) VALUES(96002000,149087659,'[[\"2026-03-02T15:55:00Z\",\"2026-03-02T16:55:00Z\"]]','[]','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET meeting_status_enabled=1,presence_setting='dnd' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "meeting_invisible",
+      "sql": [
+        "INSERT INTO calendar_meeting_caches(id,user_id,busy_intervals,ooo_intervals,fetched_at,created_at,updated_at) VALUES(96002000,149087659,'[[\"2026-03-02T15:55:00Z\",\"2026-03-02T16:55:00Z\"]]','[]','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET meeting_status_enabled=1,presence_setting='invisible' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "meeting_quiet_hours",
+      "sql": [
+        "INSERT INTO calendar_meeting_caches(id,user_id,busy_intervals,ooo_intervals,fetched_at,created_at,updated_at) VALUES(96002000,149087659,'[[\"2026-03-02T15:55:00Z\",\"2026-03-02T16:55:00Z\"]]','[]','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET meeting_status_enabled=1,quiet_hours_enabled=1,quiet_hours_start_minute=900,quiet_hours_end_minute=1020 WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "meeting_off",
+      "sql": [
+        "INSERT INTO calendar_meeting_caches(id,user_id,busy_intervals,ooo_intervals,fetched_at,created_at,updated_at) VALUES(96002000,149087659,'[[\"2026-03-02T15:55:00Z\",\"2026-03-02T16:55:00Z\"]]','[]','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET meeting_status_enabled=0 WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "ooo",
+      "sql": [
+        "UPDATE users SET ooo_until='2026-09-24 12:00:00',ooo_note='Back soon' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🌴 Out of office until September 24, 2026 — Back soon\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"88040b1729231cb8cb0faa6e945a15c2\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "ooo_own_zone",
+      "sql": [
+        "UPDATE users SET ooo_until='2026-03-04 01:00:00',ooo_note='Back soon',time_zone='America/New_York' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🌴 Out of office until March 03, 2026 — Back soon\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"a1b6562385cdc6c739739858421ff9a2\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "ooo_wins_custom",
+      "sql": [
+        "UPDATE users SET ooo_until='2026-09-24 12:00:00',ooo_note='Back soon',custom_status_text='Custom' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🌴 Out of office until September 24, 2026 — Back soon\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"88040b1729231cb8cb0faa6e945a15c2\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "ooo_invisible_custom",
+      "sql": [
+        "UPDATE users SET ooo_until='2026-09-24 12:00:00',ooo_note='Back soon',custom_status_text='Custom',presence_setting='invisible' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"Custom\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"436e189946cb2ca8b18de410340d580a\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "calendar_ooo",
+      "sql": [
+        "INSERT INTO calendar_meeting_caches(id,user_id,busy_intervals,ooo_intervals,fetched_at,created_at,updated_at) VALUES(96002000,149087659,'[[\"2026-03-02T15:55:00Z\",\"2026-03-02T16:55:00Z\"]]','[]','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE calendar_meeting_caches SET ooo_intervals='[[\"2026-03-02T15:00:00Z\",\"2026-03-05T01:00:00Z\"]]' WHERE id=96002000",
+        "UPDATE users SET meeting_status_enabled=1,ooo_calendar_enabled=1,ooo_until='2026-03-04 12:00:00',ooo_note='Manual note' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🌴 Out of office until March 05, 2026 — Manual note\",\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"4e81984bc3dae7b3ddcb572f9d0e393a\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "idle",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE workspace_presence_leases SET last_active_at='2026-03-02 15:49:00' WHERE id=96001000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"idle\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"88159ff30eb02c5ef02d55977bf37a26\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "active_cutoff",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE workspace_presence_leases SET last_active_at='2026-03-02 15:50:00' WHERE id=96001000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"online\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"a23ac581b4498de46c3c935359e96b6c\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "nil_activity",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE workspace_presence_leases SET last_active_at=NULL WHERE id=96001000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"online\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"a23ac581b4498de46c3c935359e96b6c\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "expiry_boundary",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE workspace_presence_leases SET expires_at='2026-03-02 16:00:00' WHERE id=96001000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"online\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"a23ac581b4498de46c3c935359e96b6c\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "expired_lease",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE workspace_presence_leases SET expires_at='2026-03-02 15:59:59' WHERE id=96001000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "wrong_session_identity",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE workspace_presence_leases SET user_id=712064548 WHERE id=96001000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "dnd",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET presence_setting='dnd' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"dnd\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"db412fd74a59ffcfec7f4bb40c90b7ee\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "invisible",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET presence_setting='invisible' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "offline_dnd",
+      "sql": [
+        "UPDATE users SET presence_setting='dnd' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "active_beats_idle",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE workspace_presence_leases SET last_active_at='2026-03-02 15:49:00' WHERE id=96001000",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001001,'second',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":true,\"presence\":\"online\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"a23ac581b4498de46c3c935359e96b6c\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "revoked_session",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sessions WHERE id=96001000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "inactive",
+      "sql": [
+        "INSERT INTO sessions(id,token,user_id,last_active_at,two_factor_verified_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',149087659,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001000,'member-polling-corpus',96001000,149087659,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET status=1 WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"e81bc814ada9482c4ff7a642f6d1a620\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "stars_david",
+      "sql": [
+        "INSERT INTO user_stars(user_id,starred_user_id,created_at,updated_at) VALUES(127326141,712064548,'2026-03-02 16:00:00','2026-03-02 16:00:00'),(149087659,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":true}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"1a8aed2d03e8f2d197e4da5bfe930ea1\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "stars_jason",
+      "sql": [
+        "INSERT INTO user_stars(user_id,starred_user_id,created_at,updated_at) VALUES(127326141,712064548,'2026-03-02 16:00:00','2026-03-02 16:00:00'),(149087659,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "viewer": "jason",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":true},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"c170a808ad40667caa24677db51b4d83\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "no_conditional_304",
+      "sql": [
+        "INSERT INTO user_stars(user_id,starred_user_id,created_at,updated_at) VALUES(127326141,712064548,'2026-03-02 16:00:00','2026-03-02 16:00:00'),(149087659,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {
+        "If-None-Match": "*",
+        "If-Modified-Since": "Tue, 03 Mar 2026 16:00:00 GMT"
+      },
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":true}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"1a8aed2d03e8f2d197e4da5bfe930ea1\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "unsigned",
+      "sql": [],
+      "viewer": null,
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 401,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "unsigned_accept",
+      "sql": [],
+      "viewer": null,
+      "path": "/rooms/96000000/members",
+      "headers": {
+        "Accept": "application/json"
+      },
+      "status": 401,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "closed_forbidden",
+      "sql": [],
+      "viewer": "loner",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 404,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "missing_room",
+      "sql": [],
+      "viewer": "david",
+      "path": "/rooms/96009999/members.json",
+      "headers": {},
+      "status": 404,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "deleted_room",
+      "sql": [
+        "UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=96000000"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 404,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "no_membership",
+      "sql": [
+        "DELETE FROM memberships WHERE room_id=96000000 AND user_id=127326141"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 404,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "fresh_avatar",
+      "sql": [
+        "UPDATE users SET updated_at='2026-03-02 16:00:01' WHERE id=149087659"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160001\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"e12d523d9175e562d8f0ac35ceae3661\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "agent_checked_in",
+      "sql": [
+        "UPDATE agents SET last_seen_at='2025-01-01 00:00:00',status='failed' WHERE user_id=394959859"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":true,\"presence\":\"agent\",\"status\":\"Failed\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"922ea3d654ea5fdbeb7d247efeef4c4a\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "agent_suspended",
+      "sql": [
+        "UPDATE agents SET last_seen_at='2026-03-02 16:00:00',suspended_at='2026-03-02 16:00:00' WHERE user_id=394959859"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "agent_note",
+      "sql": [
+        "UPDATE agents SET status='working',status_note=' Awaiting feedback ' WHERE user_id=394959859"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\" Awaiting feedback \",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"f2ea49de5ce016aea8238f3f3d4aeab3\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "agent_working",
+      "sql": [
+        "UPDATE agents SET status='waiting',status_note='Note',working_presence='Reading the thread',working_presence_expires_at='2026-03-02 16:00:01' WHERE user_id=394959859"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Reading the thread\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"71773db387a2da976f206bc68cb26faa\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "agent_working_boundary",
+      "sql": [
+        "UPDATE agents SET status='waiting',status_note='Note',working_presence='Expired',working_presence_expires_at='2026-03-02 16:00:00' WHERE user_id=394959859"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Note\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"103a71b423bc5eb9ae33e4c5488faf1d\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "agent_blank_note",
+      "sql": [
+        "UPDATE agents SET status='waiting',status_note=' ' WHERE user_id=394959859"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Waiting\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"88b9e00ab3c3e2a4ad811e7d73855772\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "legacy_bot_presence",
+      "sql": [
+        "UPDATE users SET status=0 WHERE id=773523957",
+        "INSERT INTO sessions(id,token,user_id,last_active_at,created_at,updated_at) VALUES(96001002,'legacy',773523957,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO workspace_presence_leases(id,connection_id,session_id,user_id,expires_at,last_active_at,created_at,updated_at) VALUES(96001002,'legacy',96001002,773523957,'2026-03-02 16:01:30','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523957,\"name\":\"Old Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU3LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--318c9ab3a3d405b290a3636ac6c09e070138336b1a58791227c152141c6db81d/avatar?v=20260302160000\",\"bot\":true,\"online\":true,\"presence\":\"online\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"128dc3e9ab8502d0d43537a772240536\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "bot_key_forbidden",
+      "sql": [],
+      "viewer": null,
+      "path": "/rooms/96000000/members.json?bot_key=394959859-BenderToken1",
+      "headers": {},
+      "status": 403,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "agent_token_forbidden",
+      "sql": [],
+      "viewer": null,
+      "path": "/rooms/96000000/members.json",
+      "headers": {},
+      "token": "bender-test-secret-1234",
+      "status": 403,
+      "body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache",
+        "pragma": null,
+        "etag": null,
+        "last-modified": null
+      }
+    },
+    {
+      "name": "seed_open",
+      "setup": false,
+      "sql": [],
+      "viewer": "david",
+      "path": "/rooms/104393281/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":773523956,\"name\":\"Deploy Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523959,\"name\":\"New member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"1f51d936b6a7dbc42574dca65ddc2eac\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "seed_closed",
+      "setup": false,
+      "sql": [],
+      "viewer": "david",
+      "path": "/rooms/486777696/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"0a52adbaad9406921c4d63c91177e3b8\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "seed_direct",
+      "setup": false,
+      "sql": [],
+      "viewer": "david",
+      "path": "/rooms/699448325/members.json",
+      "headers": {},
+      "status": 200,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"8de029d6ad429ef5450e7e7989af30dc\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "exact_etag_304",
+      "sql": [],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {
+        "If-None-Match": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\""
+      },
+      "status": 304,
+      "body": "",
+      "response_headers": {
+        "content-type": null,
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "etag_list",
+      "sql": [],
+      "viewer": "david",
+      "path": "/rooms/96000000/members.json",
+      "headers": {
+        "If-None-Match": "\"other\", W/\"37c4566ed4dad64d1505fb6a8da50bd9\""
+      },
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"37c4566ed4dad64d1505fb6a8da50bd9\"",
+        "last-modified": null
+      }
+    },
+    {
+      "name": "other_viewer_star_validator",
+      "sql": [
+        "INSERT INTO user_stars(user_id,starred_user_id,created_at,updated_at) VALUES(127326141,712064548,'2026-03-02 16:00:00','2026-03-02 16:00:00'),(149087659,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "viewer": "jason",
+      "path": "/rooms/96000000/members.json",
+      "headers": {
+        "If-None-Match": "W/\"1a8aed2d03e8f2d197e4da5bfe930ea1\""
+      },
+      "status": 200,
+      "body": "{\"members\":[{\"id\":394959859,\"name\":\"Bender Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260302160000\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":\"Idle\",\"starred\":false},{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":true},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"c170a808ad40667caa24677db51b4d83\"",
+        "last-modified": null
+      }
+    }
+  ]
+}

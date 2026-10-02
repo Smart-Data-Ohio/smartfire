@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Count executed named comparisons; mapped names alone are not passing tests."""
 from pathlib import Path
-import json,re,sys
+import json,re,sys,subprocess
 root=Path(__file__).resolve().parents[3]
 mapping=json.loads((Path(__file__).parent/'case-ports.json').read_text())
 log=Path(sys.argv[1]).read_text()
 status={name.rsplit('::',1)[-1]:outcome for name,outcome in re.findall(r'^test (\S+) \.\.\. (ok|FAILED|ignored)$',log,re.M)}
+subprocess.run([sys.executable, str(Path(__file__).parent/"domain-case-inventory.py")], cwd=root, check=True)
 inventory=json.loads((root/".scratch/ws11-domain-case-inventory.json").read_text())
 files={g["path"]:(g["cases"],0) for g in inventory}
 for group in mapping['files']:

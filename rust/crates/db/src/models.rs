@@ -5,6 +5,7 @@ pub mod slack_import;
 pub mod slack;
 pub mod agent;
 pub mod agent_access;
+pub mod agent_profile;
 pub mod agent_approval;
 pub mod agent_approvals;
 pub mod agent_service;
@@ -79,6 +80,8 @@ pub mod notification_policy;
 pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
+
+pub mod room_members;
 pub mod workspace_icon;
 
 pub use account::{Account, AccountSettings};

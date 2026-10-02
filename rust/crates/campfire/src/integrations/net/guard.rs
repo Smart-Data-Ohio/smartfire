@@ -44,21 +44,13 @@ pub async fn resolve_public_ips(resolver: &dyn Resolver, host: &str) -> Result<V
     Ok(v4.into_iter().chain(v6).collect())
 }
 
-pub async fn resolve_webhook(resolver: &dyn Resolver, host: &str) -> Result<IpAddr, GuardError> {
-    let bare = host.strip_prefix('[').unwrap_or(host);
-    let bare = bare.strip_suffix(']').unwrap_or(bare);
-    if let Some(address) = getaddrinfo_numeric(bare) {
-        return if blocked_at_reference_pin(address) { Err(GuardError::Violation(host.into())) } else { Ok(address) };
-    }
-    let addresses = if let Some(address) = ip_literal(host) { vec![address] } else {
-        resolver.lookup(host).await.map_err(|_| GuardError::Unresolvable)?
-    };
-    if addresses.is_empty() { return Err(GuardError::Unresolvable); }
-    let (v4, v6): (Vec<_>, Vec<_>) = addresses.into_iter().filter(|ip| !blocked_at_reference_pin(*ip)).partition(IpAddr::is_ipv4);
-    v4.into_iter().chain(v6).next().ok_or_else(|| GuardError::Violation(host.into()))
-}
-
+#[cfg(test)]
 fn blocked_at_reference_pin(ip: IpAddr) -> bool { blocked_address(ip) }
+
+/// Webhooks share the same Surfguard policy at the reference pin.
+pub async fn resolve_webhook(resolver: &dyn Resolver, host: &str) -> Result<IpAddr, GuardError> {
+    resolve(resolver, host).await
+}
 
 /// `IPAddr.new(text)` for a single address: dotted-quad IPv4, or IPv6 with optional brackets.
 fn ip_literal(text: &str) -> Option<IpAddr> {
