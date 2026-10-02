@@ -102,12 +102,12 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
     });
     await david.getByRole('combobox',{name:'Write a message',exact:true}).fill('hi from david');
     await recipient.getByRole('combobox',{name:'Write a message',exact:true}).fill('hi from kevin');
-    await page.waitForFunction(()=>document.querySelector('[data-typing-notifications-target="author"]').textContent==='David, David');
+    await waitForVisibility(page.locator('[data-typing-notifications-target="author"]').filter({hasText:/^David, David$/}),{timeout:10000});
     await recipient.getByRole('combobox',{name:'Write a message',exact:true}).fill('hi from kevin');
     await david.getByRole('combobox',{name:'Write a message',exact:true}).fill('');
-    await page.waitForFunction(()=>document.querySelector('[data-typing-notifications-target="author"]').textContent==='David');
+    await waitForVisibility(page.locator('[data-typing-notifications-target="author"]').filter({hasText:/^David$/}),{timeout:10000});
     await recipient.getByRole('combobox',{name:'Write a message',exact:true}).fill('');
-    await waitForVisibility(page.locator('.typing-indicator--active'),{state:'detached'});
+    await waitForVisibility(page.locator('.typing-indicator--active'),{state:'hidden',timeout:10000});
   } else if(caseName==='composer drafts persist per room and clear on send') {
     await editor.fill('Designers draft');
     assert.equal(await page.evaluate(()=>localStorage.getItem('campfire.composer.draft.773523953.654632876.main')),'Designers draft');
