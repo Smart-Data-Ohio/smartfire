@@ -1151,21 +1151,22 @@ mod tests {
 
     #[tokio::test]
     async fn unported_actions_say_so_instead_of_404ing() {
-        let unported = campfire_routes::TABLE
-            .iter()
-            .find(|route| {
-                let path = route.spec.trim_end_matches("(.:format)");
-                route.verb == "GET"
-                    && route.action == ActionStatus::Defined
-                    && ported(route.endpoint).is_none()
-                    && !path.contains([':', '*', '('])
-            })
-            .expect("an unported GET route without params");
-        let path = unported.spec.trim_end_matches("(.:format)");
-        let (status, header, body) = request("GET", path).await;
-        assert_eq!(status, StatusCode::NOT_IMPLEMENTED, "{path}");
-        assert_eq!(header.as_deref(), Some(unported.endpoint));
-        assert_eq!(body, format!("Not yet ported: {}\n", unported.endpoint));
+        let unported: Vec<_> = campfire_routes::TABLE.iter().filter(|route| {
+            route.verb == "GET" && route.action == ActionStatus::Defined
+                && ported(route.endpoint).is_none()
+        }).collect();
+        // As actions are ported, the remaining real routes can all have parameters
+        // (or there can be none). Keep exercising every available unported GET.
+        for route in &unported {
+            let path = route.spec.trim_end_matches("(.:format)").split('/').map(|part| {
+                if part.starts_with([':', '*']) { "1" } else { part }
+            }).collect::<Vec<_>>().join("/");
+            let (status, header, body) = request("GET", &path).await;
+            assert_eq!(status, StatusCode::NOT_IMPLEMENTED, "{path}");
+            assert_eq!(header.as_deref(), Some(route.endpoint));
+            assert_eq!(body, format!("Not yet ported: {}\n", route.endpoint));
+        }
+        println!("Dispatch unported GET routes: {} checked", unported.len());
 
         // A route Rails declares without the action stays Rails' 404, and unknown paths too.
         let (status, header, _) = request("GET", "/first_run/new").await;
@@ -1229,3 +1230,5 @@ mod agent_review_tests;
 mod agent_review_r2_tests;
 #[cfg(test)]
 mod agent_review_r3_tests;
+#[cfg(test)]
+mod agent_review_r4_tests;

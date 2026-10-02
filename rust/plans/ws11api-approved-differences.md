@@ -65,3 +65,24 @@ and reused existing JPEG variants retain their files. Injected in-transaction
 failures remove staged preview/variant files and roll back every domain/media/job
 row. These narrow approvals authorize neither other missing files nor other
 response/state differences.
+
+## Committed file ownership and missing-file serving (PR #192 fourth review)
+
+Staged original/preview/variant files are retained immediately when COMMIT
+succeeds, before fallible model callbacks. A callback exception still propagates
+and cancels later ordinary callbacks, matching pinned Rails' transaction runner.
+It cannot revoke ownership of committed files or the notifications for committed
+durable jobs. Failed writes, savepoints and failed COMMIT still remove staged
+files. The callback experiment and its committed receipt live in
+`reference-tools/agents/review192r4_commit_callbacks.rb` and
+`review-192-r4-callbacks.json`.
+
+An existing variant or preview whose file is absent fails representation lookup
+cleanly; no dangling blob or signed redirect is returned for that transformation.
+The approved JPEG posting exception remains a metadata exception: Rails permits
+subsequent posting to reuse its committed variant record even without its file.
+Message attachment preparation preserves that behavior without serving a blob;
+actual representation requests remain subject to the file check. The committed
+legacy JPEG oracle and the new agent JPEG reuse/serving regression cover both
+boundaries. The video oracle now retains every attachment's record_id and
+record_type, with exact foreign keys and generated row-count checks.

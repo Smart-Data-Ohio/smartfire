@@ -1,82 +1,93 @@
-# WS11-api PR192 third-review fixes — PARTIAL wave-4 handoff, 2026-10-02
+# WS11-api: PR192 fourth-review fixes
 
-Verified Rust source/tests/vector commit: `c180d07f26e61f2f5ae2573e29a57e2d88902686`, branch `rust/ws11api-rest-mcp`. The final report commit changes documentation only. The requested read-only review at `/home/riels/.cache/rust-port/ws11apir/review-192-r3/review-evidence.md` was read before editing.
+Verified source: `2676ac9a5fb68d2e26ab17bc67cc99f244ea18bb`, following main merge `06f0685e6dc45919ae36b20e831da4fd89dddc7e`. The merge includes main `033ab0ca93a567bb7ddaf239ca29db9d1253a9ff` (#193). Cargo metadata succeeds with `--locked`. The separate `rust/ws11api-work-writes` branch remains exactly at `ceb1229b16ad40978a9fc5a97072469a9c5e9f4f`; no work-write adapter changes were made.
 
-## Fixes, ruling and failing-first evidence
+## Fixes and failing-first evidence
 
-1. **Fresh video thumbnail retention.** `crates/campfire/src/active_storage.rs` now decides the approved JPEG discard from the **original source's** content type, before a video is replaced by its JPEG preview. Non-JPEG attachments retain their staged variants after commit and enqueue variant analysis atomically. Successful fresh video has source blob 15, JPEG preview 16 and WebP variant 17, all with files. Reposting reuses the same usable variant. Injected variant insertion and analysis-queue failures return 500, restore every domain/media/queue row and remove all staged preview/variant files.
+| Item | Against unchanged 03342475 | Fixed behavior |
+|---|---|---|
+| Committed video ownership | An earlier MessageActivity after-commit failure commits the message, reopened thread, media rows and two jobs, but deletes preview 16 and variant 17 files | HTTP500 and committed state remain; both generated files survive with exact row/file sizes and checksums, and representation reuse returns a usable file |
+| Missing-file representation lookup | Existing missing variant/preview records return a dangling blob | Matching transformation lookup returns a clean error; the exact signed HTTP representation returns 500 with no redirect and unchanged rows/files/jobs |
+| Video attachment targets | The oracle has no record_id and the new target assertion fails | Rails extraction includes record_id and record_type; all three exact Message/source/preview/variant relationships and row deltas (+2 blobs, +3 attachments, +1 variant) are checked |
 
-   The exact Rails exception is **`ActiveStorage::FileNotFoundError: ActiveStorage::FileNotFoundError`**, raised in **`ActiveStorage::Service::DiskService#stream`, `activestorage/lib/active_storage/service/disk_service.rb:152`**, rescuing `Errno::ENOENT`. Gem revision is `1a02651ac37f`. `ActiveStorage::Preview#processed` requests its variant at `preview.rb:54`; `VariantWithRecord#transform_blob` opens the newly recorded preview at `variant_with_record.rb:48` before its deferred upload. The probe captures **one open transaction**. Rails returns 500 and rolls back the message, reopening, preview/variant rows and jobs. The separately uploaded source survives.
+The six-test final baseline batch has **1 passing pre-commit rollback control and 5 failures**, including both missing-file cases. Production source in the baseline clone is exactly 03342475; only tests, module registration and helper visibility were copied. The committed raw receipt is `reference-tools/agents/review-192-r4-failing-first.txt`.
 
-   **The pre-commit defect branch of the maintainer's ruling applies.** Rust does not reproduce the crash: it returns **201** with consistent media and two logical jobs, `ActiveStorage::AnalyzeJob(blob_id:17)` and `ChannelThread::PushMessageJob(thread_id:1900700030,message_id:935962058)`. `reference-tools/agents/review192r3_attachment_diagnosis.rb` first records the unchanged failing Rails request. It then uses ordinary Rails preprocessing in committed transactions (including preview analysis) and posts the same source to produce a valid successful response/state oracle. No Rails request or failure path is patched.
+The signed HTTP key converts a Ruby format symbol into a string and produces a different Marshal digest, as Rails does. An initial extra HTTP assertion removed the posting variant but requested a distinct URL variant, which correctly regenerated and returned 302. The fixture now materializes/removes the exact URL transformation before asserting its failure. The first full attempt was stopped to correct that test. A second complete run identified the approved JPEG preparation regression and an obsolete dispatch-test assumption after main completed the last parameterless unported GET. The shared messaging runtime also required retaining metadata-only lookup semantics. The final fresh clone runs the six new regressions, all six legacy JPEG response/state vectors and the dispatch test before the whole workspace. Superseded runs are not counted as final verification. The final full workspace run below is from a new clone of the corrected commit.
 
-   `vectors/agent_review192r3_attachment.json` retains both outcomes and the Rails rollback/exception, all nonrandom approved message/thread/blob attributes, attachment relationships, file presence/sizes and logical job arguments. `plans/ws11api-approved-differences.md` records the rationale beside the JPEG approval. The verifier compares every artifact byte and has injections rejecting status, rollback, file, job, response and header drift.
+## Changes by file
 
-   **JPEG remains the explicit state exception.** The already-approved fresh JPEG vector still asserts its absent variant file, one push job and Rust201/Rails500. That is the only deliberate missing-file exception; this report does not claim an unqualified invariant that every JPEG variant has a file. Existing JPEG variants with files remain usable. This preserves the instruction to scope the discard to the approved JPEG case.
+- `crates/db/src/database.rs`: an infallible `on_commit_success` resource-finalization queue runs immediately after successful COMMIT and before ordinary model callbacks. Savepoint rollback truncates it, and failed writes/COMMIT drop captured staged guards. Three database regressions cover callback failure, savepoint boundaries and actual deferred-foreign-key COMMIT failure.
+- `crates/campfire/src/active_storage.rs`: staged-file retention uses that queue for originals, previews and variants. The approved original-JPEG discard remains unchanged.
+- `crates/storage/src/storage.rs`: serving/transformation lookups require the recorded file while metadata lookup retains Rails processed-record semantics; absent files fail cleanly instead of returning a dangling blob. No synthetic success, automatic metadata rewrite or additional variant record is returned for the missing transformation.
+- `crates/campfire/src/controllers/agent_review_r4_tests.rs`: real HTTP/media/writer regressions for an earlier fallible callback, successful file reuse, two missing-file cases, exact foreign keys/counts and three late pre-commit faults. Existing R3 helper visibility/module registration supports these tests. The added approved-JPEG regression verifies two posts reuse one metadata record while missing-file serving fails.
+- `crates/campfire/src/controllers/messages.rs`: preserve the approved JPEG metadata reuse in attachment preparation; it returns no image for serving. Agent thread preparation preserves the same boundary.
+- `crates/campfire/src/controllers.rs`: main completes the last parameterless unported GET; the dispatch regression now exercises every remaining unported GET, including parameterized routes, and retains the missing-action/unknown-path404 checks.
+- `reference-tools/agents/review192r3_attachment_diagnosis.rb` and its committed video vector: retain attachment target IDs; every other byte, including sizes/checksums and record types, is unchanged.
+- `reference-tools/agents/{verify-http-vectors.py,test-http-vector-verifier.py}`: validate exact target tuples and prove target/type mutations fail comparison. The injection suite is now 12 tests.
+- `reference-tools/agents/review192r4_commit_callbacks.rb` and its recorded JSON: pinned Rails callback experiment, without changing the Rails app or its callbacks.
 
-2. **HTML timestamp excluded from JSON.** `crates/db/src/models/message_rendering.rs` loads `github_pull_request_threads` aggregate timestamps only in the full HTML loader, never `load_payload`. At both 5/50 plain root messages, MCP reader SELECTs fall **19→18**, and this unused query falls **1→0**. Both response SHA-256 hashes are identical before/after. All 1,491 existing wire cases are unchanged.
+## After-commit audit and Rails semantics
 
-The separate baseline clone remains at **15f5536f9869d1261568e9153dfcd1f1bae6c985**. Only the six-test module, registration/helper visibility and vector were added. **Four regressions failed first:** fresh video retained no variant file, reuse trusted that missing file, no variant analysis was enqueued, and MCP queried HTML timestamps at both sizes. **Two controls already passed:** reused JPEG file retention and injected variant-insert rollback. The committed receipt is `reference-tools/agents/review-192-r3-failing-first.txt`. The existing approved JPEG and original attachment rollback regressions remain in the pinned 19-test review run. No mock replaces the router, writer, media processor or queue.
+Pinned Rails gem 1a02651ac37f `ActiveRecord::ConnectionAdapters::Transaction#commit_records` (abstract/transaction.rb:308) stops executing callbacks on the first exception. Its ensure path only calls `committed!(should_run_callbacks: false)` on remaining records; transaction after_commit callbacks are also skipped. The real Rails probe raises `RuntimeError: PR192 injected Rails after-commit error`, records only `first:1900700040`, retains both records 1900700040/1900700041 and reports zero open transactions. It recaptures identically to the committed receipt.
 
-## Merge and cross-workstream boundaries
+Rust preserves this cancellation behavior for ordinary hooks and broadcasts. Production `Message::create` registers fallible `ChannelThread::broadcast_thread_indicators` reads before media retention, so ownership cannot depend on their success. Finalizing already-written files is resource bookkeeping, not a new Rails-style side effect.
 
-Merge commit `c180d07f26e61f2f5ae2573e29a57e2d88902686` includes fetched main **5f908337a953b8672472317b03bd0cd5de34194e**, including #185, #194, #195 and #197. Conflicts were resolved by retaining both the agent endpoint declarations/payload preloads and main's huddle endpoints and batched event/GitHub provider loaders. No board presenter was manually changed; main's reviewed WS14g changes arrived through the merge. Main's real WS15g repository/account services remain authoritative. Cargo metadata passes with `--locked` after the merge. No Rails source, dependency, throttle, timing threshold or comparison mask was changed. The only new parity exception is the explicitly authorized fresh-video outcome; the JPEG approval is unchanged.
+The other work that must survive this failure is committed durable job notification: thread push, variant analysis and any committed purge/delivery jobs. Main already persists these inside the source transaction and wakes remaining committed jobs after an earlier callback error. The existing `ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs` regression is rerun below, and the HTTP fault regression asserts the exact two committed job payloads. No additional change to job handling was needed. Later ordinary indicator/publication/model hooks remain skipped as in Rails. Transactional index/unread/reference/activity bookkeeping remains committed; pre-commit media/attachment/job faults still roll it all back.
 
-## Complete versus flagged
+The two approved Rails crash differences remain narrow: fresh JPEG Rust201/Rails500 with its explicitly approved missing variant file; fresh video Rust201/Rails500 with usable generated files. The fresh-video diagnosis remains the genuine pre-commit unuploaded JPEG preview defect, not a missing original upload. No masks, timings, concurrency settings, dependency or Rails source changed.
 
-Both requested review findings are fixed. Twenty exact recaptured artifacts contain **1,491 unchanged wire cases plus two approved media-difference cases**. All 38 MCP tools remain dispatched; selected success coverage remains 31/35 REST and 33/38 MCP. The boundary and validation matrices cover selected cases, not every possible input/header.
+## Verification and limits
 
-**Nine WS12 writes remain pending:** REST board create and work update/result/handoff; MCP `create_board_post`, `update_board_post`, `update_work`, `set_result`, `handoff_work`. They return **generic REST500 / MCP-32603**, with unchanged domain/queue tables; no fake success or special unavailable response is claimed. No WS12 branch/service was wired in this review pass.
+All commands below were run for this report. The final clone rebuilt default, first_run and agents_ui seeds, cleaned all 13 local workspace packages and rebuilt from its own source paths. Only one owned target existed at a time; cargo used two jobs with the configured rustc throttle and tests used eight threads/ports52900–52949. The Python model server was not touched; no stash/rebase or new ignore was used.
 
-**Not only owner-blocked items remain in the broader wave-4 scope.** Exhaustive coercion/length/callback precedence, broader date grammar, work/filter/cursor combinations, legacy boosts without Agent rows, bot bounce/reply-source chains, further media replay/purge/MIME/representation cases, and concurrent revocation/viewer/delivery/finalization interactions remain partial. This requested review pass is complete; no new Rails controller-file pass counts are claimed.
+The native workspace retains the previously established media-version differences: logo output, the storage version guard and the exact fresh-video byte golden. These are not masked or counted as passing. The same current test binaries pass the relevant full assertions in the pinned runtime. Other ignored tests remain ignored and are not passes. There are zero actual seed skips.
 
-## Verification and native media limits
+## Failing-first command (expected exit101)
 
-A fresh Git clone of the merged commit ran the entire workspace, with default, first_run and agents_ui seeds rebuilt. All 13 local workspace packages were cleaned before rebuilding from fresh source paths; third-party compilation cache was retained. Cargo used two jobs and the configured rustc throttle. Tests used at most eight threads and ports 52900–52949. The Python model server was not touched; no stash/rebase, new ignore, reduced concurrency or widened timing threshold was used.
-
-The native suite exits **101**: **4,465 passed, three failed, 16 ignored, zero actual seed skips**. Two failures are the accepted native logo and storage-version checks (also reproduced on clean main by the read-only review). The third is the **new strict video state oracle**, whose native preview/WebP sizes/checksums differ: JPEG11787 versus pinned11788 bytes, WebP3336 versus pinned3326. Message/thread/source metadata, attachments, jobs and file presence match; no fields are masked. The same binary passes that complete state comparison in the pinned runtime. Pinned logo, all ten storage vectors and all 19 PR192 regressions pass. Both normally ignored WS14g polling HTTP comparisons were explicitly run and pass.
-
-Strict clippy, release-input build, all exact oracle comparisons, 84 source pins and 11 verifier injection tests exit **0**. The full workspace's other ignored tests remain deferred; they are not counted as passes. Raw commands and summary lines follow.
-
-## Failing-first baseline (exit 101)
 
 ```bash
-CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r3-tmp" CARGO_TARGET_DIR="$PWD/.scratch/pr192-r3-target" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked --manifest-path .scratch/pr192-r3-baseline/rust/Cargo.toml -p campfire --bin campfire pr192_r3 -- --nocapture --test-threads=8 > .scratch/pr192-r3/logs/failing-first-final.log 2>&1
+CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r4-tmp" CARGO_TARGET_DIR="$PWD/.scratch/pr192-r4-target" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path .scratch/pr192-r4-baseline/rust/Cargo.toml -p campfire --bin campfire pr192_r4 -- --nocapture --test-threads=8 > .scratch/pr192-r4/logs/final-failing-first.log 2>&1
 ```
 
 ```text
-Baseline: 15f5536f9869d1261568e9153dfcd1f1bae6c985
-Only regression module, registration, helper visibility and vector added; no production edits.
-PR192_R3_CACHE size=5 SELECTs=19 HTML_timestamp_SELECTs=1 body_sha256=e5496bb86574510f488746563a320c83942db1b1d06fc29c761f3210b055324a
-test controllers::agent_review_r3_tests::pr192_r3_reused_jpeg_variant_retains_its_existing_file ... ok
-PR192_R3_CACHE size=50 SELECTs=19 HTML_timestamp_SELECTs=1 body_sha256=91bee85e195e08c6912e83111854ff26b6f123d88f942ff1df256dc51803a1fe
-assertion `left == right` failed: JSON payloads must not read HTML-only cache stamps
-  left: [1, 1]
- right: [0, 0]
-test controllers::agent_review_r3_tests::pr192_r3_mcp_payload_omits_html_cache_timestamps_at_both_sizes ... FAILED
-test controllers::agent_review_r3_tests::pr192_r3_video_insert_failure_rolls_back_all_rows_and_files ... ok
-PR192_R3_VIDEO status=201 variant_files=[(17, false, 0)]
-assertion `left == right` failed: successful video must enqueue its variant analysis atomically
-  left: 201
- right: 500
-test controllers::agent_review_r3_tests::pr192_r3_fresh_video_retains_preview_and_variant_files ... FAILED
-test controllers::agent_review_r3_tests::pr192_r3_video_analysis_enqueue_failure_rolls_back_all_rows_and_files ... FAILED
-test controllers::agent_review_r3_tests::pr192_r3_reused_video_variant_keeps_the_same_usable_file ... FAILED
-test result: FAILED. 2 passed; 4 failed; 0 ignored; 0 measured; 2370 filtered out; finished in 1.02s
+Baseline 03342475c6bc61e44d1ce3cc39d6799aafa2df58; production source unchanged.
+The final six-test module, module registration and existing-helper visibility were copied; the old oracle remains unchanged.
+    Finished `test` profile [unoptimized] target(s) in 2m 31s
+thread 'controllers::agent_review_r4_tests::pr192_r4_video_oracle_preserves_attachment_targets_and_exact_row_counts' (1372923) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:187:9:
+oracle omits attachment target: {"blob_id":16,"created_at":"2026-03-02 16:00:00 UTC","name":"preview_image","record_type":"ActiveStorage::Blob"}
+test controllers::agent_review_r4_tests::pr192_r4_video_oracle_preserves_attachment_targets_and_exact_row_counts ... FAILED
+thread 'controllers::agent_review_r4_tests::pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files' (1372918) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:296:5:
+approved missing JPEG file must never be returned for serving: Ok(Blob { id: 16, key: "q66e086hralkmjzn8z0e1ftl169h", filename: Filename("moon.jpg"), content_type: Some("image/jpeg"), metadata: Object([("identified", Bool(true))]), service_name: "local", byte_size: 13036, checksum: Some("p7Xvr8seqToD36kDFhsGng=="), created_at: "2026-03-02 16:00:00" })
+test controllers::agent_review_r4_tests::pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files ... FAILED
+thread 'controllers::agent_review_r4_tests::pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and_jobs' (1372919) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:30:5:
+committed blob 16 has lost its file
+test controllers::agent_review_r4_tests::pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and_jobs ... FAILED
+thread 'controllers::agent_review_r4_tests::pr192_r4_missing_preview_file_fails_cleanly_without_returning_a_blob' (1372921) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:157:5:
+missing media file returned dangling blob: Ok(Blob { id: 18, key: "aqx8i2kd4q6c0j3042yvgyi5318r", filename: Filename("alpha-centuri.webp"), content_type: Some("image/webp"), metadata: Object([("identified", Bool(true))]), service_name: "local", byte_size: 3336, checksum: Some("e8tykSPtDcnTAIo2FuqAJw=="), created_at: "2026-03-02 16:00:00" })
+thread 'controllers::agent_review_r4_tests::pr192_r4_missing_variant_file_fails_cleanly_without_returning_a_blob' (1372922) panicked at crates/campfire/src/controllers/agent_review_r4_tests.rs:157:5:
+missing media file returned dangling blob: Ok(Blob { id: 18, key: "2hmgujm8nb7u87aykx93g6g987w5", filename: Filename("alpha-centuri.webp"), content_type: Some("image/webp"), metadata: Object([("identified", Bool(true))]), service_name: "local", byte_size: 3336, checksum: Some("e8tykSPtDcnTAIo2FuqAJw=="), created_at: "2026-03-02 16:00:00" })
+test controllers::agent_review_r4_tests::pr192_r4_missing_variant_file_fails_cleanly_without_returning_a_blob ... FAILED
+test controllers::agent_review_r4_tests::pr192_r4_missing_preview_file_fails_cleanly_without_returning_a_blob ... FAILED
+PR192_R4_ROLLBACK preview_attachment/variant_attachment/push_job rows/files=unchanged
+test controllers::agent_review_r4_tests::pr192_r4_late_media_and_job_failures_roll_back_rows_and_files ... ok
+    controllers::agent_review_r4_tests::pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files
+    controllers::agent_review_r4_tests::pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and_jobs
+    controllers::agent_review_r4_tests::pr192_r4_missing_preview_file_fails_cleanly_without_returning_a_blob
+    controllers::agent_review_r4_tests::pr192_r4_missing_variant_file_fails_cleanly_without_returning_a_blob
+    controllers::agent_review_r4_tests::pr192_r4_video_oracle_preserves_attachment_targets_and_exact_row_counts
+test result: FAILED. 1 passed; 5 failed; 0 ignored; 0 measured; 2490 filtered out; finished in 4.19s
 ```
 
-## Fresh clone, merge lockfile and seeds (exit 0)
+## Fresh-clone workspace
+
 
 ```bash
-git clone --no-hardlinks --no-local --branch rust/ws11api-rest-mcp . .scratch/pr192-r3-final-fresh
-mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path .scratch/pr192-r3-final-fresh/rust/Cargo.toml --format-version 1 > .scratch/pr192-r3/final-metadata.json
-git log -1 --format='%H%n%P'
-PARITY_NAMESPACE=ws11api-r3-final-seeds PARITY_IMAGE=ws11api-reference:d7c7de92 .scratch/pr192-r3-final-fresh/rust/parity/bin/seed build default first_run agents_ui
+git clone --no-hardlinks --no-local --branch rust/ws11api-rest-mcp . .scratch/pr192-r4-done-fresh
+mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path .scratch/pr192-r4-done-fresh/rust/Cargo.toml --format-version 1 > .scratch/pr192-r4/done-metadata.json
+PARITY_NAMESPACE=ws11api-r4-done-seeds PARITY_IMAGE=ws11api-reference:d7c7de92 .scratch/pr192-r4-done-fresh/rust/parity/bin/seed build default first_run agents_ui
 ```
 
 ```text
-c180d07f26e61f2f5ae2573e29a57e2d88902686
-d7d3390fd99c9cebae1cf42bc2b841f6af305a39 5f908337a953b8672472317b03bd0cd5de34194e
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
@@ -85,52 +96,50 @@ seed: building agents_ui
 seed: agents_ui -> parity/.seed/agents_ui (6.1M)
 ```
 
-## Full workspace (exit 101: three native media comparisons)
 
 ```bash
-CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r3-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path .scratch/pr192-r3-final-fresh/rust/Cargo.toml --workspace --exclude html5ever --no-fail-fast -- --nocapture --test-threads=8 > .scratch/pr192-r3/logs/final-workspace.log 2>&1
-python3 .scratch/pr192-r3-final-fresh/rust/reference-tools/agents/summarize-http-tests.py .scratch/pr192-r3/logs/final-workspace.log
+CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r4-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path .scratch/pr192-r4-done-fresh/rust/Cargo.toml --workspace --exclude html5ever --no-fail-fast -- --nocapture --test-threads=8 > .scratch/pr192-r4/logs/done-workspace.log 2>&1
+python3 .scratch/pr192-r4-done-fresh/rust/reference-tools/agents/summarize-http-tests.py .scratch/pr192-r4/logs/done-workspace.log
 ```
 
 ```text
-    Finished `test` profile [unoptimized] target(s) in 3m 01s
-test result: FAILED. 2481 passed; 2 failed; 7 ignored; 0 measured; 0 filtered out; finished in 519.03s
+test result: FAILED. 2512 passed; 2 failed; 7 ignored; 0 measured; 0 filtered out; finished in 484.07s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.48s
-test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.77s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.42s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
-test result: ok. 1257 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 123.10s
-test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.63s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
-test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
+test result: ok. 1279 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 107.80s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.84s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.97s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
-test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.34s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.41s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.17s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.32s
 test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.33s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.30s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.14s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.55s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.15s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.79s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.41s
-test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
-test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.69s
+test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.35s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.73s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
@@ -140,8 +149,8 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.05s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.93s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -153,73 +162,89 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-WS11-api cargo totals: 4465 passed; 3 failed; 16 ignored; 59 result summaries
+WS11-api cargo totals: 4518 passed; 3 failed; 16 ignored; 59 result summaries
 WS11-api seed skips: 0 actual; 1 intentional missing-seed unit notice
 ```
 
-## Controller/review receipts from the full run
+## Targeted preflight (all exit0)
+
 
 ```bash
-python3 .scratch/pr192-r3/receipts.py
+CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r4-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path .scratch/pr192-r4-done-fresh/rust/Cargo.toml -p campfire --bin campfire pr192_r4 -- --nocapture --test-threads=8
 ```
 
 ```text
-WS11-api compiled agent/bot/review groups: 97 passed; 1 failed; 0 ignored
-PR192_R2_PAYLOAD context=true SELECTs=27
-PR192_R2_CONTEXT author_batch_SELECTs=1
-PR192_R2_JPEG Rust_status=201 Rails_status=500 jobs=1 variant_file_exists=false
-PR192_R2_PAYLOAD context=false SELECTs=18
-PR192_R2_PRIVATE interface=mcp_private_work size=5 SELECTs=22
-PR192_R2_PRIVATE interface=mcp_private_work size=50 SELECTs=22
-PR192_R2_PRIVATE interface=rest_private_work size=5 SELECTs=21
-PR192_R2_PRIVATE interface=rest_private_work size=50 SELECTs=21
-PR192_R3_VIDEO status=201 variant_files=[(17, true, 3336)]
-PR192_R3_CACHE size=5 SELECTs=18 HTML_timestamp_SELECTs=0 body_sha256=e5496bb86574510f488746563a320c83942db1b1d06fc29c761f3210b055324a
-PR192_R3_CACHE size=50 SELECTs=18 HTML_timestamp_SELECTs=0 body_sha256=91bee85e195e08c6912e83111854ff26b6f123d88f942ff1df256dc51803a1fe
-WS11-api review reader: board_rest; size=5; returned=5; SELECTs=14
-WS11-api review reader: board_mcp; size=5; returned=5; SELECTs=9
-WS11-api review reader: board_rest; size=50; returned=50; SELECTs=14
-WS11-api review reader: board_mcp; size=50; returned=50; SELECTs=9
-WS11-api review reader: context_thread; size=5; returned=5; SELECTs=27
-WS11-api review reader: context_thread; size=50; returned=50; SELECTs=27
-WS11-api review thread attachment: status=500; posted_rows=0; closed_at=Some("2026-03-01 16:00:00")
-WS11-api review reader: history_root; size=5; returned=5; SELECTs=18
-WS11-api review reader: history_root; size=50; returned=50; SELECTs=18
-WS11-api review reader: history_thread; size=5; returned=5; SELECTs=26
-WS11-api review reader: history_thread; size=50; returned=50; SELECTs=26
-WS11-api review reader: work_rest; size=5; returned=5; SELECTs=12
-WS11-api review reader: work_mcp; size=5; returned=5; SELECTs=13
-WS11-api review reader: work_rest; size=50; returned=50; SELECTs=12
-WS11-api review reader: work_mcp; size=50; returned=50; SELECTs=13
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 2515 filtered out; finished in 2.58s
 ```
 
-## Strict clippy (exit 0)
 
 ```bash
-CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r3-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo clippy --locked -j2 --manifest-path .scratch/pr192-r3-final-fresh/rust/Cargo.toml --workspace --exclude html5ever --all-targets -- -D warnings > .scratch/pr192-r3/logs/final-clippy.log 2>&1
+CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r4-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path .scratch/pr192-r4-done-fresh/rust/Cargo.toml -p campfire --bin campfire controllers::messages::review_tests::jpeg_new_and_reused_variants_match_rails_rows_files_and_lifecycle -- --exact --nocapture --test-threads=8
 ```
 
 ```text
-    Finished `dev` profile [unoptimized] target(s) in 2m 18s
+WS8bm JPEG boundaries: 6 Rails responses byte-identical; root success; initial/reply 500 then reuse 201; committed variant rows and missing files match
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2520 filtered out; finished in 2.09s
 ```
 
-## Release inputs (exit 0)
 
 ```bash
-CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r3-tmp" CARGO_TARGET_DIR="$PWD/.scratch/pr192-r3-final-fresh/rust/target" mise exec rust@1.98.1 -- bash .scratch/pr192-r3-final-fresh/rust/ci/with-release-inputs.sh cargo build --locked --workspace --bins -j2 > .scratch/pr192-r3/logs/final-release-inputs.log 2>&1
+CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r4-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path .scratch/pr192-r4-done-fresh/rust/Cargo.toml -p campfire --bin campfire controllers::tests::unported_actions_say_so_instead_of_404ing -- --exact --nocapture --test-threads=8
 ```
 
 ```text
-    Finished `dev` profile [unoptimized] target(s) in 1m 58s
+Dispatch unported GET routes: 1 checked
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2520 filtered out; finished in 0.28s
 ```
 
-## Exact vector, source and injection suites (all exit 0)
+## New invariants and database callback controls
+
 
 ```bash
-PARITY_NAMESPACE=ws11api-r3-final-oracles RUST_TEST_THREADS=8 python3 .scratch/pr192-r3-final-fresh/rust/reference-tools/agents/record-http-vectors.py .scratch/pr192-r3/final-oracles
-python3 .scratch/pr192-r3-final-fresh/rust/reference-tools/agents/verify-http-vectors.py .scratch/pr192-r3/final-oracles
-python3 .scratch/pr192-r3-final-fresh/rust/reference-tools/agents/check-http-reference.py
-python3 .scratch/pr192-r3-final-fresh/rust/reference-tools/agents/test-http-vector-verifier.py
+rg '^PR192_R4|^test database::tests::commit_finalizers|^test tests::agent_work_events_test::ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs' .scratch/pr192-r4/logs/done-workspace.log
+```
+
+```text
+PR192_R4_JPEG reuse_statuses=201/201 messages=2 variants=1 missing_file_serving=clean_error
+PR192_R4_AFTER_COMMIT status=500 message/thread/media/two_jobs=committed preview/variant_files=retained later_model_callback=skipped
+PR192_R4_MISSING_FILE preview_missing=true clean_error=true rows/files/jobs=unchanged
+PR192_R4_MISSING_FILE preview_missing=false clean_error=true rows/files/jobs=unchanged
+PR192_R4_ROLLBACK preview_attachment/variant_attachment/push_job rows/files=unchanged
+PR192_R4_RELATIONS blobs=+2 attachments=+3 variants=+1 three_exact_foreign_keys=true target_injection=detected
+test database::tests::commit_finalizers_follow_savepoint_rollback_boundaries ... ok
+test database::tests::commit_finalizers_do_not_run_when_commit_itself_fails ... ok
+test database::tests::commit_finalizers_precede_fallible_model_callbacks ... ok
+test tests::agent_work_events_test::ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs ... ok
+```
+
+## Strict clippy and release inputs (both exit0)
+
+
+```bash
+CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r4-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo clippy --locked -j2 --manifest-path .scratch/pr192-r4-done-fresh/rust/Cargo.toml --workspace --exclude html5ever --all-targets -- -D warnings > .scratch/pr192-r4/logs/verified-clippy.log 2>&1
+```
+
+```text
+Finished `dev` profile [unoptimized] target(s) in 1m 26s
+```
+
+
+```bash
+CI=1 CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r4-tmp" CARGO_TARGET_DIR="$PWD/.scratch/pr192-r4-done-fresh/rust/target" mise exec rust@1.98.1 -- bash .scratch/pr192-r4-done-fresh/rust/ci/with-release-inputs.sh cargo build --locked --workspace --bins -j2 > .scratch/pr192-r4/logs/verified-release-inputs.log 2>&1
+```
+
+```text
+Finished `dev` profile [unoptimized] target(s) in 1m 27s
+```
+
+## Exact vectors, source pins and verifier injections (exit0)
+
+
+```bash
+PARITY_NAMESPACE=ws11api-r4-done-vectors python3 .scratch/pr192-r4-done-fresh/rust/reference-tools/agents/record-http-vectors.py .scratch/pr192-r4/done-vectors
+python3 .scratch/pr192-r4-done-fresh/rust/reference-tools/agents/verify-http-vectors.py .scratch/pr192-r4/done-vectors
+PARITY_NAMESPACE=ws11api-r4-done-sources python3 .scratch/pr192-r4-done-fresh/rust/reference-tools/agents/check-http-reference.py
+python3 .scratch/pr192-r4-done-fresh/rust/reference-tools/agents/test-http-vector-verifier.py
 ```
 
 ```text
@@ -247,72 +272,69 @@ WS11-api MCP dispatch: 38 explicit tool names; 29 throttled tools
 WS11-api base MCP coverage: 84 asserted vectors; 0 deferred base vectors
 WS11-api boundary matrix: 35 REST invalid credentials; 35 REST human sessions; 29 MCP tool overflows
 WS11-api reference sources: 84 pinned files matched; 0 image or checkout mismatches (d7c7de92)
-...........
+............
 ----------------------------------------------------------------------
-Ran 11 tests in 0.007s
+Ran 12 tests in 0.009s
 
 OK
 WS11-api vector totals: 1491 unchanged wire cases; 2 approved media differences; 20 exact oracle artifacts
 ```
 
-## Pinned PR192 review regressions (exit 0)
+## Pinned callbacks and pinned media regressions (exit0)
+
 
 ```bash
-docker run --rm --name ws11api-r3-review-tests --network none --cpus 2 --user "$(id -u):$(id -g)" -e CI=1 -e RUST_TEST_THREADS=8 -e CABLE_TEST_PORT_RANGE=52900-52919 -e INTEGRATION_TEST_PORT_RANGE=52920-52949 -e MAIL_TEST_PORT_RANGE=52920-52949 -e TMPDIR="$PWD/.scratch/pr192-r3-tmp" -v "$PWD/.scratch/pr192-r3-final-fresh:$PWD/.scratch/pr192-r3-final-fresh:ro" -v "$PWD/.scratch/pr192-r3-tmp:$PWD/.scratch/pr192-r3-tmp" --entrypoint "$PWD/.scratch/pr192-r3-final-fresh/rust/target/debug/deps/campfire-d38ff26cb5c6fd57" ws11api-reference:d7c7de92 pr192 --nocapture --test-threads=8
+PARITY_NAMESPACE=ws11api-r4-done-callbacks PARITY_IMAGE=ws11api-reference:d7c7de92 .scratch/pr192-r4-done-fresh/rust/parity/bin/reference exec --seed default bin/rails runner /work/reference-tools/agents/review192r4_commit_callbacks.rb > .scratch/pr192-r4/verified-rails-callbacks.json
+cmp .scratch/pr192-r4/verified-rails-callbacks.json .scratch/pr192-r4-done-fresh/rust/reference-tools/agents/review-192-r4-callbacks.json
 ```
 
 ```text
-test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 2471 filtered out; finished in 18.65s
+{
+  "exception": {
+    "class": "RuntimeError",
+    "message": "PR192 injected Rails after-commit error",
+    "open_transactions": 0
+  },
+  "trace": [
+    "first:1900700040"
+  ],
+  "committed_ids": [
+    1900700040,
+    1900700041
+  ],
+  "commit_records_source": [
+    "/usr/local/bundle/ruby/3.4.0/bundler/gems/rails-1a02651ac37f/activerecord/lib/active_record/connection_adapters/abstract/transaction.rb",
+    308
+  ]
+}
 ```
 
-```text
-PR192_R2_PRIVATE interface=mcp_private_work size=5 SELECTs=22
-PR192_R2_PRIVATE interface=rest_private_work size=5 SELECTs=21
-PR192_R3_CACHE size=5 SELECTs=18 HTML_timestamp_SELECTs=0 body_sha256=e5496bb86574510f488746563a320c83942db1b1d06fc29c761f3210b055324a
-PR192_R2_PRIVATE interface=rest_private_work size=50 SELECTs=21
-PR192_R2_JPEG Rust_status=201 Rails_status=500 jobs=1 variant_file_exists=false
-PR192_R2_PRIVATE interface=mcp_private_work size=50 SELECTs=22
-PR192_R2_PAYLOAD context=false SELECTs=18
-PR192_R3_CACHE size=50 SELECTs=18 HTML_timestamp_SELECTs=0 body_sha256=91bee85e195e08c6912e83111854ff26b6f123d88f942ff1df256dc51803a1fe
-PR192_R2_PAYLOAD context=true SELECTs=27
-PR192_R2_CONTEXT author_batch_SELECTs=1
-PR192_R3_VIDEO status=201 variant_files=[(17, true, 3326)]
-```
-
-## Pinned logo (exit 0)
 
 ```bash
-docker run --rm --name ws11api-r3-logo --network none --cpus 2 --user "$(id -u):$(id -g)" -e CI=1 -e RUST_TEST_THREADS=8  -e TMPDIR="$PWD/.scratch/pr192-r3-tmp" -v "$PWD/.scratch/pr192-r3-final-fresh:$PWD/.scratch/pr192-r3-final-fresh:ro" -v "$PWD/.scratch/pr192-r3-tmp:$PWD/.scratch/pr192-r3-tmp" --entrypoint "$PWD/.scratch/pr192-r3-final-fresh/rust/target/debug/deps/campfire-d38ff26cb5c6fd57" ws11api-reference:d7c7de92 controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers --exact --nocapture --test-threads=8
+python3 .scratch/pr192-r4/run-pinned.py
 ```
 
 ```text
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2489 filtered out; finished in 2.29s
+review:
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 2496 filtered out; finished in 19.85s
+logo:
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2520 filtered out; finished in 0.94s
+storage:
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.06s
+polling:
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2519 filtered out; finished in 0.69s
 ```
 
-## Pinned storage vectors (exit 0)
+## Remaining scope and cleanup
+
+Both requested fourth-review fixes are complete. Nine work writes remain explicitly pending (four REST, five MCP): valid requests still return generic REST500 or MCP-32603 with no domain/queue writes. Their WS12 services are now merged, but adapter wiring remains pending and its run was paused by the maintainer on the preserved work-writes branch; these are no longer owner-blocked. No work-write service/domain logic was reimplemented here. All other prior API coverage is retained.
+
+
 
 ```bash
-docker run --rm --name ws11api-r3-storage --network none --cpus 2 --user "$(id -u):$(id -g)" -e CI=1 -e RUST_TEST_THREADS=8  -e TMPDIR="$PWD/.scratch/pr192-r3-tmp" -v "$PWD/.scratch/pr192-r3-final-fresh:$PWD/.scratch/pr192-r3-final-fresh:ro" -v "$PWD/.scratch/pr192-r3-tmp:$PWD/.scratch/pr192-r3-tmp" --entrypoint "$PWD/.scratch/pr192-r3-final-fresh/rust/target/debug/deps/vectors-377b245d4f8eeec0" ws11api-reference:d7c7de92 --nocapture --test-threads=8
+python3 .scratch/pr192-r4/cleanup-target.py
 ```
 
 ```text
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.12s
+WS11-api cleanup: removed owned scratch target .scratch/pr192-r4-done-fresh/rust/target (11995767141 bytes); 0 owned PR192-R4 target directories remain
 ```
-
-## Explicit WS14g polling HTTP comparisons (exit 0)
-
-```bash
-CI=1 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r3-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 .scratch/pr192-r3-final-fresh/rust/target/debug/deps/campfire-d38ff26cb5c6fd57 ws14g_agent_polling_http_ --ignored --nocapture --test-threads=8 > .scratch/pr192-r3/logs/final-ws14g-polling.log 2>&1
-```
-
-```text
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2488 filtered out; finished in 0.85s
-```
-
-## Cleanup
-
-```text
-WS11-api cleanup: removed owned scratch target .scratch/pr192-r3-final-fresh/rust/target (11823586562 bytes); 0 owned PR192-R3 target directories remain
-```
-
-All test/build processes and review containers completed before target deletion. Logs, source clones and seeds remain in the owned `.scratch/pr192-r3*` paths. The final report commit changes no verified Rust source, tests, helpers or vector bytes. The pushed SHA is in the final reply.

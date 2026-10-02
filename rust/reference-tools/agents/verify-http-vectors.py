@@ -47,6 +47,14 @@ def check_approved_video_difference(vector):
     assert [job['class'] for job in case['state']['jobs']] == ['ActiveStorage::AnalyzeJob', 'ChannelThread::PushMessageJob']
     assert case['state']['jobs'][0]['args']['blob_id'] == case['state']['blobs'][2]['attributes']['id']
     assert json.loads(case['approved']['response'])['id'] == case['state']['message']['id']
+    attachments = case['state']['attachments']
+    assert len(attachments) == 3
+    source, preview, image = [blob['attributes']['id'] for blob in case['state']['blobs']]
+    assert [(a['record_type'], a['record_id'], a['name'], a['blob_id']) for a in attachments] == [
+        ('ActiveStorage::Blob', source, 'preview_image', preview),
+        ('ActiveStorage::VariantRecord', 7, 'image', image),
+        ('Message', case['state']['message']['id'], 'attachment', source),
+    ]
 
 
 def check_dispatch(names, source):

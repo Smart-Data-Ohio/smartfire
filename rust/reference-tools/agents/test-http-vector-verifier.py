@@ -95,6 +95,19 @@ class VerifierInjections(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 api['check_approved_video_difference'](changed)
 
+    def test_approved_video_attachment_targets_are_not_masked(self):
+        root = Path(__file__).resolve().parents[2]
+        vector = json.loads((root / 'vectors/agent_review192r3_attachment.json').read_bytes())
+        expected = json.dumps(vector).encode()
+        for index in range(3):
+            for field, value in [('record_id', -1), ('record_type', 'WrongTarget')]:
+                changed = deepcopy(vector)
+                changed['cases'][0]['state']['attachments'][index][field] = value
+                with self.assertRaises(AssertionError):
+                    api['compare_vectors'](json.dumps(changed).encode(), expected, 'attachment target drift')
+                with self.assertRaises(AssertionError):
+                    api['check_approved_video_difference'](changed)
+
     def test_approved_video_state_and_headers_are_not_masked(self):
         root = Path(__file__).resolve().parents[2]
         vector = json.loads((root / 'vectors/agent_review192r3_attachment.json').read_bytes())
