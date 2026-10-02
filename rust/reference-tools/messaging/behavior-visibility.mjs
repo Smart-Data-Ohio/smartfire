@@ -2,6 +2,7 @@
 // overflow, closed details, image maps and shadow-tree visibility.
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
+import {CAPYBARA_DEFAULT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {errors}=require('playwright');
 const atom=readFileSync(new URL('./selenium/isDisplayed.js',import.meta.url),'utf8');
@@ -30,7 +31,7 @@ async function waitForMatches(locator,accept,options,description) {
   throw new errors.TimeoutError(`Selenium visibility ${description} timed out after ${timeout}ms: ${locator}; last visible count: ${count}`);
 }
 export async function waitForVisibleCount(locator,count,options={}) {
-  await waitForMatches(locator,value=>value===count,options,`count=${count}`);
+  await waitForMatches(locator,value=>value===count,{timeout:CAPYBARA_DEFAULT,...options},`count=${count}`);
 }
 export async function visibleMatch(locator,options={}) {
   const indices=await waitForMatches(locator,count=>count>0,options,'visible');

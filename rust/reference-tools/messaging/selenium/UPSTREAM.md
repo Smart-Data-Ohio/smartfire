@@ -6,7 +6,7 @@
 `selenium-webdriver-4.35.0/lib/selenium/webdriver/atoms/isDisplayed.js`
 
 SHA256: `ae26018c01cd27448b250f8e55a094cbfcd2e2cbbe171c78aaa906e1b5c3ed7c`.
-The accompanying Apache 2.0 LICENSE comes from the same installed gem.
+The accompanying Apache 2.0 LICENSE and NOTICE come from the same installed gem.
 
 `behavior-visibility.mjs` calls the atom with `ignoreOpacity=false`, just as
 Selenium's Ruby atom adapter does by default. It checks effective opacity

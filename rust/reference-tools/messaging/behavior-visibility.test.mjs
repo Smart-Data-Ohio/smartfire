@@ -29,7 +29,7 @@ test('pinned Selenium visibility counts opacity through ancestors and other hidd
     await waitForVisibleCount(reactions,2);
     await waitForVisibility(page.getByText('transparent ancestor',{exact:true}),{state:'hidden'});
     await assert.rejects(waitForVisibility(page.getByText('transparent',{exact:true})),{name:'TimeoutError'});
-    await assert.rejects(waitForVisibleCount(reactions,9),{name:'TimeoutError'});
+    await assert.rejects(waitForVisibleCount(reactions,9,{timeout:200}),{name:'TimeoutError'});
     await page.getByText('visible',{exact:true}).evaluate(element=>element.remove());
     await waitForVisibility(page.getByText('visible',{exact:true}),{state:'detached'});
     await waitForVisibleCount(reactions,1);
