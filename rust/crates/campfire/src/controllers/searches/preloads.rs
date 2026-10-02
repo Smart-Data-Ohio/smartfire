@@ -55,40 +55,104 @@ impl Preloads {
             .collect();
         let ids = records.body_ids(messages);
         let fizzy_cards = crate::integrations::fizzy::cards::Card::for_messages(p.conn, &ids)?;
-        let link_references = crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?;
-        let mut event_views = HashMap::new();
-        let event_messages = if ids.is_empty() { Vec::new() } else {
-            let sql = format!("SELECT DISTINCT message_id FROM event_references WHERE message_id IN ({})", std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(","));
-            p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
+        let link_references =
+            crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?;
+        let page_messages: Vec<_> = messages
+            .iter()
+            .chain(records.sources.values())
+            .cloned()
+            .collect();
+        let event_views =
+            crate::controllers::presenters::events::for_messages(p.conn, &page_messages)?;
+        // Use the owner's presentation/refresh policy with page-scoped persisted facts.
+        // Preloading does not schedule refreshes; an actual fragment miss does.
+        let mut github = HashMap::new();
+        let linked = if ids.is_empty() {
+            Vec::new()
+        } else {
+            let sql = format!(
+                "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ({})",
+                std::iter::repeat_n("?", ids.len())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+            p.conn
+                .prepare(&sql)?
+                .query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
                 .collect::<std::result::Result<Vec<_>, _>>()?
         };
-        for id in event_messages {
-            if let Some(message) = messages.iter().find(|m| m.id == id).or_else(|| records.sources.get(&id)) {
-                event_views.insert(id, crate::controllers::presenters::events::for_message(p.conn, message)?);
-            }
-        }
-        // Keep main's GitHub factory and refresh policy, while honoring the existing
-        // message-owner contract that a preloaded message performs no further queries.
-        // Merely preloading never schedules refreshes; only an actual fragment miss does.
-        let mut github = HashMap::new();
-        let linked = if ids.is_empty() { Vec::new() } else {
-            let sql = format!("SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ({})", std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(","));
-            p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_,i64>(0))?
-                .collect::<std::result::Result<Vec<_>,_>>()?
+        let prs =
+            crate::integrations::github::pull_requests::PullRequest::for_messages(p.conn, &linked)?;
+        let discussions =
+            crate::integrations::github::threads::PullRequestThread::for_messages(p.conn, &linked)?;
+        let account = if linked.is_empty() {
+            None
+        } else {
+            campfire_db::Account::first(p.conn)?
         };
         for id in &linked {
-            let message = messages.iter().find(|m| m.id == *id).or_else(|| records.sources.get(id));
+            let message = messages
+                .iter()
+                .find(|m| m.id == *id)
+                .or_else(|| records.sources.get(id));
             if let Some(message) = message {
-                let html = crate::controllers::presenters::github::message_cards_in_zone(p.conn, p.app(), message, &p.render_zone)?;
-                let stamp = crate::controllers::presenters::github::cache_stamp(p.conn, message)?;
-                let refreshes = crate::integrations::github::pull_requests::PullRequest::for_message(p.conn, *id)?
-                    .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(p.now))).map(|pr| pr.id).collect();
-                github.insert(*id, GithubRendering { html, stamp, refreshes });
+                let cards = prs.get(id).map(Vec::as_slice).unwrap_or_default();
+                let views = cards
+                    .iter()
+                    .map(|pr| {
+                        crate::controllers::presenters::github::shared_card_in_discussion(
+                            pr,
+                            discussions.get(&(message.room_id, pr.id)).copied(),
+                        )
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let html = crate::controllers::presenters::github::render_message_cards(
+                    p.app(),
+                    message,
+                    &p.render_zone,
+                    account.as_ref(),
+                    &views,
+                );
+                let stamp = cards
+                    .iter()
+                    .map(|pr| pr.updated_at)
+                    .max()
+                    .map(|newest| {
+                        format!(
+                            "github:{}:{}",
+                            newest.to_db(),
+                            records
+                                .pr_thread_stamps
+                                .get(&message.room_id)
+                                .map(|t| t.to_db())
+                                .unwrap_or_default()
+                        )
+                    })
+                    .unwrap_or_default();
+                let refreshes = cards
+                    .iter()
+                    .filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(p.now)))
+                    .map(|pr| pr.id)
+                    .collect();
+                github.insert(
+                    *id,
+                    GithubRendering {
+                        html,
+                        stamp,
+                        refreshes,
+                    },
+                );
             }
         }
-        let cache = crate::controllers::presenters::message_cache_preloads::CacheFacts::load(p, messages, &records)?;
+        let cache = crate::controllers::presenters::message_cache_preloads::CacheFacts::load(
+            p, messages, &records,
+        )?;
         Ok(Self {
-            cache, github, event_views, fizzy_cards, link_references,
+            cache,
+            github,
+            event_views,
+            fizzy_cards,
+            link_references,
             records,
             users,
             attachments,
@@ -296,7 +360,9 @@ impl PageResolver<'_> {
     }
 }
 impl AttachableResolver for PageResolver<'_> {
-    fn twitter_post_exists_for_url(&self, url: &str) -> bool { self.db.twitter_post_exists_for_url(url) }
+    fn twitter_post_exists_for_url(&self, url: &str) -> bool {
+        self.db.twitter_post_exists_for_url(url)
+    }
 
     fn embed_image_path(&self, url: &str) -> std::result::Result<String, campfire_richtext::Error> {
         self.db.embed_image_path(url)
