@@ -107,10 +107,16 @@ pub async fn bare(c: &mut Ctx, status: StatusCode, template: Format, render: imp
 }
 
 /// Renders with the `ViewContext` `ApplicationController.render` has: no request, no
-/// `Current.user`, no CSRF tokens, and the renderer's default host (`http://example.org`).
+/// `Current.user`, no CSRF tokens, and Rails' configured job-renderer route defaults.
 /// A scoped event write retains the actor's Time.zone; background work defaults to UTC.
 pub fn render_detached<T>(app: &AppState, account: Option<&Account>, render: impl FnOnce(&ViewContext) -> T) -> T {
-    render_detached_at(app, account, "http://example.org", render)
+    render_detached_at(app, account, default_renderer_base_url(app), render)
+}
+
+/// config/initializers/default_url_options.rb: APP_URL configures jobs as well as mail.
+/// ActionController's renderer supplies example.org only when no origin is configured.
+pub(crate) fn default_renderer_base_url(app: &AppState) -> &str {
+    app.config.mail.app_url.as_deref().unwrap_or("http://example.org")
 }
 
 /// `SetCurrentRequest#default_url_options` supplies the request's host, port and protocol to

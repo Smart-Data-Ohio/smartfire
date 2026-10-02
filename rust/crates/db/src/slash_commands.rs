@@ -9,6 +9,7 @@ use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 pub mod time_parser;
+mod calendar;
 pub(crate) mod user_settings;
 #[cfg(test)]
 #[path = "tests/time_zone_writer_test.rs"]
@@ -230,7 +231,7 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
     let zone_name = user_zone(tx, c.user_id)?;
     match name {
         "poll" => Ok(CommandResult::new("open_poll")),
-        "huddle" => Ok(huddle_stub(c)),
+        "huddle" => Ok(huddle_launch(c)),
         "event" => Ok(event_stub(c, args, &zone_name, tx.now())),
         "play" => play_stub(tx, c, args),
         "shrug" => {
@@ -376,8 +377,8 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
         _ => unreachable!("registry has a handler for every entry"),
     }
 }
-/// WS13 owns launch execution. Rails returns a launch result, and creates no huddle here.
-pub fn huddle_stub(c: &Context) -> CommandResult {
+/// Rails returns a client launch action. The huddle controller performs the subsequent join.
+pub fn huddle_launch(c: &Context) -> CommandResult {
     if c.huddles_configured {
         let mut r = CommandResult::new("start_huddle");
         r.room_id = Some(c.room_id);
@@ -485,7 +486,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
                 || mentioned.contains(&member.user_id)
             {
                 tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
-                    stream: format!("user_{}_unreads", member.user_id),
+                    stream: crate::broadcasts::unread_rooms_stream_name(member.user_id),
                     payload: json!({"roomId":room.id}),
                 }));
             }

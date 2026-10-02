@@ -1,0 +1,240 @@
+{
+  "reference": "d7c7de92",
+  "rows": {
+    "twitter_posts": [
+      {
+        "id": 1068132254,
+        "author_avatar_url": null,
+        "author_handle": "author",
+        "author_name": "Author <&>",
+        "created_at": "2026-03-02 16:00:00",
+        "fetch_error": null,
+        "fetch_requested_at": null,
+        "fetched_at": "2026-03-02 16:00:00",
+        "likes": 310826,
+        "media": "[{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/photo.jpg\",\"width\":800,\"height\":532,\"alt\":\"Rocket <&>\"}]",
+        "post_id": "90071992547409931",
+        "posted_at": "2026-03-02 16:00:00",
+        "quote": "{\"url\":\"https://x.com/nasa/status/3\",\"author_name\":\"NASA\",\"author_handle\":\"nasa\",\"text\":\"Quote <&>\"}",
+        "replies": 124658,
+        "reposts": 18041,
+        "text": "Hello @nasa #launch https://example.test/a?x=1&y=2",
+        "updated_at": "2026-03-02 16:00:00",
+        "url": "https://x.com/author/status/90071992547409931"
+      },
+      {
+        "id": 1068132255,
+        "author_avatar_url": null,
+        "author_handle": null,
+        "author_name": null,
+        "created_at": "2026-03-02 16:00:00",
+        "fetch_error": null,
+        "fetch_requested_at": "2026-03-02 16:00:00",
+        "fetched_at": null,
+        "likes": null,
+        "media": null,
+        "post_id": "00022",
+        "posted_at": null,
+        "quote": null,
+        "replies": null,
+        "reposts": null,
+        "text": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "url": "https://x.com/loader/status/00022"
+      },
+      {
+        "id": 1068132256,
+        "author_avatar_url": null,
+        "author_handle": null,
+        "author_name": null,
+        "created_at": "2026-03-02 16:00:00",
+        "fetch_error": "Missing <&>",
+        "fetch_requested_at": null,
+        "fetched_at": "2026-03-02 16:00:00",
+        "likes": null,
+        "media": null,
+        "post_id": "9",
+        "posted_at": null,
+        "quote": null,
+        "replies": null,
+        "reposts": null,
+        "text": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "url": "https://x.com/i/status/9"
+      },
+      {
+        "id": 1068132257,
+        "author_avatar_url": null,
+        "author_handle": null,
+        "author_name": "   ",
+        "created_at": "2026-03-02 16:00:00",
+        "fetch_error": null,
+        "fetch_requested_at": null,
+        "fetched_at": "2026-03-02 16:00:00",
+        "likes": null,
+        "media": null,
+        "post_id": "9999999999999999999999999",
+        "posted_at": null,
+        "quote": null,
+        "replies": null,
+        "reposts": null,
+        "text": "cached post",
+        "updated_at": "2026-03-02 16:00:00",
+        "url": null
+      }
+    ],
+    "messages": [
+      {
+        "id": 935962058,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "twitter-preload-0",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "X preload reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962059,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "twitter-preload-1",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "X preload reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962060,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "twitter-preload-2",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "X preload reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "action_text_rich_texts": [
+      {
+        "id": 935962058,
+        "body": "<p>X preload reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962058,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962059,
+        "body": "<p>X preload reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962059,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962060,
+        "body": "<p>X preload reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962060,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "twitter_post_references": [
+      {
+        "id": 499734376,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962058,
+        "twitter_post_id": 1068132254,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 499734377,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962059,
+        "twitter_post_id": 1068132255,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 499734378,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962059,
+        "twitter_post_id": 1068132256,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 499734379,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962060,
+        "twitter_post_id": 1068132257,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "label": "case-0",
+      "message_id": 935962058,
+      "html": "  <div id=\"twitter_cards_message_twitter-preload-0\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"90071992547409931\">\n    <header class=\"x-post-card__header\">\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/author\">Author &lt;&amp;&gt;</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/author\">@author</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a> <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a> <a href=\"https://example.test/a?x=1&amp;y=2\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.test/a?x=1&amp;y=2</a></div>\n\n      <div class=\"x-post-card__media x-post-card__media--1\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/author/status/90071992547409931\">\n              <img alt=\"Rocket &lt;&amp;&gt;\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/photo.jpg\" />\n</a>      </div>\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__quote-link\" href=\"https://x.com/nasa/status/3\">            <strong>NASA</strong>\n            <span class=\"x-post-card__quote-handle\">@nasa</span>\n</a>\n        </div>\n        <div class=\"x-post-card__quote-text\">Quote &lt;&amp;&gt;</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">125K replies</span>\n        <span class=\"x-post-card__count\">18K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/author/status/90071992547409931\">View on X</a>\n    </footer>\n</article>\n\n  </div>\n"
+    },
+    {
+      "label": "case-1",
+      "message_id": 935962059,
+      "html": "  <div id=\"twitter_cards_message_twitter-preload-1\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"9\">\n    <p class=\"x-post-card__error\">\n      Couldn’t load this post.\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/i/status/9\">View on X</a>\n    </p>\n</article>\n\n  \n    <article class=\"x-post-card\" data-twitter-post=\"00022\">\n    <p class=\"x-post-card__loading\">Loading post…</p>\n</article>\n\n  </div>\n"
+    },
+    {
+      "label": "case-2",
+      "message_id": 935962060,
+      "html": "  <div id=\"twitter_cards_message_twitter-preload-2\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"9999999999999999999999999\">\n    <header class=\"x-post-card__header\">\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/i/status/9999999999999999999999999\">Post on X</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">cached post</div>\n\n\n\n    <footer class=\"x-post-card__footer\">\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/i/status/9999999999999999999999999\">View on X</a>\n    </footer>\n</article>\n\n  </div>\n"
+    }
+  ]
+}
