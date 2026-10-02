@@ -17,6 +17,7 @@ const INPUT: &str = include_str!("slack_claim.json");
 const ORACLE: &str = include_str!("../../../../../vectors/slack/google_claim_http.json");
 const NOW: &str = "2026-03-02T16:00:00Z";
 mod review;
+mod boundaries;
 fn grant() -> String {
     ["fixture", "claim", "grant"].join("-")
 }

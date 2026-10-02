@@ -82,4 +82,5 @@ review_enrollment_failure[:after] = review_response.call(review_browser)
 db.execute('DROP TRIGGER refuse_review_enable')
 review_results = { claims: review_claims, preview_queries: review_preview_queries, enrollment_audit_failure: review_enrollment_failure }
 puts "Google claim review oracle: #{review_claims.length} signed callback cases; preview SELECTs #{review_preview_queries.map { |r| "#{r[:size]}=#{r[:selects]}" }.join(', ')}; enrollment audit failure #{review_enrollment_failure[:state]}"
+eval(File.read(File.join(WORK,'reference-tools/slack/google_enrollment_boundaries.rb')),binding,'google_enrollment_boundaries.rb')
 review_results
