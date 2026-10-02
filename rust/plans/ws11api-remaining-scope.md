@@ -178,7 +178,7 @@ Reason: WS11 owns fixed-entropy factory/reset comparisons and the actual queued 
 
 Owner: WS11 domain.
 
-Reason: WS12 owns ActivityItem.accessible_to and capped WorkHandoffs.create producers/viewers. The complete named comparisons remain deferred to that owner.
+Reason: WS11 owns these two budget comparisons; they remain unworked at this checkpoint. They exercise installed WS12 ActivityItem.accessible_to and WorkHandoffs.create producers/viewers. Any production change in those services remains with WS12.
 
 - a stranger cannot read another agent's budget item
 - an agent-created handoff counts toward no budget, even with caps exhausted
