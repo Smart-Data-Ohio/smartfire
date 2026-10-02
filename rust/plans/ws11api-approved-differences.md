@@ -66,7 +66,7 @@ failures remove staged preview/variant files and roll back every domain/media/jo
 row. These narrow approvals authorize neither other missing files nor other
 response/state differences.
 
-## Committed file ownership and missing-file serving (PR #192 fourth review)
+## Committed file ownership and missing-file serving (PR #192 fourth and fifth reviews)
 
 Staged original/preview/variant files are retained immediately when COMMIT
 succeeds, before fallible model callbacks. A callback exception still propagates
