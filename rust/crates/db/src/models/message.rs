@@ -473,7 +473,7 @@ impl Message {
     /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
     /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
-        Self::create_with_options(tx, attributes, None, false)
+        Self::create_with_options(tx, attributes, None, false, false)
     }
 
     /// Board creation records its assignment before invoking the real WS11 opener fanout.
@@ -483,7 +483,7 @@ impl Message {
         attributes: NewMessage,
         defer_agent_delivery: bool,
     ) -> Result<Self> {
-        Self::create_with_options(tx, attributes, None, defer_agent_delivery)
+        Self::create_with_options(tx, attributes, None, defer_agent_delivery, false)
     }
 
     /// Slack's `importing: true` plus `ActiveRecord::Base.no_touching`: keep validation,
@@ -494,7 +494,16 @@ impl Message {
         created_at: Timestamp,
         edited_at: Option<Timestamp>,
     ) -> Result<Self> {
-        Self::create_with_options(tx, attributes, Some((created_at, edited_at)), false)
+        Self::create_with_options(tx, attributes, Some((created_at, edited_at)), false, false)
+    }
+
+    /// A quiet root note with already-loaded Rails belongs_to associations. Only their
+    /// existence reads are skipped; rendering, validation, touches and callbacks stay shared.
+    pub(crate) fn create_quiet_note(tx: &mut Tx<'_>, room: &Room, creator: &User, body: String) -> Result<Self> {
+        Self::create_with_options(tx, NewMessage {
+            room_id: room.id, creator_id: creator.id, system_note: true, body: Some(body),
+            ..Default::default()
+        }, None, false, true)
     }
 
     fn create_with_options(
@@ -502,10 +511,11 @@ impl Message {
         attributes: NewMessage,
         imported_time: Option<(Timestamp, Option<Timestamp>)>,
         defer_agent_delivery: bool,
+        loaded_associations: bool,
     ) -> Result<Self> {
         let importing = imported_time.is_some();
         let body = Self::rendered_body(tx, &attributes)?;
-        Self::validate(tx.conn(), &attributes)?.into_result()?;
+        Self::validate_with_associations(tx.conn(), &attributes, true, loaded_associations)?.into_result()?;
         let now = tx.now();
         let client_message_id = attributes
             .client_message_id
@@ -699,12 +709,16 @@ impl Message {
         attributes: &NewMessage,
         new_record: bool,
     ) -> Result<Errors> {
+        Self::validate_with_associations(conn, attributes, new_record, false)
+    }
+
+    fn validate_with_associations(conn: &Connection, attributes: &NewMessage, new_record: bool, loaded_associations: bool) -> Result<Errors> {
         let mut errors = Errors::default();
         // `belongs_to :room` and `:creator` (required)
-        if Room::find_by_id(conn, attributes.room_id)?.is_none() {
+        if !loaded_associations && Room::find_by_id(conn, attributes.room_id)?.is_none() {
             errors.add("room", "must exist");
         }
-        if User::find_by_id(conn, attributes.creator_id)?.is_none() {
+        if !loaded_associations && User::find_by_id(conn, attributes.creator_id)?.is_none() {
             errors.add("creator", "must exist");
         }
         // `DriveAttachment`'s own validations, through the autosaved association (declared, so

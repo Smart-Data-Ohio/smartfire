@@ -48,7 +48,7 @@ facts = -> do
    pushes: ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j[:job] == BoardAutomations::NudgePushJob }.map { |j| GlobalID::Locator.locate(j[:args][0]['_aj_globalid']).recipient_id }}
 end
 sla = []
-%w[under nudge-boundary before-nudge escalation-boundary before-escalation unassigned creator-owner agent-owner inactive-owner revoked-owner bot-creator no-recipient deleted channel done unruled nil-entry untracked repeat new-crossing later-escalation].each do |kind|
+%w[under nudge-boundary before-nudge escalation-boundary before-escalation unassigned creator-owner agent-owner inactive-owner revoked-owner bot-creator no-recipient deleted channel done unruled nil-entry untracked legacy-invalid-status repeat new-crossing later-escalation].each do |kind|
   ActiveRecord::Base.transaction do
     sql = setup + [rule_sql]
     entered = case kind
@@ -60,7 +60,7 @@ sla = []
     when 'nil-entry' then nil
     else '2026-03-02 12:00:00'
     end
-    status = {'done'=>'done','unruled'=>'planned','untracked'=>nil}.fetch(kind, 'in_progress')
+    status = {'done'=>'done','unruled'=>'planned','untracked'=>nil,'legacy-invalid-status'=>'mystery'}.fetch(kind, 'in_progress')
     who = {'unassigned'=>nil,'creator-owner'=>creator,'agent-owner'=>bot,'no-recipient'=>nil}.fetch(kind, owner)
     sql << thread_sql.call(970000001, 'Stale <&> post', status, entered, who)
     sql << "UPDATE users SET status=1 WHERE id=#{owner}" if kind == 'inactive-owner'
@@ -69,6 +69,7 @@ sla = []
     sql << "UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=#{board}" if kind == 'deleted'
     sql << "UPDATE rooms SET type='Rooms::Open' WHERE id=#{board}" if kind == 'channel'
     sql << "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(#{board},'done',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')" if kind == 'done'
+    sql = sql.map {|q|q.sub("'in_progress'", "'mystery'")} if kind == 'legacy-invalid-status'
     sql.each { |s| conn.execute(s) }
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     BoardAutomations::SlaDispatcher.dispatch_due!(now: now)
@@ -90,7 +91,7 @@ sla = []
   end
 end
 digests = []
-%w[empty under boundary before-boundary quiet escaping many done nil-entry untracked deleted channel no-rules repeat next-day age-minute age-hour age-day].each do |kind|
+%w[empty under boundary before-boundary quiet escaping many done nil-entry untracked deleted channel no-rules legacy-invalid-status repeat next-day age-minute age-hour age-day].each do |kind|
   ActiveRecord::Base.transaction do
     sql = setup + (kind == 'no-rules' ? [] : [rule_sql])
     entered = case kind
@@ -104,7 +105,7 @@ digests = []
     else '2026-03-02 14:00:00'
     end
     sql = setup + [rule_sql.sub('60,240', '1,240')] if kind == 'age-minute'
-    status = {'done'=>'done','untracked'=>nil}.fetch(kind, 'in_progress')
+    status = {'done'=>'done','untracked'=>nil,'legacy-invalid-status'=>'mystery'}.fetch(kind, 'in_progress')
     count = kind == 'many' ? 23 : (kind == 'empty' ? 0 : 1)
     count.times do |i|
       sql << thread_sql.call(970000001+i, kind == 'escaping' ? '**Bold** <&> title' : "Old work #{i+1}", status, entered, i == 1 ? nil : owner)
@@ -113,6 +114,7 @@ digests = []
     sql << "UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=#{board}" if kind == 'deleted'
     sql << "UPDATE rooms SET type='Rooms::Open' WHERE id=#{board}" if kind == 'channel'
     sql << "UPDATE memberships SET unread_at=NULL WHERE room_id=#{board}"
+    sql = sql.map {|q|q.sub("'in_progress'", "'mystery'")} if kind == 'legacy-invalid-status'
     sql.each { |s| conn.execute(s) }
     before = Message.count
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
@@ -165,6 +167,49 @@ query_counts = []
     end
   end
 end
+failures=[]
+['post','attach'].each do |kind|
+  ActiveRecord::Base.transaction do
+    sql=setup+[rule_sql,thread_sql.call(970000001,'Failure post','in_progress','2026-03-02 14:00:00')]
+    sql.each{|q|conn.execute(q)}
+    trigger=kind=='post' ? "CREATE TRIGGER reject_digest BEFORE INSERT ON messages WHEN NEW.system_note=1 BEGIN SELECT RAISE(ABORT,'reject note'); END" : "CREATE TRIGGER reject_digest BEFORE UPDATE OF message_id ON board_stale_digests BEGIN SELECT RAISE(ABORT,'reject link'); END"
+    conn.execute(trigger)
+    before=Message.count
+    BoardAutomations::DigestDispatcher.dispatch_due!(now:now)
+    failures << {name:kind,setup:sql,trigger:,claims:BoardStaleDigest.count,message_delta:Message.count-before,attached:BoardStaleDigest.where.not(message_id:nil).count}
+    raise ActiveRecord::Rollback
+  end
+end
+cleanup=[]
+2.times do |kind|
+  ActiveRecord::Base.transaction do
+    sql=setup+[rule_sql,thread_sql.call(970000001,'Cleanup post','in_progress','2026-03-02 13:00:00')]
+    sql << "INSERT INTO board_tag_assignments(room_id,tag,assignee_id,created_by_id,created_at,updated_at) VALUES(#{board},'bug',#{owner},#{creator},'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+    sql.each {|q|conn.execute(q)}
+    BoardAutomations::SlaDispatcher.dispatch_due!(now:now)
+    BoardAutomations::DigestDispatcher.dispatch_due!(now:now)
+    if kind==1
+      post=ChannelThread.find(970000001)
+      reply=post.post_message!(creator:User.find(creator),attributes:{markdown_source:'Which option?'})
+      poll=Poll.create_for_message!(message:reply,labels:['A','B'])
+      poll.cast_vote!(User.find(owner),[poll.poll_options.first.id])
+      pending=ScheduledMessage.create!(user:User.find(creator),room:Room.find(board),thread:post,markdown_source:'Threaded nudge',send_at:now+3600)
+      dropped=ScheduledMessage.create!(user:User.find(creator),room:Room.find(board),markdown_source:'Root post',send_at:now+3600)
+      dropped.drop!(reason:'test')
+    end
+    Room.find(board).begin_destroy!
+    Room::DestroyJob.perform_now(board)
+    tables=%w[rooms messages channel_threads board_tag_assignments board_sla_rules board_sla_nudges board_stale_digests scheduled_messages]
+    counts=tables.to_h{|table|[table,conn.select_value("SELECT COUNT(*) FROM #{table} WHERE #{table=='rooms' ? 'id' : 'room_id'}=#{board}").to_i]}
+    counts['sla_items']=ActivityItem.where(event_type:'work_sla').count
+    counts['polls']=Poll.where(id:poll.id).count if kind==1
+    counts['poll_options']=PollOption.where(poll_id:poll.id).count if kind==1
+    counts['poll_votes']=PollVote.where(poll_id:poll.id).count if kind==1
+    counts['scheduled_items']=ActivityItem.where(source_type:'ScheduledMessage',source_id:[pending.id,dropped.id]).count if kind==1
+    cleanup << {with_scheduled:kind==1,setup:sql,counts:}
+    raise ActiveRecord::Rollback
+  end
+end
 cadence = Periodic::Runner.new.instance_variable_get(:@tasks).select { |t| t.name.start_with?('board ') }.map { |t| {name: t.name, seconds: t.interval.to_i} }
-puts JSON.pretty_generate(reference: 'd7c7de92 plus approved board drift', now: now.strftime('%Y-%m-%d %H:%M:%S.%6N'), models:, sla:, digests:, cadence:, query_counts:)
-warn "Rails board automation oracle: #{models.size} rule cases; #{sla.size} SLA cases; #{digests.size} digest cases; #{cadence.size} cadences; #{query_counts.size} query probes; 0 masks"
+puts JSON.pretty_generate(reference: 'd7c7de92 plus approved board drift', now: now.strftime('%Y-%m-%d %H:%M:%S.%6N'), models:, sla:, digests:, failures:, cleanup:, cadence:, query_counts:)
+warn "Rails board automation oracle: #{models.size} rule cases; #{sla.size} SLA cases; #{digests.size} digest cases; #{failures.size} failure cases; #{cleanup.size} cleanup cases; #{cadence.size} cadences; #{query_counts.size} query probes; 0 masks"
