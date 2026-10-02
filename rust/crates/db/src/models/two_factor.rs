@@ -446,7 +446,13 @@ impl TwoFactorSetupSecret {
 
     pub fn extend_expiry(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         require_transaction(tx)?;
-        self.expires_at = tx.now().since(SETUP_TTL);
+        let expires_at = tx.now().since(SETUP_TTL);
+        // TwoFactorSetupSecret#extend_expiry! uses update!: Rails skips the
+        // UPDATE (and timestamp touch) when expires_at has not changed.
+        if self.expires_at == expires_at {
+            return Ok(());
+        }
+        self.expires_at = expires_at;
         self.updated_at = tx.now();
         tx.conn().execute_cached(
             "UPDATE two_factor_setup_secrets SET expires_at = ?, updated_at = ? WHERE id = ?",

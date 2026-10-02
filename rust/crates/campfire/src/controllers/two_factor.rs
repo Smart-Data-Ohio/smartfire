@@ -79,20 +79,15 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
     let secrets = c.app().secrets.clone();
     let audit = audit_context(c)?;
     let target = Target::from(&user);
-    let outcome = c
-        .app()
-        .db
-        .write(move |tx| {
-            crate::authentication::enroll(
-                tx,
-                &user,
-                session_id,
-                &ArEncryption::new(&secrets),
-                &code,
-            )
-        })
-        .await
-        .map_err(Error::internal)?;
+    let outcome = crate::authentication::enroll(
+        &c.app().db,
+        user,
+        session_id,
+        ArEncryption::new(&secrets),
+        code,
+    )
+    .await
+    .map_err(Error::internal)?;
     match outcome {
         crate::authentication::Enrollment::Enabled => profile(c),
         crate::authentication::Enrollment::Wrong => {
