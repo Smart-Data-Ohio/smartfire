@@ -168,6 +168,59 @@ export const instantaneousOpacityMutations=new Map([
   ['keeps newer typing through an asynchronous edit and leaves failures in edit mode',visibilityAssertionMutations.get('keeps newer typing through an asynchronous edit and leaves failures in edit mode')],
   ['the picker shows category tabs and switches between them',visibilityLookupMutations.get('the picker shows category tabs and switches between them')],
 ]);
+// Assert visibility on the Rails-selected element, not a visible child or row.
+// These served probes run over unchanged assertions for failing-first evidence.
+export const elementScopeMutations=new Map([
+  ['Markdown messages reach other users and editing preserves the original source',new Map([
+    ['hidden-code-visible-token',opacity('pre code { visibility: hidden !important; } pre code .code-token { visibility: visible !important; }')],
+    ['transparent-initial-heading',opacity('.message:not(:has(.message__edited)) .markdown-body h2 { opacity: 0 !important; }')],
+  ])],
+  ['sending messages between two users',new Map([
+    ['hidden-body-visible-presentation',opacity('.message__body { visibility: hidden !important; } .message__body [data-reply-target="body"] { visibility: visible !important; }')],
+  ])],
+  ['a stray create re-entry does not wipe the half-filled thread name',new Map([
+    ['transparent-thread-body',opacity('#thread-panel .thread-panel__thread-content .message__body { opacity: 0 !important; }')],
+    ['hidden-conversation-visible-children',opacity('#thread-panel [data-thread-panel-target="conversation"] { visibility: hidden !important; } #thread-panel [data-thread-panel-target="conversation"] > * { visibility: visible !important; }')],
+  ])],
+  ['untrusted markup stays inert in the delivered message',new Map([
+    ['hidden-safety-body-visible-code',opacity('.message__body { visibility: hidden !important; } .message__body pre code { visibility: visible !important; }')],
+  ])],
+  ['Markdown replies and file attachments remain usable',new Map([
+    ['hidden-reply-body-visible-presentation',opacity('.message:has(strong) .message__body { visibility: hidden !important; } .message:has(strong) [data-reply-target="body"] { visibility: visible !important; }')],
+    ['transparent-attachment-reply-preview',opacity('.message__reply-preview { opacity: 0 !important; }')],
+  ])],
+  ['composer autocomplete exposes combobox semantics over a polite listbox',new Map([
+    ['transparent-combobox-lookup',opacity(`${editor} { opacity: 0 !important; }`)],
+  ])],
+  ['thread drafts persist per thread without touching the channel draft',new Map([
+    ['transparent-restored-thread-draft',opacity('#thread-panel textarea[name="message[markdown_source]"] { opacity: 0 !important; }')],
+    ['transparent-cleared-thread-draft',opacity('#thread-panel:has(.thread-panel__thread-content .message[data-message-id] ~ .message[data-message-id]) textarea[name="message[markdown_source]"] { transition: none !important; opacity: 0 !important; }')],
+  ])],
+  ['message update preserves the input state',new Map([
+    ['transparent-boost-draft-after-edit',opacity('input[name="boost[content]"] { transition: none !important; opacity: 0 !important; }')],
+  ])],
+  ['boost by another user preserves the input state',new Map([
+    ['transparent-boost-draft-after-delivery',opacity('input[name="boost[content]"] { transition: none !important; opacity: 0 !important; }')],
+  ])],
+]);
+elementScopeMutations.set('sending preserves the submitted source and a newer draft',new Map([
+  ['hidden-submitted-body-visible-strong',opacity('.message:has(strong) .message__body { visibility: hidden !important; } .message:has(strong) .message__body strong { visibility: visible !important; }')],
+]));
+elementScopeMutations.set('search tolerates operators, shows an empty state and pages older results',new Map([
+  ['transparent-older-search-text',opacity('#search-results .message .markdown-body p { opacity: 0 !important; }')],
+]));
+elementScopeMutations.set('editing to add a URL renders its card live and the edited marker on load',new Map([
+  ['transparent-initial-url-text',opacity('.message:not(:has(.message__edited)) .markdown-body p { opacity: 0 !important; }')],
+]));
+elementScopeMutations.get('thread drafts persist per thread without touching the channel draft').set('hidden-initial-composer-conversation',[
+  'controllers/thread_panel_controller-',
+  'if (this.hasConversationTarget) this.conversationTarget.hidden = view !== "conversation"',
+  'if (this.hasConversationTarget) { this.conversationTarget.hidden = view !== "conversation"; if (view === "conversation" && !sessionStorage.getItem("ws8bm-mutant-first-conversation")) { sessionStorage.setItem("ws8bm-mutant-first-conversation", "1"); this.conversationTarget.style.setProperty("visibility", "hidden", "important"); for (const child of this.conversationTarget.children) child.style.setProperty("visibility", "visible", "important") } }',
+]);
+for(const [name,variants] of elementScopeMutations) {
+  if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
+  for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
+}
 for(const [name,variants] of visibilityLookupMutations) {
   if(!visibilityAssertionMutations.has(name)) visibilityAssertionMutations.set(name,new Map());
   for(const [variant,mutation] of variants) visibilityAssertionMutations.get(name).set(variant,mutation);

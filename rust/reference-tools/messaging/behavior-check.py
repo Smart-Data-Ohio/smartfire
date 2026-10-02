@@ -157,13 +157,13 @@ parser.add_argument("--case", help="run one exact pinned declaration from the se
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 parser.add_argument("--mutant", help="select one served mutant variant; without --negative, diagnose its acceptance on both apps (not parity credit)")
-parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity"], help="diagnose all new visibility assertion mutants without parity credit")
+parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes"], help="diagnose all new visibility assertion mutants without parity credit")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
 if args.mutant_set:
-    assert not args.mutant and not args.negative and not args.case, "mutant-set is a diagnostic escape run"
-    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
+    assert not args.mutant and not args.case and (not args.negative or args.mutant_set == "element-scopes"), "only element-scopes supports a negative mutant-set run"
+    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
     diagnostic_variants = json.loads(subprocess.check_output([
         "node", "--input-type=module", "-e",
         f"import {{{diagnostic_export}}} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
@@ -270,7 +270,7 @@ for file in files:
     jobs = [(batch, args.mutant or "default") for batch in filter(None, batches)]
     if args.mutant_set:
         jobs = [([case], variant) for case in selected for variant in diagnostic_variants[case]]
-    if args.negative and not args.mutant:
+    if args.negative and not args.mutant and not args.mutant_set:
         # A failed highlight check can still have posted a real message. Each
         # additional mutant therefore gets its own seed/database/server, not
         # just a fresh browser that would read previous mutants' saved rows.
