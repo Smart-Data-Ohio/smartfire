@@ -1,5 +1,5 @@
 //! Rails activity presentation over the owner's permission-filtered ActivityItem APIs.
-use campfire_db::{ActivityItem, Connection, Result, User};
+use campfire_db::{ActivityItem, ChannelThread, Connection, Result, User, WorkThreadEvent};
 use campfire_views::activity::Item;
 use rusqlite::OptionalExtension;
 use std::collections::HashMap;
@@ -7,6 +7,9 @@ use std::collections::HashMap;
 /// Request-local association preload, after the owner's accessibility query.
 pub struct MessageSources {
     saved: HashMap<i64, i64>,
+    work: HashMap<i64, WorkThreadEvent>,
+    work_threads: HashMap<i64, ChannelThread>,
+    work_actors: HashMap<i64, User>,
     messages: HashMap<i64, campfire_db::Message>,
     rooms: HashMap<i64, campfire_db::Room>,
 }
@@ -32,7 +35,34 @@ impl MessageSources {
             .into_iter()
             .map(|message| (message.id, message))
             .collect();
-        let mut room_ids: Vec<_> = messages.values().map(|message| message.room_id).collect();
+        let work_ids: Vec<_> = rows
+            .iter()
+            .filter(|row| row.source_type == "WorkThreadEvent")
+            .map(|row| row.source_id)
+            .collect();
+        let work: HashMap<_, _> = WorkThreadEvent::for_ids(conn, &work_ids)?
+            .into_iter()
+            .map(|event| (event.id, event))
+            .collect();
+        let thread_ids: Vec<_> = work.values().map(|event| event.channel_thread_id).collect();
+        let work_threads: HashMap<_, _> = ChannelThread::for_ids(conn, &thread_ids)?
+            .into_iter()
+            .map(|thread| (thread.id, thread))
+            .collect();
+        let actor_ids: Vec<_> = work.values().filter_map(|event| event.actor_id).collect();
+        let work_actors = if actor_ids.is_empty() {
+            HashMap::new()
+        } else {
+            User::where_ids(conn, &actor_ids)?
+                .into_iter()
+                .map(|user| (user.id, user))
+                .collect()
+        };
+        let mut room_ids: Vec<_> = messages
+            .values()
+            .map(|message| message.room_id)
+            .chain(work_threads.values().map(|thread| thread.room_id))
+            .collect();
         room_ids.sort_unstable();
         room_ids.dedup();
         let rooms = campfire_db::Room::for_ids(conn, &room_ids)?
@@ -41,9 +71,22 @@ impl MessageSources {
             .collect();
         Ok(Self {
             saved,
+            work,
+            work_threads,
+            work_actors,
             messages,
             rooms,
         })
+    }
+    fn work_event(&self, row: &ActivityItem) -> Result<&WorkThreadEvent> {
+        self.work
+            .get(&row.source_id)
+            .ok_or(campfire_db::Error::RecordNotFound("WorkThreadEvent"))
+    }
+    fn work_thread(&self, event: &WorkThreadEvent) -> Result<&ChannelThread> {
+        self.work_threads
+            .get(&event.channel_thread_id)
+            .ok_or(campfire_db::Error::RecordNotFound("ChannelThread"))
     }
     fn room(&self, id: i64) -> Result<&campfire_db::Room> {
         self.rooms
@@ -73,7 +116,7 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &MessageSources)
             .map(|message| {
                 if let Some(thread) = message.thread_id {
                     format!(
-                        "/rooms/{}?thread={thread}&message_id={}",
+                        "/rooms/{}?message_id={}&thread={thread}",
                         message.room_id, message.id
                     )
                 } else {
@@ -81,13 +124,15 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &MessageSources)
                 }
             })
             .unwrap_or_else(fallback),
-        "WorkThreadEvent" | "BoardSlaNudge" => {
-            // FLAGGED WS12 facts readers, shared with the presentation below.
-            let table = if row.source_type == "WorkThreadEvent" {
-                "work_thread_events"
-            } else {
-                "board_sla_nudges"
-            };
+        "WorkThreadEvent" => messages
+            .work
+            .get(&row.source_id)
+            .and_then(|event| messages.work_threads.get(&event.channel_thread_id))
+            .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
+            .unwrap_or_else(fallback),
+        "BoardSlaNudge" => {
+            // FLAGGED WS12 BoardSlaNudge reader, until the owner exports its model.
+            let table = "board_sla_nudges";
             let thread_id: Option<i64> = conn
                 .query_row(
                     &format!("SELECT channel_thread_id FROM {table} WHERE id=?"),
@@ -241,30 +286,22 @@ pub fn item(
             };
         }
         "WorkThreadEvent" => {
-            // FLAGGED WS12 WorkThreadEvent facts reader; domain access stays in ActivityItem.
-            let (thread,actor,from,to,from_id,to_id,from_name,to_name,created) = conn.query_row(
-                "SELECT channel_thread_id,actor_id,from_status,to_status,from_owner_id,to_owner_id,from_owner_name,to_owner_name,created_at FROM work_thread_events WHERE id=?",[item.source_id],
-                |r| Ok((r.get::<_,i64>(0)?,r.get::<_,Option<i64>>(1)?,r.get::<_,Option<String>>(2)?,r.get::<_,Option<String>>(3)?,r.get::<_,Option<i64>>(4)?,r.get::<_,Option<i64>>(5)?,r.get::<_,Option<String>>(6)?,r.get::<_,Option<String>>(7)?,r.get::<_,campfire_db::Timestamp>(8)?)))?;
-            let thread = campfire_db::ChannelThread::find(conn, thread)?;
-            result.created_at = Some(created.jiff());
+            let event = messages.work_event(item)?;
+            let thread = messages.work_thread(event)?;
+            result.created_at = Some(event.created_at.jiff());
             result.title = format!(
                 "{} · {}",
-                super::accounts::room_display_name(
-                    conn,
-                    &campfire_db::Room::find(conn, thread.room_id)?,
-                    viewer
-                )?,
+                super::accounts::room_display_name(conn, messages.room(thread.room_id)?, viewer)?,
                 thread.name
             );
             result.author = Some(
-                actor
-                    .map(|id| campfire_db::User::find_by_id(conn, id))
-                    .transpose()?
-                    .flatten()
-                    .map(|u| u.name)
+                event
+                    .actor_id
+                    .and_then(|id| messages.work_actors.get(&id))
+                    .map(|user| user.name.clone())
                     .unwrap_or_else(|| "Work thread".into()),
             );
-            result.body = work_body(from, to, from_id, to_id, from_name, to_name);
+            result.body = work_body(event);
         }
         "BoardSlaNudge" => {
             // FLAGGED WS12 BoardSlaNudge facts reader; no writer is implemented here.
@@ -435,7 +472,7 @@ pub fn payload_with_sources(
             source.creator_id = Some(message.creator_id);
             source.path = if let Some(thread) = message.thread_id {
                 format!(
-                    "/rooms/{}?thread={thread}&message_id={}",
+                    "/rooms/{}?message_id={}&thread={thread}",
                     room.id, message.id
                 )
             } else {
@@ -469,15 +506,12 @@ pub fn payload_with_sources(
             Some(source)
         }
         "WorkThreadEvent" => {
-            // FLAGGED WS12 WorkThreadEvent facts reader; access and mutations use ActivityItem.
-            let (thread, actor, from, to, from_id, to_id, from_name, to_name) = conn.query_row(
-                "SELECT channel_thread_id,actor_id,from_status,to_status,from_owner_id,to_owner_id,from_owner_name,to_owner_name FROM work_thread_events WHERE id=?",
-                [row.source_id], |r| Ok((r.get::<_,i64>(0)?, r.get::<_,Option<i64>>(1)?, r.get::<_,Option<String>>(2)?, r.get::<_,Option<String>>(3)?, r.get::<_,Option<i64>>(4)?, r.get::<_,Option<i64>>(5)?, r.get::<_,Option<String>>(6)?, r.get::<_,Option<String>>(7)?)))?;
-            source.body = work_body(from, to, from_id, to_id, from_name, to_name);
-            let thread = campfire_db::ChannelThread::find(conn, thread)?;
+            let event = messages.work_event(row)?;
+            let thread = messages.work_thread(event)?;
+            source.body = work_body(event);
             source.room_id = Some(thread.room_id);
             source.thread_id = Some(thread.id);
-            source.creator_id = actor;
+            source.creator_id = event.actor_id;
             source.path = format!("/rooms/{}?thread={}", thread.room_id, thread.id);
             Some(source)
         }
@@ -603,29 +637,27 @@ fn event_body(
         _ => format!("Event updated: {start}."),
     })
 }
-fn work_body(
-    from: Option<String>,
-    to: Option<String>,
-    from_id: Option<i64>,
-    to_id: Option<i64>,
-    from_name: Option<String>,
-    to_name: Option<String>,
-) -> String {
+fn work_body(event: &WorkThreadEvent) -> String {
     let mut changes = Vec::new();
-    if from != to {
+    if event.from_status != event.to_status {
         changes.push(format!(
             "Status: {} → {}",
-            humanize(from.as_deref()),
-            humanize(to.as_deref())
+            humanize(event.from_status.as_deref()),
+            humanize(event.to_status.as_deref())
         ));
     }
-    if from_id != to_id {
-        let name = |value: Option<String>| {
+    if event.from_owner_id != event.to_owner_id {
+        let name = |value: Option<&str>| {
             value
                 .filter(|v| !campfire_richtext::ruby::is_blank(v))
-                .unwrap_or_else(|| "unassigned".into())
+                .unwrap_or("unassigned")
+                .to_owned()
         };
-        changes.push(format!("Owner: {} → {}", name(from_name), name(to_name)));
+        changes.push(format!(
+            "Owner: {} → {}",
+            name(event.from_owner_name.as_deref()),
+            name(event.to_owner_name.as_deref())
+        ));
     }
     if changes.is_empty() {
         "Work thread updated".into()

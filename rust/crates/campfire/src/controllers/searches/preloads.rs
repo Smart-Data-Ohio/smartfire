@@ -94,36 +94,18 @@ impl Preloads {
         } else {
             crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?
         };
-        let mut event_views = HashMap::new();
-        let event_messages = if payload || ids.is_empty() {
-            Vec::new()
+        let page_messages: Vec<_> = messages
+            .iter()
+            .chain(records.sources.values())
+            .cloned()
+            .collect();
+        let event_views = if payload {
+            HashMap::new()
         } else {
-            let sql = format!(
-                "SELECT DISTINCT message_id FROM event_references WHERE message_id IN ({})",
-                std::iter::repeat_n("?", ids.len())
-                    .collect::<Vec<_>>()
-                    .join(",")
-            );
-            p.conn
-                .prepare(&sql)?
-                .query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
-                .collect::<std::result::Result<Vec<_>, _>>()?
+            crate::controllers::presenters::events::for_messages(p.conn, &page_messages)?
         };
-        for id in event_messages.into_iter().filter(|_| !payload) {
-            if let Some(message) = messages
-                .iter()
-                .find(|m| m.id == id)
-                .or_else(|| records.sources.get(&id))
-            {
-                event_views.insert(
-                    id,
-                    crate::controllers::presenters::events::for_message(p.conn, message)?,
-                );
-            }
-        }
-        // Keep main's GitHub factory and refresh policy, while honoring the existing
-        // message-owner contract that a preloaded message performs no further queries.
-        // Merely preloading never schedules refreshes; only an actual fragment miss does.
+        // Use the owner's presentation/refresh policy with page-scoped persisted facts.
+        // Preloading does not schedule refreshes; an actual fragment miss does.
         let mut github = HashMap::new();
         let linked = if payload || ids.is_empty() {
             Vec::new()
@@ -139,24 +121,56 @@ impl Preloads {
                 .query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
                 .collect::<std::result::Result<Vec<_>, _>>()?
         };
-        for id in linked.iter().filter(|_| !payload) {
+        let prs =
+            crate::integrations::github::pull_requests::PullRequest::for_messages(p.conn, &linked)?;
+        let discussions =
+            crate::integrations::github::threads::PullRequestThread::for_messages(p.conn, &linked)?;
+        let account = if linked.is_empty() {
+            None
+        } else {
+            campfire_db::Account::first(p.conn)?
+        };
+        for id in &linked {
             let message = messages
                 .iter()
                 .find(|m| m.id == *id)
                 .or_else(|| records.sources.get(id));
             if let Some(message) = message {
-                let html = crate::controllers::presenters::github::message_cards_in_zone(
-                    p.conn,
+                let cards = prs.get(id).map(Vec::as_slice).unwrap_or_default();
+                let views = cards
+                    .iter()
+                    .map(|pr| {
+                        crate::controllers::presenters::github::shared_card_in_discussion(
+                            pr,
+                            discussions.get(&(message.room_id, pr.id)).copied(),
+                        )
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let html = crate::controllers::presenters::github::render_message_cards(
                     p.app(),
                     message,
                     &p.render_zone,
-                )?;
-                let stamp = crate::controllers::presenters::github::cache_stamp(p.conn, message)?;
-                let refreshes =
-                    crate::integrations::github::pull_requests::PullRequest::for_message(
-                        p.conn, *id,
-                    )?
-                    .into_iter()
+                    account.as_ref(),
+                    &views,
+                );
+                let stamp = cards
+                    .iter()
+                    .map(|pr| pr.updated_at)
+                    .max()
+                    .map(|newest| {
+                        format!(
+                            "github:{}:{}",
+                            newest.to_db(),
+                            records
+                                .pr_thread_stamps
+                                .get(&message.room_id)
+                                .map(|t| t.to_db())
+                                .unwrap_or_default()
+                        )
+                    })
+                    .unwrap_or_default();
+                let refreshes = cards
+                    .iter()
                     .filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(p.now)))
                     .map(|pr| pr.id)
                     .collect();

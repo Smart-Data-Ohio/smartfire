@@ -2,7 +2,7 @@
 
 Partial WS13 delivery. Grant issuance/reuse, revocation and successful leave describe presence after commit; gateway first-sighting jobs render the current committed roster. The application cable sink renders sidebar once, fans it out to memberships, and publishes the header once through WS7. A rolled-back revocation publishes nothing. Missing grants/rooms and unconfigured huddles are silent. Boot retries only BroadcastPresenceJob rows failed with the exact previous unknown-handler error, preserving actual rendering failures.
 
-The single participants partial matches 50 pinned Rails renders (five room types, two placements, five roster sizes, escaped names, both avatar limits). The socket test uses the production seeded app/router and real WebSockets in WS13's port range. Other grant callbacks, join/push handlers, full invitation and stream/stage effects remain subsequent slices. No other huddle HTML or pixel parity is claimed.
+The single participants partial matches 50 pinned Rails renders (five room types, two placements, five roster sizes, escaped names, both avatar limits). The socket test uses the production seeded app/router and real WebSockets in WS13's port range. Other grant callbacks, join/push handlers, full invitation and stream/stage effects remain subsequent slices. No other huddle HTML parity is claimed.
 
 Commands run from the WS13 worktree:
 

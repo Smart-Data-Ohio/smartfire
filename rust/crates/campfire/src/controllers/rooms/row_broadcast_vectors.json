@@ -1,0 +1,353 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "open_false",
+      "input": {
+        "room": {
+          "id": 9401,
+          "kind": "open",
+          "name": "Row <&>",
+          "display_name": "Row <&>"
+        },
+        "configured": false
+      },
+      "html": "<a id=\"list_rooms_open_9401\" data-rooms-list-target=\"room\" data-room-id=\"9401\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Row &lt;&amp;&gt;\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9401/leave\" data-menu-open-room=\"true\" data-menu-direct-room=\"false\" data-menu-room-label=\"Row &lt;&amp;&gt;\" class=\"sidebar-item room btn\" href=\"/rooms/9401\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Row &lt;&amp;&gt;</span>\n</a>"
+    },
+    {
+      "name": "open_true",
+      "input": {
+        "room": {
+          "id": 9401,
+          "kind": "open",
+          "name": "Row <&>",
+          "display_name": "Row <&>"
+        },
+        "configured": true
+      },
+      "html": "<a id=\"list_rooms_open_9401\" data-rooms-list-target=\"room\" data-room-id=\"9401\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Row &lt;&amp;&gt;\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9401/leave\" data-menu-open-room=\"true\" data-menu-direct-room=\"false\" data-menu-room-label=\"Row &lt;&amp;&gt;\" class=\"sidebar-item room btn\" href=\"/rooms/9401\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Row &lt;&amp;&gt;</span>\n    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_open_9401\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9401/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9401\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n</a>"
+    },
+    {
+      "name": "closed_false",
+      "input": {
+        "room": {
+          "id": 9402,
+          "kind": "closed",
+          "name": "Row <&>",
+          "display_name": "Row <&>"
+        },
+        "configured": false
+      },
+      "html": "<a id=\"list_rooms_closed_9402\" data-rooms-list-target=\"room\" data-room-id=\"9402\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Row &lt;&amp;&gt;\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9402/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Row &lt;&amp;&gt;\" class=\"sidebar-item room btn\" href=\"/rooms/9402\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Row &lt;&amp;&gt;</span>\n</a>"
+    },
+    {
+      "name": "closed_true",
+      "input": {
+        "room": {
+          "id": 9402,
+          "kind": "closed",
+          "name": "Row <&>",
+          "display_name": "Row <&>"
+        },
+        "configured": true
+      },
+      "html": "<a id=\"list_rooms_closed_9402\" data-rooms-list-target=\"room\" data-room-id=\"9402\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Row &lt;&amp;&gt;\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/9402/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Row &lt;&amp;&gt;\" class=\"sidebar-item room btn\" href=\"/rooms/9402\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Row &lt;&amp;&gt;</span>\n    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_closed_9402\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9402/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9402\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n</a>"
+    },
+    {
+      "name": "direct_127326141_false_false",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "Jason, Kevin"
+        },
+        "actor_id": 127326141,
+        "membership_id": 1021579718,
+        "unread": false,
+        "involvement": "everything",
+        "member_ids": [
+          149087659,
+          712064548
+        ],
+        "configured": false
+      },
+      "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, Kevin\n      </span>\n    </span>\n</a></div>"
+    },
+    {
+      "name": "direct_127326141_false_true",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "Jason, Kevin"
+        },
+        "actor_id": 127326141,
+        "membership_id": 1021579718,
+        "unread": true,
+        "involvement": "muted",
+        "member_ids": [
+          149087659,
+          712064548
+        ],
+        "configured": false
+      },
+      "html": "<div class=\"sidebar-item direct unread muted\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"true\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, Kevin\n      </span>\n    </span>\n</a>    <span class=\"sidebar-item__status\">New</span>\n</div>"
+    },
+    {
+      "name": "direct_712064548_false_false",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Jason"
+        },
+        "actor_id": 712064548,
+        "membership_id": 1021579719,
+        "unread": false,
+        "involvement": "everything",
+        "member_ids": [
+          127326141,
+          149087659
+        ],
+        "configured": false
+      },
+      "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason\n      </span>\n    </span>\n</a></div>"
+    },
+    {
+      "name": "direct_712064548_false_true",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Jason"
+        },
+        "actor_id": 712064548,
+        "membership_id": 1021579719,
+        "unread": true,
+        "involvement": "muted",
+        "member_ids": [
+          127326141,
+          149087659
+        ],
+        "configured": false
+      },
+      "html": "<div class=\"sidebar-item direct unread muted\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"true\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason\n      </span>\n    </span>\n</a>    <span class=\"sidebar-item__status\">New</span>\n</div>"
+    },
+    {
+      "name": "direct_149087659_false_false",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Kevin"
+        },
+        "actor_id": 149087659,
+        "membership_id": 1021579720,
+        "unread": false,
+        "involvement": "everything",
+        "member_ids": [
+          127326141,
+          712064548
+        ],
+        "configured": false
+      },
+      "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Kevin\n      </span>\n    </span>\n</a></div>"
+    },
+    {
+      "name": "direct_149087659_false_true",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Kevin"
+        },
+        "actor_id": 149087659,
+        "membership_id": 1021579720,
+        "unread": true,
+        "involvement": "muted",
+        "member_ids": [
+          127326141,
+          712064548
+        ],
+        "configured": false
+      },
+      "html": "<div class=\"sidebar-item direct unread muted\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"true\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Kevin\n      </span>\n    </span>\n</a>    <span class=\"sidebar-item__status\">New</span>\n</div>"
+    },
+    {
+      "name": "direct_127326141_true_false",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "Jason, Kevin"
+        },
+        "actor_id": 127326141,
+        "membership_id": 1021579718,
+        "unread": false,
+        "involvement": "everything",
+        "member_ids": [
+          149087659,
+          712064548
+        ],
+        "configured": true
+      },
+      "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, Kevin\n      </span>\n    </span>\n</a>    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_direct_9403\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9403/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9403\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n</div>"
+    },
+    {
+      "name": "direct_127326141_true_true",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "Jason, Kevin"
+        },
+        "actor_id": 127326141,
+        "membership_id": 1021579718,
+        "unread": true,
+        "involvement": "muted",
+        "member_ids": [
+          149087659,
+          712064548
+        ],
+        "configured": true
+      },
+      "html": "<div class=\"sidebar-item direct unread muted\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"true\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, Kevin\n      </span>\n    </span>\n</a>    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_direct_9403\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9403/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9403\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n    <span class=\"sidebar-item__status\">New</span>\n</div>"
+    },
+    {
+      "name": "direct_712064548_true_false",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Jason"
+        },
+        "actor_id": 712064548,
+        "membership_id": 1021579719,
+        "unread": false,
+        "involvement": "everything",
+        "member_ids": [
+          127326141,
+          149087659
+        ],
+        "configured": true
+      },
+      "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason\n      </span>\n    </span>\n</a>    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_direct_9403\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9403/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9403\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n</div>"
+    },
+    {
+      "name": "direct_712064548_true_true",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Jason"
+        },
+        "actor_id": 712064548,
+        "membership_id": 1021579719,
+        "unread": true,
+        "involvement": "muted",
+        "member_ids": [
+          127326141,
+          149087659
+        ],
+        "configured": true
+      },
+      "html": "<div class=\"sidebar-item direct unread muted\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"true\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason\n      </span>\n    </span>\n</a>    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_direct_9403\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9403/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9403\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n    <span class=\"sidebar-item__status\">New</span>\n</div>"
+    },
+    {
+      "name": "direct_149087659_true_false",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Kevin"
+        },
+        "actor_id": 149087659,
+        "membership_id": 1021579720,
+        "unread": false,
+        "involvement": "everything",
+        "member_ids": [
+          127326141,
+          712064548
+        ],
+        "configured": true
+      },
+      "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Kevin\n      </span>\n    </span>\n</a>    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_direct_9403\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9403/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9403\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n</div>"
+    },
+    {
+      "name": "direct_149087659_true_true",
+      "input": {
+        "room": {
+          "id": 9403,
+          "kind": "direct",
+          "name": null,
+          "display_name": "David, Kevin"
+        },
+        "actor_id": 149087659,
+        "membership_id": 1021579720,
+        "unread": true,
+        "involvement": "muted",
+        "member_ids": [
+          127326141,
+          712064548
+        ],
+        "configured": true
+      },
+      "html": "<div class=\"sidebar-item direct unread muted\" id=\"list_rooms_direct_9403\" data-rooms-list-target=\"room\" data-room-id=\"9403\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"9403\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"true\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/9403/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Kevin\" href=\"/rooms/9403\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Kevin\n      </span>\n    </span>\n</a>    <span class=\"voice-room__trailing\">\n      <span id=\"sidebar_voice_participants_rooms_direct_9403\"\n      class=\"voice-stack voice-stack--huddle\"\n      role=\"group\"\n      aria-label=\"Nobody in huddle\"\n      title=\"Nobody in huddle\"\n      data-controller=\"huddle-participants\"\n      data-huddle-participants-url-value=\"/rooms/9403/huddle/participants\"\n      data-huddle-participants-max-value=\"3\"\n      data-huddle-participants-interval-value=\"0\"\n      data-huddle-participants-label-value=\"in huddle\"\n      data-huddle-participants-card-url-template-value=\"/users/USER_ID/card\"\n      data-huddle-presence-room-id=\"9403\">\n  <span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">\n  </span>\n  <span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>\n</span>\n\n    </span>\n    <span class=\"sidebar-item__status\">New</span>\n</div>"
+    }
+  ],
+  "headers": [
+    {
+      "name": "header_127326141_unnamed",
+      "room_id": 9403,
+      "actor_id": 127326141,
+      "room_name": null,
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_9403\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Jason, Kevin</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "header_712064548_unnamed",
+      "room_id": 9403,
+      "actor_id": 712064548,
+      "room_name": null,
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_9403\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Jason</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "header_149087659_unnamed",
+      "room_id": 9403,
+      "actor_id": 149087659,
+      "room_name": null,
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_9403\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">David, Kevin</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "header_127326141_named",
+      "room_id": 9403,
+      "actor_id": 127326141,
+      "room_name": "Group <&>",
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_9403\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Group &lt;&amp;&gt;</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "header_712064548_named",
+      "room_id": 9403,
+      "actor_id": 712064548,
+      "room_name": "Group <&>",
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_9403\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Group &lt;&amp;&gt;</span>\n  </h1>\n</div>\n"
+    },
+    {
+      "name": "header_149087659_named",
+      "room_id": 9403,
+      "actor_id": 149087659,
+      "room_name": "Group <&>",
+      "html": "<div class=\"room-header__identity room--current min-width\" id=\"header_rooms_direct_9403\">\n  <span class=\"room-header__kind\">Direct message</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"for-screen-reader\">Ping with</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Group &lt;&amp;&gt;</span>\n  </h1>\n</div>\n"
+    }
+  ]
+}

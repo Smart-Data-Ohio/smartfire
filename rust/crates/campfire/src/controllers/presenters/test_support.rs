@@ -160,6 +160,9 @@ pub struct TestApp {
 }
 
 impl TestApp {
+    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_with_huddle_services(clock, crate::integrations::net::Network::system(), settings, huddle).await
+    }
     /// Stop and join job workers before arranging assertions about committed enqueues.
     /// HTTP routes and the durable queue sink stay active. Tests of job execution should
     /// keep the default runner instead.
@@ -208,6 +211,15 @@ impl TestApp {
             values,
         )
         .await
+    }
+
+    /// WS16 fixture seam: real Google/Slack HTTP with a shared frozen clock/config.
+    pub async fn boot_with_network_clock_and_env(
+        network: crate::integrations::net::Network,
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_clients("default", clock, network, extra, None).await
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {

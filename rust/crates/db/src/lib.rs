@@ -41,3 +41,6 @@ pub mod slash_commands;
 pub mod command_suggestions;
 
 pub mod autocomplete_users;
+
+#[cfg(feature = "test-support")]
+pub use database::FixtureAuthInputs;

@@ -1,14 +1,15 @@
 //! Shared board row facts for HTTP lists and background Turbo broadcasts.
 use super::Presenter;
-use campfire_db::{ChannelThread, ThreadTag, Timestamp, User};
+use campfire_db::{ChannelThread, Room, ThreadTag, Timestamp, User};
 use campfire_views::rooms::boards::{Listing, Row};
 use std::collections::HashMap;
 
 pub fn rows(
     p: &Presenter<'_>,
-    room_id: i64,
+    room: &Room,
     posts: &[ChannelThread],
 ) -> campfire_db::Result<Vec<Row>> {
+    let room_id = room.id;
     let ids = posts.iter().map(|post| post.id).collect::<Vec<_>>();
     let replies = ChannelThread::board_reply_counts(p.conn, &ids)?;
     let links = ChannelThread::board_link_counts(p.conn, &ids)?;
@@ -45,7 +46,7 @@ pub fn rows(
                 work_status: post.work_status.clone().unwrap_or_default(),
                 work_label: post.work_status_label(),
                 lifecycle: post
-                    .status(p.conn, Timestamp::from_jiff(p.now))?
+                    .status_in_room(room, Timestamp::from_jiff(p.now))
                     .name()
                     .into(),
                 owner_id: post.work_owner_id,
@@ -141,7 +142,7 @@ pub fn listing(
         tag,
         current_user_id: viewer.id,
         can_administer: viewer.can_administer(Some(room.creator_id), false),
-        posts: rows(p, room.id, &posts)?,
+        posts: rows(p, room, &posts)?,
         owner_options,
         tag_counts: ChannelThread::board_tag_counts(p.conn, room.id)?,
         any_posts: ChannelThread::board_has_posts(p.conn, room.id)?,

@@ -111,7 +111,7 @@ rows=cases.map do |c|
  masked=Base64.urlsafe_encode64(([9]*32+[14]*32).pack('C*'),padding:false)
  response=Rack::MockRequest.new(Rails.application).request(c.fetch(:method,'GET'),'http://example.org'+c[:path],'HTTP_COOKIE'=>cookie,'CONTENT_TYPE'=>'application/json','HTTP_X_CSRF_TOKEN'=>c[:bad_csrf] ? 'invalid' : masked,'action_dispatch.content_security_policy_nonce_generator'=>->(_){'NONCE'},input:JSON.generate(c.fetch(:body,{})))
  snapshot=SlackImport.order(:id).map{|r|r.attributes.slice('id','slack_workspace_id','slack_connection_id','user_id','kind','mode','status','options','state','stats','error','started_at','heartbeat_at','finished_at','created_at','updated_at')}
- audit=AuditLog.order(:id).map{|l|l.attributes.slice('action','actor_id','target_type','target_id','details')}
+ audit=AuditLog.order(:id).map{|l|l.attributes.slice('action','actor_id','target_type','target_id','target_label','details')}
  jobs=ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|{'class'=>j[:job].name,'arguments'=>j[:args],'queue'=>j[:queue]}}
  {**c,status_code:response.status,location:response['Location'],flash:Thread.current[:flash],runs:snapshot,audit:,jobs:,response_body:response.body}
 end

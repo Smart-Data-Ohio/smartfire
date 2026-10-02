@@ -5,7 +5,7 @@ use campfire_db::models::huddle_grant::HuddleGrant;
 use campfire_db::{Membership, Room};
 
 pub(crate) fn stage_model(
-    app: &App,
+    app: &crate::app::AppState,
     conn: &campfire_db::Connection,
     room_id: i64,
     viewer_id: i64,

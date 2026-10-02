@@ -72,7 +72,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                     target: Some(Target {
                         record_type: "SlackWorkspace".into(),
                         id: workspace.id,
-                        label: None,
+                        label: Some(format!("SlackWorkspace #{}", workspace.id)),
                     }),
                     changes: Some(json!({"client_id":client_id})),
                     ..Default::default()

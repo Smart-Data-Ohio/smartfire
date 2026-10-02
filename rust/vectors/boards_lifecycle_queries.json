@@ -1,0 +1,36 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-03-02T16:00:00.000000Z",
+  "sources": {
+    "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
+    "app/models/room.rb": "9297f5aeffe5d78dca2b2d33f02173f56b918251fb398a2d17677fe3e85892ce"
+  },
+  "rows": [
+    {
+      "posts": 2,
+      "room_reads": 0,
+      "states": [
+        "active",
+        "active"
+      ]
+    },
+    {
+      "posts": 12,
+      "room_reads": 0,
+      "states": [
+        "active",
+        "active",
+        "active",
+        "active",
+        "active",
+        "active",
+        "active",
+        "active",
+        "active",
+        "active",
+        "active",
+        "active"
+      ]
+    }
+  ]
+}

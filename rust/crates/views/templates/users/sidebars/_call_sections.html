@@ -1,0 +1,25 @@
+      <section class="sidebar-section sidebar-section--voice rooms" aria-labelledby="voice-heading">
+        <header class="sidebar-section__header">
+          <h2 id="voice-heading">Voice</h2>
+{% if can_create %}            {% filter link_to(h::routes::new_rooms_voice(), h::attrs().class("btn sidebar-section__add").aria("label", "New voice channel").attr("title", "New voice channel")) %}
+              {{ h::image_tag(ctx, "add.svg", h::attrs().size(16).aria_hidden()) }}
+{% endfilter %}{% endif %}        </header>
+
+        <div id="voice_rooms" class="sidebar-list" data-controller="sorted-list">
+{% for row in rows %}{% if !row.stage %}            {{ row.render(ctx)|safe }}
+{% endif %}{% endfor %}        </div>
+      </section>
+
+      <section class="sidebar-section sidebar-section--stage rooms" aria-labelledby="stage-heading">
+        <header class="sidebar-section__header">
+          <h2 id="stage-heading">Stage</h2>
+{% if can_create %}            {% filter link_to(h::routes::new_rooms_stage(), h::attrs().class("btn sidebar-section__add").aria("label", "New stage channel").attr("title", "New stage channel")) %}
+              {{ h::image_tag(ctx, "add.svg", h::attrs().size(16).aria_hidden()) }}
+{% endfilter %}{% endif %}        </header>
+
+        <div id="stage_rooms" class="sidebar-list" data-controller="sorted-list">
+{% for row in rows %}{% if row.stage %}              {{ row.render(ctx)|safe }}
+{% endif %}{% endfor %}        </div>
+      </section>
+
+

@@ -49,10 +49,19 @@ calendar_job!(Remote, RemoteDeleteJob, "Calendar::RemoteDeleteJob");
 calendar_job!(Watch, WatchChannelJob, "Calendar::WatchChannelJob");
 pub fn register(registry: &mut Registry) {
     registry.register(cleanup_job);
-    registry.on_exhausted::<Cleanup,_>(|app,job,error| {
-        let class=error.downcast_ref::<api::Error>().map_or("Google::Client::Unavailable",api::Error::class);
-        tracing::error!(error_class=class,"Calendar::DisconnectCleanupJob failed after retries");
-        app.errors.report(error,class,serde_json::json!({"job":"Calendar::DisconnectCleanupJob","account_id":job.0.0.2}));
+    registry.on_exhausted::<Cleanup, _>(|app, job, error| {
+        let class = error
+            .downcast_ref::<api::Error>()
+            .map_or("Google::Client::Unavailable", api::Error::class);
+        tracing::error!(
+            error_class = class,
+            "Calendar::DisconnectCleanupJob failed after retries"
+        );
+        app.errors.report(
+            error,
+            class,
+            serde_json::json!({"job":"Calendar::DisconnectCleanupJob","account_id":job.0.0.2}),
+        );
     });
     registry.register(remote_job);
     registry.register(watch_job);
@@ -235,6 +244,39 @@ async fn watch_job(app: App, job: Watch, execution: Execution) -> JobResult {
 }
 pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
     let api = app.google.api();
+    let Some(_) = api
+        .config
+        .webhook_url
+        .as_ref()
+        .filter(|_| api.config.configured())
+    else {
+        return Ok(());
+    };
+    let account = app
+        .db
+        .read(move |conn| GoogleAccount::for_user(conn, user_id))
+        .await?;
+    watch_with_account(app, user_id, account).await
+}
+async fn usable_account(
+    app: &App,
+    mut account: GoogleAccount,
+) -> api::Result<(GoogleAccount, bool)> {
+    let enc = ArEncryption::new(&app.secrets);
+    Ok(app
+        .db
+        .write(move |tx| {
+            let usable = account.usable(tx, &enc)? && account.calendar();
+            Ok((account, usable))
+        })
+        .await?)
+}
+async fn watch_with_account(
+    app: &App,
+    user_id: i64,
+    account: Option<GoogleAccount>,
+) -> api::Result<()> {
+    let api = app.google.api();
     let Some(address) = api
         .config
         .webhook_url
@@ -243,7 +285,11 @@ pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
     else {
         return Ok(());
     };
-    if !usable(app, user_id).await? {
+    let Some(account) = account else {
+        return Ok(());
+    };
+    let (account, usable) = usable_account(app, account).await?;
+    if !usable {
         return Ok(());
     }
     let old = app
@@ -269,11 +315,15 @@ pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
     rand::rng().fill_bytes(&mut bytes);
     let token = bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
     let payload = json!({"id":channel_id,"type":"web_hook","address":address,"token":token});
-    let response = match api
-        .request(
+    // Rails rescues client errors from constructing credentials as well as HTTP.
+    let response = match async {
+        let mut credentials = api
+            .credentials_from_account(&app.db, &app.secrets, account)
+            .await?;
+        api.request_with(
+            &mut credentials,
             &app.db,
             &app.secrets,
-            user_id,
             ApiRequest::calendar(
                 Method::POST,
                 "/calendar/v3/calendars/primary/events/watch",
@@ -282,6 +332,8 @@ pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
             now(app),
         )
         .await
+    }
+    .await
     {
         Ok(v) => v,
         Err(e) if e.unavailable() => return Err(e),
@@ -338,18 +390,45 @@ pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
 /// Calendar::PushChannel#stop_remote!: HTTP outside the writer, while the grant still exists.
 /// Return the loaded row id so a concurrent replacement is not destroyed by the disconnect.
 pub async fn stop_remote(app: &App, user_id: i64) -> api::Result<Option<i64>> {
-    let channel = app.db.read(move |conn| {
-        Ok(conn.query_row("SELECT id,channel_id,resource_id FROM calendar_push_channels WHERE user_id=?", [user_id],
-            |r| Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,Option<String>>(2)?))).optional()?)
-    }).await?;
-    let Some((id,channel_id,resource_id)) = channel else { return Ok(None) };
+    let channel = app
+        .db
+        .read(move |conn| {
+            Ok(conn
+                .query_row(
+                    "SELECT id,channel_id,resource_id FROM calendar_push_channels WHERE user_id=?",
+                    [user_id],
+                    |r| {
+                        Ok((
+                            r.get::<_, i64>(0)?,
+                            r.get::<_, String>(1)?,
+                            r.get::<_, Option<String>>(2)?,
+                        ))
+                    },
+                )
+                .optional()?)
+        })
+        .await?;
+    let Some((id, channel_id, resource_id)) = channel else {
+        return Ok(None);
+    };
     if let Some(resource_id) = resource_id.filter(|s| !api::blank(s))
-        && usable(app,user_id).await?
+        && usable(app, user_id).await?
     {
         let payload = json!({"id":channel_id,"resourceId":resource_id});
-        if let Err(api::Error::Storage(error)) = app.google.api().request(&app.db,&app.secrets,user_id,
-            ApiRequest::calendar(Method::POST,"/calendar/v3/channels/stop",Some(&payload)),now(app)).await
-        { return Err(error.into()); }
+        if let Err(api::Error::Storage(error)) = app
+            .google
+            .api()
+            .request(
+                &app.db,
+                &app.secrets,
+                user_id,
+                ApiRequest::calendar(Method::POST, "/calendar/v3/channels/stop", Some(&payload)),
+                now(app),
+            )
+            .await
+        {
+            return Err(error.into());
+        }
     }
     Ok(Some(id))
 }
@@ -379,11 +458,31 @@ pub async fn renew(app: &App) -> api::Result<()> {
                 .collect::<rusqlite::Result<Vec<_>>>()?)
         })
         .await?;
+    let user_ids = channels
+        .iter()
+        .map(|(_, user, _)| *user)
+        .collect::<Vec<_>>();
+    let mut accounts = app
+        .db
+        .read(move |conn| {
+            Ok(GoogleAccount::for_users(conn, &user_ids)?
+                .into_iter()
+                .map(|account| (account.user_id, account))
+                .collect::<std::collections::HashMap<_, _>>())
+        })
+        .await?;
     for (id, user, expiry) in channels {
+        let account = accounts.remove(&user);
         let result = async {
-            if usable(app, user).await? {
+            let account = if let Some(account) = account {
+                let (account, usable) = usable_account(app, account).await?;
+                usable.then_some(account)
+            } else {
+                None
+            };
+            if let Some(account) = account {
                 if expiry.is_none_or(|t| t <= now.since(jiff::SignedDuration::from_hours(24))) {
-                    watch(app, user).await?;
+                    watch_with_account(app, user, Some(account)).await?;
                 }
             } else {
                 app.db
@@ -405,7 +504,11 @@ pub async fn renew(app: &App) -> api::Result<()> {
             );
         }
     }
-    let missing=app.db.read(|conn|Ok(conn.prepare("SELECT g.user_id FROM google_accounts g WHERE g.disconnected_reason IS NULL AND NOT EXISTS(SELECT 1 FROM calendar_push_channels p WHERE p.user_id=g.user_id) ORDER BY g.id")?.query_map([],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)).await?;
+    // Rails' healing pass loads accounts, then watch_for resolves the user's grant afresh.
+    let missing = app.db.read(|conn| {
+        Ok(conn.prepare("SELECT g.user_id FROM google_accounts g WHERE g.disconnected_reason IS NULL AND NOT EXISTS(SELECT 1 FROM calendar_push_channels p WHERE p.user_id=g.user_id) ORDER BY g.id")?
+            .query_map([], |r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)
+    }).await?;
     for user in missing {
         if let Err(e) = watch(app, user).await {
             tracing::error!(
@@ -494,7 +597,10 @@ mod tests {
     #[test]
     fn google_meeting_refresh_does_not_inherit_calendar_google_retries() {
         assert!(matches!(
-            application_result(Err(api::Error::Unavailable("timeout".into())), &execution(1)),
+            application_result(
+                Err(api::Error::Unavailable("timeout".into())),
+                &execution(1)
+            ),
             Err(JobError::Error(_))
         ));
     }

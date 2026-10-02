@@ -58,6 +58,15 @@ pub struct Env {
     /// builds expose no provider; UUIDs remain random and insert_all uses SQLite's clock.
     #[cfg(feature = "test-support")]
     pub fixture_inputs: Option<Arc<FixtureInputs>>,
+    /// WS16 flagged fixture-only enrollment entropy; never bypasses TOTP confirmation.
+    #[cfg(feature = "test-support")]
+    pub fixture_auth_inputs: Option<Arc<FixtureAuthInputs>>,
+}
+
+#[cfg(feature = "test-support")]
+pub struct FixtureAuthInputs {
+    pub totp_secret: String,
+    pub backup_codes: Vec<String>,
 }
 
 #[cfg(feature = "test-support")]
@@ -82,6 +91,8 @@ impl Default for Env {
             user_deactivation_hooks: Vec::new(),
             #[cfg(feature = "test-support")]
             fixture_inputs: None,
+            #[cfg(feature = "test-support")]
+            fixture_auth_inputs: None,
         }
     }
 }

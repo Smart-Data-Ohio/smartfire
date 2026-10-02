@@ -25,6 +25,25 @@ impl PullRequestThread {
     ) -> Result<Option<Self>> {
         Ok(conn.query_row("SELECT * FROM github_pull_request_threads WHERE room_id=? AND github_pull_request_id=?",params![room_id,pull_request_id],Self::from_row).optional()?)
     }
+    /// Discussion mappings for the page's referenced PRs, scoped to each message's room.
+    pub fn for_messages(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashMap<(i64, i64), i64>> {
+        if ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let sql = format!(
+            "SELECT DISTINCT t.room_id,t.github_pull_request_id,t.channel_thread_id FROM github_pull_request_threads t JOIN messages m ON m.room_id=t.room_id JOIN github_pull_request_references r ON r.message_id=m.id AND r.github_pull_request_id=t.github_pull_request_id WHERE m.id IN ({})",
+            vec!["?"; ids.len()].join(",")
+        );
+        Ok(conn
+            .prepare(&sql)?
+            .query_map(rusqlite::params_from_iter(ids), |row| {
+                Ok(((row.get(0)?, row.get(1)?), row.get(2)?))
+            })?
+            .collect::<rusqlite::Result<_>>()?)
+    }
     pub fn validate(
         conn: &Connection,
         pull_request_id: i64,

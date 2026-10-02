@@ -83,6 +83,8 @@ pub mod welcome;
 pub mod internal_huddle;
 #[cfg(test)]
 mod internal_huddle_tests;
+#[cfg(test)]
+mod internal_huddle_declaration_tests;
 pub mod workspace_icons;
 
 #[cfg(test)]
@@ -185,6 +187,26 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "rooms/voices#show" => arc(rooms::call_channels::show),
+        "rooms/voices#new" => arc(rooms::call_channels::new),
+        "rooms/voices#create" => arc(rooms::call_channels::create),
+        "rooms/voices#edit" => arc(rooms::call_channels::edit),
+        "rooms/voices#update" => arc(rooms::call_channels::update),
+        "rooms/voices#index" => arc(rooms::index),
+        "rooms/voices#destroy" => arc(rooms::destroy_without_room),
+        "rooms/stages#show" => arc(rooms::call_channels::show),
+        "rooms/stages#new" => arc(rooms::call_channels::new),
+        "rooms/stages#create" => arc(rooms::call_channels::create),
+        "rooms/stages#edit" => arc(rooms::call_channels::edit),
+        "rooms/stages#update" => arc(rooms::call_channels::update),
+        "rooms/stages#index" => arc(rooms::index),
+        "rooms/stages#destroy" => arc(rooms::destroy_without_room),
+
+        "rooms/huddles#show" => arc(rooms::huddles::show),
+        "rooms/huddles#create" => arc(rooms::huddles::create),
+        "rooms/huddles#participants" => arc(rooms::huddles::participants),
+        "rooms/huddles#leave" => arc(rooms::huddles::leave),
+        "users/huddle_presence#show" => arc(rooms::huddles::presence),
         "rooms/stage/roles#update" => arc(rooms::stage_participation::role),
         "rooms/stage/hands#create" => arc(rooms::stage_participation::raise),
         "rooms/stage/hands#destroy" => arc(rooms::stage_participation::lower),
@@ -874,6 +896,21 @@ mod tests {
         "agents#me", "agents#update",
         "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
         "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
+        "rooms/voices#index",
+        "rooms/voices#show",
+        "rooms/voices#new",
+        "rooms/voices#create",
+        "rooms/voices#edit",
+        "rooms/voices#update",
+        "rooms/voices#destroy",
+        "rooms/stages#index",
+        "rooms/stages#show",
+        "rooms/stages#new",
+        "rooms/stages#create",
+        "rooms/stages#edit",
+        "rooms/stages#update",
+        "rooms/stages#destroy",
+        "rooms/huddles#show", "rooms/huddles#create", "rooms/huddles#participants", "rooms/huddles#leave", "users/huddle_presence#show",
         "accounts/slack_import_runs#index",
         "accounts/slack_import_runs#create",
         "accounts/slack_import_runs#show",

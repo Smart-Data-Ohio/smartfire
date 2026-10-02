@@ -1,0 +1,11 @@
+{#- app/views/users/sidebars/rooms/_voice.html.erb -#}
+{% filter link_to_room(row.id, row.options()) %}
+  <span class="sidebar-item__icon{% if row.icon.is_some() %} sidebar-item__icon--custom{% endif %}" aria-hidden="true">{{ h::icon_avatar_tag(ctx,row.icon.as_ref(),24,h::attrs()) }}</span>
+  <span class="sidebar-item__label overflow-ellipsis">{{ row.name }}</span>
+  <span class="voice-room__trailing">
+    {{ row.participants_html()|safe }}
+  </span>
+  {%- if row.unread %}
+    <span class="sidebar-item__status">New</span>
+  {%- endif %}
+{% endfilter %}

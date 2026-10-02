@@ -1,0 +1,2766 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-09-23T10:30:00Z",
+  "rows": [
+    {
+      "spec": {
+        "name": "success",
+        "cache": {
+          "fetch_error": "stale notice"
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          },
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T13:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T13:30:00Z"
+            },
+            "transparency": "transparent"
+          }
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": "stale notice",
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}},{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T13:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T13:30:00Z\"},\"transparency\":\"transparent\"}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "privacy_fields"
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "never_opted_in",
+        "meeting": false
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "skipped",
+          "cache": null,
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "inactive",
+        "inactive": true
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "skipped",
+          "cache": null,
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "unusable",
+        "disconnected": true,
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ],
+          "ooo_intervals": [
+            [
+              "2026-09-22T00:00:00Z",
+              "2026-09-25T00:00:00Z"
+            ]
+          ]
+        }
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [
+          [
+            "2026-09-22T00:00:00Z",
+            "2026-09-25T00:00:00Z"
+          ]
+        ],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Connect Google Calendar to show calendar status.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": "Google rejected the connection"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "revoked",
+        "expired": true,
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            400,
+            "{\"error\":\"invalid_grant\"}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          400,
+          "{\"error\":\"invalid_grant\"}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar needs reconnecting before calendar status can update.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/token",
+              "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&refresh_token=refresh-token&grant_type=refresh_token",
+              "content_type": "application/x-www-form-urlencoded",
+              "access_token": null
+            }
+          ],
+          "jobs": [],
+          "disconnected": "Google rejected the connection"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "rate_limit",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            429,
+            "{}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          429,
+          "{}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "quota",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            403,
+            "{\"error\":{\"errors\":[{\"reason\":\"userRateLimitExceeded\"}]}}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          403,
+          "{\"error\":{\"errors\":[{\"reason\":\"userRateLimitExceeded\"}]}}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "server_error",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            500,
+            "boom"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          500,
+          "boom"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "malformed",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            200,
+            "{oops"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{oops"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "fresh",
+        "cache": {
+          "fetched_offset_us": -30000000
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:30.000000Z",
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "followup",
+        "cache": {
+          "fetched_offset_us": -30000000
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:30.000000Z",
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "dedupe",
+        "cache": {
+          "fetched_offset_us": -30000000
+        },
+        "offsets": [
+          0,
+          0
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:30.000000Z",
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        },
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "completed_claim",
+        "cache": {
+          "fetched_offset_us": -30000000
+        },
+        "offsets": [
+          0,
+          61,
+          61
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:30.000000Z",
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        },
+        {
+          "at": "2026-09-23T10:31:01.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:31:01.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A31%3A01Z&timeMax=2026-09-24T10%3A31%3A01Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        },
+        {
+          "at": "2026-09-23T10:31:01.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:31:01.000000Z",
+            "refresh_pending_at": "2026-09-23T10:31:01.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A31%3A01Z&timeMax=2026-09-24T10%3A31%3A01Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            },
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "ooo_only",
+        "meeting": false,
+        "ooo": true,
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            },
+            "eventType": "outOfOffice"
+          },
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T13:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T13:30:00Z"
+            }
+          }
+        ]
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"},\"eventType\":\"outOfOffice\"},{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T13:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T13:30:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-10-23T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "both_opt_ins",
+        "ooo": true,
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            },
+            "eventType": "outOfOffice"
+          },
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T13:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T13:30:00Z"
+            }
+          }
+        ]
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"},\"eventType\":\"outOfOffice\"},{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T13:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T13:30:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T13:00:00Z",
+                "2026-09-23T13:30:00Z"
+              ]
+            ],
+            "ooo_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-10-23T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "meeting_only_no_ooo",
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            },
+            "eventType": "outOfOffice"
+          }
+        ]
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"},\"eventType\":\"outOfOffice\"}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "meeting_lookahead"
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "ooo_server_error",
+        "ooo": true,
+        "cache": {
+          "ooo_intervals": [
+            [
+              "2026-09-22T00:00:00Z",
+              "2026-09-25T00:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            500,
+            "boom"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [
+          [
+            "2026-09-22T00:00:00Z",
+            "2026-09-25T00:00:00Z"
+          ]
+        ],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          500,
+          "boom"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [
+              [
+                "2026-09-22T00:00:00Z",
+                "2026-09-25T00:00:00Z"
+              ]
+            ],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-10-23T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "both_revoked",
+        "ooo": true,
+        "expired": true,
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ],
+          "ooo_intervals": [
+            [
+              "2026-09-22T00:00:00Z",
+              "2026-09-25T00:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            400,
+            "{\"error\":\"invalid_grant\"}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [
+          [
+            "2026-09-22T00:00:00Z",
+            "2026-09-25T00:00:00Z"
+          ]
+        ],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          400,
+          "{\"error\":\"invalid_grant\"}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar needs reconnecting before calendar status can update.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/token",
+              "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&refresh_token=refresh-token&grant_type=refresh_token",
+              "content_type": "application/x-www-form-urlencoded",
+              "access_token": null
+            }
+          ],
+          "jobs": [],
+          "disconnected": "Google rejected the connection"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "missing_user",
+        "missing_user": true
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "skipped",
+          "cache": null,
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "missing_account",
+        "account": false
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Connect Google Calendar to show calendar status.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "calendar_scope_missing",
+        "scopes": "openid email"
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Connect Google Calendar to show calendar status.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "unreadable_token",
+        "unreadable": true
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Connect Google Calendar to show calendar status.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": "The stored token could not be read; reconnect"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transport",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ],
+          "ooo_intervals": [
+            [
+              "2026-09-22T00:00:00Z",
+              "2026-09-25T00:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            "timeout",
+            ""
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [
+          [
+            "2026-09-22T00:00:00Z",
+            "2026-09-25T00:00:00Z"
+          ]
+        ],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          "timeout",
+          ""
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [
+              [
+                "2026-09-22T00:00:00Z",
+                "2026-09-25T00:00:00Z"
+              ]
+            ],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "forbidden",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            403,
+            "{}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          403,
+          "{}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "null_response",
+        "responses": [
+          [
+            200,
+            "null"
+          ]
+        ]
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "null"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "empty_response",
+        "responses": [
+          [
+            200,
+            "{}"
+          ]
+        ]
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "stale_pending_cleared",
+        "cache": {
+          "pending_offset_us": -120000000
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          }
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": "2026-09-23T10:28:00.000000Z",
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "refresh_pending_at": -120000000
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "transient_pending_cleared",
+        "cache": {
+          "pending_offset_us": -120000000,
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        },
+        "responses": [
+          [
+            503,
+            "{}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": "2026-09-23T10:28:00.000000Z",
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "refresh_pending_at": -120000000
+      },
+      "responses": [
+        [
+          503,
+          "{}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "fetched_before_boundary",
+        "cache": {
+          "fetched_offset_us": -60000001
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:28:59.999999Z",
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -60000001
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "fetched_at_boundary",
+        "cache": {
+          "fetched_offset_us": -60000000
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:00.000000Z",
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -60000000
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "fetched_after_boundary",
+        "cache": {
+          "fetched_offset_us": -59999999
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:00.000001Z",
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -59999999
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:00.000001Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "pending_before_boundary",
+        "cache": {
+          "fetched_offset_us": -30000000,
+          "pending_offset_us": -60000001
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:30.000000Z",
+        "refresh_pending_at": "2026-09-23T10:28:59.999999Z",
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000,
+        "refresh_pending_at": -60000001
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "pending_at_boundary",
+        "cache": {
+          "fetched_offset_us": -30000000,
+          "pending_offset_us": -60000000
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:30.000000Z",
+        "refresh_pending_at": "2026-09-23T10:29:00.000000Z",
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000,
+        "refresh_pending_at": -60000000
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:30:00.000000Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [
+            {
+              "class": "Calendar::MeetingRefreshJob",
+              "args": [
+                127326141
+              ],
+              "at": "2026-09-23T10:31:00.000000Z"
+            }
+          ],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "pending_after_boundary",
+        "cache": {
+          "fetched_offset_us": -30000000,
+          "pending_offset_us": -59999999
+        }
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": "2026-09-23T10:29:30.000000Z",
+        "refresh_pending_at": "2026-09-23T10:29:00.000001Z",
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": null
+      },
+      "initial_offsets_us": {
+        "fetched_at": -30000000,
+        "refresh_pending_at": -59999999
+      },
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "fresh",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:29:30.000000Z",
+            "refresh_pending_at": "2026-09-23T10:29:00.000001Z",
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:25:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "all_day_ooo",
+        "meeting": false,
+        "ooo": true,
+        "zone": "Pacific Time (US & Canada)",
+        "items": [
+          {
+            "eventType": "outOfOffice",
+            "start": {
+              "date": "2026-09-28"
+            },
+            "end": {
+              "date": "2026-10-05"
+            }
+          }
+        ]
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"eventType\":\"outOfOffice\",\"start\":{\"date\":\"2026-09-28\"},\"end\":{\"date\":\"2026-10-05\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [
+              [
+                "2026-09-28T00:00:00-07:00",
+                "2026-10-05T00:00:00-07:00"
+              ]
+            ],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-10-23T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_preserve_false",
+        "cache": {
+          "in_meeting_broadcast": false
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          }
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": false
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": false
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_preserve_true",
+        "cache": {
+          "in_meeting_broadcast": true
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          }
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": true
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": true
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_unusable_preserves_true",
+        "disconnected": true,
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ],
+          "in_meeting_broadcast": true
+        }
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": true
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [],
+            "ooo_intervals": [],
+            "fetch_error": "Connect Google Calendar to show calendar status.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": true
+          },
+          "broadcast_claims": [],
+          "calls": [],
+          "jobs": [],
+          "disconnected": "Google rejected the connection"
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_transient_preserves_false",
+        "cache": {
+          "busy_intervals": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ],
+          "in_meeting_broadcast": false
+        },
+        "responses": [
+          [
+            503,
+            "{}"
+          ]
+        ]
+      },
+      "initial": {
+        "busy_intervals": [
+          [
+            "2026-09-23T10:00:00Z",
+            "2026-09-23T11:00:00Z"
+          ]
+        ],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": false
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          503,
+          "{}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "error",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": false
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "broadcast_boundary_flips",
+        "cache": {
+          "in_meeting_broadcast": false
+        },
+        "items": [
+          {
+            "status": "confirmed",
+            "start": {
+              "dateTime": "2026-09-23T10:00:00Z"
+            },
+            "end": {
+              "dateTime": "2026-09-23T11:00:00Z"
+            }
+          }
+        ],
+        "broadcast_claims": [
+          true,
+          true,
+          false,
+          false,
+          true
+        ]
+      },
+      "initial": {
+        "busy_intervals": [],
+        "ooo_intervals": [],
+        "fetch_error": null,
+        "fetched_at": null,
+        "refresh_pending_at": null,
+        "created_at": "2026-09-23T10:25:00.000000Z",
+        "updated_at": "2026-09-23T10:25:00.000000Z",
+        "in_meeting_broadcast": false
+      },
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:25:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": false
+          },
+          "broadcast_claims": [
+            {
+              "active": true,
+              "won": true,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": true
+              }
+            },
+            {
+              "active": true,
+              "won": false,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": true
+              }
+            },
+            {
+              "active": false,
+              "won": true,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": false
+              }
+            },
+            {
+              "active": false,
+              "won": false,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": false
+              }
+            },
+            {
+              "active": true,
+              "won": true,
+              "cache": {
+                "busy_intervals": [
+                  [
+                    "2026-09-23T10:00:00Z",
+                    "2026-09-23T11:00:00Z"
+                  ]
+                ],
+                "ooo_intervals": [],
+                "fetch_error": null,
+                "fetched_at": "2026-09-23T10:30:00.000000Z",
+                "refresh_pending_at": null,
+                "created_at": "2026-09-23T10:25:00.000000Z",
+                "updated_at": "2026-09-23T10:30:00.000000Z",
+                "in_meeting_broadcast": true
+              }
+            }
+          ],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    },
+    {
+      "spec": {
+        "name": "pages",
+        "responses": [
+          [
+            200,
+            "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}],\"nextPageToken\":\"page-2\"}"
+          ],
+          [
+            200,
+            "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T13:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T13:30:00Z\"}}]}"
+          ]
+        ]
+      },
+      "initial": null,
+      "initial_offsets_us": {},
+      "responses": [
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T10:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T11:00:00Z\"}}],\"nextPageToken\":\"page-2\"}"
+        ],
+        [
+          200,
+          "{\"items\":[{\"status\":\"confirmed\",\"start\":{\"dateTime\":\"2026-09-23T13:00:00Z\"},\"end\":{\"dateTime\":\"2026-09-23T13:30:00Z\"}}]}"
+        ]
+      ],
+      "steps": [
+        {
+          "at": "2026-09-23T10:30:00.000000Z",
+          "result": "ok",
+          "cache": {
+            "busy_intervals": [
+              [
+                "2026-09-23T10:00:00Z",
+                "2026-09-23T11:00:00Z"
+              ],
+              [
+                "2026-09-23T13:00:00Z",
+                "2026-09-23T13:30:00Z"
+              ]
+            ],
+            "ooo_intervals": [],
+            "fetch_error": null,
+            "fetched_at": "2026-09-23T10:30:00.000000Z",
+            "refresh_pending_at": null,
+            "created_at": "2026-09-23T10:30:00.000000Z",
+            "updated_at": "2026-09-23T10:30:00.000000Z",
+            "in_meeting_broadcast": null
+          },
+          "broadcast_claims": [],
+          "calls": [
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            },
+            {
+              "method": "GET",
+              "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken&pageToken=page-2",
+              "body": "",
+              "content_type": "application/json",
+              "access_token": "access-token"
+            }
+          ],
+          "jobs": [],
+          "disconnected": null
+        }
+      ]
+    }
+  ]
+}

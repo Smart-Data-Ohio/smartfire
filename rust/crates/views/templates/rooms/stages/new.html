@@ -1,0 +1,8 @@
+{% extends "rooms/calls/_new.html" %}
+{%- block content %}
+
+<section class="panel txt-align-center" style="view-transition-name: new-room">
+{{ "  "|safe }}
+  {% include "rooms/stages/_form.html" %}
+
+</section>{{ "\n"|safe }}{%- endblock %}

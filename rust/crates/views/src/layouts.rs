@@ -31,6 +31,23 @@ pub trait Page {
     }
 }
 
+#[derive(Template)]
+#[template(path = "layouts/_huddle.html")]
+pub struct Huddle<'a> {
+    pub ctx: &'a crate::ViewContext<'a>,
+    pub user: &'a crate::CurrentUser,
+}
+
+#[derive(Template)]
+#[template(path = "layouts/_huddle_invitation.html")]
+pub struct HuddleInvitation;
+
+#[derive(Template)]
+#[template(path = "layouts/_huddle_join_notice.html")]
+pub struct HuddleJoinNotice<'a> {
+    pub ctx: &'a crate::ViewContext<'a>,
+}
+
 /// The application layout around page parts rendered elsewhere, for templates that don't extend
 /// the layout themselves (Rails picks the layout per request). Each part is what the ERB's
 /// `content_for` / `yield` would have produced.
