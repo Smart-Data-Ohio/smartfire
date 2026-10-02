@@ -15,7 +15,7 @@ use crate::database::Tx;
 use crate::error::{OptionalExt, Result};
 use crate::events::Event;
 use crate::models::{Ban, Membership, Message, Session, Webhook};
-use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
+use crate::sql::{self, CachedStatements, query_all, query_one};
 use crate::time::Timestamp;
 
 pub mod presentation;
@@ -270,11 +270,12 @@ impl User {
 
     /// `User.where(id: ids)`
     pub fn where_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
-        let sql = format!(
-            r#"SELECT * FROM "users" WHERE "users"."id" IN ({})"#,
-            placeholders(ids.len())
-        );
-        query_all(conn, &sql, rusqlite::params_from_iter(ids), Self::from_row)
+        query_all(
+            conn,
+            r#"SELECT * FROM "users" WHERE "users"."id" IN (SELECT value FROM json_each(?))"#,
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
     }
 
     /// `User.active.ordered`
