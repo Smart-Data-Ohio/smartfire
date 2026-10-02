@@ -1,19 +1,20 @@
 //! Rails activity presentation over the owner's permission-filtered ActivityItem APIs.
-use campfire_db::{ActivityItem, ChannelThread, Connection, Result, User, WorkThreadEvent};
+use campfire_db::{ActivityItem, Connection, Result, User};
 use campfire_views::activity::Item;
 use rusqlite::OptionalExtension;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 /// Request-local association preload, after the owner's accessibility query.
-pub struct MessageSources {
+pub struct Sources {
     saved: HashMap<i64, i64>,
-    work: HashMap<i64, WorkThreadEvent>,
-    work_threads: HashMap<i64, ChannelThread>,
-    work_actors: HashMap<i64, User>,
     messages: HashMap<i64, campfire_db::Message>,
     rooms: HashMap<i64, campfire_db::Room>,
+    work_events: HashMap<i64, campfire_db::WorkThreadEvent>,
+    threads: HashMap<i64, campfire_db::ChannelThread>,
+    actors: HashMap<i64, User>,
+    room_names: RefCell<HashMap<i64, String>>,
 }
-impl MessageSources {
+impl Sources {
     pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
         Self::load_for(conn, rows, true)
     }
@@ -41,26 +42,33 @@ impl MessageSources {
             .into_iter()
             .map(|message| (message.id, message))
             .collect();
-        let work_ids: Vec<_> = rows
+        let work_ids = rows
             .iter()
             .filter(|row| row.source_type == "WorkThreadEvent")
             .map(|row| row.source_id)
-            .collect();
-        let work: HashMap<_, _> = WorkThreadEvent::for_ids(conn, &work_ids)?
+            .collect::<Vec<_>>();
+        let work_events = campfire_db::WorkThreadEvent::for_ids(conn, &work_ids)?
             .into_iter()
             .map(|event| (event.id, event))
-            .collect();
-        let thread_ids: Vec<_> = work.values().map(|event| event.channel_thread_id).collect();
-        let work_threads: HashMap<_, _> = ChannelThread::for_ids(conn, &thread_ids)?
+            .collect::<HashMap<_, _>>();
+        let thread_ids = work_events
+            .values()
+            .map(|event| event.channel_thread_id)
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let threads = campfire_db::ChannelThread::for_ids(conn, &thread_ids)?
             .into_iter()
             .map(|thread| (thread.id, thread))
-            .collect();
-        let actor_ids: Vec<_> = if html {
-            work.values().filter_map(|event| event.actor_id).collect()
-        } else {
-            Vec::new()
-        };
-        let work_actors = if actor_ids.is_empty() {
+            .collect::<HashMap<_, _>>();
+        let actor_ids = work_events
+            .values()
+            .filter(|_| html)
+            .filter_map(|event| event.actor_id)
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let actors = if actor_ids.is_empty() {
             HashMap::new()
         } else {
             User::where_ids(conn, &actor_ids)?
@@ -68,8 +76,10 @@ impl MessageSources {
                 .map(|user| (user.id, user))
                 .collect()
         };
-        let mut room_ids: Vec<_> = messages.values().map(|message| message.room_id)
-            .chain(work_threads.values().filter(|_| html).map(|thread| thread.room_id))
+        let mut room_ids: Vec<_> = messages
+            .values()
+            .map(|message| message.room_id)
+            .chain(threads.values().filter(|_| html).map(|thread| thread.room_id))
             .collect();
         room_ids.sort_unstable();
         room_ids.dedup();
@@ -79,22 +89,35 @@ impl MessageSources {
             .collect();
         Ok(Self {
             saved,
-            work,
-            work_threads,
-            work_actors,
             messages,
             rooms,
+            work_events,
+            threads,
+            actors,
+            room_names: RefCell::default(),
         })
     }
-    fn work_event(&self, row: &ActivityItem) -> Result<&WorkThreadEvent> {
-        self.work
+    fn work_event(&self, row: &ActivityItem) -> Result<&campfire_db::WorkThreadEvent> {
+        self.work_events
             .get(&row.source_id)
-            .ok_or(campfire_db::Error::RecordNotFound("WorkThreadEvent"))
+            .ok_or_else(|| rusqlite::Error::QueryReturnedNoRows.into())
     }
-    fn work_thread(&self, event: &WorkThreadEvent) -> Result<&ChannelThread> {
-        self.work_threads
-            .get(&event.channel_thread_id)
+    fn thread(&self, id: i64) -> Result<&campfire_db::ChannelThread> {
+        self.threads
+            .get(&id)
             .ok_or(campfire_db::Error::RecordNotFound("ChannelThread"))
+    }
+    fn room_name(&self, conn: &Connection, id: i64, viewer: &User) -> Result<String> {
+        self.room(id)?;
+        if self.room_names.borrow().is_empty() {
+            self.room_names
+                .replace(campfire_db::Room::display_names_for(
+                    conn,
+                    &self.rooms.values().cloned().collect::<Vec<_>>(),
+                    Some(viewer),
+                )?);
+        }
+        Ok(self.room_names.borrow()[&id].clone())
     }
     fn room(&self, id: i64) -> Result<&campfire_db::Room> {
         self.rooms
@@ -113,10 +136,10 @@ impl MessageSources {
 
 /// `ActivityItemsHelper#activity_item_source_path`, independent of the JSON source whitelist.
 pub fn destination(conn: &Connection, row: &ActivityItem) -> Result<String> {
-    let messages = MessageSources::load(conn, std::slice::from_ref(row))?;
+    let messages = Sources::load(conn, std::slice::from_ref(row))?;
     source_path(conn, row, &messages)
 }
-fn source_path(conn: &Connection, row: &ActivityItem, messages: &MessageSources) -> Result<String> {
+fn source_path(conn: &Connection, row: &ActivityItem, messages: &Sources) -> Result<String> {
     let fallback = || "/activity".to_owned();
     Ok(match row.source_type.as_str() {
         "Message" | "SavedItem" => messages
@@ -133,17 +156,16 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &MessageSources)
             })
             .unwrap_or_else(fallback),
         "WorkThreadEvent" => messages
-            .work
+            .work_events
             .get(&row.source_id)
-            .and_then(|event| messages.work_threads.get(&event.channel_thread_id))
+            .and_then(|event| messages.threads.get(&event.channel_thread_id))
             .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
             .unwrap_or_else(fallback),
         "BoardSlaNudge" => {
-            // FLAGGED WS12 BoardSlaNudge reader, until the owner exports its model.
-            let table = "board_sla_nudges";
+            // FLAGGED WS12 BoardSlaNudge facts reader.
             let thread_id: Option<i64> = conn
                 .query_row(
-                    &format!("SELECT channel_thread_id FROM {table} WHERE id=?"),
+                    "SELECT channel_thread_id FROM board_sla_nudges WHERE id=?",
                     [row.source_id],
                     |r| r.get(0),
                 )
@@ -195,7 +217,7 @@ pub fn item(
     app: &crate::app::AppState,
     item: &ActivityItem,
     viewer: &User,
-    messages: &MessageSources,
+    messages: &Sources,
 ) -> Result<Item> {
     let mut result = Item {
         id: item.id,
@@ -222,9 +244,8 @@ pub fn item(
         }
         "Message" | "SavedItem" => {
             if let Some(message) = messages.message(item) {
-                let room = messages.room(message.room_id)?;
                 result.created_at = Some(message.created_at.jiff());
-                result.title = super::accounts::room_display_name(conn, room, viewer)?;
+                result.title = messages.room_name(conn, message.room_id, viewer)?;
                 if let Some(id) = message.thread_id {
                     result.title +=
                         &format!(" · {}", campfire_db::ChannelThread::find(conn, id)?.name);
@@ -295,21 +316,21 @@ pub fn item(
         }
         "WorkThreadEvent" => {
             let event = messages.work_event(item)?;
-            let thread = messages.work_thread(event)?;
+            let thread = messages.thread(event.channel_thread_id)?;
             result.created_at = Some(event.created_at.jiff());
             result.title = format!(
                 "{} · {}",
-                super::accounts::room_display_name(conn, messages.room(thread.room_id)?, viewer)?,
+                messages.room_name(conn, thread.room_id, viewer)?,
                 thread.name
             );
             result.author = Some(
                 event
                     .actor_id
-                    .and_then(|id| messages.work_actors.get(&id))
+                    .and_then(|id| messages.actors.get(&id))
                     .map(|user| user.name.clone())
                     .unwrap_or_else(|| "Work thread".into()),
             );
-            result.body = work_body(event);
+            result.body = work_event_body(event);
         }
         "BoardSlaNudge" => {
             // FLAGGED WS12 BoardSlaNudge facts reader; no writer is implemented here.
@@ -450,14 +471,14 @@ pub fn payload(
     app: &crate::app::AppState,
     row: &ActivityItem,
 ) -> Result<Payload> {
-    let messages = MessageSources::load_json(conn, std::slice::from_ref(row))?;
+    let messages = Sources::load_json(conn, std::slice::from_ref(row))?;
     payload_with_sources(conn, app, row, &messages)
 }
 pub fn payload_with_sources(
     conn: &Connection,
     app: &crate::app::AppState,
     row: &ActivityItem,
-    messages: &MessageSources,
+    messages: &Sources,
 ) -> Result<Payload> {
     let mut source = Source {
         kind: row.source_type.clone(),
@@ -515,8 +536,8 @@ pub fn payload_with_sources(
         }
         "WorkThreadEvent" => {
             let event = messages.work_event(row)?;
-            let thread = messages.work_thread(event)?;
-            source.body = work_body(event);
+            source.body = work_event_body(event);
+            let thread = messages.thread(event.channel_thread_id)?;
             source.room_id = Some(thread.room_id);
             source.thread_id = Some(thread.id);
             source.creator_id = event.actor_id;
@@ -645,7 +666,7 @@ fn event_body(
         _ => format!("Event updated: {start}."),
     })
 }
-fn work_body(event: &WorkThreadEvent) -> String {
+fn work_event_body(event: &campfire_db::WorkThreadEvent) -> String {
     let mut changes = Vec::new();
     if event.from_status != event.to_status {
         changes.push(format!(

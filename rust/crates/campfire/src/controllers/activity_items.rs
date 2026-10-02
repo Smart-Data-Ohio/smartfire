@@ -65,9 +65,9 @@ pub async fn index(c: &mut Ctx) -> Result {
             let unread = ActivityItem::unread_count(conn, &viewer)? as usize;
             let next = (rows.len() == 100).then(|| rows.last().unwrap().id);
             let sources = if json {
-                activity::MessageSources::load_json(conn, &rows)?
+                activity::Sources::load_json(conn, &rows)?
             } else {
-                activity::MessageSources::load(conn, &rows)?
+                activity::Sources::load(conn, &rows)?
             };
             let payloads = if json {
                 rows.iter()
