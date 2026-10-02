@@ -57,6 +57,7 @@ impl WorkThreadEvent {
             Self::from_row,
         )
     }
+    /// `ActivityItem.preload(:source)`: load only the authorized inbox page's sources.
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
         if ids.is_empty() {
             return Ok(Vec::new());

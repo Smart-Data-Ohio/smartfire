@@ -43,6 +43,12 @@ pub fn subscription_section(
 }
 
 pub fn card(conn: &Connection, pr: &PullRequest, room_id: i64) -> Result<Card> {
+    card_in_discussion(
+        pr,
+        PullRequestThread::for_room_pr(conn, room_id, pr.id)?.map(|m| m.channel_thread_id),
+    )
+}
+fn card_in_discussion(pr: &PullRequest, discussion_thread: Option<i64>) -> Result<Card> {
     Ok(Card {
         id: pr.id,
         owner: pr.owner.clone(),
@@ -64,8 +70,7 @@ pub fn card(conn: &Connection, pr: &PullRequest, room_id: i64) -> Result<Card> {
         files_loaded: pr.changed_files.as_ref().is_some_and(|s| !blank(s)),
         files: Vec::new(),
         files_total: 0,
-        discussion_thread: PullRequestThread::for_room_pr(conn, room_id, pr.id)?
-            .map(|m| m.channel_thread_id),
+        discussion_thread,
     })
 }
 pub fn card_with_files(conn: &Connection, pr: &PullRequest, room_id: i64) -> Result<Card> {
@@ -107,6 +112,19 @@ pub fn card_with_files(conn: &Connection, pr: &PullRequest, room_id: i64) -> Res
 }
 pub fn shared_card(conn: &Connection, pr: &PullRequest, room_id: i64, files: bool) -> Result<Card> {
     if pr.private != Some(false) {
+        return shared_card_in_discussion(pr, None);
+    }
+    if files {
+        card_with_files(conn, pr, room_id)
+    } else {
+        card(conn, pr, room_id)
+    }
+}
+pub(crate) fn shared_card_in_discussion(
+    pr: &PullRequest,
+    discussion_thread: Option<i64>,
+) -> Result<Card> {
+    if pr.private != Some(false) {
         return Ok(Card {
             id: pr.id,
             owner: pr.owner.clone(),
@@ -116,22 +134,38 @@ pub fn shared_card(conn: &Connection, pr: &PullRequest, room_id: i64, files: boo
             ..Default::default()
         });
     }
-    if files {
-        card_with_files(conn, pr, room_id)
-    } else {
-        card(conn, pr, room_id)
-    }
+    card_in_discussion(pr, discussion_thread)
 }
 pub fn message_cards(conn: &Connection, app: &AppState, message: &Message) -> Result<String> {
     message_cards_in_zone(conn, app, message, &super::page::renderer_time_zone())
 }
-pub fn message_cards_in_zone(conn: &Connection, app: &AppState, message: &Message, zone: &campfire_views::time::Zone) -> Result<String> {
+pub fn message_cards_in_zone(
+    conn: &Connection,
+    app: &AppState,
+    message: &Message,
+    zone: &campfire_views::time::Zone,
+) -> Result<String> {
     let cards = PullRequest::for_message(conn, message.id)?
         .iter()
         .map(|pr| shared_card(conn, pr, message.room_id, false))
         .collect::<Result<Vec<_>>>()?;
     let account = Account::first(conn)?;
-    Ok(super::page::render_detached_in_zone(app, account.as_ref(), "http://example.org", zone, |ctx| {
+    Ok(render_message_cards(
+        app,
+        message,
+        zone,
+        account.as_ref(),
+        &cards,
+    ))
+}
+pub(crate) fn render_message_cards(
+    app: &AppState,
+    message: &Message,
+    zone: &campfire_views::time::Zone,
+    account: Option<&Account>,
+    cards: &[Card],
+) -> String {
+    super::page::render_detached_in_zone(app, account, "http://example.org", zone, |ctx| {
         campfire_views::github::cards(
             ctx,
             &message.client_message_id,
@@ -140,9 +174,9 @@ pub fn message_cards_in_zone(conn: &Connection, app: &AppState, message: &Messag
                 room_id: message.room_id,
                 thread_id: message.thread_id,
             },
-            &cards,
+            cards,
         )
-    }))
+    })
 }
 pub fn cache_stamp(conn: &Connection, message: &Message) -> Result<String> {
     let prs = PullRequest::for_message(conn, message.id)?;

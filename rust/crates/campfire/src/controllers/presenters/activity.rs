@@ -64,7 +64,10 @@ impl Sources {
         let actors = if actor_ids.is_empty() {
             HashMap::new()
         } else {
-            User::where_ids(conn, &actor_ids)?.into_iter().map(|user| (user.id,user)).collect()
+            User::where_ids(conn, &actor_ids)?
+                .into_iter()
+                .map(|user| (user.id, user))
+                .collect()
         };
         let mut room_ids: Vec<_> = messages
             .values()
@@ -137,7 +140,7 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &Sources) -> Res
             .map(|message| {
                 if let Some(thread) = message.thread_id {
                     format!(
-                        "/rooms/{}?thread={thread}&message_id={}",
+                        "/rooms/{}?message_id={}&thread={thread}",
                         message.room_id, message.id
                     )
                 } else {
@@ -145,9 +148,11 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &Sources) -> Res
                 }
             })
             .unwrap_or_else(fallback),
-        "WorkThreadEvent" => messages.work_events.get(&row.source_id)
+        "WorkThreadEvent" => messages
+            .work_events
+            .get(&row.source_id)
             .and_then(|event| messages.threads.get(&event.channel_thread_id))
-            .map(|thread| format!("/rooms/{}?thread={}",thread.room_id,thread.id))
+            .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
             .unwrap_or_else(fallback),
         "BoardSlaNudge" => {
             // FLAGGED WS12 BoardSlaNudge facts reader.
@@ -233,7 +238,7 @@ pub fn item(
         "Message" | "SavedItem" => {
             if let Some(message) = messages.message(item) {
                 result.created_at = Some(message.created_at.jiff());
-                result.title = messages.room_name(conn,message.room_id,viewer)?;
+                result.title = messages.room_name(conn, message.room_id, viewer)?;
                 if let Some(id) = message.thread_id {
                     result.title +=
                         &format!(" · {}", campfire_db::ChannelThread::find(conn, id)?.name);
@@ -308,11 +313,12 @@ pub fn item(
             result.created_at = Some(event.created_at.jiff());
             result.title = format!(
                 "{} · {}",
-                messages.room_name(conn,thread.room_id,viewer)?,
+                messages.room_name(conn, thread.room_id, viewer)?,
                 thread.name
             );
             result.author = Some(
-                event.actor_id
+                event
+                    .actor_id
                     .and_then(|id| messages.actors.get(&id))
                     .map(|user| user.name.clone())
                     .unwrap_or_else(|| "Work thread".into()),
@@ -488,7 +494,7 @@ pub fn payload_with_sources(
             source.creator_id = Some(message.creator_id);
             source.path = if let Some(thread) = message.thread_id {
                 format!(
-                    "/rooms/{}?thread={thread}&message_id={}",
+                    "/rooms/{}?message_id={}&thread={thread}",
                     room.id, message.id
                 )
             } else {
@@ -600,17 +606,6 @@ fn truncate(text: String) -> String {
         text
     }
 }
-fn work_event_body(event: &campfire_db::WorkThreadEvent) -> String {
-    work_body(
-        event.from_status.clone(),
-        event.to_status.clone(),
-        event.from_owner_id,
-        event.to_owner_id,
-        event.from_owner_name.clone(),
-        event.to_owner_name.clone(),
-    )
-}
-
 fn humanize(value: Option<&str>) -> String {
     let value = value
         .filter(|v| !campfire_richtext::ruby::is_blank(v))
@@ -664,29 +659,27 @@ fn event_body(
         _ => format!("Event updated: {start}."),
     })
 }
-fn work_body(
-    from: Option<String>,
-    to: Option<String>,
-    from_id: Option<i64>,
-    to_id: Option<i64>,
-    from_name: Option<String>,
-    to_name: Option<String>,
-) -> String {
+fn work_event_body(event: &campfire_db::WorkThreadEvent) -> String {
     let mut changes = Vec::new();
-    if from != to {
+    if event.from_status != event.to_status {
         changes.push(format!(
             "Status: {} → {}",
-            humanize(from.as_deref()),
-            humanize(to.as_deref())
+            humanize(event.from_status.as_deref()),
+            humanize(event.to_status.as_deref())
         ));
     }
-    if from_id != to_id {
-        let name = |value: Option<String>| {
+    if event.from_owner_id != event.to_owner_id {
+        let name = |value: Option<&str>| {
             value
                 .filter(|v| !campfire_richtext::ruby::is_blank(v))
-                .unwrap_or_else(|| "unassigned".into())
+                .unwrap_or("unassigned")
+                .to_owned()
         };
-        changes.push(format!("Owner: {} → {}", name(from_name), name(to_name)));
+        changes.push(format!(
+            "Owner: {} → {}",
+            name(event.from_owner_name.as_deref()),
+            name(event.to_owner_name.as_deref())
+        ));
     }
     if changes.is_empty() {
         "Work thread updated".into()

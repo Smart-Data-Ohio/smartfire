@@ -143,6 +143,31 @@ impl CalendarEvent {
             Self::from_row,
         )
     }
+    /// Message-card associations, ordered like Event.soonest_first and restricted
+    /// to events in the referring message's room.
+    pub fn for_message_ids(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
+        let mut result = std::collections::HashMap::<i64, Vec<Self>>::new();
+        if ids.is_empty() {
+            return Ok(result);
+        }
+        let sql = format!(
+            "SELECT r.message_id,e.* FROM events e JOIN event_references r ON r.event_id=e.id JOIN messages m ON m.id=r.message_id AND m.room_id=e.room_id WHERE r.message_id IN ({}) ORDER BY e.starts_at,e.id",
+            crate::sql::placeholders(ids.len())
+        );
+        for row in conn
+            .prepare(&sql)?
+            .query_map(rusqlite::params_from_iter(ids), |row| {
+                Ok((row.get::<_, i64>("message_id")?, Self::from_row(row)?))
+            })?
+        {
+            let (message, event) = row?;
+            result.entry(message).or_default().push(event);
+        }
+        Ok(result)
+    }
     /// The controller's RoomScoped lookup. Always require membership, even for administrators
     /// and open rooms: direct event URLs do not join a room.
     pub fn find_visible(conn: &Connection, room_id: i64, id: i64, user_id: i64) -> Result<Self> {

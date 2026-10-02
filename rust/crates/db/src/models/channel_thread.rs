@@ -191,6 +191,7 @@ impl ChannelThread {
         )
     }
 
+    /// Preload the conversations of a bounded, authorized inbox page.
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
         if ids.is_empty() {
             return Ok(Vec::new());
@@ -889,7 +890,12 @@ impl ChannelThread {
         self.destroy_inner(tx, true, None)
     }
 
-    fn destroy_inner(&self, tx: &mut Tx<'_>, importing: bool, deleted_by_id: Option<i64>) -> Result<()> {
+    fn destroy_inner(
+        &self,
+        tx: &mut Tx<'_>,
+        importing: bool,
+        deleted_by_id: Option<i64>,
+    ) -> Result<()> {
         let fresh = Self::find(tx.conn(), self.id)?;
         tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
