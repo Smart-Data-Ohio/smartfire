@@ -12,6 +12,7 @@ fn vectors() -> Value {
 }
 fn with_pool(original: &App, pool: Pool) -> App {
     Arc::new(AppState {
+        fizzy: crate::integrations::fizzy::State::system(),
         google: original.google.clone(),
         errors: original.errors.clone(),
         ar_encryption: original.ar_encryption.clone(),

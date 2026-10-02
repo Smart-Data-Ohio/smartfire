@@ -60,3 +60,17 @@ fn ruby_inspect(value: &Value) -> String {
 mod tests;
 #[cfg(test)]
 mod rails_client_tests;
+
+/// Per-app transport avoids process-wide network/config overrides in concurrent HTTP tests.
+pub struct State {
+    pub network: super::net::Network,
+    pub base: String,
+}
+impl State {
+    pub fn system() -> Self {
+        Self {
+            network: super::net::Network::system(),
+            base: client::api_base_url(),
+        }
+    }
+}

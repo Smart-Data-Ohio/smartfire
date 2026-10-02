@@ -1,0 +1,34 @@
+PR192 R5 failing-first receipt
+Baseline production revision: 7f77fa5fa85ee46290f5cac44fcea7227c8cab56.
+Only the new R5 regression module and its registration were added before this run; production active_storage.rs was unchanged. Six regressions fail on the handled response status, all with actual 500. No case failed on setup or native media bytes.
+
+Command (expected exit101):
+env CI=1 CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/pr192-r5-target" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 RUST_TEST_THREADS=8 TMPDIR="$PWD/.scratch/pr192-r5-tmp" CABLE_TEST_PORT_RANGE=52900-52919 INTEGRATION_TEST_PORT_RANGE=52920-52949 MAIL_TEST_PORT_RANGE=52920-52949 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path rust/Cargo.toml -p campfire pr192_r5_ -- --nocapture --test-threads=8
+
+Raw status assertions and summary lines:
+    Finished `test` profile [unoptimized] target(s) in 2m 57s
+thread 'controllers::agent_review_r5_tests::pr192_r5_jpeg_missing_variant_proxy' (2189665) panicked at crates/campfire/src/controllers/agent_review_r5_tests.rs:26:5:
+  left: 500
+ right: 404
+test controllers::agent_review_r5_tests::pr192_r5_jpeg_missing_variant_proxy ... FAILED
+thread 'controllers::agent_review_r5_tests::pr192_r5_jpeg_missing_variant_redirect' (2189666) panicked at crates/campfire/src/controllers/agent_review_r5_tests.rs:26:5:
+  left: 500
+ right: 302
+test controllers::agent_review_r5_tests::pr192_r5_jpeg_missing_variant_redirect ... FAILED
+thread 'controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_redirect' (2189668) panicked at crates/campfire/src/controllers/agent_review_r5_tests.rs:26:5:
+  left: 500
+ right: 302
+thread 'controllers::agent_review_r5_tests::pr192_r5_video_missing_variant_proxy' (2189669) panicked at crates/campfire/src/controllers/agent_review_r5_tests.rs:26:5:
+  left: 500
+ right: 404
+thread 'controllers::agent_review_r5_tests::pr192_r5_video_missing_variant_redirect' (2189670) panicked at crates/campfire/src/controllers/agent_review_r5_tests.rs:26:5:
+  left: 500
+ right: 302
+thread 'controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_proxy' (2189667) panicked at crates/campfire/src/controllers/agent_review_r5_tests.rs:26:5:
+  left: 500
+ right: 200
+test controllers::agent_review_r5_tests::pr192_r5_video_missing_variant_redirect ... FAILED
+test controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_redirect ... FAILED
+test controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_proxy ... FAILED
+test controllers::agent_review_r5_tests::pr192_r5_video_missing_variant_proxy ... FAILED
+test result: FAILED. 0 passed; 6 failed; 0 ignored; 0 measured; 2521 filtered out; finished in 1.18s

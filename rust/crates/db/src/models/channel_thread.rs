@@ -996,7 +996,14 @@ impl ChannelThread {
 
     /// `manageable_by?(user)`: an administrator or the room's creator.
     pub fn manageable_by(&self, conn: &Connection, user: &User) -> Result<bool> {
-        Ok(user.is_administrator() || user.id == self.room(conn)?.creator_id)
+        Ok(user.is_administrator() || self.manageable_in_room(&self.room(conn)?, user))
+    }
+
+    pub fn manageable_in_room(&self, room: &Room, user: &User) -> bool {
+        user.is_administrator() || user.id == room.creator_id
+    }
+    pub fn settings_manageable_in_room(&self, room: &Room, user: &User) -> bool {
+        self.manageable_in_room(room, user) || user.id == self.creator_id
     }
 
     /// `settings_manageable_by?(user)`: also the thread's creator.
