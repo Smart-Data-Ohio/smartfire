@@ -3,7 +3,7 @@
   <header>
     <h1 id="thread-title">{{ name }}</h1>
     <p>{{ status }} · {{ count }} messages</p>
-  </header>
+{% if let Some(work) = work %}{{ self.work_section(work) }}{% endif %}  </header>
 
 {% if !pull_request_header.0.is_empty() %}    {{ pull_request_header }}
 {% endif %}

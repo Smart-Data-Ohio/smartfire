@@ -4,7 +4,7 @@
 use jiff::SignedDuration;
 use rusqlite::params;
 
-use crate::sql::{CachedStatements, exists, query_one};
+use crate::sql::{CachedStatements, exists, query_all, query_one};
 use crate::{Connection, Result, Timestamp, Tx, User};
 
 pub const CAPABILITIES: [&str; 7] = [
@@ -17,6 +17,43 @@ pub const CAPABILITIES: [&str; 7] = [
     "dm_anyone",
 ];
 const LEGACY_CAPABILITIES: [&str; 3] = ["read_messages", "post_messages", "react"];
+
+/// Request-local batch of Agent#can? facts, with the same policy as capability_for_agent.
+/// Membership remains the caller's check. A revoked grant disables the legacy fallback.
+pub fn capabilities_for_agents(
+    conn: &Connection,
+    capability: &str,
+    requests: &[(i64, Option<i64>)],
+) -> Result<std::collections::HashMap<(i64, Option<i64>), bool>> {
+    if requests.is_empty() {
+        return Ok(Default::default());
+    }
+    if !CAPABILITIES.contains(&capability) {
+        return Ok(requests.iter().map(|&key| (key, false)).collect());
+    }
+    Ok(query_all(
+        conn,
+        "SELECT json_extract(request.value,'$[0]'), json_extract(request.value,'$[1]'),
+         a.id IS NOT NULL AND a.suspended_at IS NULL AND u.id IS NOT NULL AND u.status=0
+         AND (r.id IS NULL OR r.deleted_at IS NULL)
+         AND ((? AND NOT EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id))
+           OR EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id
+             AND g.capability=? AND g.revoked_at IS NULL
+             AND (g.room_id IS NULL OR g.room_id=json_extract(request.value,'$[1]'))))
+         FROM json_each(?) request
+         LEFT JOIN agents a ON a.id=json_extract(request.value,'$[0]')
+         LEFT JOIN users u ON u.id=a.user_id
+         LEFT JOIN rooms r ON r.id=json_extract(request.value,'$[1]')",
+        params![
+            LEGACY_CAPABILITIES.contains(&capability),
+            capability,
+            serde_json::json!(requests).to_string()
+        ],
+        |row| Ok(((row.get(0)?, row.get(1)?), row.get(2)?)),
+    )?
+    .into_iter()
+    .collect())
+}
 
 fn active_agent(conn: &Connection, agent_id: i64) -> Result<Option<(i64, bool)>> {
     let user = query_one(
