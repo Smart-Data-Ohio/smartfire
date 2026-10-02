@@ -15,6 +15,12 @@ pub struct MessageSources {
 }
 impl MessageSources {
     pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        Self::load_for(conn, rows, true)
+    }
+    pub fn load_json(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        Self::load_for(conn, rows, false)
+    }
+    fn load_for(conn: &Connection, rows: &[ActivityItem], html: bool) -> Result<Self> {
         let saved_ids: Vec<_> = rows
             .iter()
             .filter(|row| row.source_type == "SavedItem")
@@ -49,7 +55,11 @@ impl MessageSources {
             .into_iter()
             .map(|thread| (thread.id, thread))
             .collect();
-        let actor_ids: Vec<_> = work.values().filter_map(|event| event.actor_id).collect();
+        let actor_ids: Vec<_> = if html {
+            work.values().filter_map(|event| event.actor_id).collect()
+        } else {
+            Vec::new()
+        };
         let work_actors = if actor_ids.is_empty() {
             HashMap::new()
         } else {
@@ -58,10 +68,8 @@ impl MessageSources {
                 .map(|user| (user.id, user))
                 .collect()
         };
-        let mut room_ids: Vec<_> = messages
-            .values()
-            .map(|message| message.room_id)
-            .chain(work_threads.values().map(|thread| thread.room_id))
+        let mut room_ids: Vec<_> = messages.values().map(|message| message.room_id)
+            .chain(work_threads.values().filter(|_| html).map(|thread| thread.room_id))
             .collect();
         room_ids.sort_unstable();
         room_ids.dedup();
@@ -442,7 +450,7 @@ pub fn payload(
     app: &crate::app::AppState,
     row: &ActivityItem,
 ) -> Result<Payload> {
-    let messages = MessageSources::load(conn, std::slice::from_ref(row))?;
+    let messages = MessageSources::load_json(conn, std::slice::from_ref(row))?;
     payload_with_sources(conn, app, row, &messages)
 }
 pub fn payload_with_sources(
