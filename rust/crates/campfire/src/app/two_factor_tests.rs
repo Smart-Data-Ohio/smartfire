@@ -411,7 +411,14 @@ async fn enrollment_keeps_confirmed_state_if_the_audit_cannot_be_saved() {
             assert!(User::find(c, DAVID)?.two_factor_enabled(c)?);
             assert_eq!(Session::for_user(c, DAVID)?.len(), 1);
             assert!(Session::find(c, id)?.two_factor_verified()); // test helper began verified
-            assert_eq!(c.query_row("SELECT count(*) FROM two_factor_setup_secrets WHERE session_id=?", [id], |row| row.get::<_, i64>(0))?, 0);
+            assert_eq!(
+                c.query_row(
+                    "SELECT count(*) FROM two_factor_setup_secrets WHERE session_id=?",
+                    [id],
+                    |row| row.get::<_, i64>(0)
+                )?,
+                0
+            );
             assert_eq!(
                 c.query_row("SELECT count(*) FROM two_factor_backup_codes", [], |r| r
                     .get::<_, i64>(0))?,

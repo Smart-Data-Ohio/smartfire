@@ -276,7 +276,6 @@ pub fn enroll(
     session_id: i64,
     encryption: &ArEncryption,
     code: &str,
-    context: &Context,
 ) -> Result<Enrollment> {
     let mut credential = match TwoFactorCredential::for_user(tx.conn(), user.id)? {
         Some(credential) if credential.enabled() => return Ok(Enrollment::Enabled),
@@ -300,16 +299,6 @@ pub fn enroll(
         other.destroy(tx)?;
     }
     user.reset_remote_connections(tx);
-    AuditLog::record(
-        tx,
-        NewAuditLog {
-            action: "two_factor.enable".into(),
-            target: Some(Target::from(user)),
-            changes: (!others.is_empty()).then(|| json!({"signed_out_other_devices":others.len()})),
-            ..Default::default()
-        },
-        context,
-    )?;
     Ok(Enrollment::Confirmed {
         codes,
         signed_out: others.len(),
