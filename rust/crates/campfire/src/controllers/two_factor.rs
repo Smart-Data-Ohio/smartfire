@@ -76,14 +76,13 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
         .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?
         .id;
     let code = scalar(c, "code");
-    let secrets = c.app().secrets.clone();
     let audit = audit_context(c)?;
     let target = Target::from(&user);
     let outcome = crate::authentication::enroll(
         &c.app().db,
         user,
         session_id,
-        ArEncryption::new(&secrets),
+        c.app().ar_encryption.clone(),
         code,
     )
     .await

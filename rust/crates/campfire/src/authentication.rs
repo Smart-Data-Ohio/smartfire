@@ -277,7 +277,7 @@ pub async fn enroll(
     db: &Database,
     user: User,
     session_id: i64,
-    encryption: ArEncryption,
+    encryption: std::sync::Arc<ArEncryption>,
     code: String,
 ) -> Result<Enrollment> {
     let user_id = user.id;
