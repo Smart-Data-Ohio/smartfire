@@ -555,3 +555,6 @@ pub(super) async fn viewer_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
 
 #[cfg(test)]
 mod access_boundary_tests;
+
+#[cfg(test)]
+mod coercion_tests;

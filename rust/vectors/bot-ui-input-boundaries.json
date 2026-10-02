@@ -1,0 +1,1509 @@
+{
+  "reference": "d7c7de92",
+  "expiry": [
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": null
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": ""
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": " "
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "invalid"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "20300615"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "30-06-15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "0030-06-15 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "15/06/2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "06/15/2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "June 15, 2030 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "15 June 2030 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "Jun 2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-01 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "June 15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-15 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "15 Jun"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-15 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "June"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-01 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "10:20"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 10:20:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "4pm"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 16:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "Fri"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "junk"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-01 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-166"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-03-01 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-W24-6"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030W246"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "20300615T102030Z"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030/06/15 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030.06.15 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "Sat, 15 Jun 2030 10:20:30 GMT"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "Sat Jun 15 10:20:30 2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15T10:20:30Z"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15T10:20:30+05:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 04:50:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:30.123456789"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30.123456",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-02-30 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-03-02 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15 24:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-16 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:60"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:21:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:30 EST"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 15:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:30 +0530"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 04:50:30",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2026-03-08T02:30:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-08 02:30:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2026-11-01T01:30:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-11-01 01:30:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": 12
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 12,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": 12.5
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 12.5,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": -12
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": -12,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": 0
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 0,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": true
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 1,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": false
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": []
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": [
+          "2030-06-15"
+        ]
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": {
+          "year": 2030
+        }
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15",
+        "expires_at(4i)": "10",
+        "expires_at(5i)": "20"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "2",
+        "expires_at(3i)": "30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "13",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "",
+        "expires_at(2i)": "",
+        "expires_at(3i)": ""
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": "2035-01-01",
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2035-01-01 00:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": true,
+        "expires_at(2i)": 6,
+        "expires_at(3i)": 15
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030x",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15",
+        "expires_at(4i)": "25"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15",
+        "expires_at(6f)": "30.75"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at(1i)": "2026",
+        "expires_at(2i)": "11",
+        "expires_at(3i)": "1",
+        "expires_at(4i)": "1",
+        "expires_at(5i)": "30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": 12,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": 12.5,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": -12,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": 0,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "expires_at": true,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": null
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": ""
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": " "
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "invalid"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "20300615"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "30-06-15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "0030-06-15 04:56:02",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "15/06/2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "06/15/2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "June 15, 2030 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 14:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "15 June 2030 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 14:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "Jun 2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-01 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "June 15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-15 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "15 Jun"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-15 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "June"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-01 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 15:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "10:20"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 15:20:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "4pm"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 21:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "Fri"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 05:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "junk"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-06-01 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-166"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-03-01 05:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-W24-6"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 05:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030W246"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-02 05:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "20300615T102030Z"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030/06/15 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 14:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030.06.15 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 14:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "Sat, 15 Jun 2030 10:20:30 GMT"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "Sat Jun 15 10:20:30 2030"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 14:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15T10:20:30Z"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 10:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15T10:20:30+05:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 04:50:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:30.123456789"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 14:20:30.123456",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-02-30 10:20:30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-03-02 15:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15 24:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-16 04:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:60"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 14:21:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:30 EST"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 15:20:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2030-06-15 10:20:30 +0530"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2030-06-15 04:50:30",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2026-03-08T02:30:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-03-08 07:30:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2026-11-01T01:30:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2026-11-01 05:30:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": 12
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 12,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": 12.5
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 12.5,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": -12
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": -12,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": 0
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 0,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": true
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": 1,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": false
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": []
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": [
+          "2030-06-15"
+        ]
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": {
+          "year": 2030
+        }
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15",
+        "expires_at(4i)": "10",
+        "expires_at(5i)": "20"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "2",
+        "expires_at(3i)": "30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "13",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "",
+        "expires_at(2i)": "",
+        "expires_at(3i)": ""
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": "2035-01-01",
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "2035-01-01 05:00:00",
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": true,
+        "expires_at(2i)": 6,
+        "expires_at(3i)": 15
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030x",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15",
+        "expires_at(4i)": "25"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2030",
+        "expires_at(2i)": "6",
+        "expires_at(3i)": "15",
+        "expires_at(6f)": "30.75"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at(1i)": "2026",
+        "expires_at(2i)": "11",
+        "expires_at(3i)": "1",
+        "expires_at(4i)": "1",
+        "expires_at(5i)": "30"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": 12,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": 12.5,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": -12,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": 0,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    },
+    {
+      "zone": "America/New_York",
+      "attributes": {
+        "expires_at": true,
+        "name": ""
+      },
+      "status": 500,
+      "persisted": false,
+      "stored": null,
+      "audits": 0
+    }
+  ],
+  "github_tokens": [
+    {
+      "input": null,
+      "token": null,
+      "status": 302,
+      "flash": {
+        "alert": "Paste a token to connect GitHub."
+      }
+    },
+    {
+      "input": "",
+      "token": null,
+      "status": 302,
+      "flash": {
+        "alert": "Paste a token to connect GitHub."
+      }
+    },
+    {
+      "input": " \t \n ",
+      "token": null,
+      "status": 302,
+      "flash": {
+        "alert": "Paste a token to connect GitHub."
+      }
+    },
+    {
+      "input": false,
+      "token": "false",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": true,
+      "token": "true",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": 12,
+      "token": "12",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": 12.5,
+      "token": "12.5",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": [],
+      "token": "[]",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": [
+        "first",
+        "second"
+      ],
+      "token": "[\"first\", \"second\"]",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": [
+        "line\\nquote\"",
+        "é",
+        true,
+        12
+      ],
+      "token": "[\"line\\\\nquote\\\"\", \"é\", true, 12]",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": [
+        [
+          "nested"
+        ],
+        {
+          "x": "value"
+        }
+      ],
+      "token": "[[\"nested\"], #<ActionController::Parameters {\"x\" => \"value\"} permitted: false>]",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": {},
+      "token": "{}",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": {
+        "value": "token"
+      },
+      "token": "{\"value\" => \"token\"}",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    },
+    {
+      "input": {
+        "nested": {
+          "x": "value"
+        },
+        "list": [
+          "one",
+          true
+        ]
+      },
+      "token": "{\"nested\" => {\"x\" => \"value\"}, \"list\" => [\"one\", true]}",
+      "status": 302,
+      "flash": {
+        "notice": "GitHub connected as fixture-machine."
+      }
+    }
+  ],
+  "github_upload": {
+    "token_pattern": "^#<ActionDispatch::Http::UploadedFile:0x[0-9a-f]+>$",
+    "status": 302,
+    "flash": {
+      "notice": "GitHub connected as fixture-machine."
+    }
+  }
+}
