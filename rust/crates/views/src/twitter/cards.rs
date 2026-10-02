@@ -246,15 +246,28 @@ struct CardPartial<'a> {
 }
 
 pub fn cards(ctx: &ViewContext, message: &crate::messages::MessageView) -> h::Html {
-    let mut bodies = message.components.twitter_cards.clone();
+    cards_for_client_id(
+        ctx,
+        &message.client_message_id,
+        &message.components.twitter_cards,
+        &message.components.twitter_posts,
+    )
+}
+/// Card-only callbacks reuse the container without loading a message's body,
+/// cache stamps, avatars, polls, boosts or unrelated provider associations.
+pub fn cards_for_client_id(
+    ctx: &ViewContext,
+    client_id: &str,
+    legacy: &[String],
+    posts: &[Card],
+) -> h::Html {
+    let mut bodies = legacy.to_vec();
     bodies.extend(
-        message
-            .components
-            .twitter_posts
+        posts
             .iter()
             .map(|card| format!("\n    {}\n  ", card.render(ctx))),
     );
-    crate::messages::cards(message, "twitter_cards", "x-post-cards", 2, &bodies)
+    crate::messages::cards_for_client_id(client_id, "twitter_cards", "x-post-cards", 2, &bodies)
 }
 #[cfg(test)]
 #[path = "cards_tests.rs"]

@@ -6,6 +6,8 @@ pub(crate) const SIZE: usize = 1_000;
 pub(crate) enum Reference {
     LinkEmbed(i64),
     GithubPullRequest(i64),
+    FizzyCard(i64),
+    TwitterPost(i64),
 }
 pub(crate) fn next(
     conn: &Connection,
@@ -19,6 +21,8 @@ pub(crate) fn next(
             "github_pull_request_id",
             id,
         ),
+        Reference::FizzyCard(id) => ("fizzy_card_references", "fizzy_card_id", id),
+        Reference::TwitterPost(id) => ("twitter_post_references", "twitter_post_id", id),
     };
     let ids = conn.prepare(&format!(
         "SELECT id FROM messages WHERE id IN (SELECT message_id FROM {table} WHERE {column}=?1) AND (?2 IS NULL OR id>?2) ORDER BY id LIMIT ?3"
