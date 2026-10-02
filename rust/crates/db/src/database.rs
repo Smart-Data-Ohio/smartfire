@@ -548,6 +548,8 @@ type Job = Box<dyn FnOnce(&Connection, &Env) + Send>;
 pub struct Database {
     writer: mpsc::Sender<Job>,
     readers: Arc<ReaderPool>,
+    #[cfg(feature = "test-support")]
+    writer_query_log: Arc<Mutex<Option<Arc<Mutex<Vec<String>>>>>>,
     env: Env,
     path: PathBuf,
 }
@@ -564,10 +566,17 @@ impl Database {
 
         let (sender, mut receiver) = mpsc::channel::<Job>(config.write_queue.max(1));
         let writer_env = env.clone();
+        #[cfg(feature = "test-support")]
+        let writer_query_log = Arc::new(Mutex::new(None));
+        #[cfg(feature = "test-support")]
+        let query_log = writer_query_log.clone();
         std::thread::Builder::new()
             .name("campfire-db-writer".into())
             .spawn(move || {
                 while let Some(job) = receiver.blocking_recv() {
+                    #[cfg(feature = "test-support")]
+                    let _trace = query_log.lock().unwrap().clone()
+                        .map(|log| QueryTrace::enter(&conn, log));
                     // A panicking write must not take the writer down with it.
                     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         job(&conn, &writer_env)
@@ -591,6 +600,8 @@ impl Database {
         Ok(Self {
             writer: sender,
             readers: Arc::new(ReaderPool::new(readers)),
+            #[cfg(feature = "test-support")]
+            writer_query_log,
             env,
             path: config.path,
         })
@@ -680,6 +691,20 @@ impl Database {
     #[cfg(feature = "test-support")]
     pub fn stop_capturing_read_queries(&self) {
         *self.readers.query_log.lock().unwrap() = None;
+    }
+
+    /// Trace the pooled readers and SELECTs issued from writer transactions.
+    #[cfg(feature = "test-support")]
+    pub fn capture_queries(&self) -> Arc<Mutex<Vec<String>>> {
+        let log = self.capture_read_queries();
+        *self.writer_query_log.lock().unwrap() = Some(log.clone());
+        log
+    }
+
+    #[cfg(feature = "test-support")]
+    pub fn stop_capturing_queries(&self) {
+        self.stop_capturing_read_queries();
+        *self.writer_query_log.lock().unwrap() = None;
     }
 
     /// [`Database::read`] for synchronous callers.
