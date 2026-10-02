@@ -1,0 +1,546 @@
+{
+  "reference": "d7c7de92",
+  "vapid_public_key": "BEYXTBB5_jNhNzXDmx5KEU55Vbbd-u--Lk9rM5OFQvUkPIBwZJ9QzAq0zdEzFw6yTV8cTriz_qYBVicY02_VxTQ=",
+  "cases": [
+    {
+      "stack": "bare",
+      "path": "/searches",
+      "accept": null,
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": null,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "bare",
+      "path": "/searches",
+      "accept": null,
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": null,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "bare",
+      "path": "/searches",
+      "accept": "text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "bare",
+      "path": "/searches",
+      "accept": "text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "bare",
+      "path": "/searches",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "bare",
+      "path": "/searches",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "bare",
+      "path": "/searches?q=missingheaderquery",
+      "accept": null,
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": null,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "bare",
+      "path": "/searches?q=missingheaderquery",
+      "accept": null,
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": null,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "bare",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "bare",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "bare",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "bare",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "bare",
+      "path": "/users/127326141",
+      "accept": null,
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": null,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "bare",
+      "path": "/users/127326141",
+      "accept": null,
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": null,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "bare",
+      "path": "/users/127326141",
+      "accept": "text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "bare",
+      "path": "/users/127326141",
+      "accept": "text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "bare",
+      "path": "/users/127326141",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "bare",
+      "path": "/users/127326141",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "rack",
+      "path": "/searches",
+      "accept": null,
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "rack",
+      "path": "/searches",
+      "accept": null,
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "rack",
+      "path": "/searches",
+      "accept": "text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "rack",
+      "path": "/searches",
+      "accept": "text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "rack",
+      "path": "/searches",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "rack",
+      "path": "/searches",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": 1
+    },
+    {
+      "stack": "rack",
+      "path": "/searches?q=missingheaderquery",
+      "accept": null,
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "rack",
+      "path": "/searches?q=missingheaderquery",
+      "accept": null,
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "rack",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "rack",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "rack",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "rack",
+      "path": "/searches?q=missingheaderquery",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “missingheaderquery”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>",
+      "search_token_inputs": 0
+    },
+    {
+      "stack": "rack",
+      "path": "/users/127326141",
+      "accept": null,
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "rack",
+      "path": "/users/127326141",
+      "accept": null,
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "rack",
+      "path": "/users/127326141",
+      "accept": "text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "rack",
+      "path": "/users/127326141",
+      "accept": "text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "rack",
+      "path": "/users/127326141",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": false,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    },
+    {
+      "stack": "rack",
+      "path": "/users/127326141",
+      "accept": "text/vnd.turbo-stream.html, text/html",
+      "frame": true,
+      "status": 200,
+      "headers": {
+        "Vary": "Accept,Accept-Encoding",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "X-Frame-Options": "SAMEORIGIN"
+      },
+      "section": null,
+      "search_token_inputs": null
+    }
+  ]
+}

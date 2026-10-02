@@ -17,6 +17,12 @@ pub struct Sources {
 }
 impl Sources {
     pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        Self::load_for(conn, rows, true)
+    }
+    pub fn load_json(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        Self::load_for(conn, rows, false)
+    }
+    fn load_for(conn: &Connection, rows: &[ActivityItem], html: bool) -> Result<Self> {
         let saved_ids: Vec<_> = rows
             .iter()
             .filter(|row| row.source_type == "SavedItem")
@@ -68,6 +74,7 @@ impl Sources {
             .collect::<HashMap<_, _>>();
         let actor_ids = work_events
             .values()
+            .filter(|_| html)
             .filter_map(|event| event.actor_id)
             .collect::<std::collections::BTreeSet<_>>()
             .into_iter()
@@ -83,7 +90,7 @@ impl Sources {
         let mut room_ids: Vec<_> = messages
             .values()
             .map(|message| message.room_id)
-            .chain(threads.values().map(|thread| thread.room_id))
+            .chain(threads.values().filter(|_| html).map(|thread| thread.room_id))
             .collect();
         room_ids.sort_unstable();
         room_ids.dedup();
@@ -459,7 +466,7 @@ pub fn payload(
     app: &crate::app::AppState,
     row: &ActivityItem,
 ) -> Result<Payload> {
-    let messages = Sources::load(conn, std::slice::from_ref(row))?;
+    let messages = Sources::load_json(conn, std::slice::from_ref(row))?;
     payload_with_sources(conn, app, row, &messages)
 }
 pub fn payload_with_sources(
