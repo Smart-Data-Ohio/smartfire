@@ -146,10 +146,9 @@ where
         && let Ok(parsed) = &mut parsed
         && !parsed.raw.is_empty()
         && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON)
+        && let Some(params) = parser(&original_method, parts.uri.path(), &parsed.raw)
     {
-        if let Some(params) = parser(&original_method, parts.uri.path(), &parsed.raw) {
-            parsed.params = params;
-        }
+        parsed.params = params;
     }
     let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip());
     let head = parts.method == Method::HEAD;
