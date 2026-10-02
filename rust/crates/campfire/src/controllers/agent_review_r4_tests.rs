@@ -12,7 +12,7 @@ async fn media(app: &TestApp, source: i64) -> (Blob, Blob) {
                 .unwrap()
                 .unwrap();
             let variant = conn.query_row(
-                "SELECT id FROM active_storage_variant_records WHERE blob_id=?",
+                "SELECT id FROM active_storage_variant_records WHERE blob_id=? ORDER BY id LIMIT 1",
                 [preview.id],
                 |r| r.get::<_, i64>(0),
             )?;
@@ -121,27 +121,39 @@ async fn missing_file(preview_missing: bool) {
         .send(post(&app, source, "pr192-r4-missing-file"))
         .await;
     assert_eq!(response.status.as_u16(), 201, "{}", response.text());
-    let (preview, image) = media(&app, source).await;
-    let missing = if preview_missing { &preview } else { &image };
-    app.booted.app.storage.service.delete(&missing.key).unwrap();
-    let before = super::agent_review_tests::snapshot(&app).await;
-    let files = super::agent_review_tests::stored_files(&app);
+    let storage = &app.booted.app.storage;
     let blob = app
         .db()
         .read(move |c| Ok(Blob::find(c, source).unwrap().unwrap()))
         .await
         .unwrap();
-    let representation = campfire_storage::paths::representation_redirect_path(
-        &*app.booted.app.storage.verifier,
-        &blob,
-        &Variation::format_only("webp"),
-    );
-    let result = crate::active_storage::processed_representation(
-        &app.booted.app,
-        blob,
-        Variation::format_only("webp"),
+    // Rails' signed JSON key turns the format symbol into a string, with a distinct
+    // Marshal digest. Remove the exact variant the HTTP URL requests.
+    let variation = Variation::decode(
+        &*storage.verifier,
+        &Variation::format_only("webp").key(&*storage.verifier),
+        app.booted.app.clock.now(),
     )
-    .await;
+    .unwrap();
+    let image = crate::active_storage::processed_representation(
+        &app.booted.app,
+        blob.clone(),
+        variation.clone(),
+    )
+    .await
+    .unwrap();
+    let (preview, _) = media(&app, source).await;
+    let missing = if preview_missing { &preview } else { &image };
+    storage.service.delete(&missing.key).unwrap();
+    let before = super::agent_review_tests::snapshot(&app).await;
+    let files = super::agent_review_tests::stored_files(&app);
+    let representation = campfire_storage::paths::representation_redirect_path(
+        &*storage.verifier,
+        &blob,
+        &variation,
+    );
+    let result =
+        crate::active_storage::processed_representation(&app.booted.app, blob, variation).await;
     assert!(
         result.is_err(),
         "missing media file returned dangling blob: {result:?}"
