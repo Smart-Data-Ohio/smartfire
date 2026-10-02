@@ -27,6 +27,11 @@ class ProbeJobsTest(unittest.TestCase):
                                     mutation_variants={"menu": ["opacity"], "sending": []}),
                          [(["menu"], "opacity")])
 
+    def test_unregistered_explicit_variant_cannot_report_an_empty_green_run(self):
+        with self.assertRaisesRegex(ValueError, "no registered served variant"):
+            probe_jobs([["sending"]], ["sending"], negative=True, mutant="default",
+                       mutation_variants={"sending": ["hidden-body"]})
+
     def test_positive_case_and_allowed_hidden_probe_keep_their_scopes(self):
         self.assertEqual(probe_jobs([["menu", "sending"]], ["menu", "sending"]),
                          [(["menu", "sending"], "default")])

@@ -15,6 +15,8 @@ def probe_jobs(batches, selected, *, negative=False, mutant=None,
     jobs = [(eligible, variant) for batch in batches
             if (eligible := [case for case in batch
                              if variant in mutation_variants[case]])]
+    if mutant and selected and not jobs:
+        raise ValueError(f"no registered served variant {mutant!r} for {selected!r}")
     if not mutant:
         # Each further mutant gets an independent fixture: a failed assertion
         # can still leave real writes in its database.
