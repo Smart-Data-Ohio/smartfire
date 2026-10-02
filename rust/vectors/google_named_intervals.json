@@ -1,0 +1,608 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "a declined event from another attendee still counts",
+      "assertions": 1,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "attendees": [
+                {
+                  "email": "jason@gmail.test",
+                  "responseStatus": "declined"
+                },
+                {
+                  "self": true,
+                  "responseStatus": "accepted"
+                }
+              ]
+            }
+          ],
+          "zone": "UTC",
+          "result": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "all-day events never count",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "date": "2026-09-23"
+              },
+              "end": {
+                "date": "2026-09-24"
+              }
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "cancelled events never count",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "cancelled",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              }
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "derives busy intervals from timed events",
+      "assertions": 1,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              }
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T13:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T13:30:00Z",
+                "timeZone": "UTC"
+              }
+            }
+          ],
+          "zone": "UTC",
+          "result": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ],
+            [
+              "2026-09-23T13:00:00Z",
+              "2026-09-23T13:30:00Z"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "events declined by the member never count",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "attendees": [
+                {
+                  "email": "david@gmail.test",
+                  "self": true,
+                  "responseStatus": "declined"
+                },
+                {
+                  "email": "jason@gmail.test",
+                  "responseStatus": "accepted"
+                }
+              ]
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "focus-time events never count as busy",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "focusTime"
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "malformed items are skipped without raising",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            null,
+            "not-an-event",
+            {},
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "not-a-time",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              }
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              }
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              }
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "organizer-only events without attendees count as busy",
+      "assertions": 1,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              }
+            }
+          ],
+          "zone": "UTC",
+          "result": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "out-of-office events never count as busy",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "outOfOffice"
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "tentative and needs-action events count as busy",
+      "assertions": 1,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "tentative",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              }
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T13:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T13:30:00Z",
+                "timeZone": "UTC"
+              },
+              "attendees": [
+                {
+                  "self": true,
+                  "responseStatus": "needsAction"
+                }
+              ]
+            }
+          ],
+          "zone": "UTC",
+          "result": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ],
+            [
+              "2026-09-23T13:00:00Z",
+              "2026-09-23T13:30:00Z"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/meeting_intervals_test.rb",
+      "source_sha256": "eb10388b3794c7909b966d34c25ab89b3ea13b455a646f333ffa42536f2c1dd8",
+      "test": "transparent (show-as-free) events never count",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "meeting",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "transparency": "transparent"
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/ooo_intervals_test.rb",
+      "source_sha256": "98beca271e83486267b9dbc436069fb7644e46bc08e792851103bc88d18de69b",
+      "test": "all-day out-of-office events resolve in the member's zone",
+      "assertions": 1,
+      "calls": [
+        {
+          "kind": "ooo",
+          "items": [
+            {
+              "eventType": "outOfOffice",
+              "status": "confirmed",
+              "start": {
+                "date": "2026-09-28"
+              },
+              "end": {
+                "date": "2026-10-05"
+              }
+            }
+          ],
+          "zone": "Pacific Time (US & Canada)",
+          "result": [
+            [
+              "2026-09-28T00:00:00-07:00",
+              "2026-10-05T00:00:00-07:00"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/ooo_intervals_test.rb",
+      "source_sha256": "98beca271e83486267b9dbc436069fb7644e46bc08e792851103bc88d18de69b",
+      "test": "cancelled out-of-office events never count",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "ooo",
+          "items": [
+            {
+              "status": "cancelled",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "outOfOffice"
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/ooo_intervals_test.rb",
+      "source_sha256": "98beca271e83486267b9dbc436069fb7644e46bc08e792851103bc88d18de69b",
+      "test": "derives intervals from timed out-of-office events",
+      "assertions": 1,
+      "calls": [
+        {
+          "kind": "ooo",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "outOfOffice"
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-24T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-24T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "outOfOffice"
+            }
+          ],
+          "zone": "UTC",
+          "result": [
+            [
+              "2026-09-23T10:00:00Z",
+              "2026-09-23T11:00:00Z"
+            ],
+            [
+              "2026-09-24T10:00:00Z",
+              "2026-09-24T11:00:00Z"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/ooo_intervals_test.rb",
+      "source_sha256": "98beca271e83486267b9dbc436069fb7644e46bc08e792851103bc88d18de69b",
+      "test": "malformed items are skipped without raising",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "ooo",
+          "items": [
+            null,
+            "not-an-event",
+            {},
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "not-a-time",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "outOfOffice"
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "outOfOffice"
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "outOfOffice"
+            },
+            {
+              "eventType": "outOfOffice",
+              "status": "confirmed",
+              "start": {
+                "date": "not-a-date"
+              },
+              "end": {
+                "date": "2026-10-05"
+              }
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    },
+    {
+      "file": "test/models/calendar/ooo_intervals_test.rb",
+      "source_sha256": "98beca271e83486267b9dbc436069fb7644e46bc08e792851103bc88d18de69b",
+      "test": "ordinary events never count, even timed ones",
+      "assertions": 2,
+      "calls": [
+        {
+          "kind": "ooo",
+          "items": [
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T10:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T11:00:00Z",
+                "timeZone": "UTC"
+              }
+            },
+            {
+              "status": "confirmed",
+              "start": {
+                "dateTime": "2026-09-23T13:00:00Z",
+                "timeZone": "UTC"
+              },
+              "end": {
+                "dateTime": "2026-09-23T13:30:00Z",
+                "timeZone": "UTC"
+              },
+              "eventType": "default"
+            }
+          ],
+          "zone": "UTC",
+          "result": []
+        }
+      ]
+    }
+  ],
+  "cache_uniqueness": {
+    "file": "test/models/calendar/meeting_cache_test.rb",
+    "source_sha256": "24bc611682e8a47dbd29f239fbcded12c08b04a73c785700ef71b63b68eb3488",
+    "test": "one cache per user",
+    "assertions": 1,
+    "rows": 1
+  }
+}
