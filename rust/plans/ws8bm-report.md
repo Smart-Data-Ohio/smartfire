@@ -1,700 +1,489 @@
-# WS8bm PR #189 action, visible-text and deadline corrections — partial port
+# WS8bm continuation — controller attribution complete, system port partial
 
-Worker: GPT-6.1 Sol. Branch: `rust/ws8bm-messages-http`.
-Reference: Rails `d7c7de9264c63015be398001d7a1094e7695a6db`, plus the approved drift in wave4/_common.md. Behaviour and byte-response parity only; no pixel checks.
+Worker: GPT-6.1 Sol. Branch: `rust/ws8bm-messages-http-2`. Base: `2921b282`; the frozen `rust/ws8bm-messages-http` / PR #189 was left alone.
+Pinned Rails: `d7c7de9264c63015be398001d7a1094e7695a6db`, with only the approved drift in wave4/_common.md. No pixel comparisons, changed normalizations, weakened assertions, enlarged deadlines, additional Cargo jobs or rustc-throttle changes.
 
-Fixed the three URL findings and their categories throughout the thirty reviewed declarations and every supplementary executable module (105 names in thirteen files). Element actions use the shared Selenium-visible lookup within the original action budget. Text matching uses Selenium 4.35.0's visible-text routines on the selected element, excluding hidden descendants. The existing vendored isDisplayed atom is unchanged; the new text routines are unmodified upstream functions, with Closure dependencies supplied by the tool. Explicit hidden/all queries, scripted actions, literal code-source reads and geometry observations preserve their original scopes.
+**Checkpoint: 156/156 controller declarations attributed; 118/135 system declarations passed, 17 deferred, zero owner-blocked.** All ten formerly WS12-blocked controller declarations and all six formerly blocked system flows now have scoped proof. Sixteen system declarations gained credit: six formerly blocked and ten of the original twenty-seven deferrals. The remaining seventeen are owned port/harness work, not blocked on WS12. This is a coherent PR-ready attribution slice and a partial system port, not blanket system sign-off. The original Ruby system files are not being executed: these are named paired browser equivalents, plus two direct Rails/Rust model differentials. The pre-existing 102 system credits are retained from the frozen baseline, not all rerun this checkpoint.
 
-Every assertion uses Capybara's pinned two-second default or its original explicit wait. The URL loading assertion stays fifteen seconds; the reloaded edited marker is two seconds. Negative visible-selector/text checks retry while forbidden matches remain, and explicit all-node security checks retry without filtering hidden nodes. Timeout zero is a single snapshot. Successful absence returns immediately, matching Capybara's synchronize semantics; these checks do not claim that a forbidden node can never appear later. Navigation and application/Cable readiness remain separate from assertion waits.
+Main was merged with merge commits at the start and checkpoint, including #202, #199 and #203. No stash was used. The final source checkpoint is `fe4cbd716` (main `b573dd24c`); the controller-inventory verifier and report/inventory evidence updates are later tools/docs-only follow-ups. Both sides' behavior and tests were kept. Neither #201 work JSON API reads nor WS12 board automations is required by these pinned declarations; no remaining declaration here claims those owners' API/automation sign-off.
 
-| Category / principal changed check | Old behaviour | New behaviour | Pinned Rails line |
-| --- | --- | --- | --- |
-| Text: URL loading card | Visible card accepted hidden descendant Loading post text | Card's Selenium visible text must contain Loading post, within 15 s | search_forward_edit_test.rb:78 |
-| Action: URL editor fill | Playwright filled an opacity-zero editor | Shared visible field lookup and fill, within 2 s | search_forward_edit_test.rb:74 |
-| Deadline: reloaded edited marker | Supplementary default allowed 30 s | Visible marker/text within the original 2 s | search_forward_edit_test.rb:84 |
-| Action: picker search fill | Playwright filled an opacity-zero search field | Shared visible field lookup and fill, within 2 s | message_toolbar_test.rb:77 |
-| Negative/deadline: focused-message removal | DOM detach accepted a 4 s removal under the supplementary 30 s default | Original visible absence retries within 2 s; surviving focus within its original 10 s | message_list_a11y_test.rb:127–128 |
+## What changed
 
-The complete per-call action/text table and additional wait/negative corrections follow below. Raw property/attribute, count, focus, scripted browser and explicit hidden/all exceptions were swept as part of the same audit. All changes are reference tools or documentation; no Rust product, Rails application, golden, normalization mask, test concurrency or rustc throttle changes. No assertion wait was widened to obtain a pass.
+- Eight work-controller checks use real cookie-authenticated HTTP and each page's real CSRF token on both apps: work conversion/history, owner eligibility and revoked identity, owner-versus-manager permissions, eligible agent notification/picker exclusions, and ordinary fields. Exact persisted states, ordered audit deltas and agent-event counts supplement the original response assertions. These inspect `agent_events`, not a racing job queue. Two SQLite oracle regressions reject an unauthorized owner write and an extra agent event.
+- Two direct-model Rust regressions reproduce the original omitted-owner and independent stale-instance declarations. A producer runs pinned Rails models/callbacks under the original nonperforming job adapter; its new vector is regenerated byte-for-byte and its model source SHA checked against the pin. Real model guard/stale-history mutants fail the regressions, then the source is restored and positive tests run.
+- Paired system controls cover the work lifecycle, guidance/disclosure/focus trap, owner activity and exact deep link, phone thread drawer, joined read/unread behavior, older-anchor paging/live-reply/read transitions, touch font sizing, thread code colors/scroll/copy control, and all five mobile-layout declarations. PR Discuss now has paired control and persisted-row proof too. The multipart reply attachment check remains deferred after the retained merged-checkpoint Rust preview failure.
 
-Inventory remains **102 passed / 27 deferred / 6 WS12-blocked** out of 135 named system declarations, and **146/156 controller declarations**, with ten WS12 deferrals. This review earns no new declaration credit. Release-click, attachment preview and PR Discuss remain deferred even if a diagnostic attempt passes. Activity/work/board remain flagged WS12 seams. Exact remaining names are listed at the end.
+The only authored Rust source additions are tests: two database regressions and an explicitly ignored browser-host service in the existing `#[cfg(test)]` presenters test-support module. No new production policy, renderer, route or workspace dependency was authored. The host is not an ignored product regression: it is explicitly invoked to serve one test fixture and is guarded by `WS8BM_BROWSER_HOST=1`.
 
-**Duplicate-delivery limitation:** the case injects Turbo markup into the browser and checks the mounted-row/render-queue guard. It does **not verify server-originated redelivery**; the pinned original calls `message.broadcast_create`.
+## Fixture, visibility and deadline audit
 
-## Failing-first served evidence at 89de2839
+Every visible action/assertion uses the shared unmodified Selenium 4.35.0 visibility atom (effective ancestor opacity included) and its visible-text helper. Hidden/all scopes remain DOM-based. New native-role lookups include ARIA-hidden matches before the Selenium filter, because ARIA-tree exclusion differs from the pinned Selenium atom. Ordinary assertions/actions retain Capybara's 2 s default; explicit original 5/10/15/20 s waits are retained. Negated checks retry while forbidden matches remain, with original budgets and Capybara's immediate success on observed absence. No metadata wait is added to release-click.
 
-Before changing any assertions, only added the five served category probes and diagnostic registry/CLI selection. Both apps accepted all five against the unchanged 89de2839 assertions. These are deliberate application asset/response mutations, not replacement oracle values: hidden loading text, opacity-zero URL editor, a CSS edited-marker reveal after four seconds, an opacity-zero picker field, and an actual Turbo remove render delayed four seconds. Ordinary hidden-allowed probes remain separate positive acceptance checks.
+| Input or assertion | Difference corrected / scope kept | Pinned source |
+| --- | --- | --- |
+| Mobile profile fixture | Rich parity seed enrolled JZ and added a remembered device, unlike the original fixture. Actual Rails deletes those extras in the per-case fixture before copying it to both apps; 320/375/414 px limits and zero-overflow assertions are unchanged. | mobile_layout_test.rb:43-61; no two-factor fixture file in the pin |
+| Drawer Activity inbox lookup | Exact accessible name rejected the real unread-count suffix. Partial label lookup matches `click_link destination`; the same Selenium-visible filter remains. | mobile_layout_test.rb:141-151 |
+| Ordinary system motion input | Production hosts omit Rails.env.test?'s data-test-motion=off. A pre-parse init script supplies that test-only input on the new ordinary cases and upload flow. It changes no assertion or duration; the default server-emission motion declaration remains deferred. | layouts/application.html.erb:2; motion_test.rb:1-6 |
+| Work owner revoked fixture | A separately created/deactivated human named Kevin preserves the original inactive/name response state while keeping the harness's Kevin session usable; it is a second work thread. No fake JSON/DB writes replace the controller's validation or clear request. | channel_threads_controller_test.rb:343-349 |
+| Work lifecycle/guidance/activity | Visible selectors/text/actions on their asserted nodes; model state polled through real thread JSON using the original 10 s custom poll. Activity opens the exact path/query and persisted owner/history/event state is checked. | threads_test.rb:158-291, helpers:527-585 |
+| Phone drawer/guidance | Original native/scripted focus, keyboard and geometry observations; actions require visible controls. New helper role lookups include ARIA-hidden but still reject Selenium-invisible controls. No screenshots. | threads_test.rb:218-249,293-339,527-552 |
+| Joined/anchored threads | Original live conversation/message/unread state waits, 10 s membership polling and 1 s negative new-reply assertion. Connected cable is explicitly hidden/all DOM scope. | threads_test.rb:342-373,397-480 |
+| Thread code | Direct visibility of asserted code/pre/keyword nodes, exact two RGB colors, 20 s highlighted const wait, original scroll widths and copy-control count. | code_highlighting_test.rb:152-176 |
+| Coarse fonts | Original visible field assertions plus scripted computed sizes; untouched desktop <16, coarse >=16 limits including bare 10 px probe. | message_list_a11y_test.rb:510-550 |
+| Outside-shell headers / no orphan toggle | Original scripted geometry, opacity/hit testing and visible absence. Go Back is DOM text with explicit visible: :all. Correct original HQ edit route. | mobile_layout_test.rb:64-136 |
+| URL loading/edited marker | Visible loading text, visible editor action; author-first sequence; Loading 15 s, reloaded card 10 s, edited marker 2 s. No extra recipient/body wait. | search_forward_edit_test.rb:74-84 |
+| Upload | Actual file-input action keeps visible: :all; visible preview 10 s, visible filename/default deadline and hidden context DOM scope stay unchanged. Per-case Rails fixture retains only the three original root messages. SQL checks saved file contents, reply target and notify=false. | workspace_markdown_test.rb:143-169 |
+| PR Discuss | Real visible card actions/title/files, original 10 s waits, one actual parent-message mapping retained on reopening. | threads_test.rb:482-523 |
 
-Commands at the unchanged assertion revision:
+No new non-test include of files outside crates/ was added. The new model vector include lives in the database test module, and the browser host lives in the existing cfg(test) module. Main's literal freshness digest fix is retained. The list/composer seam remains `Presenter::messages(&records)`, `messages::Index { ctx, messages }` and `Presenter::room_message_list(&records, divider.message_id, divider.count)`. [ws8bm-integration.md](ws8bm-integration.md) still specifies verified context, selected records/divider, room and thread facts, ordered commands, Drive flow, real schedule child and request-owned pending template. No public presenter contract was changed; WS15g's real GitHub renderer is used.
 
-```sh
-python3 rust/reference-tools/messaging/behavior-check.py search_forward_edit message_toolbar --mutant-set categories --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py message_list_a11y --mutant-set categories --keep-going
-```
+**Duplicate-delivery limitation remains:** that existing case injects Turbo markup in the browser to check its render guard. It does not prove server-originated redelivery; the pinned Rails original calls message.broadcast_create.
 
-Raw summaries (`before-categories.log`, `before-negative-removal.log` under `.scratch/ws8bm-category-review/`):
+## Flake disposition
+
+The URL race belongs to the former live-worker harness boundary, not a demonstrated failure of the original Ruby test. Pinned test_helper.rb:13 includes ActiveJob::TestHelper; its installed before_setup supplies TestAdapter with jobs left enqueued. The URL and PR tests do not perform their fetch jobs. Running production workers erased Loading post / the seeded PR title. The opt-in reference initializer now supplies the same nonperforming adapter; the cfg(test) Rust host calls TestApp::without_job_runner before HTTP, while retaining the real router, front server and durable enqueue sink. The upload case uses that same original adapter boundary and three-message fixture. No endpoint/render/job row is mocked. The URL passed three isolated paired attempts at unchanged deadlines; PR has paired control and row proof. The upload changes produced one successful paired isolation at 8d4302d96, but the final fe4cbd716 run passed Rails and failed Rust at the original 10 s preview wait. Both real POSTs returned 200; its delivered child had no reply-preview/body target. The transport/render/pending-replacement cause remains unresolved, so the declaration remains deferred. Successful attempts and rejected mutants are diagnostic only, not credit.
+
+Release-click passed one isolated attempt but remains deferred: its original 700 ms hold and immediate `elementFromPoint` require the press point to hit the menu. The original does not control the metadata response's delivery time. Astra's recorded 250 ms metadata delay moves the menu past that point on both apps. Waiting for metadata, moving the point or dropping the menu-hit assertion would change the test. Its successful diagnostic does not earn reliability credit.
+
+The first post-#203 continuation batch has 22 passes and a Rust startup failure: ERR_NETWORK_CHANGED interrupted asset/module requests before Stimulus initialized and before the activity flow began. Its raw failure is retained; isolation at the same readiness deadline supplies a separate receipt. Isolation passed both apps with the same 15 s startup readiness budget. No automatic retry, extended timeout, mask or assertion weakening hides the retained failed batch. Earlier fixture/motion failures and the production-boundary upload failure are also retained as failing diagnostics.
+
+## Ten completed controller declarations
+
+These are case attributions, not a claim of executing the original controller file or adding ten one-to-one Rust test functions. All pre-existing controller credits are preserved.
+
+| Declaration | Pinned line | New proof |
+| --- | --- | --- |
+| converts a thread to work, assigns an eligible owner, and keeps an audit trail | 304 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+| work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable | 331 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+| assigned owner can change work status but cannot reassign it | 356 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+| only a thread manager can remove work tracking | 375 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+| the work model also protects conversion when the owner field is omitted | 387 | message_controller_model_refuses_untracking_with_owner_omitted_like_rails |
+| work status updates from separate stale instances produce one event per real change | 398 | message_controller_separate_stale_work_changes_match_rails_history |
+| a manager can assign an eligible agent and the agent is notified | 413 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+| the owner picker lists eligible agents with profiles and excludes ineligible ones | 433 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+| a member who cannot manage the thread cannot assign an agent | 480 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+| ordinary thread fields remain separate from work tracking | 496 | paired real HTTP + original JSON/status + persisted history/agent-event rows |
+
+## Six formerly owner-blocked system flows
+
+| Declaration | Pinned source | Outcome |
+| --- | --- | --- |
+| tracks work, assigns an owner, completes and reopens it without losing the conversation | threads_test.rb:158 | Paired controls and persisted rows PASS |
+| shows work-thread guidance in the new-thread form and on the work page | threads_test.rb:197 | Paired controls and persisted rows PASS |
+| keeps the new-thread guidance usable on a phone | threads_test.rb:218 | Paired controls and persisted rows PASS |
+| shows work assignment activity to the owner and opens the exact thread | threads_test.rb:251 | Paired controls and persisted rows PASS |
+| text fields stay at 16px on touch devices without changing the desktop look | message_list_a11y_test.rb:510 | Paired controls and persisted rows PASS |
+| every drawer destination has one toggle that opens the drawer on itself | mobile_layout_test.rb:124 | Paired controls and persisted rows PASS |
+
+## Disposition of every original deferred declaration (27)
+
+| Declaration | Pinned source | Outcome / concrete remaining work |
+| --- | --- | --- |
+| thread code stays readable in both themes and scrolls within a narrow screen | code_highlighting_test.rb:152 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| keeps the thread drawer usable on a phone and preserves the channel | threads_test.rb:293 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| marks a joined thread read only while the conversation is visible | threads_test.rb:342 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| opens a shared thread message link around an older post | threads_test.rb:397 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| keeps an anchored older thread unread when a new reply arrives | threads_test.rb:426 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| discusses a pull request from its card | threads_test.rb:482 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| Markdown replies and file attachments remain usable | workspace_markdown_test.rb:143 | DEFERRED: Rust missed the visible attachment reply preview at the original 10 s delivery deadline in the fresh fe4cbd716 checkpoint after Rails passed. Both actual message POSTs returned 200, but the delivered child had no reply-preview/body target. The original three-root-message fixture, test-only motion input and nonperforming job adapter produced an earlier paired pass at 8d4302d96, so they are necessary fixture corrections but do not repair the remaining delivery/render failure. Trace the real response and broadcast, distinguish pending replacement from server partials, and obtain stable paired control/row proof before credit. Not blocked on another owner. |
+| workspace follows the system theme and mobile navigation remains reachable | workspace_markdown_test.rb:242 | DEFERRED: Own mapped sequence remains unimplemented: compact composer geometry/empty field, JZ online presence (5 s), theme background change, profile-bar containment, drawer focus trapping/current room, Escape focus return, and coarse-pointer Enter/newline/send with saved source (workspace_markdown_test.rb:242-290). These are behavior assertions, not pixel work. |
+| From Google Drive starts the legacy picker flow | composer_attach_menu_test.rb:34 | DEFERRED: Needs the pinned server-side WebMock Drive list response and actual Google connection fixture, then visible Q3 Planning through the real picker route (composer_attach_menu_test.rb:37-47). Current harness does not yet provide that server-side transport; no owner block. |
+| From Google Drive starts the enhanced share flow when sharing is configured | composer_attach_menu_test.rb:46 | DEFERRED: Needs the original GOOGLE_PICKER_API_KEY/project-number environment and DriveShareMocks SDK/dialog scenario (composer_attach_menu_test.rb:50-69). The account/Drive controllers are merged, but this own harness boundary is not ported. |
+| a release click landing on the just-opened menu does not activate it | message_interactions_test.rb:55 | DEFERRED: Pinned message_interactions_test.rb:68-91 assumes the fixed 700 ms press point hits the newly opened menu. Metadata can change its height before this instantaneous hit test; it is not made deterministic by the original. Keep the original hit requirement and hold; record current paired attempts rather than waiting for metadata or changing the press point. |
+| attach Drive files from the picker, send textless, and remove through edit | drive_attachments_test.rb:10 | DEFERRED: Needs server-side Drive list/file WebMock fixtures, the two actual picker selections, chip geometry/removal, textless persisted file-ID set, and edit-frame replacement before final empty attachment rows (drive_attachments_test.rb:10-76). Current harness lacks those external transports; no owner block. |
+| edit a room message in the composer and remove one of two attachments | drive_attachments_test.rb:79 | DEFERRED: Needs two Drive metadata/list responses followed by real root composer edit, removal, one remaining visible link and exact persisted FILE_ID, plus hidden context DOM assertion (drive_attachments_test.rb:79-113). Own server-side mock transport remains unported. |
+| attach a Drive file from the thread composer | drive_attachments_test.rb:116 | DEFERRED: Needs pinned Drive list/file transport, real joined-thread fixture and the original 10 s settled drawer transform/picker/link assertions, followed by thread-message attachment IDs (drive_attachments_test.rb:116-140,151-164). Own harness work; merged WS12/#201/automations are not prerequisites. |
+| motion is off by default in the test environment | motion_test.rb:19 | DEFERRED: Asserts server-emitted data-test-motion=off and all three 0ms tokens (motion_test.rb:19-23). Both live harnesses boot production, where the Rails layout intentionally omits that attribute. Supplying the test-only input for other cases cannot earn credit for this server-emission declaration; a real test-environment host contract is still needed. |
+| mobile drawer animates in, lands in place, and returns focus with motion on | motion_test.rb:26 | DEFERRED: Own transition sequence remains unported: original 30 s token override, attached transitionrun listeners, initial/mid-travel transform, live transform animation, Web Animations finish and restored focus with original 5 s polling (motion_test.rb:26-70). No screenshots are needed; do not merely assert landed geometry. |
+| member selection mode moves no rows and resizes nothing | motion_test.rb:73 | DEFERRED: Own HQ multi-select sequence remains unported: original optional Show members 5 s, minimum-two 10 s, avatar-left/content-height equality across control-click/two selections/clear, and visible Message (2) (motion_test.rb:73-100). No owner block. |
+| people directory bar shifts no rows when toggling | motion_test.rb:103 | DEFERRED: Own directory selection sequence remains unported: minimum-two rows, exact row-top array before/after visible multi-select bar and after clearing all checked boxes (motion_test.rb:103-116). No owner block. |
+| people directory bar stays stuck while scrolling | motion_test.rb:119 | DEFERRED: Needs the original 12 Sticky User rows and 1400x400 viewport, actual scrolling >100 px, original 5 s wait for scrollTop=100, and sticky bar-bottom <= main-bottom+1 (motion_test.rb:119-146). Those fixture and sequence assertions remain own unported work. |
+| room menu measures at full scale when clamping to the viewport edge | motion_test.rb:149 | DEFERRED: Own motion-on contextmenu sequence remains unported: original synthetic far-right pointer, visible menu, 5 s transform-none polling, full-scale right <= innerWidth-8+1 and hidden-all Escape assertion (motion_test.rb:149-174). No owner block. |
+| mobile drawer keeps the room list scroll position across close and reopen | motion_test.rb:177 | DEFERRED: Needs 15 real Scroll rooms, focus/blur and actual >=400 px overflow, exact scrollTop=400, current room outside view, exact closed/open offset retention and visible focus after reopening (motion_test.rb:177-238). Own fixture and sequence remain unported; preserve the original 5 s polling. |
+| mobile drawer reveals a current room far down the list on first open | motion_test.rb:241 | DEFERRED: Needs 15 Scroll rooms plus Zz far room, hidden-all current-link lookup, zero initial offset/out-of-view precondition and first-open current-link focus/5 s reveal (motion_test.rb:241-257). Own fixtures and sequence remain unported. |
+| mobile drawer reopens on the current room when it is already in view | motion_test.rb:260 | DEFERRED: Needs 15 Scroll rooms, original focused current link, 5 s settled-scroll/current-in-view predicate, exact closed/reopened scroll offset and focused current link (motion_test.rb:260-292). Own fixture and sequence remain unported. |
+| the profile page fits phone widths without scrolling sideways | mobile_layout_test.rb:48 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| headers outside the workspace shell stay opaque over scrolled content | mobile_layout_test.rb:61 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| headers outside the workspace shell never cover the page or its scrollbar | mobile_layout_test.rb:85 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+| pages outside the workspace shell show no drawer toggle that opens nothing | mobile_layout_test.rb:114 | PORTED: original controls/assertions and persisted rows pass on both apps; see scope audit and fresh receipts. |
+
+## Fresh-source verification and raw receipts
+
+All commands below are run from the fresh source clone `.scratch/ws8bm-next/fresh`, with CARGO_BUILD_JOBS=2, configured machine rustc throttle, RUST_TEST_THREADS=8 and its own generated default/first_run/agents_ui parity seeds and target. The clone was created with git clone --no-hardlinks; its initial native build took 3m35s and required neither an existing Cargo target nor previous scratch fixture. Subsequent fast-forwards preserve that independently generated build. Seeds, Node dependencies, source hashes and the exact vendored atom are checked/generated by the harness itself.
+
+The new source checkpoint browser receipts are listed individually rather than turning a retained failed batch into a fictional green summary. An isolated startup retry complements its 22-case result; six pre-existing thread flows are rerun because their visible-role lookup changed. Separate provider/upload runs and mutants use the original test-only job boundary. The checkpoint upload control failure is retained and does not receive declaration credit. Its three negative outcomes cannot establish discrimination against a reliable positive control; they are diagnostic only. The 102 retained older system credits are not represented as a new full-135 run. Native tests, doctests, clippy and the release-input build are also rerun after the checkpoint merge, despite the authored Rust changes being test-only. The first native app run has six media-byte failures (one logo and five video cases) under host libvips 8.18.6 / FFmpeg 9.0.2. Their unchanged exact PNG/body/state/Content-Length assertions require the pinned media versions; the affected product/tests/vectors have no changes relative to main b573dd24c. Main's committed media_runtime.sh extracts libvips 8.16.1 / FFmpeg 7.1.5-0+deb13u1 from the pinned image into a private directory. The complete workspace rerun keeps CI=1 and eight test threads, with all storage version/byte assertions enabled; no test, byte expectation or host library is changed. All six media cases pass unchanged with the pinned libraries. The host-media command stopped at the failed app binary; the pinned --no-fail-fast invocation executes every workspace target. Both raw command outcomes are retained below.
+
+### Fresh continuation
+
+Command: `python3 rust/reference-tools/messaging/behavior-check.py --slice continuation --keep-going`
+
+Raw lines from `fresh-checkpoint-positive.log`:
 
 ```text
-WS8bm review escape check: 4 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
-WS8bm review escape check: 1 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 23.22s
+WS8bm behaviour check: 22 named cases passed on Rails and Rust; 1 failed; no pixel checks
 ```
 
-Each log includes a Rails ACCEPTED and Rust ACCEPTED line for every named variant. Post-fix fresh-clone paired rejection evidence is reported below, including all five.
+### Activity startup isolation
 
-## Pinned text and wait semantics
+Command: `python3 rust/reference-tools/messaging/behavior-check.py threads --case 'shows work assignment activity to the owner and opens the exact thread' --keep-going`
 
-A remote Selenium probe uses the reference image's actual Capybara 3.40.0 and Selenium 4.35.0 gems with host Chromium/ChromeDriver 153. It confirms that visibility-hidden and opacity-zero descendant text does not match, and preformatted whitespace agrees with the shared text helper. This is a helper semantic check, **not execution of the original Ruby system files**. The broader mapped checks still drive both live apps and inspect their persisted rows.
-
-Raw lines from `text-oracle.log`:
+Raw lines from `fresh-activity-isolation.log`:
 
 ```text
-WS8bm Capybara oracle: version 3.40.0; default 2; retry 0.01
-WS8bm Capybara text: card: "X"
-WS8bm Capybara text: opacity: "visible"
-WS8bm Capybara text: code: "one\n  two "
-WS8bm Capybara match: card: false
-WS8bm Capybara match: opacity: false
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s
+WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
 ```
 
-Source/provenance and checksums are documented in `reference-tools/messaging/selenium/UPSTREAM.md`. The pinned visibility atom still hashes to `ae26018c01cd27448b250f8e55a094cbfcd2e2cbbe171c78aaa906e1b5c3ed7c`; every live harness invocation validates it against the reference image. The helper tests cover hidden descendant text, whitespace, element visibility, six action types, negative retry/all-node scope and timeout-zero snapshots.
+### Existing threads + PR
 
-## Fresh-clone verification
+Command: `python3 rust/reference-tools/messaging/behavior-check.py threads --exclude-case 'tracks work, assigns an owner, completes and reopens it without losing the conversation' --exclude-case 'shows work-thread guidance in the new-thread form and on the work page' --exclude-case 'keeps the new-thread guidance usable on a phone' --exclude-case 'shows work assignment activity to the owner and opens the exact thread' --exclude-case 'keeps the thread drawer usable on a phone and preserves the channel' --exclude-case 'marks a joined thread read only while the conversation is visible' --exclude-case 'opens a shared thread message link around an older post' --exclude-case 'keeps an anchored older thread unread when a new reply arrives' --keep-going`
 
-Created `.scratch/ws8bm-category-fresh` with `git clone --no-hardlinks --no-checkout .` and checked out the tool commits. Its first cold build generated its own seeds, dependencies and Cargo target; no test required a pre-existing scratch fixture or target. The initial broad diagnostic loaded several consecutive tool revisions while the audit finished; its failures are retained below. The final 105-name suite, separate thirty-name suite, full-registry discrimination pass, helper/planner checks and hidden-scope probes use the sealed source revision `629d98dd2f88ae2a206e477d03c3c2b6a44b4c61`. Documentation/evidence-only follow-ups do not change those source files. Every browser invocation validates the pinned source and Selenium atom and runs `cargo build --locked -j2`; the rustc throttle remains configured.
+Raw lines from `fresh-existing-threads.log`:
 
-The required review discrimination set is **95 unique variants across 45 names**: the previous 89, five new category probes, and the existing default variant for the newly selected focused-removal name. The expanded run also attempts all **147 registered variants across 97 names**. It proves 146; the remaining `threads / discusses a pull request from its card / default` never applies its thread-header mutation before the Rails card loses its title. Its isolated retry also remains invalid. It is the existing deferred PR flow and gets no rejection or declaration credit. The three permitted hidden-scope CSS variants are positive acceptance proofs, excluded from negative scheduling. All five new probes have explicit Rails and Rust REJECTED markers after the fix.
-
-Run the following from the fresh clone, with `CARGO_TARGET_DIR` set to that clone's `rust/target` (the drivers did this). Every command below was executed in this review; the isolation commands ran three times each. The broad positive command ran first diagnostically and then against the final sealed source.
-
-```sh
-node --test rust/reference-tools/messaging/behavior-visibility.test.mjs
-python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
-python3 rust/reference-tools/messaging/behavior-check.py --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py message_interactions message_actions_mobile message_toolbar code_highlighting --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py message_list_a11y message_toolbar --mutant-set hidden-scopes --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py --negative --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py sending_messages --case 'sending messages between two users' --mutant hidden-body-visible-presentation --negative --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py threads --case 'discusses a pull request from its card' --mutant default --negative --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py search_forward_edit --case 'editing to add a URL renders its card live and the edited marker on load' --mutant hidden-url-loading-text --negative --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py workspace_markdown --case 'desktop keyboard composition keeps line breaks and sends once after composition ends' --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py composer --case 'clicking a reply preview scrolls to the loaded message instead of navigating' --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py search_forward_edit --case 'editing to add a URL renders its card live and the edited marker on load' --keep-going
-python3 rust/reference-tools/messaging/behavior-check.py sending_messages --case 'editing messages' --keep-going
-python3 rust/reference-tools/messaging/deferred-system-inventory.py
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.53s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5m 56s
+WS8bm behaviour check: 7 named cases passed on Rails and Rust; 0 failed; no pixel checks
 ```
 
-Retained failures and follow-ups:
+### URL
 
-- The first 105-name diagnostic reports 102 passes and three failures. The keyboard assertion combined two lines into one raw-newline expectation after switching to visible text; the original workspace_markdown:107–109 asserts First line and Second line separately. Corrected the port to those two visible assertions while retaining the exact single two-line database row. It passes in the final broad run and isolation. The other failures are the existing deferred PR Discuss flow and a Rails Send Message click timeout in the loaded-reply flow at 1,992 ms. The final broad reply run and all three reply isolates pass at the original two-second action budget. This is evidence of an intermittent mapped Rails click failure, not proof that the original Ruby case fails.
-- The full negative run retains three invalid attempts: sending-message startup closed before readiness, an unapplied deferred PR header mutation, and network-change errors in the hidden URL loading probe. Only the missing tuples were retried. Sending and hidden loading now reject on both apps; the PR mutation stays unapplied and is not counted. No network, startup or job-observation fix was made.
-- The final 105-name run reports 103 passes and two failures: Rails Stimulus startup for root editing, before any case assertion, and the deferred PR card/title lookup at its original ten-second wait. Root editing passes in its isolated rerun on both apps, including persisted rows. The verifier requires current paired proof for every one of the 102 previously credited declarations.
-- **URL timing:** both broad attempts pass the author-only Loading post sequence. The first two final URL isolates pass on both apps; the third times out on Rails at exactly the unchanged fifteen-second loading assertion, before Rust runs. The selected card, visible-text predicate and sequence match search_forward_edit:74–84; the pinned gem probe above confirms hidden text semantics. Astra's read-only 89de2839 evidence measures the loading state lasting only 63–74 ms before replacement by the error card. This is a retained intermittent Rails-side failure of the mapped loading assertion, suitable for the lead's deflake list. The original Ruby system test was not executed, so no claim of a reproduced Ruby-original flake is made. No wait is widened and no loading assertion is removed.
+Command: `python3 rust/reference-tools/messaging/behavior-check.py search_forward_edit --case 'editing to add a URL renders its card live and the edited marker on load' --keep-going`
 
-Raw summaries below are copied verbatim from `.scratch/ws8bm-category-review/`; invalid attempts remain alongside successful follow-ups.
+Raw lines from `fresh-checkpoint-url.log`:
 
-`fresh-helper.log`
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.30s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+### Upload
+
+Command: `python3 rust/reference-tools/messaging/behavior-check.py workspace_markdown --case 'Markdown replies and file attachments remain usable' --keep-going`
+
+Raw lines from `fresh-checkpoint-upload.log`:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.18s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+WS8bm behaviour check: 0 named cases passed on Rails and Rust; 1 failed; no pixel checks
+```
+
+### Continuation mutants
+
+Command: `python3 rust/reference-tools/messaging/behavior-check.py --slice continuation --negative --keep-going`
+
+Raw lines from `fresh-checkpoint-negative.log`:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.48s
+WS8bm discrimination check: 26 served mutants rejected on Rails and Rust across 23 named checks; 0 invalid or escaped
+```
+
+### PR mutant
+
+Command: `python3 rust/reference-tools/messaging/behavior-check.py threads --case 'discusses a pull request from its card' --negative --keep-going`
+
+Raw lines from `fresh-pr-negative.log`:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.21s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+WS8bm discrimination check: 1 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+```
+
+### URL mutants
+
+Command: `python3 rust/reference-tools/messaging/behavior-check.py search_forward_edit --case 'editing to add a URL renders its card live and the edited marker on load' --negative --keep-going`
+
+Raw lines from `fresh-url-negative.log`:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+WS8bm discrimination check: 5 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+```
+
+### Upload mutants
+
+Command: `python3 rust/reference-tools/messaging/behavior-check.py workspace_markdown --case 'Markdown replies and file attachments remain usable' --negative --keep-going`
+
+Raw lines from `fresh-upload-negative.log`:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.24s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+WS8bm discrimination check: 3 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+```
+
+### Real model mutants
+
+Command: `python3 rust/reference-tools/messaging/work-model-discriminate.py`
+
+Raw lines from `fresh-model-mutants-final.log`:
+
+```text
+WS8bm direct-model discrimination: omitted-owner: real model mutant REJECTED (1 assertion failure)
+WS8bm direct-model discrimination: stale-history: real model mutant REJECTED (1 assertion failure)
+```
+
+### Direct model positives
+
+Command: `mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire_db message_controller_ -- --test-threads=8`
+
+Raw lines from `fresh-model-positive-after-mutants.log`:
+
+```text
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.86s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 1287 filtered out; finished in 0.08s
+```
+
+### Workspace tests with host media (retained failed diagnostic)
+
+Command: `mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --all-targets -- --test-threads=8`
+
+Raw lines from `fresh-workspace-final.log`:
+
+```text
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 03s
+test result: FAILED. 2548 passed; 6 failed; 8 ignored; 0 measured; 0 filtered out; finished in 533.68s
+```
+
+### Workspace tests with the pinned media runtime
+
+Command: `LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --all-targets --no-fail-fast -- --test-threads=8`
+
+Raw lines from `fresh-workspace-pinned.log`:
+
+```text
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 00s
+test result: ok. 2554 passed; 0 failed; 8 ignored; 0 measured; 0 filtered out; finished in 460.32s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.83s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
+test result: ok. 1285 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 112.10s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.16s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.29s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.99s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.78s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.71s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.85s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.80s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.99s
+```
+
+### Workspace doctests
+
+Command: `mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --doc -- --test-threads=8`
+
+Raw lines from `fresh-doctests-final.log`:
+
+```text
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+### Strict workspace clippy
+
+Command: `mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
+
+Raw lines from `fresh-clippy-checkpoint.log`:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.99s
+```
+
+### Release inputs only
+
+Command: `bash rust/ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo build --locked --workspace --bins`
+
+Raw lines from `fresh-release-inputs.log`:
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 23s
+```
+
+### Helper tests
+
+Command: `node --test rust/reference-tools/messaging/behavior-visibility.test.mjs`
+
+Raw lines from `fresh-helpers-final.log`:
 
 ```text
 ℹ tests 8
 ℹ pass 8
 ℹ fail 0
-ℹ skipped 0
 ```
 
-`fresh-planner.log`
+### Planner/row oracle tests
+
+Command: `python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py' -v`
+
+Raw lines from `fresh-unit-final.log`:
 
 ```text
-Ran 6 tests in 0.000s
+Ran 8 tests in 0.001s
 OK
 ```
 
-`fresh-all-paired.log`
-
-```text
-WS8bm behaviour check: 102 named cases passed on Rails and Rust; 3 failed; no pixel checks
-```
-
-`fresh-final-all-paired.log`
-
-```text
-WS8bm behaviour check: 103 named cases passed on Rails and Rust; 2 failed; no pixel checks
-```
-
-`fresh-final-thirty.log`
-
-```text
-WS8bm behaviour check: 30 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`fresh-hidden-scopes.log`
-
-```text
-WS8bm review escape check: 3 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
-```
-
-`fresh-all-mutants.log`
-
-```text
-WS8bm discrimination check: 144 served mutants rejected on Rails and Rust across 95 named checks; 3 invalid or escaped
-```
-
-`fresh-mutant-retry-1.log`
-
-```text
-WS8bm discrimination check: 1 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
-```
-
-`fresh-mutant-retry-2.log`
-
-```text
-WS8bm discrimination check: 0 served mutants rejected on Rails and Rust across 0 named checks; 1 invalid or escaped
-```
-
-`fresh-mutant-retry-3.log`
-
-```text
-WS8bm discrimination check: 1 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
-```
-
-`fresh-mutant-evidence.log`
-
-```text
-WS8bm full discrimination evidence: 146/147 unique served mutants rejected on Rails and Rust; 1 missing paired proofs
-```
-
-`fresh-keyboard-isolation.log`
-
-```text
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`fresh-reply-isolation-1.log`
-
-```text
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`fresh-reply-isolation-2.log`
-
-```text
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`fresh-reply-isolation-3.log`
-
-```text
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`fresh-url-isolation-1.log`
-
-```text
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`fresh-url-isolation-2.log`
-
-```text
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`fresh-url-isolation-3.log`
-
-```text
-WS8bm behaviour check: 0 named cases passed on Rails and Rust; 1 failed; no pixel checks
-```
-
-`fresh-positive-retry-1.log`
-
-```text
-WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
-```
-
-`verified-evidence.log`
-
-```text
-WS8bm required discrimination evidence: 95/95 unique served variants rejected on Rails and Rust across 45 named checks; 0 unresolved
-WS8bm hidden-scope evidence: 3/3 permitted served CSS variants accepted on Rails and Rust; excluded from negative scheduling; 0 missing
-WS8bm reviewed positive evidence: 30/30 paired passes; 0 failed attempts retained; 0 missing declarations
-WS8bm current credited evidence: 102/102 paired behaviour and persisted-row passes; 0 missing current proofs; deferred credit unchanged
-```
-
-`fresh-final-inventory.log`
-
-```text
-WS8bm system inventory: 135 named declarations; 102 mapped behaviour passes; 27 deferred; 6 WS12 blocked; no pixel checks
-```
-
-Raw URL failure, retained:
-
-```text
-WS8bm failed application: http://127.0.0.1:52020 editing to add a URL renders its card live and the edited marker on load
-WS8bm browser flow FAILED: search_forward_edit: editing to add a URL renders its card live and the edited marker on load: TimeoutError: Selenium visibility visible timed out after 15000ms: locator('.message[data-message-id="935962058"]').locator('.x-post-card').locator('capybara-text={"mode":"filter","value":"Loading post","exact":false}'); last visible count: 0
-```
-
-Fresh cold binary build (the harness invocation above):
-
-```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 03s
-```
-
-Rust workspace tests and strict clippy were not rerun: this review changes reference tools and documentation only, as authorized for this scope. No old test/clippy summary is presented as a current run.
-
-## Cleanup and final scope
-
-After all test processes exited, removed only this review's regenerable fresh-clone Cargo target. Its listeners on 52020–52022 and its Rust/browser processes are gone. Verified no `.scratch` target directories remain. Kept raw receipts for review. The final declaration names/statuses/source hashes and the pinned visibility atom are unchanged.
-
-From the fresh clone:
+### Reproduction inputs and attribution checks
 
 ```sh
-mise exec rust@1.98.1 -- cargo clean --manifest-path rust/Cargo.toml --target-dir /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-category-fresh/rust/target
+PARITY_IMAGE=triage-reference-d7c7de92 bash rust/parity/bin/seed build agents_ui
+PARITY_IMAGE=triage-reference-d7c7de92 PARITY_NAMESPACE=ws8bm PARITY_OWNER=ws8bm bash rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/messaging/work-model-declarations.rb
+python3 rust/reference-tools/messaging/controller-case-inventory.py
+python3 rust/reference-tools/messaging/deferred-system-inventory.py
+mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 >/dev/null
+PARITY_IMAGE=triage-reference-d7c7de92 PARITY_NAMESPACE=ws8bm-continuation PARITY_OWNER=ws8bm WS8BR2_MEDIA_DIR="$PWD/.scratch/rails-media" bash rust/reference-tools/users/media_runtime.sh
 ```
 
-Raw cleanup and scope lines:
+The producer's stdout is compared byte-for-byte to `rust/vectors/messaging/work-model-declarations.json`; its source SHA256 is verified against `git show d7c7de92:app/models/channel_thread.rb`. Python tomllib parses all 15 Cargo manifests (duplicate keys are errors). ctypes loads the private libvips, and the private ffmpeg's first version line matches `vectors/storage.json` exactly. These raw receipts follow.
+
+Raw inventory lines from `controller-inventory-final.log`:
 
 ```text
-     Removed 6852 files, 5.2GiB total
-WS8bm scope verification: tools/docs only; 0 Rust product, golden or mask file changes; declaration names/statuses/source hashes unchanged; 0 scratch targets remain
+test/controllers/messages_controller_test.rb: 56 named declarations; 56 scoped attributions; 0 blocked
+test/controllers/messages_drive_attachments_test.rb: 19 named declarations; 19 scoped attributions; 0 blocked
+test/controllers/messages/cached_fragment_csrf_test.rb: 4 named declarations; 4 scoped attributions; 0 blocked
+test/controllers/messages/legacy_presentation_cache_test.rb: 2 named declarations; 2 scoped attributions; 0 blocked
+test/controllers/messages/boosts_controller_test.rb: 17 named declarations; 17 scoped attributions; 0 blocked
+test/controllers/channel_threads_controller_test.rb: 24 named declarations; 24 scoped attributions; 0 blocked
+test/controllers/channel_thread_messages_controller_test.rb: 12 named declarations; 12 scoped attributions; 0 blocked
+test/controllers/channel_thread_messages_drive_attachments_test.rb: 13 named declarations; 13 scoped attributions; 0 blocked
+test/controllers/message_forwards_controller_test.rb: 7 named declarations; 7 scoped attributions; 0 blocked
+test/controllers/message_forward_sources_controller_test.rb: 2 named declarations; 2 scoped attributions; 0 blocked
+WS8bm controller inventory: 156 named declarations; 156 scoped attributions; 0 owner-blocked
 ```
 
-## Per-check audit
+Raw inventory lines from `inventory-final.log`:
 
-Pinned source: Rails `d7c7de9264c63015be398001d7a1094e7695a6db`. This covers every implemented check in the 30 reviewed declarations and all supplementary modules (105 executable names in 13 files). It is an audit of mapped behaviour checks, not a claim that the original Ruby system files ran. Pixel assertions receive no credit.
+```text
+test/system/boosting_messages_test.rb: 4 named declarations; 4 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/code_highlighting_test.rb: 6 named declarations; 6 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/sending_messages_test.rb: 3 named declarations; 3 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/threads_test.rb: 15 named declarations; 15 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/workspace_markdown_test.rb: 8 named declarations; 6 mapped behaviour passes; 2 deferred; 0 WS12 blocked
+test/system/composer_test.rb: 11 named declarations; 11 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/composer_attach_menu_test.rb: 9 named declarations; 7 mapped behaviour passes; 2 deferred; 0 WS12 blocked
+test/system/message_interactions_test.rb: 10 named declarations; 9 mapped behaviour passes; 1 deferred; 0 WS12 blocked
+test/system/message_actions_mobile_test.rb: 2 named declarations; 2 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/message_toolbar_test.rb: 13 named declarations; 13 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/message_list_a11y_test.rb: 29 named declarations; 29 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/drive_attachments_test.rb: 3 named declarations; 0 mapped behaviour passes; 3 deferred; 0 WS12 blocked
+test/system/unread_divider_test.rb: 5 named declarations; 5 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/search_forward_edit_test.rb: 3 named declarations; 3 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/motion_test.rb: 9 named declarations; 0 mapped behaviour passes; 9 deferred; 0 WS12 blocked
+test/system/mobile_layout_test.rb: 5 named declarations; 5 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+WS8bm system inventory: 135 named declarations; 118 mapped behaviour passes; 17 deferred; 0 WS12 blocked; no pixel checks
+```
 
-Each table row identifies a changed call in the reviewed `89de2839` source. Repeated/shared checks list the corresponding pinned query/action lines in their declarations. The shared helper supplies the same scope to every call; scripted browser observations, raw code-source reads and explicit hidden/all queries are treated separately below.
+Raw inventory lines from `fresh-model-oracle-final.log`:
 
-### Changed actions and visible-text lookups
+```text
+WS8bm Rails direct-model declarations: 2 cases; omitted-owner refusal and independent stale writes; real callbacks
+```
 
-| Check at 89de2839 | Category | Old behavior | New behavior | Pinned Rails line |
-| --- | --- | --- | --- | --- |
-| behavior-actions.mjs:56 `row.scrollIntoViewIfNeeded()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:39,43,59 (visible message find before long press); system_test_helper.rb:202–210 (scripted touch and 700 ms hold) |
-| behavior-actions.mjs:75 `row.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:16,25,47 |
-| behavior-actions.mjs:82 `page.getByRole('menuitem',{name:'Delete message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:47 |
-| behavior-actions.mjs:100 `editor.fill('A draft that must survive editing')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:113 |
-| behavior-actions.mjs:101 `page.getByRole('button',{name:'Cancel message context',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:124 |
-| behavior-actions.mjs:124 `page.getByRole('menuitem',{name:'Edit message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:168 |
-| behavior-actions.mjs:126 `editor.fill('First edit request')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:179 |
-| behavior-actions.mjs:133 `page.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:191,218 |
-| behavior-actions.mjs:135 `editor.fill('A newer draft typed while saving')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:192 |
-| behavior-actions.mjs:142 `editor.fill('Failed edit')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:217 |
-| behavior-actions.mjs:142 `page.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:191,218 |
-| behavior-actions.mjs:143 `page.locator('#composer [data-composer-target="feedback"]').filter({hasText:'The message could not be saved'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:219 |
-| behavior-actions.mjs:145 `page.getByRole('button',{name:'Cancel message context',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:221 |
-| behavior-actions.mjs:147 `page.getByRole('menuitem',{name:'Reply',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:231 |
-| behavior-actions.mjs:148 `page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:233,239 |
-| behavior-actions.mjs:150 `page.getByLabel('Notify author',{exact:true}).uncheck()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:235 |
-| behavior-actions.mjs:151 `browser.locator('.message__reply-preview').filter({hasText:'Replying to JZ'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:239 |
-| behavior-actions.mjs:152 `page.getByRole('menuitem',{name:'Delete message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:228,231,237 |
-| behavior-actions.mjs:154 `page.locator('.message__reply-preview').filter({hasText:'Replying to a deleted message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:246 |
-| behavior-actions.mjs:157 `page.getByRole('menuitem',{name:'Copy text',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:263 |
-| behavior-actions.mjs:159 `page.getByRole('menuitem',{name:'Copy link',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:260,263,267,270,274,277,279,282 |
-| behavior-actions.mjs:161 `page.getByRole('menuitem',{name:'Forward',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:277,279,280,282 |
-| behavior-actions.mjs:163 `dialog.locator('.message-forward-dialog__destination').filter({hasText:'Forward destination'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:279 |
-| behavior-actions.mjs:164 `dialog.getByLabel('Add a note (optional)',{exact:true}).fill('Forwarded from the interaction test')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:280 |
-| behavior-actions.mjs:165 `dialog.getByRole('button',{name:'Forward',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:277,279,280,282 |
-| behavior-actions.mjs:166 `page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:285 |
-| behavior-actions.mjs:168 `page.getByRole('menuitem',{name:'Forward',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:295 |
-| behavior-actions.mjs:171 `submit.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:292,295,302 |
-| behavior-actions.mjs:172 `page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:'Forwarded to 1 destination'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:303 |
-| behavior-actions.mjs:182 `chip.locator('.reaction-chip__count').filter({hasText:new RegExp(^${count}$)})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_interactions_test.rb:320,324,333,337,342,346 |
-| behavior-actions.mjs:191 `row.locator('.reaction-chip[data-reaction="👍"]').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_interactions_test.rb:315,318,328,331,341 |
-| behavior-attach-menu.mjs:21 `button.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:14 |
-| behavior-attach-menu.mjs:25 `button.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:27,28 |
-| behavior-attach-menu.mjs:25 `menu.getByRole('menuitem',{name:'From this device',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:28 |
-| behavior-attach-menu.mjs:28 `button.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:72 |
-| behavior-attach-menu.mjs:30 `button.press('ArrowDown')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:85,90,93,96 |
-| behavior-attach-menu.mjs:36 `button.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:106,109 |
-| behavior-attach-menu.mjs:36 `page.locator('.room-header__name').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:109 |
-| behavior-attach-menu.mjs:38 `button.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:120 |
-| behavior-attach-menu.mjs:41 `menu.getByRole('menuitem',{name:'From Google Drive',exact:true}).click({trial:true})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_attach_menu_test.rb:120 |
-| behavior-attach-menu.mjs:58 `page.locator('#composer .composer__file').filter({hasText:'hello'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_attach_menu_test.rb:166 |
-| behavior-attach-menu.mjs:63 `page.locator('#composer .composer__file').filter({hasText:'pasted'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_attach_menu_test.rb:174 |
-| behavior-attach-menu.mjs:68 `page.locator('#composer .composer__file').filter({hasText:'dropped'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_attach_menu_test.rb:183 |
-| behavior-boosts.mjs:7 `message(browser).getByRole('link',{name:'Add a boost',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | boosting_messages_test.rb:87 |
-| behavior-boosts.mjs:8 `message(browser).locator('input[name="boost[content]"]').fill(value)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | boosting_messages_test.rb:13,37,49,63,71,86,88 |
-| behavior-boosts.mjs:10 `message(browser).getByRole('button',{name:'Submit',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | boosting_messages_test.rb:14,72 |
-| behavior-boosts.mjs:11 `browser.locator('[data-boost-delete-target="content"]').filter({hasText:value})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | boosting_messages_test.rb:26,30,36,51,55,62,96 |
-| behavior-boosts.mjs:15 `david.locator('[data-boost-delete-target="content"]').filter({hasText:/^Hello$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | boosting_messages_test.rb:26,30 |
-| behavior-boosts.mjs:16 `boost.locator('[data-boost-delete-target="content"]').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | boosting_messages_test.rb:25,27 |
-| behavior-boosts.mjs:16 `boost.getByRole('button',{name:'Delete this boost',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | boosting_messages_test.rb:27 |
-| behavior-boosts.mjs:18 `browser.locator('[data-boost-delete-target="content"]').filter({hasText:/^Hello$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | boosting_messages_test.rb:26,30 |
-| behavior-code.mjs:12 `code.locator('.code-token').filter({hasText:keyword})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | code_highlighting_test.rb:38,76,91,98,122,129,141 |
-| behavior-code.mjs:19 `page.getByRole('combobox',{name:'Write a message',exact:true}).fill(source)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | code_highlighting_test.rb:31,74,115,127 (`send_message`); system_test_helper.rb:96–105 (`find_field`, click, paste) |
-| behavior-code.mjs:20 `page.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | code_highlighting_test.rb:31,74,115,127 (`send_message`); system_test_helper.rb:92 (`click_on "Send Message"`) |
-| behavior-code.mjs:27 `row.getByRole('button',{name:'Copy code',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | code_highlighting_test.rb:52,106,118,145 |
-| behavior-code.mjs:49 `row.locator('code.language-unknown-language').filter({hasText:'<script>window.codeExecuted = true</script>'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | code_highlighting_test.rb:79 |
-| behavior-code.mjs:65 `row.locator('pre code.language-ts').filter({hasText:'const value: string = "hello";'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | code_highlighting_test.rb:116 |
-| behavior-code.mjs:71 `page.getByRole('combobox',{name:'Write a message',exact:true}).fill(code_replacement)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | code_highlighting_test.rb:138 |
-| behavior-code.mjs:71 `page.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | code_highlighting_test.rb:139 |
-| behavior-composer.mjs:11 `message.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by composer_test.rb |
-| behavior-composer.mjs:15 `page.getByRole('menuitem',{name:'Reply',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:273,290 |
-| behavior-composer.mjs:16 `page.locator('[data-composer-target="contextLabel"]').filter({hasText:'Replying to'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:173,291 |
-| behavior-composer.mjs:18 `page.locator('[data-reply-target="body"]').filter({hasText:body})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:16,19,25,45,80,85,86,90,108,117,133,144,161,170,173,174,200,209,215,237,251,255,269,274,281,291,294,300 |
-| behavior-composer.mjs:19 `message.locator('.message__reply-preview').filter({hasText:"Third time's a charm."})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:130,154,173,174,294 |
-| behavior-composer.mjs:24 `page.locator(a[href="/rooms/${id}"]).first().click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:21,130,154,168,169,236,250,254,268,273,280,289,290,293,299 |
-| behavior-composer.mjs:30 `editor.fill(':thu')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:15 |
-| behavior-composer.mjs:30 `page.locator('suggestion-option').filter({hasText:'thumbsup'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:16 |
-| behavior-composer.mjs:32 `editor.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:21 |
-| behavior-composer.mjs:32 `editor.fill('hello')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:22 |
-| behavior-composer.mjs:32 `editor.press('Enter')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:22,23 |
-| behavior-composer.mjs:43 `editor.fill(':zx')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:42 |
-| behavior-composer.mjs:43 `editor.fill(':open')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:44 |
-| behavior-composer.mjs:44 `page.locator('suggestion-option').filter({hasText:'OpenAI'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:45 |
-| behavior-composer.mjs:45 `editor.press('Enter')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:47 |
-| behavior-composer.mjs:49 `editor.fill('@kev+in')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:63 |
-| behavior-composer.mjs:55 `editor.fill(':open')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:79 |
-| behavior-composer.mjs:55 `page.locator('suggestion-option').filter({hasText:'OpenAI'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:80 |
-| behavior-composer.mjs:62 `editor.press('ArrowDown')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:92,97 |
-| behavior-composer.mjs:63 `editor.press('Escape')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:92,97 |
-| behavior-composer.mjs:66 `editor.fill(':open')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:107 |
-| behavior-composer.mjs:66 `page.locator('suggestion-option').filter({hasText:'OpenAI'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:108,117 |
-| behavior-composer.mjs:68 `page.locator('suggestion-option').filter({hasText:'OpenAI'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:108,117 |
-| behavior-composer.mjs:69 `page.locator('.message[data-message-id]').filter({hasText:/^:open$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:108,117 |
-| behavior-composer.mjs:70 `editor.press('Enter')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:121 |
-| behavior-composer.mjs:73 `message.locator('.message__reply-preview-link').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:130 |
-| behavior-composer.mjs:84 `message.locator('.message__reply-preview-link').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:154 |
-| behavior-composer.mjs:93 `page.getByRole('menuitem',{name:'Delete message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:169 |
-| behavior-composer.mjs:95 `browser.locator('[data-reply-target="body"]').filter({hasText:'A reply whose source goes away'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:170,173,174 |
-| behavior-composer.mjs:96 `delivered.locator('.message__reply-preview').filter({hasText:'Replying to a deleted message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:173 |
-| behavior-composer.mjs:105 `david.getByRole('combobox',{name:'Write a message',exact:true}).fill('hi from david')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:194 |
-| behavior-composer.mjs:106 `recipient.getByRole('combobox',{name:'Write a message',exact:true}).fill('hi from kevin')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:197,203 |
-| behavior-composer.mjs:107 `page.locator('[data-typing-notifications-target="author"]').filter({hasText:/^David, David$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:200,209,215 |
-| behavior-composer.mjs:108 `recipient.getByRole('combobox',{name:'Write a message',exact:true}).fill('hi from kevin')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:197,203 |
-| behavior-composer.mjs:109 `david.getByRole('combobox',{name:'Write a message',exact:true}).fill('')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:194,197,203,206,212 |
-| behavior-composer.mjs:110 `page.locator('[data-typing-notifications-target="author"]').filter({hasText:/^David$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:200,209,215 |
-| behavior-composer.mjs:111 `recipient.getByRole('combobox',{name:'Write a message',exact:true}).fill('')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:194,197,203,206,212 |
-| behavior-composer.mjs:114 `editor.fill('Designers draft')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:222 |
-| behavior-composer.mjs:116 `editor.fill('Pets draft')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:229 |
-| behavior-composer.mjs:118 `page.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:236 |
-| behavior-composer.mjs:126 `panel.locator('[data-thread-panel-target="browserList"] .thread-panel__thread-item').filter({hasText:'Composer draft thread'}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:268,280 (visible thread-item find/click) |
-| behavior-composer.mjs:126 `panel.locator('[data-thread-panel-target="browserList"] .thread-panel__thread-item').filter({hasText:'Composer draft thread'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:268,280 (find thread item with text: thread_name) |
-| behavior-composer.mjs:130 `panel.getByRole('button',{name:'New thread',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:250 |
-| behavior-composer.mjs:133 `panel.locator('[data-thread-panel-target="createName"]').fill('Composer draft thread')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:252 (fill_in "Thread name") |
-| behavior-composer.mjs:134 `panel.locator('[data-thread-panel-target="createMessage"]').fill('The thread for draft persistence.')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:253 |
-| behavior-composer.mjs:136 `panel.locator('[data-thread-panel-target="createSubmit"]').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:254 (visible createSubmit find/click) |
-| behavior-composer.mjs:138 `panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:'Composer draft thread'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | Supplementary title consistency after composer_test.rb:255 (conversation pane); not an original title assertion |
-| behavior-composer.mjs:139 `panel.getByRole('combobox',{name:'Write a thread reply',exact:true}).fill('Thread draft')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:258,272 |
-| behavior-composer.mjs:139 `editor.fill('Channel draft')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:260 |
-| behavior-composer.mjs:142 `reply.fill('Thread draft sent')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:272 |
-| behavior-composer.mjs:142 `panel.getByRole('button',{name:'Send Reply',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | composer_test.rb:273 |
-| behavior-composer.mjs:143 `panel.locator('.message__body').filter({hasText:'Thread draft sent'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | composer_test.rb:274 |
-| behavior-message-destinations.mjs:19 `message.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by message_list_a11y_test.rb |
-| behavior-message-destinations.mjs:29 `message.scrollIntoViewIfNeeded()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:434,489 (visible message find before long_press); system_test_helper.rb:202–210 |
-| behavior-message-destinations.mjs:41 `page.locator('#search-results .message').filter({hasText:'A searchable menu result'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_list_a11y_test.rb:423 |
-| behavior-message-destinations.mjs:67 `page.locator('.message').filter({hasText:"Third time's a charm."})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_list_a11y_test.rb:496 |
-| behavior-message-destinations.mjs:84 `bio.fill(caseName===destinationCases[6]?'Reduced motion flash check':'Reduced motion dismiss check')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:598 |
-| behavior-message-destinations.mjs:85 `bio.locator('xpath=ancestor::form').getByRole('button',{name:'Save changes',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:575,600 |
-| behavior-message-destinations.mjs:92 `page.locator('.flash__dismiss').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:603 |
-| behavior-message-list.mjs:35 `row(id).locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by message_list_a11y_test.rb |
-| behavior-message-list.mjs:127 `editor.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:235 |
-| behavior-message-list.mjs:127 `editor.press('ArrowUp')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:236 |
-| behavior-message-list.mjs:128 `page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_list_a11y_test.rb:238 |
-| behavior-message-list.mjs:136 `editor.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:252 |
-| behavior-message-list.mjs:136 `editor.press('ArrowUp')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:253 |
-| behavior-message-list.mjs:137 `page.locator('.flash--client[role="alert"]').filter({hasText:'temporarily unavailable'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_list_a11y_test.rb:255 |
-| behavior-message-list.mjs:139 `page.getByRole('menuitem',{name:'Forward',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:267 |
-| behavior-message-list.mjs:143 `page.getByRole('menuitem',{name:'Forward',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_list_a11y_test.rb:284 |
-| behavior-message-list.mjs:156 `list.locator('.message').filter({hasText:/^History post 0$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_list_a11y_test.rb:332,353,354,370,371 |
-| behavior-search-forward.mjs:7 `search.fill('nonsense zebra tuxedo xyzzy')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | search_forward_edit_test.rb:24 |
-| behavior-search-forward.mjs:7 `search.press('Enter')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | search_forward_edit_test.rb:24 |
-| behavior-search-forward.mjs:8 `page.getByText('No messages match',{exact:false})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:25 |
-| behavior-search-forward.mjs:14 `page.locator('#search-results .message').filter({hasText:'system paging alpha'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:32,36 |
-| behavior-search-forward.mjs:15 `page.getByRole('link',{name:'Load older results',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | search_forward_edit_test.rb:34 |
-| behavior-search-forward.mjs:16 `page.locator('#search-results').getByText('system paging alpha',{exact:true})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:33,35 |
-| behavior-search-forward.mjs:22 `page.locator('pre code').filter({hasText:'puts :forwarded'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:60 |
-| behavior-search-forward.mjs:23 `source.locator('pre code').filter({hasText:'puts :forwarded'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:60 |
-| behavior-search-forward.mjs:24 `source.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by search_forward_edit_test.rb |
-| behavior-search-forward.mjs:25 `page.getByRole('menuitem',{name:'Forward',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | search_forward_edit_test.rb:49,53 |
-| behavior-search-forward.mjs:27 `dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)').filter({hasText:'Designers'}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | search_forward_edit_test.rb:51 |
-| behavior-search-forward.mjs:27 `dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)').filter({hasText:'Designers'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:51 |
-| behavior-search-forward.mjs:28 `dialog.getByRole('button',{name:'Forward',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | search_forward_edit_test.rb:49,53 |
-| behavior-search-forward.mjs:29 `page.locator('[data-message-actions-target="forwardStatus"]').filter({hasText:/Forwarded to 1 destination/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:46,50,55,59,60 |
-| behavior-search-forward.mjs:31 `viewer.locator('pre code.language-ruby').filter({hasText:'puts :forwarded'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:60 |
-| behavior-search-forward.mjs:38 `message.getByText('nothing linked yet',{exact:true})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:69 |
-| behavior-search-forward.mjs:43 `message.locator('.x-post-card').filter({hasText:'Loading post'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:78 |
-| behavior-search-forward.mjs:45 `message.locator('.message__edited').filter({hasText:'(edited)'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | search_forward_edit_test.rb:84 |
-| behavior-toolbar.mjs:12 `row.getByRole('button',{name:'Add reaction',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:69,88,115,125,132,144,159,173,188,201 |
-| behavior-toolbar.mjs:18 `row.locator(.reaction-chip[data-reaction="${content}"] .reaction-chip__count).filter({hasText:/^1$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_toolbar_test.rb:11,15,16,17,18,19,20,28,29,35,40,48,49,52,64,71,72,73,78,81,82,89,91,92,95,96,97,100,101,116,126,128,133,136,137,145,148,149,152,153,160,163,166,167,174,175,184,189,194,195,202,207,209,212,221 |
-| behavior-toolbar.mjs:22 `originalMessage(recipient).locator(.reaction-chip[data-reaction="${content}"] .reaction-chip__count).filter({hasText:/^1$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_toolbar_test.rb:11,15,16,17,18,19,20,28,29,35,40,48,49,52,64,71,72,73,78,81,82,89,91,92,95,96,97,100,101,116,126,128,133,136,137,145,148,149,152,153,160,163,166,167,174,175,184,189,194,195,202,207,209,212,221 |
-| behavior-toolbar.mjs:30 `row.getByRole('button',{name:'React with thumbs up',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:26 |
-| behavior-toolbar.mjs:32 `row.getByRole('button',{name:'Reply to message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:34 |
-| behavior-toolbar.mjs:33 `page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | message_toolbar_test.rb:35 |
-| behavior-toolbar.mjs:34 `page.getByRole('button',{name:'Cancel message context',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:36 |
-| behavior-toolbar.mjs:35 `row.getByRole('button',{name:'Open thread',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:39 |
-| behavior-toolbar.mjs:37 `row.getByRole('button',{name:'More message actions',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:45 |
-| behavior-toolbar.mjs:44 `row.focus()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:56,57 |
-| behavior-toolbar.mjs:48 `search.fill('fire')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:77 |
-| behavior-toolbar.mjs:48 `option('Fire').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:79 |
-| behavior-toolbar.mjs:52 `page.locator('#emoji-picker-tab-people').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:93 |
-| behavior-toolbar.mjs:62 `option('Grinning face').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:127 |
-| behavior-toolbar.mjs:63 `page.locator('#emoji-picker-tab-recent').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:134 |
-| behavior-toolbar.mjs:65 `page.locator('#emoji-picker-tab-custom').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:146 |
-| behavior-toolbar.mjs:66 `option('Acme Corp').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:150 |
-| behavior-toolbar.mjs:68 `search.fill('openai')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:162 |
-| behavior-toolbar.mjs:69 `option('OpenAI').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:164 |
-| behavior-toolbar.mjs:75 `page.locator('#emoji-picker-tab-smileys').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | message_toolbar_test.rb:204 |
-| behavior-unread.mjs:12 `target.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by unread_divider_test.rb |
-| behavior-unread.mjs:13 `page.getByRole('menuitem',{name:'Mark unread',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | unread_divider_test.rb:103 |
-| behavior-unread.mjs:14 `page.locator('#sidebar .unread').filter({hasText:'Designers'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | unread_divider_test.rb:107 |
-| behavior-unread.mjs:18 `list.locator('.message').filter({hasText:'First unread off page'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | unread_divider_test.rb:86 |
-| behavior-unread.mjs:28 `pill.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | unread_divider_test.rb:93 |
-| behavior-unread.mjs:29 `list.locator('.message').filter({hasText:'First unread off page'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | unread_divider_test.rb:86 |
-| behavior-unread.mjs:45 `pill.click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | unread_divider_test.rb:66 |
-| behavior.mjs:93 `page.getByRole('combobox',{name:'Write a message',exact:true}).fill(value)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:96–105 (`find_field`, click, paste); per-call `fill_in` in the named declaration |
-| behavior.mjs:94 `page.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:92 (`click_on`) |
-| behavior.mjs:98 `page.getByRole('combobox',{name:'Write a message',exact:true}).fill(value)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:96–105 (`find_field`, click, paste); per-call `fill_in` in the named declaration |
-| behavior.mjs:99 `page.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:92 (`click_on`) |
-| behavior.mjs:102 `message.click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible `find(...).right_click`) |
-| behavior.mjs:104 `page.getByRole('menuitem',{name:'Edit message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | sending_messages_test.rb:39 |
-| behavior.mjs:105 `page.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Editing Message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | sending_messages_test.rb:40 |
-| behavior.mjs:106 `page.locator('#composer').filter({hasText:'Editing Message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | sending_messages_test.rb:40 |
-| behavior.mjs:153 `author.locator('.github-pr-card__title').filter({hasText:'Fix login'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:509,520 |
-| behavior.mjs:154 `card().getByRole('button',{name:'Discuss',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:506,517 |
-| behavior.mjs:155 `author.locator('.github-pr-thread-header .github-pr-card__title').filter({hasText:'Fix login'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:509,520 |
-| behavior.mjs:156 `author.locator('.github-pr-files__heading').filter({hasText:'Files changed'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:510 |
-| behavior.mjs:157 `author.locator('.github-pr-files__path').filter({hasText:'app/models/user.rb'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:511 |
-| behavior.mjs:159 `card().getByRole('link',{name:'Discuss',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:506,517 |
-| behavior.mjs:160 `author.locator('.github-pr-thread-header .github-pr-card__title').filter({hasText:'Fix login'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:509,520 |
-| behavior.mjs:171 `root.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by threads_test.rb |
-| behavior.mjs:172 `page.getByRole('menuitem',{name:'Create thread',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:552 |
-| behavior.mjs:177 `panel.getByRole('button',{name:'New thread',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:101,563 |
-| behavior.mjs:186 `nameField.fill(name)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:30,32,46,57,78,103,104,555,556,565,566 |
-| behavior.mjs:189 `firstField.fill(first)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:30,32,46,57,78,103,104,555,556,565,566 |
-| behavior.mjs:194 `panel.locator('[data-thread-panel-target="createSubmit"]').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:22,26,33,41,44,47,51,55,58,63,66,79,85,88,101,112,129,131,143,149,153,506,517,531,533,535,543,549,552,557,563,567 |
-| behavior.mjs:197 `panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:18,45,48,54,56,60,67,74,75,81,89,92,93,102,130,132,137,138,139,142,145,146,147,150,151,154,155,379,380,384,392,393,509,510,511,520,539,544,554,564,572,573,577,583 |
-| behavior.mjs:209 `author.locator('[data-reply-target="body"]').filter({hasText:value})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:18,45,48,54,56,60,67,74,75,81,89,92,93,102,130,132,137,138,139,142,145,146,147,150,151,154,155,379,380,384,392,393,509,510,511,520,539,544,554,564,572,573,577,583 |
-| behavior.mjs:211 `panel.locator('.thread-panel__thread-content .message__body').filter({hasText:value})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:577 |
-| behavior.mjs:214 `panel.getByRole('combobox',{name:'Write a thread reply',exact:true}).fill(value)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:32,46,57,78 |
-| behavior.mjs:215 `panel.getByRole('button',{name:'Send Reply',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:33,47,58,79 |
-| behavior.mjs:227 `message.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by threads_test.rb |
-| behavior.mjs:231 `page.getByRole('button',{name:'Close threads',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:543 |
-| behavior.mjs:241 `panel.locator('[data-thread-panel-target="threadStatus"]').filter({hasText:'This thread link is invalid.'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:380 |
-| behavior.mjs:258 `other.locator('[data-thread-panel-target="manage"] summary').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:129,131,143,149,153 |
-| behavior.mjs:259 `other.locator('[data-thread-panel-target="closeThread"]').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:129,131,143,149,153 |
-| behavior.mjs:260 `other.locator('[data-thread-panel-target="threadStatus"]').filter({hasText:/Closed thread/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:130,132,137,138,139,142,145,146,147,150,151,154,155 |
-| behavior.mjs:265 `items.filter({hasText:'Active planning thread'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:130,132,137,138,139,142,145,146,147,150,151,154,155 |
-| behavior.mjs:266 `items.filter({hasText:'Closed planning thread'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:130,132,137,138,139,142,145,146,147,150,151,154,155 |
-| behavior.mjs:267 `panel.locator('[data-thread-panel-target="filter"]').selectOption('closed')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:141,143 |
-| behavior.mjs:268 `items.filter({hasText:'Closed planning thread'}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:129,131,143,149,153 |
-| behavior.mjs:268 `items.filter({hasText:'Closed planning thread'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:130,132,137,138,139,142,145,146,147,150,151,154,155 |
-| behavior.mjs:272 `panel.getByRole('button',{name:'Join',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:149 |
-| behavior.mjs:275 `panel.getByRole('button',{name:'Leave',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:153 |
-| behavior.mjs:296 `author.getByRole('menuitem',{name:'Delete message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:88 |
-| behavior.mjs:303 `panel.locator('[data-thread-panel-target="parent"]').filter({hasText:"Third time's a charm."})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:18,60 |
-| behavior.mjs:305 `panel.locator('[data-thread-panel-target="preferences"] summary').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:22,26,33,41,44,47,51,55,58,63,66 |
-| behavior.mjs:306 `panel.locator('[data-thread-panel-target="involvement"]').selectOption('nothing')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:23 |
-| behavior.mjs:307 `panel.locator('[data-thread-panel-target="manage"] summary').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:22,26,33,41,44,47,51,55,58,63,66 |
-| behavior.mjs:308 `panel.locator('[data-thread-panel-target="autoArchive"]').selectOption('1440')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:27 |
-| behavior.mjs:309 `author.getByRole('combobox',{name:'Write a message',exact:true}).fill('A channel draft stays here.')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:30 |
-| behavior.mjs:312 `author.getByRole('menuitem',{name:'Reply',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:33,44,47,58 |
-| behavior.mjs:313 `panel.locator('[data-composer-target="contextLabel"]').filter({hasText:'Replying to'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:45 |
-| behavior.mjs:315 `panel.locator('.message__reply-preview').filter({hasText:'A reply from the thread drawer.'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:32,37 |
-| behavior.mjs:316 `author.getByRole('menuitem',{name:'Edit message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:55 |
-| behavior.mjs:317 `panel.locator('[data-composer-target="contextLabel"]').filter({hasText:'Editing Message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:56 |
-| behavior.mjs:319 `panel.locator('[data-thread-panel-target="parent"]').filter({hasText:"Third time's a charm."})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:18,60 |
-| behavior.mjs:321 `author.locator('.message__quick-reaction[title="Thumbs up"]').click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | threads_test.rb:22,26,33,41,44,47,51,55,58,63,66 |
-| behavior.mjs:322 `panel.locator('.boosts__reactions').filter({hasText:'👍'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | threads_test.rb:67 |
-| behavior.mjs:335 `message.locator('h2').filter({hasText:/^Design review$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:55,67,72,78 |
-| behavior.mjs:337 `message.locator(selector).filter({hasText:value})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:55,67,72,78 |
-| behavior.mjs:340 `message.locator('pre code').filter({hasText:'const message = "<script>literal code</script>";'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:55,67,72,78 |
-| behavior.mjs:343 `message.locator('pre code.language-javascript[data-highlighted="yes"] .code-token').filter({hasText:'const'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:55,67,72,78 |
-| behavior.mjs:347 `author.locator('h2').filter({hasText:/^Design review$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:55,67,72,78 |
-| behavior.mjs:348 `message.locator('h2').filter({hasText:/^Design review$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:55,67,72,78 |
-| behavior.mjs:355 `page.locator(.message[data-message-id="${id}"] h2).filter({hasText:/^Review complete$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:55,67,72,78 |
-| behavior.mjs:364 `editor.fill('First line')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:93 |
-| behavior.mjs:364 `editor.press('Shift+Enter')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:94,95,108,114 |
-| behavior.mjs:364 `editor.pressSequentially('Second line')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:95 |
-| behavior.mjs:369 `editor.press('Enter')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:94,95,108,114 |
-| behavior.mjs:372 `editor.press('ArrowUp')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:94,95,108,114 |
-| behavior.mjs:373 `author.locator('#composer').filter({hasText:'Editing Message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:115 |
-| behavior.mjs:379 `page.locator('p').filter({hasText:/^Safety check$/})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:134,137,138 |
-| behavior.mjs:380 `message.locator('.message__body').filter({hasText:'Safety check'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:134 |
-| behavior.mjs:381 `message.locator('pre code').filter({hasText:'<img onerror="literal code">'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:137 |
-| behavior.mjs:392 `author.locator('strong').filter({hasText:'A useful point'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:145,153,165 |
-| behavior.mjs:393 `parent.locator('.message__body').filter({hasText:'A useful point'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:145,153,165 |
-| behavior.mjs:394 `parent.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by workspace_markdown_test.rb |
-| behavior.mjs:395 `author.getByRole('menuitem',{name:'Reply',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:151 |
-| behavior.mjs:396 `author.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:152 |
-| behavior.mjs:397 `author.locator('#composer [data-composer-target="contextPreview"]').filter({hasText:'A useful point'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:145,153,165 |
-| behavior.mjs:398 `author.getByLabel('Notify author',{exact:true}).uncheck()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:155 |
-| behavior.mjs:400 `author.locator('#composer').filter({hasText:'markdown-workspace-attachment'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:160 |
-| behavior.mjs:401 `author.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:161 |
-| behavior.mjs:403 `page.locator('.message__reply-preview').filter({hasText:'A useful point'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:165 |
-| behavior.mjs:404 `attachment.locator('.message__reply-preview').filter({hasText:'A useful point'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:165 |
-| behavior.mjs:418 `editor.fill('@Kev')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:181 |
-| behavior.mjs:418 `author.locator('suggestion-option').filter({hasText:'Kevin'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:182 |
-| behavior.mjs:419 `editor.press('Enter')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:183 |
-| behavior.mjs:423 `page.locator('strong').filter({hasText:'the layout'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:182,191,195,196,197 |
-| behavior.mjs:424 `message.locator('.mention').filter({hasText:'Kevin'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:191,195,197 |
-| behavior.mjs:436 `author.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:209,215 |
-| behavior.mjs:440 `author.getByRole('combobox',{name:'Write a message',exact:true}).fill('')` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:214 |
-| behavior.mjs:441 `author.getByRole('button',{name:'Restore draft',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:212 |
-| behavior.mjs:443 `messages(page).locator('strong').filter({hasText:'Recovered'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:216 |
-| behavior.mjs:446 `author.getByRole('combobox',{name:'Write a message',exact:true}).fill(first)` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:223 |
-| behavior.mjs:454 `messages(recipient).filter({hasText:second})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | workspace_markdown_test.rb:232,237 |
-| behavior.mjs:455 `author.getByRole('button',{name:'Send Message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | workspace_markdown_test.rb:236 |
-| behavior.mjs:469 `original.click({button:'right'})` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | system_test_helper.rb:129 (visible body `find(...).right_click`), called by sending_messages_test.rb |
-| behavior.mjs:472 `author.getByRole('menuitem',{name:'Edit message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | sending_messages_test.rb:39 |
-| behavior.mjs:473 `author.locator('#composer').filter({hasText:'Editing Message'})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | sending_messages_test.rb:40 |
-| behavior.mjs:481 `author.getByRole('menuitem',{name:'Delete message',exact:true}).click()` | Action | Raw Playwright action omitted Selenium opacity/visible lookup | Shared visible lookup + action inside the original budget | sending_messages_test.rb:65 |
-| behavior.mjs:483 `messages(author).filter({hasText:"Third time's a charm."})` | Text | Raw descendant text could satisfy the selected node | Selenium visible descendant text on the selected node; hidden text excluded | sending_messages_test.rb:57,69 |
+Raw inventory lines from `fresh-model-vector-final.log`:
 
-### Additional text/property, deadline and negative corrections
+```text
+WS8bm Rails model vector: regenerated bytes match; pinned model source SHA256 verified
+```
 
-| Check | Category | Old behavior | New behavior | Pinned Rails line |
-| --- | --- | --- | --- | --- |
-| URL Loading post | Text | Visible card + hidden-inclusive `hasText` | Visible card + Selenium visible descendant Loading text, 15 s | search_forward_edit:78 |
-| URL textarea fill (shared submit) | Action | Opacity-zero field filled by Playwright | Default-visible field lookup and fill, 2 s | search_forward_edit:74 |
-| Reloaded edited marker | Deadline | Supplementary inherited 30 s | Visible marker/text at default 2 s | search_forward_edit:84 |
-| Forwarded Ruby source | Text | Visible code node + raw textContent | Visible code node + visible text includes source | search_forward_edit:60 |
-| Markdown raw code content assertion | Text | Code visibility then raw source string | Visible code text includes the literal source, independently of tokens | workspace_markdown:334 |
-| Malicious thread title | Text | Raw title.textContent | Selected title visible text includes/equals the literal title | threads:392 |
-| First thread reply count | Text/deadline | Raw textContent after 30 s visibility | Visible indicator text, broadcast deadline 15 s | threads:74 |
-| Second reply indicator | Deadline | Supplementary 30 s default | Visible indicator, broadcast deadline 15 s | threads:81 |
-| Empty reply indicator | Negative/deadline | Wait only for hidden attribute at inherited default | Retry visible absence 15 s, then retain all-node hidden-attribute check | threads:92–93 |
-| Deleted thread replies | Negative/deadline | Required DOM detach, inherited 30 s | Retry visible absence 10 s | threads:89 |
-| Thread join/leave controls | Negative/deadline | Instant false visibility reads, positive 30 s | Retry negative default 2 s; positive controls 10 s | threads:145–155 |
-| Invalid external deep link pane | Deadline | 30 s | Visible pane, explicit 10 s | threads:379 |
-| Thread create pane | Deadline | 30 s | Explicit visible pane 10 s | threads:102,554,564 |
-| Conversation/title after create | Deadline/text | Conversation already 10 s, hidden-inclusive title text | Both visible pane and visible title text at 10 s | threads:572–573 |
-| Thread parent preview | Deadline/text | 30 s/hidden descendant text | Visible preview text, 10 s | threads:18,59 |
-| Thread reply context | Deadline/text | 30 s/hidden descendant text | Visible context text, 10 s | threads:45 |
-| Thread edit context | Deadline/text | 30 s/hidden descendant text | Visible context text, 10 s | threads:54 |
-| Drawer reply preview | Deadline/text | 30 s/hidden descendant text | Visible preview text, 10 s | threads:48 |
-| PR card and header lookups (deferred flow) | Deadline/text | Inherited 30 s, then global 2 s | Separate original card scope 10 s and action find 2 s; visible header text 10 s | threads:505–506,509,516–517,520 |
-| Drawer reaction | Deadline/text | 30 s/hidden descendant text | Visible reaction text, 10 s | threads:67 |
-| Thread browser active/closed items | Deadline/text | 30 s lookup/wait | Explicit visible text 10 s, subsequent find/click default 2 s | threads:138,142–143 |
-| Closing a thread/status | Deadline/text | Default action with no original explicit close-control assertion, then 30 s text | Close-control assertion 10 s, action 2 s, visible status text 10 s | threads:130–132 |
-| Close drawer | Negative/deadline | 30 s function wait | Retry body class disappearance, 10 s | threads:544 |
-| Toolbar popup attribute | Deadline | Instant attribute check after separate visibility | Atom + expected attribute in one 2 s query | message_toolbar:20 |
-| Recent tab not selected | Deadline/visible state | Instant raw aria-selected inequality | Original visible non-selected tab selector retries for 2 s | message_toolbar:95 |
-| Reaction active/inactive after count | Negative/deadline | Additional function mixed raw text and visibility with active state | Count text uses its 10 s visible-text assertion; active/inactive selector retries separately at 2 s | message_interactions:321,325,333,338,343,347 |
-| Message/menu close and delete | Negative | Required DOM detach | Retry original default-visible absence at 2 s (dialog remains 10 s) | message_interactions:22,49,94,107; message_toolbar:52; message_actions_mobile:45,63; sending_messages:69; system_test_helper:115 |
-| All-node code security counts | Negative | Instant raw count | Retry count without visibility filtering at default 2 s | code_highlighting:41,80 |
-| All-node Markdown security count | Negative | Instant raw count | Retry raw all-node count at default 2 s | workspace_markdown:138 |
-| Keyboard message text | Text | Combined raw-newline expectation | Separate visible First line / Second line assertions, both 2 s; exact single two-line database row retained | workspace_markdown:107–109 |
-| Composer URL-encoding request | Deadline | Waited for HTTP response at 30 s, unlike request observation | Request-record observation synchronizes at default 2 s | composer:65–68 |
-| Composer reply context/preview | Deadline/text | 30 s text waits | Visible context and preview text, 10 s | composer:291,294 |
-| Autocomplete blur delivery | Deadline/text | Body assertion 2 s, 30 s element waits | Default 2 s fields/suggestions; delivered text explicit 10 s | composer:25 |
-| Loaded reply target | Deadline | 30 s | Explicit visible target 10 s | composer:133 |
-| Deleted reply target/tombstone | Negative/deadline/text | DOM detach and 30 s text | Visible absence and tombstone text at 10 s; link absence default 2 s | composer:170,173–174 |
-| Saved room draft delivery | Deadline | 2 s added sender body wait | Original delivered text wait 10 s | composer:237 |
-| Thread draft pane/body | Deadline/text | 30 s | Create/conversation/body explicit 10 s, draft fields 2 s | composer:251,255,269,274,281 |
-| Boost delete button | Deadline | Raw click, no explicit wait-5 assertion | Visible button wait 5 s, visible lookup/click 2 s | boosting_messages:26–27 |
-| Boost removal | Negative/text | Required DOM detach of selected boost | Retry visible boost/text absence 2 s | boosting_messages:30 |
-| Message-list initial focus/tab stop | Deadline | 30 s | Both explicit 10 s | message_list_a11y:10,14 |
-| Stream/direct replacement | Deadline | 30 s | Stream 10 s; direct swap default 2 s | message_list_a11y:78,90,112 |
-| Deleted message and neighbor focus | Negative/deadline | DOM detach 30 s and inherited focus wait | Visible absence 2 s, neighbor focus 10 s | message_list_a11y:127–128,142–143 |
-| Message-list edit/error contexts | Deadline/text | 30 s text wait | Visible text at explicit 10 s | message_list_a11y:238,255,387 |
-| Forward dialog after metadata gate | Deadline | 30 s | Explicit 10 s | message_list_a11y:272 |
-| Pending-action owner | Deadline | Instant raw owner attribute | Visible owner + expected attribute within 2 s | message_list_a11y:293 |
-| Cached-page expanded attribute | Deadline/all scope | Instant raw attribute | Retry CSS attribute selector 2 s, including hidden rows | message_list_a11y:307, visible: false |
-| History text/live-region return | Negative/deadline/text | 30 s text/function waits | Visible inserted text 10 s; region not busy restoration 10 s | message_list_a11y:353–354 |
-| Live edit/own body and region | Negative/deadline/text | 30 s text/region waits | Visible delivered text and restoration at 10 s | message_list_a11y:391–392,411–412 |
-| Standalone/search menu owner | Deadline | Instant raw attribute | Visible owner attribute query 2 s | system_test_helper:134 |
-| Reduced-motion flash enter/leave | Negative/deadline | 30 s waits | Enter 10 s; automatic leave 10 s; manual dismiss leave 2 s | message_list_a11y:577,589,602,604 |
-| Empty/search first-page results | Deadline/text | 30 s | No-matches/area/count-40 explicit 10 s; count-42 and negative visible text default 2 s | search_forward_edit:25,29,32–33,36 |
-| Forward dialog/status/table | Deadline/text | 30 s | Explicit 10 s; visible text; Ruby code default 2 s | search_forward_edit:50–51,56,59–60 |
-| Unread divider/pill text | Text/deadline | Raw textContent + inherited 30 s | Selected node visible text; initial divider 5 s, jump landing default 2 s | unread_divider:19,35,61,70–71,94,107 |
-| Jump pill hiding / room unread | Negative/deadline | 30 s | Retry visible absence/unread state 5 s | unread_divider:64,70,104; system_test_helper:123 |
-| Shared assertion defaults | Deadline | Only 30 reviewed files had 2 s; other positives 30 s and negatives 3 s | Every file uses Capybara default 2 s identically in positive/negative modes; navigation 30 s and readiness/Cable 15 s stay separate | Capybara 3.40.0 default_max_wait_time=2; application_system_test_case:23–25,37,48; system_test_helper:71–78 |
-| Zero-wait snapshot helper | Deadline | timeout=0 could poll indefinitely | One observation succeeds/fails immediately; helper regression covers it | Capybara Node::Base#synchronize; explicit setup all-node wait:0 at system_test_helper:73–74 |
+Raw inventory lines from `fresh-manifest-final.log`:
 
-### Audited exceptions retained
+```text
+WS8bm manifests: 15 Cargo manifests parsed; no duplicate workspace dependency keys
+```
 
-- `page.keyboard`/mouse/CDP actions and `evaluate`/`dispatchEvent` are the original scripted/browser-level actions. They do not invent an element find. Scripted focus remains scripted in attach-menu and the message-list cases; only original visible `find` calls receive visible lookup.
-- Code literal byte comparisons remain raw `textContent` where code_highlighting:39 explicitly uses `evaluate_script("this.textContent")`; code visibility and visible selector-text assertions are separate. Clipboard results, persisted rows and JavaScript/geometry observations remain literal/raw.
-- Field/link values remain property/attribute queries on the same atom-visible node. The viewport meta, cached-page attributes, hidden composer context, thread controller-attribute and all-node security queries preserve explicit hidden/all semantics. The three permitted served CSS variants remain outside negative scheduling.
-- Every negated selector/text query retries while forbidden visible matches remain, for the original wait. It may return immediately once absence is observed, as Capybara Node::Base#synchronize does; it does not wait a fixed minimum or claim future absence.
-- Release-click stays deferred. Its hit-test and 700 ms hold are unchanged. Duplicate delivery still injects Turbo markup in the browser; it does not verify server-originated message.broadcast_create.
+Raw inventory lines from `fresh-agents-ui-seed.log`:
 
-## Stable integration contract
+```text
+seed: building agents_ui
+seed: agents_ui -> parity/.seed/agents_ui (6.1M)
+```
 
-The shell seam in [ws8bm-integration.md](ws8bm-integration.md) is unchanged: `Presenter::messages(&records)`, `messages::Index { ctx, messages }`, and `Presenter::room_message_list(&records, divider.message_id, divider.count)`. The shell passes verified request origin/viewer/assets/signer/CSRF context, selected records and divider facts. The composer receives room kind/name/ID, ordered commands, Drive flow, thread scope, the real scheduled-message child and request-owned PendingTemplate. Mount list/template boundaries verbatim. Real WS15g GitHub rendering and merged WS14e/M2 children remain in use. There is no new cross-owner production touch.
+Raw inventory lines from `fresh-media-runtime.log`:
 
-## Exact remaining work
+```text
+ws8bm pinned media runtime: image triage-reference-d7c7de92; libvips, FFmpeg tools and libraries extracted; no host libraries changed
+LD_LIBRARY_PATH=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-next/fresh/.scratch/rails-media/native-libs
+PATH=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-next/fresh/.scratch/rails-media/usr/bin:$PATH
+```
 
-### Remaining WS8bm behaviour (27)
+Raw inventory lines from `fresh-media-versions.log`:
 
-`test/system/message_interactions_test.rb`
+```text
+WS8bm media versions: libvips 8.16.1; ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers; exact storage-vector runtime; CI byte gate enabled
+```
 
-- a release click landing on the just-opened menu does not activate it — known metadata/hit-test reliability failure; successful mapped attempts do not remove its deferral; the original assertion, 700 ms hold and deadlines remain unchanged, with no new declaration credit
+Raw inventory lines from `host-media-versions.log`:
 
-`test/system/code_highlighting_test.rb`
+```text
+WS8bm host media: libvips 8.18.6; ffmpeg version n9.0.2 Copyright (c) 2000-2026 the FFmpeg developers
+```
 
-- thread code stays readable in both themes and scrolls within a narrow screen
+Raw inventory lines from `fresh-workspace-totals.log`:
 
-`test/system/threads_test.rb`
+```text
+WS8bm fresh workspace totals: 4576 passed; 0 failed; 15 ignored; 49 test targets; eight test threads; CI media byte gate enabled
+```
 
-- keeps the thread drawer usable on a phone and preserves the channel
-- marks a joined thread read only while the conversation is visible
-- opens a shared thread message link around an older post
-- keeps an anchored older thread unread when a new reply arrives
-- discusses a pull request from its card
+Raw inventory lines from `fresh-target-cleanup.log`:
 
-`test/system/workspace_markdown_test.rb`
+```text
+     Removed 27003 files, 33.7GiB total
+```
 
-- Markdown replies and file attachments remain usable
-- workspace follows the system theme and mobile navigation remains reachable
 
-`test/system/composer_attach_menu_test.rb`
+The fresh Rails direct-model producer is rerun with the pinned image, frozen seed instant and actual callbacks; `cmp` confirms the regenerated vector bytes, and SHA256 confirms its model is the pin. Cargo metadata --locked succeeds and all 15 manifests parse with no duplicate workspace dependency keys. The model mutator restores its source in finally; tracked source equality is checked before commit. The only owned scratch Cargo target, `.scratch/ws8bm-next/fresh/rust/target` (29G measured with du), was removed using cargo clean after its executables/compilers and browser servers exited; no scratch target remains in this worktree; failure logs and source clone remain as evidence. The Python model server is untouched.
 
-- From Google Drive starts the legacy picker flow
-- From Google Drive starts the enhanced share flow when sharing is configured
-
-`test/system/drive_attachments_test.rb`
-
-- attach Drive files from the picker, send textless, and remove through edit
-- edit a room message in the composer and remove one of two attachments
-- attach a Drive file from the thread composer
-
-`test/system/motion_test.rb`
-
-- motion is off by default in the test environment
-- mobile drawer animates in, lands in place, and returns focus with motion on
-- member selection mode moves no rows and resizes nothing
-- people directory bar shifts no rows when toggling
-- people directory bar stays stuck while scrolling
-- room menu measures at full scale when clamping to the viewport edge
-- mobile drawer keeps the room list scroll position across close and reopen
-- mobile drawer reveals a current room far down the list on first open
-- mobile drawer reopens on the current room when it is already in view
-
-`test/system/mobile_layout_test.rb`
-
-- the profile page fits phone widths without scrolling sideways
-- headers outside the workspace shell stay opaque over scrolled content
-- headers outside the workspace shell never cover the page or its scrollbar
-- pages outside the workspace shell show no drawer toggle that opens nothing
-
-### Owner-blocked system declarations (6)
-
-`test/system/threads_test.rb`
-
-- tracks work, assigns an owner, completes and reopens it without losing the conversation
-- shows work-thread guidance in the new-thread form and on the work page
-- keeps the new-thread guidance usable on a phone
-- shows work assignment activity to the owner and opens the exact thread
-
-`test/system/message_list_a11y_test.rb`
-
-- text fields stay at 16px on touch devices without changing the desktop look
-
-`test/system/mobile_layout_test.rb`
-
-- every drawer destination has one toggle that opens the drawer on itself
-
-### Owner-blocked controller declarations (10)
-
-All are in `test/controllers/channel_threads_controller_test.rb`, awaiting WS12 board/work writes and agent work services.
-
-- converts a thread to work, assigns an eligible owner, and keeps an audit trail
-- work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable
-- assigned owner can change work status but cannot reassign it
-- only a thread manager can remove work tracking
-- the work model also protects conversion when the owner field is omitted
-- work status updates from separate stale instances produce one event per real change
-- a manager can assign an eligible agent and the agent is notified
-- the owner picker lists eligible agents with profiles and excludes ineligible ones
-- a member who cannot manage the thread cannot assign an agent
-- ordinary thread fields remain separate from work tracking
+Exact remaining scope: nine motion declarations, five Drive picker/share/edit declarations, the full workspace theme/mobile-navigation declaration, the metadata-sensitive release-click declaration and the multipart reply attachment preview declaration, all individually named above. No controller declaration or system declaration is owner-blocked. No PR #189 changes are included as a new review-fix task.
