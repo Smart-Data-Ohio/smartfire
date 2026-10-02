@@ -1,0 +1,195 @@
+{
+  "reference": "d7c7de92",
+  "message_id": 136976342,
+  "steps": [
+    {
+      "name": "save reminder",
+      "method": "post",
+      "path": "/saved.json",
+      "params": {
+        "message_id": 136976342,
+        "saved_item": {
+          "remind_at": "2026-03-02T16:01:00Z"
+        }
+      },
+      "accept": "application/json",
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":136976342,\"status\":\"in_progress\",\"remind_at\":\"2026-03-02T16:01:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "dispatch first reminder",
+      "operation": "dispatch",
+      "advance": 60,
+      "saved_id": 3,
+      "item_id": 7
+    },
+    {
+      "name": "first reminder inbox",
+      "method": "get",
+      "path": "/activity.json?type=reminders",
+      "params": {},
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[{\"id\":7,\"event_type\":\"message_reminder\",\"state\":\"unread\",\"read_at\":null,\"handled_at\":null,\"created_at\":\"2026-03-02T16:01:00.000Z\",\"source\":{\"type\":\"SavedItem\",\"id\":3,\"room_id\":486777696,\"thread_id\":null,\"creator_id\":773523953,\"body\":\"You asked to be reminded about this message: When we are not sure, we are alive.\",\"path\":\"/rooms/486777696/@136976342\"}}],\"filter\":\"unread\",\"type_filter\":\"reminders\",\"unread_count\":1,\"next_cursor\":null}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "handle reminder",
+      "method": "patch",
+      "path": "/activity/7/handled.json",
+      "params": {},
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"id\":7,\"event_type\":\"message_reminder\",\"state\":\"handled\",\"read_at\":\"2026-03-02T16:01:00.000Z\",\"handled_at\":\"2026-03-02T16:01:00.000Z\",\"created_at\":\"2026-03-02T16:01:00.000Z\",\"source\":{\"type\":\"SavedItem\",\"id\":3,\"room_id\":486777696,\"thread_id\":null,\"creator_id\":773523953,\"body\":\"You asked to be reminded about this message: When we are not sure, we are alive.\",\"path\":\"/rooms/486777696/@136976342\"}}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "handled count",
+      "method": "get",
+      "path": "/activity/unread_count.json",
+      "params": {},
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"unread_count\":0}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "rearm reminder",
+      "method": "post",
+      "path": "/saved.json",
+      "params": {
+        "message_id": 136976342,
+        "saved_item": {
+          "remind_at": "2026-03-02T16:02:00Z"
+        }
+      },
+      "accept": "application/json",
+      "status": 201,
+      "body": "{\"id\":3,\"message_id\":136976342,\"status\":\"in_progress\",\"remind_at\":\"2026-03-02T16:02:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "dispatch recurrent reminder",
+      "operation": "dispatch",
+      "advance": 60,
+      "saved_id": 3,
+      "item_id": 7
+    },
+    {
+      "name": "recurrent reminder inbox",
+      "method": "get",
+      "path": "/activity.json?type=reminders",
+      "params": {},
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[{\"id\":7,\"event_type\":\"message_reminder\",\"state\":\"unread\",\"read_at\":null,\"handled_at\":null,\"created_at\":\"2026-03-02T16:01:00.000Z\",\"source\":{\"type\":\"SavedItem\",\"id\":3,\"room_id\":486777696,\"thread_id\":null,\"creator_id\":773523953,\"body\":\"You asked to be reminded about this message: When we are not sure, we are alive.\",\"path\":\"/rooms/486777696/@136976342\"}}],\"filter\":\"unread\",\"type_filter\":\"reminders\",\"unread_count\":1,\"next_cursor\":null}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "recurrent reminder count",
+      "method": "get",
+      "path": "/activity/unread_count.json",
+      "params": {},
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"unread_count\":1}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "delete source",
+      "method": "delete",
+      "path": "/rooms/486777696/messages/136976342",
+      "params": {},
+      "accept": "text/vnd.turbo-stream.html",
+      "status": 200,
+      "body": "<turbo-stream action=\"remove\" target=\"message_0013\"></turbo-stream>\n",
+      "headers": {
+        "content-type": "text/vnd.turbo-stream.html; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
+        "pragma": null,
+        "location": null
+      }
+    },
+    {
+      "name": "deleted source inbox",
+      "method": "get",
+      "path": "/activity.json?type=reminders",
+      "params": {},
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"activity_items\":[],\"filter\":\"unread\",\"type_filter\":\"reminders\",\"unread_count\":0,\"next_cursor\":null}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "deleted source count",
+      "method": "get",
+      "path": "/activity/unread_count.json",
+      "params": {},
+      "accept": "application/json",
+      "status": 200,
+      "body": "{\"unread_count\":0}",
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "location": null
+      }
+    },
+    {
+      "name": "deleted source open",
+      "method": "post",
+      "path": "/activity/7/open.json",
+      "params": {},
+      "accept": "application/json",
+      "status": 404,
+      "body": "{\"status\":404,\"error\":\"Not Found\"}",
+      "headers": {
+        "content-type": "application/json; charset=UTF-8",
+        "cache-control": null,
+        "pragma": null,
+        "location": null
+      }
+    }
+  ]
+}
