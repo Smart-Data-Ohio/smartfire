@@ -1,6 +1,6 @@
 //! PR #195: signed identity selection and enrollment failure against pinned Rails.
 use super::*;
-use campfire_db::{GoogleIdentity, NewUser, Role};
+use campfire_db::{google_identity::GoogleIdentity, NewUser, Role};
 
 fn oracle() -> Value {
     serde_json::from_str::<Value>(ORACLE).unwrap()["review"].clone()
