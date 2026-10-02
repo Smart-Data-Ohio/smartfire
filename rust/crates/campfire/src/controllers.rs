@@ -38,7 +38,9 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
+pub mod activity_items;
 pub mod agents;
+pub mod agent_approvals;
 pub mod autocompletable;
 pub mod channel_thread_messages;
 pub mod channel_threads;
@@ -249,8 +251,6 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "github/connections#destroy" => arc(github::connections::destroy),
         "github/app_connections#connect" => arc(github::connections::connect),
         "github/app_connections#callback" => arc(github::connections::callback),
-        "accounts/bots/github_connections#create" => arc(github::connections::bot_create),
-        "accounts/bots/github_connections#destroy" => arc(github::connections::bot_destroy),
         "github/webhooks#create" => arc(github::webhooks::create),
         "rooms/github/pull_request_cards#show" => arc(github::cards::show),
         "rooms/github_subscriptions#create" => arc(github::subscriptions::create),
@@ -278,12 +278,31 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/users#update" => arc(accounts::users::update),
         "accounts/users#destroy" => arc(accounts::users::destroy),
         "accounts/bots/keys#update" => arc(accounts::bots::keys::update),
+        "accounts/bots/webhook_secrets#create" => arc(accounts::bots::webhook_secrets::create),
+        "agents/directory#index" => arc(agents::directory::index),
+        "agent_approvals#update" => arc(agent_approvals::update),
+        "agents/approvals#for_agent" => arc(agents::history::approvals),
+        "agents/events#ledger" => arc(agents::history::ledger),
+        "accounts/bots/credentials#index" => arc(accounts::bots::credentials::index),
+        "accounts/bots/credentials#create" => arc(accounts::bots::credentials::create),
+        "accounts/bots/credentials#destroy" => arc(accounts::bots::credentials::destroy),
+        "accounts/bots/github_connections#create" => arc(accounts::bots::github_connections::create),
+        "accounts/bots/github_connections#destroy" => arc(accounts::bots::github_connections::destroy),
+        "accounts/bots/grants#index" => arc(accounts::bots::grants::index),
+        "accounts/bots/grants#create" => arc(accounts::bots::grants::create),
+        "accounts/bots/grants#destroy" => arc(accounts::bots::grants::destroy),
+        "activity_items#index" => arc(activity_items::index),
+        "activity_items#unread_count" => arc(activity_items::unread_count),
+        "activity_items#read" => arc(activity_items::read),
+        "activity_items#handled" => arc(activity_items::handled),
+        "activity_items#open" => arc(activity_items::open),
         "accounts/bots#index" => arc(accounts::bots::index),
         "accounts/bots#create" => arc(accounts::bots::create),
         "accounts/bots#new" => arc(accounts::bots::new),
         "accounts/bots#edit" => arc(accounts::bots::edit),
         "accounts/bots#update" => arc(accounts::bots::update),
         "accounts/bots#destroy" => arc(accounts::bots::destroy),
+        "accounts/bots#kill_switch" => arc(accounts::bots::kill_switch),
         "accounts/join_codes#create" => arc(accounts::join_codes::create),
         "accounts/icons#index" => arc(accounts::icons::index),
         "accounts/icons#create" => arc(accounts::icons::create),

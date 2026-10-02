@@ -116,12 +116,8 @@ pub async fn create(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     unlink(c, false).await
 }
-pub async fn bot_create(c: &mut Ctx) -> Result {
-    link_pat(c, true).await
-}
-pub async fn bot_destroy(c: &mut Ctx) -> Result {
-    unlink(c, true).await
-}
+// WS11-UI owns bot writes, including the pinned after-commit audit boundary.
+// Those routes call accounts::bots::github_connections; human routes use this service.
 async fn app_before(c: &mut Ctx) -> Result<()> {
     concerns::before_actions(c, Before::default()).await?;
     if !c.app().github_app.configured() {

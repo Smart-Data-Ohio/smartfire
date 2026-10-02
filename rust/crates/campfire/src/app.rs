@@ -107,7 +107,7 @@ pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscr
 /// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
 /// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
 pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
-    let network = crate::integrations::net::Network::system();
+    let network = subscription_network.clone();
     let github_app = crate::integrations::github::client::AppClient::with_network(
         std::env::var("GITHUB_APP_CLIENT_ID").ok(),
         std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
@@ -211,13 +211,10 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
     let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
-        db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app.clone(), github_network,
+        db.clone(), ar_encryption.clone(), github_app.clone(), github_network,
     );
     let google = crate::integrations::google::State::from_config(&config);
-    let agent_repositories = crate::integrations::agent_repositories::State::live(
-        db.clone(), ar_encryption.clone(),
-    );
-    agent_repositories.install(Arc::new(github_accounts.clone()));
+    let agent_repositories = crate::integrations::agent_repositories::State::live(github_accounts.clone());
     let app = Arc::new(AppState {
         config,
         secrets,

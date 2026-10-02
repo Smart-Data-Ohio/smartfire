@@ -1,0 +1,55 @@
+//! Read projection for `Rooms::MembersController`. Agent behavior remains in WS11;
+//! human status/presence and viewer-qualified stars use their owner APIs.
+use rusqlite::Connection;
+
+use super::{
+    user_status_settings::UserStatusSettings,
+    workspace_presence_lease::{Presence, WorkspacePresenceLease},
+};
+use crate::sql::query_all;
+use crate::{Agent, Result, Timestamp, User};
+
+pub struct Member {
+    pub user: User,
+    pub agent: Option<Agent>,
+    pub settings: UserStatusSettings,
+    pub lease: Presence,
+    pub starred: bool,
+}
+
+pub fn for_room(conn: &Connection, room: i64, viewer: i64, now: Timestamp) -> Result<Vec<Member>> {
+    let users = query_all(
+        conn,
+        "SELECT users.* FROM users JOIN memberships ON memberships.user_id=users.id WHERE memberships.room_id=? AND users.status=0 ORDER BY LOWER(users.name),users.id",
+        [room],
+        User::from_row,
+    )?;
+    let ids: Vec<_> = users.iter().map(|user| user.id).collect();
+    let mut settings = UserStatusSettings::for_ids(conn, &ids)?;
+    let leases = WorkspacePresenceLease::presence_by_user_id(conn, &ids, now)?;
+    let stars = User::find(conn, viewer)?.starred_ids_among(conn, &ids)?;
+    let bot_ids: Vec<_> = users
+        .iter()
+        .filter(|user| user.is_bot())
+        .map(|user| user.id)
+        .collect();
+    let mut agents: std::collections::HashMap<_, _> = Agent::for_users(conn, &bot_ids)?
+        .into_iter()
+        .map(|agent| (agent.user_id, agent))
+        .collect();
+    users
+        .into_iter()
+        .map(|user| {
+            let agent = agents.remove(&user.id);
+            Ok(Member {
+                settings: settings
+                    .remove(&user.id)
+                    .ok_or(crate::Error::RecordNotFound("User"))?,
+                lease: leases.get(&user.id).copied().unwrap_or(Presence::Offline),
+                starred: stars.contains(&user.id),
+                agent,
+                user,
+            })
+        })
+        .collect()
+}

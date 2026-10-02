@@ -1,5 +1,8 @@
 <h1 class="for-screen-reader">Chat Bot Setup</h1>
-<label class="align-center center avatar__form gap" data-controller="upload-preview">
+{% if let Some(errors) = bot.errors %}  <div class="txt-small" style="color: var(--color-negative)">
+    {{ errors }}
+  </div>
+{% endif %}<label class="align-center center avatar__form gap" data-controller="upload-preview">
   <div class="btn input--file">
     {{ h::image_tag(ctx, "camera.svg", h::attrs().aria_hidden().size(20)) }}
     {{ form.file_field("avatar", h::attrs().class("input").accept("image/*").data("upload_preview_target", "input").data("action", "upload-preview#previewImage")) }}
@@ -10,6 +13,8 @@
     {{ h::image_tag(ctx, bot.avatar_attachment_url.as_deref().unwrap_or("default-bot-avatar.svg"), h::attrs().alt("Bot avatar").size(48).data("upload_preview_target", "image")) }}
   </div>
 </label>
+
+{{ bot.icon_field(ctx, &form)? }}
 
 <div class="flex align-center gap">
   {{ h::translation_button(ctx, "bot_name") }}
@@ -22,10 +27,52 @@
 <div class="flex align-center gap">
   {{ h::translation_button(ctx, "webhook_url") }}
   <label class="flex align-center gap flex-item-grow txt-large input input--actor">
-    {{ form.url_field("webhook_url", bot.webhook_url.as_deref(), h::attrs().class("input").placeholder("Webhook URL")) }}
+    {{ form.url_field("webhook_url", bot.webhook_url.as_deref(), bot.webhook_options(ctx)) }}
     {{ h::image_tag(ctx, "web.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
   </label>
 </div>
 
+{% if let Some(agent) = bot.agent %}{{ "  \n" }}{% let agent_fields = h::form_with("").model("agent").errors(&agent.error_fields) %}{% if let Some(errors) = agent.errors %}      <div class="txt-small" style="color: var(--color-negative)">
+        {{ errors }}
+      </div>
+{% endif %}
+    <div class="flex align-center gap">
+      <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+        {{ agent_fields.text_field("provider", agent.provider.as_deref(), h::attrs().class("input").placeholder("Provider (e.g. OpenAI)").autocomplete("off").data("1p-ignore", true)) }}
+        {{ h::image_tag(ctx, "bot.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
+      </label>
+    </div>
+
+    <div class="flex align-center gap">
+      <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+        {{ agent_fields.text_field("runtime", agent.runtime.as_deref(), h::attrs().class("input").placeholder("Runtime (e.g. Codex CLI 0.9)").autocomplete("off").data("1p-ignore", true)) }}
+        {{ h::image_tag(ctx, "laptop.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
+      </label>
+    </div>
+
+    <div class="flex align-center gap">
+      <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+        {{ agent_fields.text_area("description", agent.description.as_deref(), h::attrs().class("input").placeholder("What this agent does (max 500 characters)").attr("rows", 3).attr("maxlength", 500)) }}
+      </label>
+    </div>
+
+    <fieldset>
+      <legend class="txt-small">Daily budgets (blank means unlimited)</legend>
+      <div class="flex align-center gap">
+        <label class="flex-item-grow">
+          <span class="txt-small">Messages per day</span>
+          {{ agent_fields.number_field("daily_message_cap", agent.cap_value("messages").as_deref(), h::attrs().class("input").attr("min", 1).attr("step", 1).placeholder("Unlimited")) }}
+        </label>
+        <label class="flex-item-grow">
+          <span class="txt-small">Board posts per day</span>
+          {{ agent_fields.number_field("daily_board_post_cap", agent.cap_value("board_posts").as_deref(), h::attrs().class("input").attr("min", 1).attr("step", 1).placeholder("Unlimited")) }}
+        </label>
+        <label class="flex-item-grow">
+          <span class="txt-small">External actions per day</span>
+          {{ agent_fields.number_field("daily_external_action_cap", agent.cap_value("external_actions").as_deref(), h::attrs().class("input").attr("min", 1).attr("step", 1).placeholder("Unlimited")) }}
+        </label>
+      </div>
+    </fieldset>
+{% endif %}
 {{ h::profile_form_submit_button(ctx) }}
 

@@ -5,6 +5,9 @@ use campfire_kit::{Ctx, Param, Result, StatusCode, format, halt};
 use serde_json::{Value, json};
 
 use super::presenters::page::db_error;
+// Reviewed human agent pages alongside the REST/MCP service adapters.
+pub mod directory;
+pub mod history;
 pub mod mcp;
 pub mod approvals;
 pub mod pending;

@@ -4,6 +4,11 @@ use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext, helpers
 use serde_json::Value;
 
 mod review;
+mod bots_ui;
+mod bot_access_ui;
+mod agents_ui;
+mod agent_history_ui;
+mod member_panel;
 #[path = "../../../test-support/asset_goldens.rs"]
 mod asset_goldens;
 

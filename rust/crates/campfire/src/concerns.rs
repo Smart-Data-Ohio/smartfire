@@ -132,6 +132,8 @@ pub struct Before {
 pub enum Authentication {
     /// `require_authentication`
     Required,
+    /// MembersController overrides request_authentication with an empty JSON 401.
+    JsonUnauthorized,
     /// `allow_unauthenticated_access`: skip `require_authentication`.
     Skipped,
     /// `require_unauthenticated_access`: skip `require_authentication`, then (after the rest of
@@ -196,6 +198,14 @@ pub async fn before_actions(c: &mut Ctx, before: Before) -> Result<()> {
     reject_banned_ip(c).await?;
     if before.authentication == Authentication::Required {
         require_authentication(c).await?;
+    }
+    if before.authentication == Authentication::JsonUnauthorized
+        && !(restore_authentication(c).await? || bot_authentication(c).await? || agent_authentication(c).await?)
+    {
+        if c.format()?.is_some_and(|format| format.is("json")) {
+            return halt(head(StatusCode::UNAUTHORIZED));
+        }
+        request_authentication(c).await?;
     }
     if before.deny_bots {
         deny_bots(c)?;

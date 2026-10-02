@@ -20,8 +20,8 @@ pub mod slack;
 pub mod twitter;
 pub mod image_proxy;
 mod jobs;
-mod agent_jobs;
 pub mod agent_repositories;
+mod agent_jobs;
 mod agent_streaming;
 pub mod action_claims;
 // WS15g installs the GitHub account, fetcher, notifier and approved-action consumers.

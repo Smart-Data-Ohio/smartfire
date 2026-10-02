@@ -217,7 +217,9 @@ pub fn usage(conn: &Connection, agent_id: i64, now: Timestamp) -> Result<Value> 
     }))
 }
 
-fn cap_usage(
+// FLAGGED WS11 UI visibility seam: Rails page usage uses the viewer's Time.zone.
+// Keep the owner counter callable with that window until usage accepts a request zone.
+pub fn cap_usage(
     conn: &Connection,
     agent_id: i64,
     user_id: i64,
