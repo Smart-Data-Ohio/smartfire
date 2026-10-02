@@ -1,0 +1,83 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U003",
+      "text": "Second page here, with a date <!date^1700000020^{date_short}|Nov 14, 2023> and <!channel>.",
+      "ts": "1700000011.000011"
+    },
+    {
+      "type": "message",
+      "user": "U001",
+      "text": "<!here> standup in <#CPRIV|secret> with <!subteam^S123|@engs>. See <mailto:team@example.com|email us> or <mailto:team@example.com>.\n• first item\n_italic_ and ~struck~ but `code *stays*` and:\n```\n*block* _stays_\n```",
+      "ts": "1700000010.000010"
+    },
+    {
+      "type": "message",
+      "user": "U002",
+      "text": "Remember this decision",
+      "ts": "1700000009.000009",
+      "pinned_to": ["CCHAN"]
+    },
+    {
+      "type": "message",
+      "subtype": "channel_topic",
+      "user": "UADMIN",
+      "text": "<@UADMIN|ada> set the channel topic",
+      "ts": "1700000008.000012",
+      "topic": "new topic"
+    },
+    {
+      "type": "message",
+      "subtype": "pinned_item",
+      "user": "UADMIN",
+      "text": "<@UADMIN|ada> pinned a message",
+      "ts": "1700000008.000011"
+    },
+    {
+      "type": "message",
+      "subtype": "huddle_thread",
+      "user": "U001",
+      "text": "A huddle happened",
+      "ts": "1700000008.000010"
+    },
+    {
+      "type": "message",
+      "subtype": "tombstone",
+      "text": "This message was deleted",
+      "ts": "1700000008.000009"
+    },
+    {
+      "type": "message",
+      "subtype": "message_deleted",
+      "text": "",
+      "ts": "1700000008.000008",
+      "deleted_ts": "1700000000.000000"
+    },
+    {
+      "type": "message",
+      "subtype": "me_message",
+      "user": "U001",
+      "text": "waves hello",
+      "ts": "1700000007.000007"
+    },
+    {
+      "type": "message",
+      "user": "U002",
+      "text": "Here is the plan (edited)",
+      "ts": "1700000006.000006",
+      "edited": { "user": "U002", "ts": "1700000007.000000" },
+      "files": [
+        {
+          "id": "F123",
+          "name": "spec.pdf",
+          "title": "spec.pdf",
+          "permalink": "https://smartdata.slack.com/files/U002/F123/spec.pdf"
+        }
+      ]
+    }
+  ],
+  "has_more": true,
+  "response_metadata": { "next_cursor": "cchan-page-2" }
+}

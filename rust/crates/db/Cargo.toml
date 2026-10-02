@@ -8,6 +8,7 @@ publish.workspace = true
 [dependencies]
 campfire_richtext.workspace = true
 rails_compat.workspace = true
+campfire_storage.workspace = true
 rusqlite.workspace = true
 jiff.workspace = true
 serde.workspace = true
@@ -30,7 +31,7 @@ caseless.workspace = true
 
 [features]
 # `campfire_db::fixtures`: the reference's test fixtures, loaded into a database for tests.
-test-support = ["dep:serde_yaml"]
+test-support = ["dep:serde_yaml", "rusqlite/trace"]
 
 [dev-dependencies]
 rusqlite = { workspace = true, features = ["trace"] }

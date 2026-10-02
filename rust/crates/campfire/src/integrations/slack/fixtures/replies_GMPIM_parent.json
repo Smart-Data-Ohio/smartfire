@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U002",
+      "text": "Group thread parent",
+      "ts": "1700000050.000050",
+      "reply_count": 1,
+      "replies": [{ "user": "U001", "ts": "1700000150.000150" }]
+    },
+    {
+      "type": "message",
+      "user": "U001",
+      "text": "Flattened group reply",
+      "ts": "1700000150.000150",
+      "thread_ts": "1700000050.000050",
+      "parent_user_id": "U002"
+    }
+  ],
+  "has_more": false,
+  "response_metadata": { "next_cursor": "" }
+}

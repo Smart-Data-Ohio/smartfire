@@ -147,3 +147,13 @@ pub struct Composer<'a> {
     /// WS8bm2 mounts its pinned schedule control in this owner-provided slot.
     pub scheduled_control: &'a h::Html,
 }
+
+/// The same composer captured by Rails's `content_for :footer` instead of `inline: true`.
+/// This is an additive shell slot; the existing pane/inline entry point is unchanged.
+#[derive(Template)]
+#[template(path = "messages/_footer_composer.html")]
+pub struct FooterComposer<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub facts: &'a Facts,
+    pub scheduled_control: &'a h::Html,
+}

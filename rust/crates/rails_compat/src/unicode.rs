@@ -51,3 +51,31 @@ pub fn alphabetic(c: char) -> bool {
     let index = ranges.partition_point(|row| row.0 <= point);
     index > 0 && point <= ranges[index - 1].1
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unicode_parity_helpers_match_recorded_ruby_casing() {
+        let oracle: serde_json::Value =
+            serde_json::from_str(include_str!("../../../vectors/unicode_casing_parity.json"))
+                .unwrap();
+        for case in oracle["casing"].as_array().unwrap() {
+            let input = case["input"].as_str().unwrap();
+            assert_eq!(
+                downcase(input),
+                case["downcase"].as_str().unwrap(),
+                "{case}"
+            );
+            assert_eq!(fold(input), case["fold"].as_str().unwrap(), "{case}");
+        }
+        for case in oracle["comparisons"].as_array().unwrap() {
+            assert_eq!(
+                fold(case["left"].as_str().unwrap()) == fold(case["right"].as_str().unwrap()),
+                case["equal"].as_bool().unwrap(),
+                "{case}"
+            );
+        }
+    }
+}

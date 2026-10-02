@@ -96,7 +96,7 @@ impl Preloads {
     }
     pub fn plain_text(&self, p: &Presenter<'_>, m: &Message) -> Result<String> {
         let resolver = p.resolver();
-        let ctx = resolver.render_context(None);
+        let ctx = resolver.render_context(p.request_host.clone());
         let mut text = if let Some(body) = self.records.bodies.get(&m.id).and_then(Option::as_deref)
         {
             if m.markdown() {
@@ -112,7 +112,7 @@ impl Preloads {
             text = self
                 .attachments
                 .get(&m.id)
-                .map(|b| b.filename.raw().to_owned())
+                .map(|b| b.filename.to_string())
                 .unwrap_or_default();
         }
         Ok(
@@ -234,7 +234,7 @@ impl Preloads {
 }
 // Stored ActionText nodes are canonicalized, but also scan Trix JSON and nested content.
 // Decoding is the established, User-only unverified-SGID fallback, never Marshal loading.
-fn mention_ids(body: &str, depth: usize) -> Vec<i64> {
+pub(crate) fn mention_ids(body: &str, depth: usize) -> Vec<i64> {
     if depth > 32 {
         return vec![];
     }

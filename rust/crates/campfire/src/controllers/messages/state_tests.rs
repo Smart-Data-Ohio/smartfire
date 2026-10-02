@@ -31,6 +31,13 @@ pub(crate) fn create_state(tx: &mut Tx<'_>, row: &Value) -> campfire_db::Result<
         forward_note: text("forward_note"), reply_to_message_id: input["reply_to_message_id"].as_i64(), attachment_blob_id: input["attachment_blob_id"].as_i64(),
         drive_file_ids: input["drive_file_ids"].as_array().map(|ids| ids.iter().map(|id| id.as_str().unwrap().to_owned()).collect()).unwrap_or_default(), ..Default::default() })?;
     assert_eq!(message.id, row["id"].as_i64().unwrap());
+    if let Some(edited) = input["edited_at"].as_str() {
+        let at=campfire_db::Timestamp::from_jiff(edited.parse().unwrap());
+        tx.conn().execute("UPDATE messages SET edited_at=? WHERE id=?", (at,message.id))?;
+    }
+    for boost in input["boosts"].as_array().into_iter().flatten() {
+        campfire_db::Boost::create(tx,message.id,boost[0].as_i64().unwrap(),boost[1].as_str().unwrap())?;
+    }
     match name {
         "deleted_reply" => Message::find(tx.conn(), oracle()["source_id"].as_i64().unwrap())?.destroy(tx)?,
         "steps" => {

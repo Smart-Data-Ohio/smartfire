@@ -5,6 +5,7 @@ use crate::models::agent_delivery::{NewEvent, create_delivered, enqueue_delivere
 use crate::models::agent_payloads::{compact, json_time};
 use crate::sql::{exists, query_all, query_one};
 use crate::{ActivityItem, Connection, Errors, Event, Job, Result, Timestamp, Tx, User};
+use rails_compat::unicode;
 use rusqlite::{Row, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -404,7 +405,7 @@ impl AgentApproval {
     pub fn github_identity_matches(&self, id: i64, login: &str) -> bool {
         self.github_account_id == Some(id)
             && self.github_login.as_deref().is_some_and(|s| {
-                !campfire_richtext::ruby::is_blank(s) && s.to_lowercase() == login.to_lowercase()
+                !campfire_richtext::ruby::is_blank(s) && unicode::fold(s) == unicode::fold(login)
             })
     }
     pub fn fizzy_identity_matches(&self, id: i64, user_id: &str) -> bool {

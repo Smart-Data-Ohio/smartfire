@@ -5,6 +5,7 @@ use super::{
     webhooks::{dig, get, integer_for_query, truthy},
 };
 use campfire_db::{ActivityItem, ChannelThread, Database, Event, Message, NewMessage, Tx, User};
+use rails_compat::unicode;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -122,7 +123,7 @@ fn record_review_request(
     let Some(login) = login.filter(|v| !value_blank(v)) else {
         return Ok(());
     };
-    let login = ruby_strip(&ruby_string(login)).to_lowercase();
+    let login = unicode::downcase(ruby_strip(&ruby_string(login)));
     let reviewer:Option<(i64,String)>=tx.conn().query_row("SELECT u.id,u.inbox_preferences FROM users u JOIN memberships m ON m.user_id=u.id AND m.room_id=? WHERE u.status=0 AND u.role!=2 AND u.github_login=? AND (m.involvement IS NULL OR m.involvement!='invisible') ORDER BY u.id LIMIT 1",params![message.room_id,login],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
     let Some((id, raw)) = reviewer else {
         return Ok(());
@@ -245,7 +246,7 @@ fn plan(conn: &Connection, event: &str, payload: &Value) -> anyhow::Result<Vec<P
                         "review_requested",
                         sender,
                         "requested a review from",
-                        format!(":{}", ruby_string(reviewer).to_lowercase()),
+                        format!(":{}", unicode::downcase(&ruby_string(reviewer))),
                         Some(reviewer.clone()),
                     )
                 }

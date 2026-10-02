@@ -1,6 +1,7 @@
 //! Assignments made by Users::ProfilesController, including the model normalizers.
 use crate::{Result, Tx};
 use campfire_richtext::ruby::{is_blank, strip};
+use rails_compat::unicode;
 use serde_json::{Map, Value};
 
 pub const INBOX_KEYS: &[&str] = &[
@@ -84,7 +85,7 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
             .iter()
             .any(|reason| reason.as_deref().is_none_or(is_blank));
         if !verified {
-            let login = strip(&login).to_lowercase();
+            let login = unicode::downcase(strip(&login));
             attrs.insert(
                 "github_login".into(),
                 if is_blank(&login) {

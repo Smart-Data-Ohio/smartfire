@@ -1,0 +1,28 @@
+{
+  "reference": "d7c7de92",
+  "source_id": 935962058,
+  "reply_id": 935962109,
+  "card_id": 935962110,
+  "rows": [
+    {
+      "name": "first",
+      "status": 200,
+      "etag": "W/\"9ad97f7b8e7ddbff929a2b0d6ef42639\""
+    },
+    {
+      "name": "unchanged",
+      "status": 304,
+      "etag": "W/\"9ad97f7b8e7ddbff929a2b0d6ef42639\""
+    },
+    {
+      "name": "source_edit",
+      "status": 200,
+      "etag": "W/\"7f7d8876a33b3f0b26f96a7d6f717b2c\""
+    },
+    {
+      "name": "card_fetch",
+      "status": 200,
+      "etag": "W/\"a021ae6c4a77ee022b85e8552ffc1312\""
+    }
+  ]
+}

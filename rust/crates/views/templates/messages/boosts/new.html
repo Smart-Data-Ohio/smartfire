@@ -4,11 +4,11 @@
     <form class="boost__form flex align-center gap expanded" data-controller="form scroll-into-view" data-turbo-frame="{{ message.dom_id("boosting") }}" data-action="keydown.esc-&gt;form#cancel" action="{{ message.boosts_path() }}" accept-charset="UTF-8" method="post">{{ crate::helpers::token_tag(&message.boosts_path().to_string(), "post") }}
       <label class="boost__form-label flex gap" style="--column-gap: 0.7ch;" role="button" tabindex="0" aria-label="Add a boost">
         <figure class="avatar boost__avatar flex-item-no-shrink">
-          <a title="{{ user.title }}" class="btn avatar" data-turbo-frame="_top" href="{{ user.path() }}"><img aria-hidden="true" src="{{ user.avatar_url }}" width="48" height="48" /></a>
+          {{ user.avatar(ctx, h::attrs()) }}
           <span class="for-screen-reader">{{ user.name }}</span>
         </figure>
 
-        <input autofocus="autofocus" autocomplete="off" autocorrect="off" maxlength="16" required="required" pattern="\S+.*" data-boost-form-target="input" class="input input--boost txt-small" size="16" type="text" name="boost[content]" />
+        <input autofocus="autofocus" autocomplete="off" autocorrect="off" maxlength="16" required="required" pattern="\S+.*" class="input input--boost txt-small" role="combobox" aria-autocomplete="list" aria-expanded="false" data-boost-form-target="input" data-controller="markdown-autocomplete" data-action="input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur" data-markdown-autocomplete-icons-url-value="/autocompletable/icons" size="16" type="text" name="boost[content]" />
       </label>
 
       <button name="button" type="submit" class="btn btn--reversed">

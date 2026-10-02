@@ -1,0 +1,18 @@
+{
+  "reference": "d7c7de92",
+  "status": 200,
+  "frames": [
+    {
+      "stream": "user_149087659_unreads",
+      "payload": {
+        "roomId": 486777696
+      }
+    },
+    {
+      "stream": "user_127326141_unreads",
+      "payload": {
+        "roomId": 486777696
+      }
+    }
+  ]
+}
