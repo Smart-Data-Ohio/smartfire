@@ -14,11 +14,11 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 use serde_json::{Map, Value, json};
 
-fn configured(c: &Ctx) -> Result<()> {
+fn configured(c: &mut Ctx) -> Result<()> {
     if c.app().google.sign_in().config.configured() {
         Ok(())
     } else {
-        Err(Error::Status(StatusCode::NOT_FOUND))
+        halt(c.head(StatusCode::NOT_FOUND))
     }
 }
 async fn workspace(c: &mut Ctx) -> Result<()> {
@@ -173,10 +173,6 @@ pub(super) fn domain_list(c: &Ctx) -> String {
     }
 }
 async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
-    let host = c.request.host();
-    let stored = c.session().remove(concerns::session_keys::RETURN_TO_KEY);
-    let return_url = sign_in::safe_return_path(stored.as_ref().and_then(Value::as_str), &host)
-        .unwrap_or_else(|| c.url_for("/"));
     let device_id = concerns::ensure_device_cookie(c)?;
     let remember = c.cookies.signed("two_factor_remember");
     let agent = c.request.user_agent().map(str::to_string);
@@ -207,6 +203,11 @@ async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
         Err(campfire_db::Error::GoogleSignInRejected(reason)) => return rejected(c, reason).await,
         Err(error) => return Err(Error::internal(error)),
     };
+    // Rails resolves the identity before consuming the password fallback's destination.
+    let host = c.request.host();
+    let stored = c.session().remove(concerns::session_keys::RETURN_TO_KEY);
+    let return_url = sign_in::safe_return_path(stored.as_ref().and_then(Value::as_str), &host)
+        .unwrap_or_else(|| c.url_for("/"));
     if let Some(session) = session {
         concerns::session_keys::clear_confirmations(c.session());
         concerns::authenticated_as(c, session, Some(user), true).await?;

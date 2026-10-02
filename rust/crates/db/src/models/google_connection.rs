@@ -55,8 +55,6 @@ pub fn finish(
 pub struct DisconnectPlan {
     account_id: i64,
     email: String,
-    ids: Vec<String>,
-    snapshot: Option<String>,
 }
 
 /// Rails commits these local removals and broadcasts before the best-effort remote stop.
@@ -77,9 +75,16 @@ pub fn prepare_disconnect(
     let plan = DisconnectPlan {
         account_id: account.id,
         email: account.email.clone(),
-        ids,
-        snapshot: account.cleanup_snapshot(secrets, tx.now().jiff()),
     };
+    // Durable cleanup must commit with the entries that contain its remote IDs,
+    // before the controller's best-effort remote stop and account removal.
+    if let Some(blob) = account.cleanup_snapshot(secrets, tx.now().jiff()) {
+        tx.emit_after_commit(Event::job(&DisconnectCleanupJob((
+            ids,
+            json!(blob),
+            Some(account.id),
+        ))));
+    }
     tx.conn()
         .execute("DELETE FROM event_calendar_entries WHERE user_id=?", [id])?;
     let removed = tx
@@ -118,13 +123,6 @@ pub fn finish_disconnect(
         },
         context,
     )?;
-    if let Some(blob) = plan.snapshot {
-        tx.emit_after_commit(Event::job(&DisconnectCleanupJob((
-            plan.ids,
-            json!(blob),
-            Some(plan.account_id),
-        ))));
-    }
     Ok(())
 }
 

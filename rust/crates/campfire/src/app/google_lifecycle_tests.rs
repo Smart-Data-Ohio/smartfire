@@ -358,3 +358,58 @@ async fn google_user_deactivation_and_its_cleanup_jobs_rollback_on_late_enqueue_
         "remote stop precedes the rolled-back writer"
     );
 }
+
+#[tokio::test]
+async fn google_disconnect_queue_rejection_rolls_back_entries_cache_links_and_snapshot() {
+    let v = vectors();
+    let case = v["cases"].as_array().unwrap().iter()
+        .find(|case| case["spec"]["name"] == "disconnect_meeting").unwrap();
+    let (a, client) = fixture(case).await;
+    a.db().write(|tx| {
+        tx.conn().execute("UPDATE events SET meet_link_requested=1,meet_link='https://meet.google.com/fixture-link' WHERE organizer_id=?", [DAVID])?;
+        Ok(())
+    }).await.unwrap();
+    let mut b = a.sign_in(DAVID).await;
+    b.get("/users/me/profile").await;
+    google_connection_tests::sudo(&a, &mut b).await;
+    a.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_disconnect_cleanup BEFORE INSERT ON background_jobs WHEN NEW.job_class='Calendar::DisconnectCleanupJob' BEGIN SELECT RAISE(ABORT,'fixture cleanup queue failure'); END;")?;
+        Ok(())
+    }).await.unwrap();
+    async fn snapshot(a: &TestApp) -> Value {
+        a.db().read(|conn| {
+            let mut state = serde_json::Map::new();
+            for (name, sql) in [
+                ("accounts", "SELECT * FROM google_accounts ORDER BY id"),
+                ("entries", "SELECT * FROM event_calendar_entries ORDER BY id"),
+                ("cache", "SELECT * FROM calendar_meeting_caches ORDER BY id"),
+                ("channels", "SELECT * FROM calendar_push_channels ORDER BY id"),
+                ("events", "SELECT * FROM events ORDER BY id"),
+                ("users", "SELECT id,meeting_status_enabled,ooo_calendar_enabled,ooo_until,ooo_note,ooo_broadcast FROM users ORDER BY id"),
+                ("jobs", "SELECT * FROM background_jobs ORDER BY id"),
+                ("audits", "SELECT * FROM audit_logs ORDER BY id"),
+            ] {
+                let mut statement = conn.prepare(sql)?;
+                let columns = statement.column_count();
+                let rows = statement.query_map([], |row| {
+                    (0..columns).map(|column| Ok(match row.get_ref(column)? {
+                        rusqlite::types::ValueRef::Null => Value::Null,
+                        rusqlite::types::ValueRef::Integer(v) => json!(v),
+                        rusqlite::types::ValueRef::Real(v) => json!(v),
+                        rusqlite::types::ValueRef::Text(v) => json!(std::str::from_utf8(v).unwrap()),
+                        rusqlite::types::ValueRef::Blob(_) => panic!("unexpected blob in disconnect state"),
+                    })).collect::<rusqlite::Result<Vec<_>>>()
+                })?.collect::<rusqlite::Result<Vec<_>>>()?;
+                state.insert(name.into(), json!(rows));
+            }
+            Ok(Value::Object(state))
+        }).await.unwrap()
+    }
+    let before = snapshot(&a).await;
+    assert_eq!(before["entries"].as_array().unwrap().len(), 2);
+    assert!(!before["cache"].as_array().unwrap().is_empty());
+    let reply = b.write(Req::new(Method::DELETE, "/google/connection")).await;
+    assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(snapshot(&a).await, before, "rejected durable cleanup must roll back every source change");
+    assert!(client.calls.lock().unwrap().is_empty(), "remote stop follows the successful source transaction");
+}

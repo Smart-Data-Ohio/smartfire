@@ -8282,6 +8282,189 @@
           "audits": []
         }
       }
+    },
+    {
+      "index": 96,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "admin_link_required_return_to",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "An administrator must link this account to Google before you can sign in with Google. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "calendar_users": [
+          127326141
+        ],
+        "identities": [],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "email_self_changed": false,
+          "google_email_link_allowed": false,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        },
+        "return_to": "http://campfire.test/account/edit",
+        "password_login": {
+          "status": 302,
+          "location": "http://campfire.test/account/edit",
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
+          "calls": [],
+          "delta": [
+            0,
+            1,
+            0,
+            0
+          ],
+          "markers": {},
+          "flow_present": false,
+          "calendar_users": [
+            127326141
+          ],
+          "identities": [],
+          "email": "legacy@smartdata.net",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "session.sign_in.failure",
+              "actor_id": null,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "google"
+              }
+            },
+            {
+              "action": "session.sign_in.success",
+              "actor_id": 712064548,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "password"
+              }
+            }
+          ],
+          "return_to": null
+        }
+      }
+    },
+    {
+      "index": 97,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "unconfigured_callback"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 404,
+        "page": {
+          "status": 200,
+          "google_mark": false,
+          "domain_sentence": null
+        },
+        "body": ""
+      },
+      "result": {
+        "status": 404,
+        "location": null,
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "calendar_users": [
+          127326141
+        ],
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [],
+        "body": "",
+        "content_type": "text/html"
+      }
     }
   ],
   "rotated_jwks": {

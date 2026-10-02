@@ -100,6 +100,8 @@ specs += %w[join_signup provision_self_change calendar_only].map { |scenario| {p
 specs << {purpose:'sign_in',scenario:'predecessor',lifecycle:true}
 specs << {purpose:'sign_in',scenario:'rotation',lifecycle:true}
 specs += %w[forged_state missing_state replay unconfigured_password].map { |scenario| {purpose:'sign_in',scenario:} }
+specs << {purpose:'sign_in',scenario:'admin_link_required_return_to',lifecycle:true}
+specs << {purpose:'sign_in',scenario:'unconfigured_callback'}
 rows=[]
 specs.each_with_index do |spec,index|
   # Restore the isolated reference database between cases. An enclosing rollback
@@ -113,7 +115,7 @@ specs.each_with_index do |spec,index|
     Rails.application.executor.run!(reset:true)
     $controller_now=BASE
     ENV['GOOGLE_CLIENT_ID']='test-client-id';ENV['GOOGLE_CLIENT_SECRET']='FAKE-google-client-secret'
-    ENV['GOOGLE_SIGN_IN_DOMAINS']=%w[unconfigured unconfigured_password].include?(spec[:scenario]) ? '' : 'smartdata.net,cnbssoftware.com'
+    ENV['GOOGLE_SIGN_IN_DOMAINS']=%w[unconfigured unconfigured_password unconfigured_callback].include?(spec[:scenario]) ? '' : 'smartdata.net,cnbssoftware.com'
     ENV['GOOGLE_SIGN_IN_DOMAINS']='EXAMPLE.ORG' if spec[:scenario]=='provision_org'
     Rails.cache.clear
     Google::SignIn::KeyStore.clear!
@@ -128,7 +130,8 @@ specs.each_with_index do |spec,index|
       kevin.update_columns(role:2) if scenario=='bot'
       kevin.update_columns(status:1,email_address:'legacy-deactivated-fixture@smartdata.net') if scenario=='predecessor'
       kevin.update_columns(email_self_changed_at:BASE,google_email_link_allowed:false) if %w[self_changed admin_allowed].include?(scenario)
-      kevin.update_columns(google_email_link_allowed:false) if scenario=='linking_disabled'
+      kevin.update_columns(google_email_link_allowed:false) if %w[linking_disabled admin_link_required_return_to].include?(scenario)
+      TwoFactorCredential.where(user:kevin).update_all(confirmed_at:nil) if scenario=='admin_link_required_return_to'
       kevin.update!(email_self_changed_at:nil,google_email_link_allowed:true) if scenario=='admin_allowed'
       if %w[immutable_email retained_deactivated retained_banned different_subject].include?(scenario)
         GoogleIdentity.create!(user:kevin,subject:scenario=='different_subject' ? 'controller-old' : 'controller-member',email:'legacy@smartdata.net',domain:'smartdata.net')
@@ -174,6 +177,7 @@ specs.each_with_index do |spec,index|
     end
     initial=nil
     if purpose=='sign_in'
+      client.get('/account/edit') if scenario=='admin_link_required_return_to'
       client.get('/session/new')
       initial={status:client.response.status,google_mark:client.response.body.include?('Sign in with Google'),domain_sentence:client.response.body[/Google sign-in for (.*?) accounts/,1]}
     end
@@ -249,6 +253,14 @@ specs.each_with_index do |spec,index|
       end
       if spec[:lifecycle]
         result[:lifecycle]=lifecycle_observation
+        if scenario=='admin_link_required_return_to'
+          result[:return_to]=client.request.session[:return_to_after_authenticating]
+          client.follow_redirect!
+          call_before=$controller_calls.length
+          client.post('/session',params:{email_address:kevin.email_address,password:'secret123456'})
+          result[:password_login]=observation(client,before,call_before)
+          result[:password_login][:return_to]=client.request.session[:return_to_after_authenticating]
+        end
         if %w[legacy_password provision provision_secondary external_password].include?(scenario)
           client.get(client.response.location)
           client.delete('/session')
@@ -284,6 +296,13 @@ specs.each_with_index do |spec,index|
       end
     else
       result=observation(client,before,0)
+      if scenario=='unconfigured_callback'
+        start[:body]=client.response.body
+        client.get('/session/google/callback',params:{state:'fixture-state',code:'fixture-code'})
+        result=observation(client,before,0)
+        result[:body]=client.response.body
+        result[:content_type]=client.response.media_type
+      end
       if scenario=='unconfigured_password'
         client.get('/session/new')
         client.post('/session',params:{email_address:kevin.email_address,password:'secret123456'})

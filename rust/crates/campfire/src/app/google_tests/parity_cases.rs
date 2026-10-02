@@ -135,6 +135,30 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
     run_cases(oracle).await;
 }
 #[tokio::test]
+async fn google_rejected_identity_preserves_saved_destination_for_password_fallback() {
+    let mut oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/google_controller_cases.json"
+    ))
+    .unwrap();
+    oracle["rows"].as_array_mut().unwrap().retain(|row| {
+        row["spec"]["scenario"] == "admin_link_required_return_to"
+    });
+    assert_eq!(oracle["rows"].as_array().unwrap().len(), 1);
+    run_cases(oracle).await;
+}
+#[tokio::test]
+async fn google_unconfigured_callback_matches_pinned_rails_empty_not_found() {
+    let mut oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/google_controller_cases.json"
+    ))
+    .unwrap();
+    oracle["rows"].as_array_mut().unwrap().retain(|row| {
+        row["spec"]["scenario"] == "unconfigured_callback"
+    });
+    assert_eq!(oracle["rows"].as_array().unwrap().len(), 1);
+    run_cases(oracle).await;
+}
+#[tokio::test]
 async fn google_callback_rotation_and_predecessor_match_pinned_rails() {
     let mut oracle: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/google_controller_cases.json"
@@ -187,7 +211,7 @@ async fn run_cases(oracle: Value) {
         a.booted.app.google.install(SignIn::with_client(
             config(if scenario == "provision_org" {
                 &["example.org"]
-            } else if matches!(scenario, "unconfigured" | "unconfigured_password") {
+            } else if matches!(scenario, "unconfigured" | "unconfigured_password" | "unconfigured_callback") {
                 &[]
             } else {
                 &["smartdata.net", "cnbssoftware.com"]
@@ -218,7 +242,8 @@ async fn run_cases(oracle: Value) {
                     if scenario=="predecessor" {tx.conn().execute("UPDATE users SET status=1,email_address='legacy-deactivated-fixture@smartdata.net' WHERE id=?",[KEVIN])?;}
                     if scenario=="bot" {tx.conn().execute("UPDATE users SET role=2 WHERE id=?",[KEVIN])?;}
                     if matches!(scenario,"self_changed"|"admin_allowed") {tx.conn().execute("UPDATE users SET google_email_link_allowed=0,email_self_changed_at=? WHERE id=?",rusqlite::params![tx.now(),KEVIN])?;}
-                    if scenario=="linking_disabled" {tx.conn().execute("UPDATE users SET google_email_link_allowed=0 WHERE id=?",[KEVIN])?;}
+                    if matches!(scenario,"linking_disabled"|"admin_link_required_return_to") {tx.conn().execute("UPDATE users SET google_email_link_allowed=0 WHERE id=?",[KEVIN])?;}
+                    if scenario=="admin_link_required_return_to" {tx.conn().execute("UPDATE two_factor_credentials SET confirmed_at=NULL WHERE user_id=?",[KEVIN])?;}
                     if scenario=="admin_allowed" {campfire_db::User::find(tx.conn(),KEVIN)?.update(tx,campfire_db::UserChanges{allow_google_email_link:true,..Default::default()})?;}
                     if matches!(scenario,"immutable_email"|"retained_deactivated"|"retained_banned"|"different_subject") {
                         campfire_db::models::google_identity::GoogleIdentity::link_to_user(tx,json!({"sub":if scenario=="different_subject"{"controller-old"}else{"controller-member"},"email":"legacy@smartdata.net","hd":"smartdata.net"}).as_object().unwrap(),KEVIN)?;
@@ -290,6 +315,9 @@ async fn run_cases(oracle: Value) {
             )
             .await;
         }
+        if scenario == "admin_link_required_return_to" {
+            b.get("/account/edit").await;
+        }
         let initial_page = b
             .get(if purpose == "sign_in" {
                 "/session/new"
@@ -352,6 +380,9 @@ async fn run_cases(oracle: Value) {
         }
         let start_reply = b.write(Req::new(Method::POST, path)).await;
         let mut started = json!({"status":start_reply.status.as_u16()});
+        if scenario == "unconfigured_callback" {
+            started["body"] = json!(start_reply.text());
+        }
         if let Some(gate) = gate {
             started["gate"] = gate;
         }
@@ -570,6 +601,17 @@ async fn run_cases(oracle: Value) {
             }
             if lifecycle {
                 observed["lifecycle"] = lifecycle_observation(&a, &history).await;
+                if scenario == "admin_link_required_return_to" {
+                    observed["return_to"] = session(&a, &b)["return_to_after_authenticating"].clone();
+                    b.get(cb.location().unwrap()).await;
+                    let calls = r.calls.lock().unwrap().len();
+                    let reply = b.write(Req::new(Method::POST, "/session").form(&[
+                        ("email_address", "legacy@smartdata.net"),
+                        ("password", "secret123456"),
+                    ])).await;
+                    observed["password_login"] = observation(&a, &b, &reply, &before, &r, calls, &password).await;
+                    observed["password_login"]["return_to"] = session(&a, &b)["return_to_after_authenticating"].clone();
+                }
                 if matches!(
                     scenario,
                     "legacy_password" | "provision" | "provision_secondary" | "external_password"
@@ -645,6 +687,13 @@ async fn run_cases(oracle: Value) {
             observed
         } else {
             let mut observed = observation(&a, &b, &start_reply, &before, &r, 0, &password).await;
+            if scenario == "unconfigured_callback" {
+                let reply = b.get("/session/google/callback?state=fixture-state&code=fixture-code").await;
+                observed = observation(&a, &b, &reply, &before, &r, 0, &password).await;
+                observed["body"] = json!(reply.text());
+                observed["content_type"] = json!(reply.content_type().map(|v| v.split(';').next().unwrap()));
+                assert_eq!(reply.body, row["result"]["body"].as_str().unwrap().as_bytes(), "unconfigured callback must match the complete Rails body");
+            }
             if scenario == "unconfigured_password" {
                 b.get("/session/new").await;
                 let response = b
