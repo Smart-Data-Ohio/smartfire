@@ -4,7 +4,6 @@
 
 use campfire_db::{Message, Room, Timeline};
 use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permit_keys};
-use campfire_views::messages::json;
 
 use super::{
     MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
@@ -26,10 +25,9 @@ pub async fn index(c: &mut Ctx) -> Result {
     let messages = find_paged_messages(c, &room).await?;
     set_pagination_headers(c, &room, &messages).await?;
     c.respond_to(&[&format::JSON])?;
-    let base_url = c.url_for("");
     let body = present(c, move |presenter| {
-        let messages = messages.iter().map(|m| presenter.message_json(m, &base_url)).collect::<campfire_db::Result<Vec<_>>>()?;
-        Ok(json::by_bots_index(&messages))
+        let messages = messages.iter().map(|m| presenter.agent_message_payload(m)).collect::<campfire_db::Result<Vec<_>>>()?;
+        Ok(campfire_views::helpers::to_rails_json(&messages))
     })
     .await?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))
@@ -195,7 +193,6 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
 
 /// `render :show` (`messages/by_bots/show.json.jbuilder`).
 async fn render_show(c: &mut Ctx, message: Message) -> Result<Response> {
-    let base_url = c.url_for("");
-    let body = present(c, move |presenter| Ok(json::by_bots_show(&presenter.message_json(&message, &base_url)?))).await?;
+    let body = present(c, move |presenter| Ok(presenter.agent_message_payload(&message)?.to_string())).await?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))
 }

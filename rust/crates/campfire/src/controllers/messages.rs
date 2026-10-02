@@ -632,6 +632,18 @@ pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
     } else if blob.is_representable() {
         // attachment.representation(:thumb).processed
         let thumb = Variation::resize_to_limit(1200, 800, None);
+        if blob.content_type() == "image/jpeg" {
+            // Approved JPEG posting reuses `.processed?` metadata, without serving
+            // its intentionally absent file. Representation endpoints require files.
+            let storage = app.storage.clone();
+            let source = blob.clone();
+            let variation = storage.variation_for(&source, &thumb).map_err(Error::internal)?;
+            let processed = app.db.read(move |conn| {
+                storage.existing_variant(conn, &source, &variation)
+                    .map(|image| image.is_some()).map_err(storage_error)
+            }).await.map_err(db_error)?;
+            if processed { return Ok(()); }
+        }
         active_storage::processed_representation(app, blob, thumb).await?;
     }
     Ok(())

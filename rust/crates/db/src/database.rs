@@ -25,6 +25,7 @@
 
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 
 use rusqlite::{Connection, OpenFlags};
@@ -157,9 +158,16 @@ impl AfterCommit {
     /// model callback; a later callback error cannot revoke those committed jobs.
     fn wake_committed_job(self, env: &Env) {
         match self {
-            Self::RecordJob { event: Some(event), .. }
-            | Self::Event(event @ (Event::Job(_) | Event::PushMessage { .. } | Event::RemoveBannedContent { .. }
-                | Event::DeliverWebhook { .. } | Event::PurgeBlob { .. })) => env.sink.emit(event),
+            Self::RecordJob {
+                event: Some(event), ..
+            }
+            | Self::Event(
+                event @ (Event::Job(_)
+                | Event::PushMessage { .. }
+                | Event::RemoveBannedContent { .. }
+                | Event::DeliverWebhook { .. }
+                | Event::PurgeBlob { .. }),
+            ) => env.sink.emit(event),
             _ => (),
         }
     }
@@ -172,6 +180,7 @@ pub struct Tx<'c> {
     env: &'c Env,
     in_transaction: bool,
     after_commit: Vec<AfterCommit>,
+    commit_finalizers: Vec<Box<dyn FnOnce() + Send>>,
     /// The first error persisting an emitted event (see [`EventSink::persist`]), which rolls the
     /// transaction back.
     persist_error: Option<Error>,
@@ -315,9 +324,18 @@ impl<'c> Tx<'c> {
     /// One record callback per transaction, at its first registration's position, with the
     /// last save's state. Append registrations so savepoint rollback restores earlier hooks.
     /// These hooks run after commit; durable jobs must use the job APIs instead.
-    pub fn after_commit_record_latest(&mut self, key: &'static str, id: i64, hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static) {
+    pub fn after_commit_record_latest(
+        &mut self,
+        key: &'static str,
+        id: i64,
+        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static,
+    ) {
         if self.in_transaction {
-            self.after_commit.push(AfterCommit::RecordHook { key, id, hook: Box::new(hook) });
+            self.after_commit.push(AfterCommit::RecordHook {
+                key,
+                id,
+                hook: Box::new(hook),
+            });
         } else {
             self.after_commit(hook);
         }
@@ -337,11 +355,23 @@ impl<'c> Tx<'c> {
                 env: self.env,
                 in_transaction: false,
                 after_commit: Vec::new(),
+                commit_finalizers: Vec::new(),
                 persist_error: None,
             };
             if let Err(error) = hook(&mut tx) {
                 tracing::error!(%error, "after_commit hook failed");
             }
+        }
+    }
+
+    /// Finalizes ownership of resources whose rows committed, before fallible model
+    /// callbacks. Captured guards are dropped on rollback, including savepoint rollback.
+    /// This is infallible resource bookkeeping, not an Active Record callback or DB write.
+    pub fn on_commit_success(&mut self, finalize: impl FnOnce() + Send + 'static) {
+        if self.in_transaction {
+            self.commit_finalizers.push(Box::new(finalize));
+        } else {
+            finalize();
         }
     }
 
@@ -355,9 +385,16 @@ impl<'c> Tx<'c> {
         }
     }
 
-    pub fn after_commit_record(&mut self, table: &'static str, id: i64,
-        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static) {
-        if !self.in_transaction { self.after_commit(hook); return; }
+    pub fn after_commit_record(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static,
+    ) {
+        if !self.in_transaction {
+            self.after_commit(hook);
+            return;
+        }
         self.register_record(table, id);
         if let Some(AfterCommit::RecordHooks {hooks, ..}) = self.after_commit.iter_mut().find(|item| {
             matches!(item, AfterCommit::RecordHooks {table: t, id: i, ..} if *t == table && *i == id)
@@ -373,9 +410,19 @@ impl<'c> Tx<'c> {
     /// fail the enclosing transaction through `persist_error`.
     pub fn savepoint<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let callbacks = self.after_commit.len();
-        let record_hooks: Vec<_> = self.after_commit.iter().enumerate().filter_map(|(i, item)| {
-            if let AfterCommit::RecordHooks {hooks, ..} = item {Some((i, hooks.len()))} else {None}
-        }).collect();
+        let finalizers = self.commit_finalizers.len();
+        let record_hooks: Vec<_> = self
+            .after_commit
+            .iter()
+            .enumerate()
+            .filter_map(|(i, item)| {
+                if let AfterCommit::RecordHooks { hooks, .. } = item {
+                    Some((i, hooks.len()))
+                } else {
+                    None
+                }
+            })
+            .collect();
         self.conn.execute_batch("SAVEPOINT model_operation")?;
         match f(self) {
             Ok(value) => {
@@ -385,8 +432,11 @@ impl<'c> Tx<'c> {
             }
             Err(error) => {
                 self.after_commit.truncate(callbacks);
+                self.commit_finalizers.truncate(finalizers);
                 for (index, length) in record_hooks {
-                    if let AfterCommit::RecordHooks {hooks, ..} = &mut self.after_commit[index] {hooks.truncate(length);}
+                    if let AfterCommit::RecordHooks { hooks, .. } = &mut self.after_commit[index] {
+                        hooks.truncate(length);
+                    }
                 }
                 self.conn.execute_batch(
                     "ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation",
@@ -399,7 +449,8 @@ impl<'c> Tx<'c> {
 
 /// Runs `f` in `BEGIN IMMEDIATE`, commits, then runs the after-commit queue. An error from
 /// `f` rolls back and discards the queue. An error from an after-commit hook is returned
-/// after waking any remaining committed jobs, discarding later model callbacks
+/// after finalizing committed resources and waking any remaining committed jobs,
+/// discarding later model callbacks
 /// (Rails raises it from the save that committed; durable enqueueing stays atomic).
 pub fn run_write<T>(
     conn: &Connection,
@@ -412,6 +463,7 @@ pub fn run_write<T>(
         env,
         in_transaction: true,
         after_commit: Vec::new(),
+        commit_finalizers: Vec::new(),
         persist_error: None,
     };
     let value = match f(&mut tx).and_then(|value| match tx.persist_error.take() {
@@ -475,11 +527,16 @@ pub fn run_write<T>(
         return Err(error.into());
     }
 
+    for finalize in std::mem::take(&mut tx.commit_finalizers) {
+        finalize();
+    }
+
     let mut after = Tx {
         conn,
         env,
         in_transaction: false,
         after_commit: Vec::new(),
+        commit_finalizers: Vec::new(),
         persist_error: None,
     };
     let mut callbacks = queue.into_iter();
@@ -491,7 +548,10 @@ pub fn run_write<T>(
                 }
                 None
             }
-            AfterCommit::Event(event) => { env.sink.emit(event); None }
+            AfterCommit::Event(event) => {
+                env.sink.emit(event);
+                None
+            }
             AfterCommit::RecordBroadcast { table, id, event } => {
                 // A later destroy suppresses the record's earlier update callback.
                 match conn.query_row(
@@ -505,12 +565,17 @@ pub fn run_write<T>(
                 }
                 None
             }
-            AfterCommit::RecordHook {hook, ..} => hook(&mut after).err(),
-            AfterCommit::RecordHooks {hooks, ..} => hooks.into_iter().try_for_each(|hook| hook(&mut after)).err(),
+            AfterCommit::RecordHook { hook, .. } => hook(&mut after).err(),
+            AfterCommit::RecordHooks { hooks, .. } => hooks
+                .into_iter()
+                .try_for_each(|hook| hook(&mut after))
+                .err(),
             AfterCommit::Hook(hook) => hook(&mut after).err(),
         };
         if let Some(error) = callback_error {
-            for pending in callbacks { pending.wake_committed_job(env); }
+            for pending in callbacks {
+                pending.wake_committed_job(env);
+            }
             return Err(error);
         }
     }
@@ -549,6 +614,7 @@ type QueryLog = Arc<Mutex<Vec<String>>>;
 /// The database handle. Cheap to clone.
 #[derive(Clone)]
 pub struct Database {
+    writer_generation: Arc<AtomicU64>,
     writer: mpsc::Sender<Job>,
     readers: Arc<ReaderPool>,
     #[cfg(feature = "test-support")]
@@ -573,13 +639,19 @@ impl Database {
         let writer_query_log = Arc::new(Mutex::new(None));
         #[cfg(feature = "test-support")]
         let query_log = writer_query_log.clone();
+        let writer_generation = Arc::new(AtomicU64::new(0));
+        let generation = writer_generation.clone();
         std::thread::Builder::new()
             .name("campfire-db-writer".into())
             .spawn(move || {
                 while let Some(job) = receiver.blocking_recv() {
                     #[cfg(feature = "test-support")]
-                    let _trace = query_log.lock().unwrap().clone()
+                    let _trace = query_log
+                        .lock()
+                        .unwrap()
+                        .clone()
                         .map(|log| QueryTrace::enter(&conn, log));
+                    generation.fetch_add(1, Ordering::SeqCst);
                     // A panicking write must not take the writer down with it.
                     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         job(&conn, &writer_env)
@@ -587,6 +659,7 @@ impl Database {
                     if outcome.is_err() && !conn.is_autocommit() {
                         let _ = conn.execute_batch("ROLLBACK TRANSACTION");
                     }
+                    generation.fetch_add(1, Ordering::SeqCst);
                     match WAL_PAGES.replace(0) {
                         0 => {}
                         pages if pages >= WAL_LIMIT_PAGES => restart_wal(&conn, &checkpoints),
@@ -602,6 +675,7 @@ impl Database {
 
         Ok(Self {
             writer: sender,
+            writer_generation,
             readers: Arc::new(ReaderPool::new(readers)),
             #[cfg(feature = "test-support")]
             writer_query_log,
@@ -612,6 +686,13 @@ impl Database {
 
     pub fn env(&self) -> &Env {
         &self.env
+    }
+
+    /// Changes before and after every writer job, including its after-commit callbacks.
+    /// Odd values mean work is in progress. Request-local read snapshots may be reused
+    /// only while this value stays equal and even; this is not an external DB version.
+    pub fn write_generation(&self) -> u64 {
+        self.writer_generation.load(Ordering::SeqCst)
     }
 
     pub fn path(&self) -> &Path {
@@ -635,7 +716,11 @@ impl Database {
 
     /// Holds a caller-owned runtime guard across the write AND its ordered after-commit
     /// callbacks. Models remain unaware of request/rendering context.
-    pub async fn write_scoped<T, F, G>(&self, scope: impl FnOnce() -> G + Send + 'static, f: F) -> Result<T>
+    pub async fn write_scoped<T, F, G>(
+        &self,
+        scope: impl FnOnce() -> G + Send + 'static,
+        f: F,
+    ) -> Result<T>
     where
         T: Send + 'static,
         F: FnOnce(&mut Tx<'_>) -> Result<T> + Send + 'static,
@@ -856,10 +941,18 @@ impl ReaderPool {
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
             }
         };
-        let checkout = Checkout { pool: self, conn: Some(conn) };
+        let checkout = Checkout {
+            pool: self,
+            conn: Some(conn),
+        };
         let conn = checkout.conn.as_ref().expect("checked out");
         #[cfg(feature = "test-support")]
-        let _trace = self.query_log.lock().unwrap().clone().map(|log| QueryTrace::enter(conn, log));
+        let _trace = self
+            .query_log
+            .lock()
+            .unwrap()
+            .clone()
+            .map(|log| QueryTrace::enter(conn, log));
         f(conn)
     }
 }
@@ -878,12 +971,17 @@ impl<'a> QueryTrace<'a> {
         fn record(event: rusqlite::trace::TraceEvent<'_>) {
             if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
                 READ_QUERIES.with(|log| {
-                    if let Some(log) = log.borrow().as_ref() { log.lock().unwrap().push(sql.into()); }
+                    if let Some(log) = log.borrow().as_ref() {
+                        log.lock().unwrap().push(sql.into());
+                    }
                 });
             }
         }
         let previous = READ_QUERIES.with(|slot| slot.replace(Some(log)));
-        conn.trace_v2(rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT, Some(record));
+        conn.trace_v2(
+            rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
+            Some(record),
+        );
         Self(conn, previous)
     }
 }
@@ -891,8 +989,11 @@ impl<'a> QueryTrace<'a> {
 #[cfg(feature = "test-support")]
 impl Drop for QueryTrace<'_> {
     fn drop(&mut self) {
-        self.0.trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
-        READ_QUERIES.with(|slot| { slot.replace(self.1.take()); });
+        self.0
+            .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+        READ_QUERIES.with(|slot| {
+            slot.replace(self.1.take());
+        });
     }
 }
 
@@ -955,6 +1056,108 @@ mod tests {
         assert_eq!(*log.lock().unwrap(), before);
     }
 
+    #[test]
+    fn commit_finalizers_precede_fallible_model_callbacks() {
+        let conn = Connection::open_in_memory().unwrap();
+        let env = Env::default();
+        let trace = Arc::new(Mutex::new(Vec::new()));
+        let observations = trace.clone();
+        let result = run_write(&conn, &env, move |tx| {
+            let first = observations.clone();
+            tx.after_commit(move |_| {
+                first.lock().unwrap().push("callback");
+                Err(Error::Other("injected callback failure".into()))
+            });
+            tx.on_commit_success(move || observations.lock().unwrap().push("finalized"));
+            Ok(())
+        });
+        assert!(result.is_err());
+        assert_eq!(*trace.lock().unwrap(), ["finalized", "callback"]);
+    }
+
+    #[test]
+    fn commit_finalizers_follow_savepoint_rollback_boundaries() {
+        let conn = Connection::open_in_memory().unwrap();
+        let env = Env::default();
+        let trace = Arc::new(Mutex::new(Vec::new()));
+        let observations = trace.clone();
+        run_write(&conn, &env, move |tx| {
+            let outer = observations.clone();
+            tx.on_commit_success(move || outer.lock().unwrap().push("outer"));
+            let nested = tx.savepoint(move |tx| -> Result<()> {
+                tx.on_commit_success(move || observations.lock().unwrap().push("rolled-back"));
+                Err(Error::Other("injected savepoint rollback".into()))
+            });
+            assert!(nested.is_err());
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(*trace.lock().unwrap(), ["outer"]);
+    }
+
+    #[test]
+    fn commit_finalizers_do_not_run_when_commit_itself_fails() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys=ON; CREATE TABLE parent(id INTEGER PRIMARY KEY); CREATE TABLE child(parent_id INTEGER REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED)").unwrap();
+        let env = Env::default();
+        let finalized = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let observed = finalized.clone();
+        let result = run_write(&conn, &env, move |tx| {
+            tx.conn().execute("INSERT INTO child VALUES(1)", [])?;
+            tx.on_commit_success(move || observed.store(true, Ordering::SeqCst));
+            Ok(())
+        });
+        assert!(result.is_err(), "deferred foreign key must reject COMMIT");
+        assert!(!finalized.load(Ordering::SeqCst));
+        assert!(conn.is_autocommit());
+        assert_eq!(
+            conn.query_row("SELECT count(*) FROM child", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn identity_snapshot_generation_covers_rollbacks_and_after_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Database::open(
+            Config::new(dir.path().join("generation.sqlite3")),
+            Env::default(),
+        )
+        .unwrap();
+        let snapshot = db.clone();
+        let first = db
+            .write_blocking(move |tx| {
+                let version = snapshot.write_generation();
+                assert_eq!(version % 2, 1, "writer is active");
+                tx.after_commit(move |_| {
+                    assert_eq!(
+                        snapshot.write_generation(),
+                        version,
+                        "after-commit callbacks are still writer work"
+                    );
+                    Ok(())
+                });
+                Ok(version)
+            })
+            .unwrap();
+        let snapshot = db.clone();
+        let rejected = db.write_blocking(move |_| -> Result<()> {
+            assert_eq!(snapshot.write_generation(), first + 2);
+            Err(Error::Other("intentional rollback".into()))
+        });
+        assert!(rejected.is_err());
+        let snapshot = db.clone();
+        db.write_blocking(move |_| {
+            assert_eq!(
+                snapshot.write_generation(),
+                first + 4,
+                "rollback also invalidates the snapshot"
+            );
+            Ok(())
+        })
+        .unwrap();
+    }
     fn main_file_len(path: &Path) -> u64 {
         std::fs::metadata(path).unwrap().len()
     }
