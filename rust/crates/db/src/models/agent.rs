@@ -218,8 +218,8 @@ impl Agent {
     pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
         if user_ids.is_empty() { return Ok(Vec::new()); }
         crate::sql::query_all(conn,
-            &format!("SELECT * FROM agents WHERE user_id IN ({})", crate::sql::placeholders(user_ids.len())),
-            rusqlite::params_from_iter(user_ids), Self::from_row)
+            "SELECT * FROM agents WHERE user_id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(user_ids).to_string()], Self::from_row)
     }
     pub fn validate(conn: &Connection, a: &NewAgent, exclude: Option<i64>) -> Result<Errors> {
         let mut errors = Errors::default();

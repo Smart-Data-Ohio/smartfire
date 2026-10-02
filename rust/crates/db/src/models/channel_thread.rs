@@ -231,11 +231,8 @@ impl ChannelThread {
         }
         query_all(
             conn,
-            &format!(
-                "SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC",
-                placeholders(room_ids.len())
-            ),
-            rusqlite::params_from_iter(room_ids),
+            "SELECT * FROM channel_threads WHERE room_id IN (SELECT value FROM json_each(?)) ORDER BY last_activity_at DESC, id DESC",
+            [serde_json::json!(room_ids).to_string()],
             Self::from_row,
         )
     }

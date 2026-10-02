@@ -112,11 +112,17 @@ fn user(p: &Presenter<'_>, user: &User, base: &str) -> Result<Value> {
     let icon_url = icon
         .as_deref()
         .and_then(|name| p.resolve_avatar_icon(name))
-        .and_then(|icon| match icon {
-            AvatarIcon::Image { url, .. } => Some(url),
-            _ => None,
-        });
+        .and_then(image_icon_url);
     Ok(user_with_icon(p, user, base, icon.as_deref(), icon_url))
+}
+
+/// Icons.image_url_for: Propshaft resolves brand assets; custom image URLs are already paths.
+fn image_icon_url(icon: AvatarIcon) -> Option<String> {
+    match icon {
+        AvatarIcon::Image { brand: true, url, .. } => Some(campfire_assets::asset_path(&url)),
+        AvatarIcon::Image { url, .. } => Some(url),
+        _ => None,
+    }
 }
 
 fn user_with_icon(
@@ -134,9 +140,7 @@ fn work_user(p: &Presenter<'_>, user: &User, base: &str, facts: &WorkReadFacts) 
     let icon_url = user.icon_name.as_deref().and_then(|name| {
         let icon = campfire_views::messages::reactions::static_icon(name);
         match icon {
-            Some(AvatarIcon::Image {
-                brand: true, url, ..
-            }) => Some(url),
+            Some(icon @ AvatarIcon::Image { brand: true, .. }) => image_icon_url(icon),
             _ if facts.custom_icon(name) => Some(format!("/icons/{name}")),
             Some(AvatarIcon::Image { url, .. }) => Some(url),
             _ => None,

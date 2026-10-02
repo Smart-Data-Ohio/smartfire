@@ -50,7 +50,7 @@ impl ThreadTag {
 
     pub fn for_threads(conn: &Connection, thread_ids: &[i64]) -> Result<Vec<Self>> {
         if thread_ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn, &format!("SELECT * FROM thread_tags WHERE channel_thread_id IN ({}) ORDER BY name", crate::sql::placeholders(thread_ids.len())), rusqlite::params_from_iter(thread_ids), Self::from_row)
+        query_all(conn, "SELECT * FROM thread_tags WHERE channel_thread_id IN (SELECT value FROM json_each(?)) ORDER BY name", [serde_json::json!(thread_ids).to_string()], Self::from_row)
     }
 
     /// `thread.tags.create!(name:)`
