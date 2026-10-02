@@ -15,6 +15,7 @@ for script, filename in [
     ('mcp_contract.rb', 'agent_mcp.json'),
     ('surface_contract.rb', 'agent_surface.json'),
     ('bot_http_contract.rb', 'agent_bot_http.json'),
+    ('legacy_bot_http_contract.rb', 'agent_legacy_bot_http.json'),
     ('conversation_http_contract.rb', 'agent_conversation_http.json'),
     ('fizzy_http_contract.rb', 'agent_fizzy_http.json'),
     ('fizzy_action_http_contract.rb', 'agent_fizzy_action_http.json'),

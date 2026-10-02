@@ -1051,6 +1051,8 @@ mod agent_surface_tests;
 
 #[cfg(test)]
 mod bot_http_tests;
+#[cfg(test)]
+mod agent_legacy_bot_tests;
 
 #[cfg(test)]
 mod agent_conversation_tests;

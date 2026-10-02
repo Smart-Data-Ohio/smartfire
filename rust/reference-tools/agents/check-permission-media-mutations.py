@@ -10,8 +10,8 @@ scratch = root.parent / '.scratch/permission-media-mutations'
 scratch.mkdir(parents=True, exist_ok=True)
 mutations = [
     ('current_read_grant', 'crates/campfire/src/controllers/agents/reads.rs',
-     'if !agent_access::capability_for_agent(p.conn, agent_id, "read_messages", Some(room.id))? {',
-     'if false && !agent_access::capability_for_agent(p.conn, agent_id, "read_messages", Some(room.id))? {',
+     'if !agent_access::capability_for_agent(p.conn,agent_id,"read_messages",Some(room.id))? {',
+     'if false && !agent_access::capability_for_agent(p.conn,agent_id,"read_messages",Some(room.id))? {',
      'agent_permissions_mcp_after_success'),
     ('reply_room_scope', 'crates/rails_compat/src/verifiers.rs',
      '(metadata::ruby_to_s(data.get("room_id")) == room_id).then',
