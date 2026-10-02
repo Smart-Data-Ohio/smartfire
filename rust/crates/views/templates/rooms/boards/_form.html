@@ -1,0 +1,12 @@
+{{ "\n  " }}{% filter room_form(ctx, form.room, form.can_administer, crate::messages::RoomKind::Board) %}
+  {% filter user_filter_menu_tag %}
+    {% if form.selected_users.len() + form.unselected_users.len() > 20 %}{{ h::user_filter_search_tag() }}{% endif %}
+
+    <div data-filter-target="list" contents>
+      {{ form.selected_list(ctx) }}
+
+{% if !form.selected_users.is_empty() && !form.unselected_users.is_empty() %}        <hr class="separator full-width" style="--border-style: solid">
+{% endif %}
+      {{ form.unselected_list(ctx) }}
+    </div>
+{% endfilter %}{% endfilter %}{{ "\n" }}
