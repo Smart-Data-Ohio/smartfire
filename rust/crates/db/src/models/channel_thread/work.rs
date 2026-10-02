@@ -169,8 +169,12 @@ impl ChannelThread {
             }
             if let Some(message) = opener {
                 crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
-                for membership in Membership::for_room(tx.conn(), thread.room_id)? {
-                    let user = User::find(tx.conn(), membership.user_id)?;
+                for (membership, user) in
+                    Membership::for_room_with_users(tx.conn(), thread.room_id)?
+                {
+                    let Some(user) = user else {
+                        continue;
+                    };
                     if !user.is_active()
                         || user.is_bot()
                         || user.id == creator_id
@@ -319,16 +323,38 @@ impl ChannelThread {
     ) -> Result<(Vec<User>, Vec<User>)> {
         let mut humans = Vec::new();
         let mut agents = Vec::new();
-        for membership in Membership::for_room(conn, room_id)? {
-            let user = User::find(conn, membership.user_id)?;
+        let members = Membership::for_room_with_users(conn, room_id)?;
+        let bot_ids = members
+            .iter()
+            .filter_map(|(_, user)| {
+                user.as_ref()
+                    .filter(|user| user.is_active() && user.is_bot())
+                    .map(|user| user.id)
+            })
+            .collect::<Vec<_>>();
+        let agents_by_user = Agent::for_users(conn, &bot_ids)?
+            .into_iter()
+            .map(|agent| (agent.user_id, agent.id))
+            .collect::<std::collections::HashMap<_, _>>();
+        let requests = agents_by_user
+            .values()
+            .map(|&id| (id, Some(room_id)))
+            .collect::<Vec<_>>();
+        let capabilities = Agent::capabilities_for_rooms(conn, "post_messages", &requests)?;
+        for (_, user) in members {
+            let Some(user) = user else {
+                continue;
+            };
             if !user.is_active() {
                 continue;
             }
             if user.is_bot() {
-                if let Some(agent) = Agent::for_user(conn, user.id)?
-                    && agent.active(conn)?
-                    && agent.can(conn, "post_messages", Some(room_id))?
-                {
+                if agents_by_user.get(&user.id).is_some_and(|agent| {
+                    capabilities
+                        .get(&(*agent, Some(room_id)))
+                        .copied()
+                        .unwrap_or(false)
+                }) {
                     agents.push(user);
                 }
             } else {

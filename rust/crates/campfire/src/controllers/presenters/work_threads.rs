@@ -20,8 +20,10 @@ pub fn rows(p: &Presenter<'_>, threads: &[ChannelThread], viewer: &User) -> Resu
         .map(|room| (room.id, room))
         .collect::<HashMap<_, _>>();
     let owners = ChannelThread::work_owners(p.conn, threads)?;
+    let records = WorkThreadLink::for_threads(p.conn, &ids)?;
+    let sources = board_posts::LinkSources::load(p.conn, &records)?;
     let mut links: HashMap<i64, Vec<WorkThreadLink>> = HashMap::new();
-    for link in WorkThreadLink::for_threads(p.conn, &ids)? {
+    for link in records {
         links.entry(link.channel_thread_id).or_default().push(link);
     }
     threads
@@ -54,11 +56,7 @@ pub fn rows(p: &Presenter<'_>, threads: &[ChannelThread], viewer: &User) -> Resu
                 count: counts.get(&thread.id).copied().unwrap_or_default(),
                 updated_at: thread.updated_at.jiff(),
                 links: Links {
-                    items: board_posts::link_items(
-                        p,
-                        room.id,
-                        links.remove(&thread.id).unwrap_or_default(),
-                    )?,
+                    items: sources.items(room.id, links.remove(&thread.id).unwrap_or_default())?,
                     events: Vec::new(),
                 },
             })

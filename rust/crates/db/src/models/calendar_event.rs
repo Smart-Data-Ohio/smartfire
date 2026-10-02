@@ -117,6 +117,18 @@ impl CalendarEvent {
         )?
         .or_not_found("Event")
     }
+
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM events WHERE id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
     /// Upcoming, unlinked choices for the work pane; retain Rails' starts_at/id order.
     pub fn work_link_candidates(
         conn: &Connection,

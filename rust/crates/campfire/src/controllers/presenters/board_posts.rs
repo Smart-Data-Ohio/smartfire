@@ -1,10 +1,15 @@
 //! Board post reads, kept outside the templates and write services.
 use super::Presenter;
-use campfire_db::{CalendarEvent, ChannelThread, Message, Result, Room, Timestamp, User};
+use crate::integrations::github::pull_requests::PullRequest;
+use campfire_db::{
+    CalendarEvent, ChannelThread, Connection, Message, Result, Room, Timestamp, User,
+    WorkThreadLink,
+};
 use campfire_views::{
     channel_threads::board::{History, Link, Links, NewPost, Post},
     helpers as h,
 };
+use std::collections::{BTreeSet, HashMap};
 
 pub fn new_post(p: &Presenter<'_>, room: &Room, viewer: &User) -> Result<NewPost> {
     let (humans, agents) = ChannelThread::work_owner_candidates_for(p.conn, room.id)?;
@@ -201,75 +206,115 @@ pub fn link_items(
     room_id: i64,
     rows: Vec<campfire_db::WorkThreadLink>,
 ) -> Result<Vec<Link>> {
-    let mut items = Vec::new();
-    for record in rows {
-        let (id, kind, pr, event, url, title) = (
-            record.id,
-            record.kind,
-            record.github_pull_request_id,
-            record.event_id,
-            record.url,
-            record.title,
-        );
-        let mut link = Link {
-            id,
-            kind: kind.clone(),
-            label: String::new(),
-            url: String::new(),
-            remove_label: String::new(),
-            state: None,
-            title: None,
-            event_time: None,
-            event_zone: None,
-            cancelled: false,
-        };
-        match kind.as_str() {
-            "pull_request" => {
-                let pr = crate::integrations::github::pull_requests::PullRequest::find(
-                    p.conn,
-                    pr.ok_or(campfire_db::Error::RecordNotFound("Github::PullRequest"))?,
-                )?;
-                link.label = format!("{}#{}", pr.display_full_name()?, pr.number);
-                link.url = pr
-                    .html_url
-                    .as_deref()
-                    .filter(|s| !campfire_richtext::ruby::is_blank(s))
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| {
-                        format!("https://github.com/{}/pull/{}", pr.full_name(), pr.number)
-                    });
-                link.remove_label = format!(
-                    "Remove link to pull request {}#{}",
-                    pr.full_name(),
-                    pr.number
-                );
-                link.state = Some(campfire_views::github::state_label(pr.state.as_deref()).into());
-                if pr.private == Some(false) {
-                    link.title = pr.title.filter(|s| !campfire_richtext::ruby::is_blank(s));
-                }
-            }
-            "event" => {
-                let event = CalendarEvent::find(
-                    p.conn,
-                    event.ok_or(campfire_db::Error::RecordNotFound("Event"))?,
-                )?;
-                link.label = event.title.clone();
-                link.url = format!("/rooms/{room_id}/events/{}", event.id);
-                link.remove_label = format!("Remove link to event {}", event.title);
-                link.event_time = Some(event.starts_at.jiff());
-                link.event_zone = Some(event.time_zone.clone());
-                link.cancelled = event.cancelled();
-            }
-            "drive_file" => {
-                link.url = url.unwrap_or_default();
-                link.label = title
-                    .filter(|s| !campfire_richtext::ruby::is_blank(s))
-                    .unwrap_or_else(|| link.url.clone());
-                link.remove_label = format!("Remove link to Drive file {}", link.label);
-            }
-            _ => return Err(campfire_db::Error::Other("Invalid work link kind".into())),
-        }
-        items.push(link);
+    LinkSources::load(p.conn, &rows)?.items(room_id, rows)
+}
+
+/// Rails includes(:github_pull_request, :event), shared across all links in a render scope.
+pub struct LinkSources {
+    pull_requests: HashMap<i64, PullRequest>,
+    events: HashMap<i64, CalendarEvent>,
+}
+impl LinkSources {
+    pub fn load(conn: &Connection, rows: &[WorkThreadLink]) -> Result<Self> {
+        let pr_ids = rows
+            .iter()
+            .filter(|link| link.kind == "pull_request")
+            .filter_map(|link| link.github_pull_request_id)
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let event_ids = rows
+            .iter()
+            .filter(|link| link.kind == "event")
+            .filter_map(|link| link.event_id)
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        Ok(Self {
+            pull_requests: PullRequest::for_ids(conn, &pr_ids)?
+                .into_iter()
+                .map(|pr| (pr.id, pr))
+                .collect(),
+            events: CalendarEvent::for_ids(conn, &event_ids)?
+                .into_iter()
+                .map(|event| (event.id, event))
+                .collect(),
+        })
     }
-    Ok(items)
+
+    pub fn items(&self, room_id: i64, rows: Vec<WorkThreadLink>) -> Result<Vec<Link>> {
+        let mut items = Vec::new();
+        for record in rows {
+            let (id, kind, pr, event, url, title) = (
+                record.id,
+                record.kind,
+                record.github_pull_request_id,
+                record.event_id,
+                record.url,
+                record.title,
+            );
+            let mut link = Link {
+                id,
+                kind: kind.clone(),
+                label: String::new(),
+                url: String::new(),
+                remove_label: String::new(),
+                state: None,
+                title: None,
+                event_time: None,
+                event_zone: None,
+                cancelled: false,
+            };
+            match kind.as_str() {
+                "pull_request" => {
+                    let pr = pr
+                        .and_then(|id| self.pull_requests.get(&id))
+                        .ok_or(campfire_db::Error::RecordNotFound("Github::PullRequest"))?;
+                    link.label = format!("{}#{}", pr.display_full_name()?, pr.number);
+                    link.url = pr
+                        .html_url
+                        .as_deref()
+                        .filter(|s| !campfire_richtext::ruby::is_blank(s))
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| {
+                            format!("https://github.com/{}/pull/{}", pr.full_name(), pr.number)
+                        });
+                    link.remove_label = format!(
+                        "Remove link to pull request {}#{}",
+                        pr.full_name(),
+                        pr.number
+                    );
+                    link.state =
+                        Some(campfire_views::github::state_label(pr.state.as_deref()).into());
+                    if pr.private == Some(false) {
+                        link.title = pr
+                            .title
+                            .clone()
+                            .filter(|s| !campfire_richtext::ruby::is_blank(s));
+                    }
+                }
+                "event" => {
+                    let event = event
+                        .and_then(|id| self.events.get(&id))
+                        .ok_or(campfire_db::Error::RecordNotFound("Event"))?;
+                    link.label = event.title.clone();
+                    link.url = format!("/rooms/{room_id}/events/{}", event.id);
+                    link.remove_label = format!("Remove link to event {}", event.title);
+                    link.event_time = Some(event.starts_at.jiff());
+                    link.event_zone = Some(event.time_zone.clone());
+                    link.cancelled = event.cancelled();
+                }
+                "drive_file" => {
+                    link.url = url.unwrap_or_default();
+                    link.label = title
+                        .filter(|s| !campfire_richtext::ruby::is_blank(s))
+                        .unwrap_or_else(|| link.url.clone());
+                    link.remove_label = format!("Remove link to Drive file {}", link.label);
+                }
+                _ => return Err(campfire_db::Error::Other("Invalid work link kind".into())),
+            }
+            items.push(link);
+        }
+        Ok(items)
+    }
 }
