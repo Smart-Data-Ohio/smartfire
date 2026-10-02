@@ -25,7 +25,7 @@ Rails.application.env_config['action_dispatch.logger'] = Rails.logger
 # Restore the private seed between cases, outside a transaction: source after-commit callbacks
 # run for every actual handoff, including ledger, history, activity and audit publication.
 conn = ActiveRecord::Base.connection
-tables = %w[channel_threads work_thread_links work_thread_events work_handoffs audit_logs agent_events activity_items memberships thread_memberships agent_grants agents users events agent_steps github_pull_requests sqlite_sequence]
+tables = %w[channel_threads work_thread_links work_thread_events work_handoffs audit_logs agent_events activity_items memberships thread_memberships agent_grants agents users events agent_steps github_pull_requests google_accounts sqlite_sequence]
 snapshot = tables.flat_map do |table|
   columns = conn.columns(table).map(&:name)
   conn.execute("SELECT #{columns.map { |column| "quote(#{conn.quote_column_name(column)})" }.join(',')} FROM #{table}").map do |row|
@@ -63,6 +63,8 @@ end
   cases << ["work-empty-#{state}",149087659,'get',"/work?state=#{state}",{},["UPDATE channel_threads SET work_status=NULL"],{}]
 end
 cases += [
+ ['link-drive-title',127326141,'post','/threads/90/work/links.turbo_stream',{kind:'drive_file',drive_url:'https://drive.google.com/file/d/1AbcDefGhIjKlMnOpQrSt/view'},[],{},200],
+ ['link-drive-title-forbidden',127326141,'post','/threads/90/work/links.turbo_stream',{kind:'drive_file',drive_url:'https://drive.google.com/file/d/1AbcDefGhIjKlMnOpQrSt/view'},[],{},200],
   ['work-frame',149087659,'get','/work?state=all',{},[],{'Turbo-Frame'=>'main'}],
   ['work-unavailable',149087659,'get','/work?state=agents',{},["UPDATE agents SET suspended_at='#{now}' WHERE id=773018776"],{}],
   ['handoff-manager',127326141,'get','/threads/90/work/handoff/new',{},[],{}],
@@ -149,9 +151,34 @@ cases += [
  ['link-delete-pr',127326141,'delete','/threads/90/work/links/902.turbo_stream',{},["INSERT INTO github_pull_requests(id,owner,repo,number,created_at,updated_at) VALUES(900083005,'rails','rails',90999999,'#{now}','#{now}')", "INSERT INTO work_thread_links(id,channel_thread_id,created_by_id,kind,github_pull_request_id,created_at,updated_at) VALUES(902,90,127326141,'pull_request',900083005,'#{now}','#{now}')"],{},200],
  ['link-delete-html-back',712064548,'delete','/threads/90/work/links/900',{},[],{'Referer'=>'https://campfire.test/work?state=all'},302]
 ]
+# Record Google's HTTP boundary, leaving Client, account policy and owned code unchanged.
+google_reply = nil
+http = Object.new
+http.define_singleton_method(:get) do |path, headers|
+ raise "unexpected Drive credential/target" unless path.start_with?('/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?') && headers['Authorization'] == ['Bearer','access-token'].join(' ')
+ status, body = google_reply
+ response = (status == 200 ? Net::HTTPOK : Net::HTTPForbidden).new('1.1', status.to_s, 'fixture')
+ response.body = body.to_json
+ response.instance_variable_set(:@read, true)
+ response
+end
+transport = Module.new
+transport.define_method(:start) do |host,*args,**options,&block|
+ host == 'www.googleapis.com' && google_reply ? block.call(http) : super(host,*args,**options,&block)
+end
+Net::HTTP.singleton_class.prepend(transport)
 rows = cases.map do |name,user_id,method,path,input,setup,headers,status|
  restore.call
  (common+setup).each { |sql| conn.execute(sql) }
+ google_reply = if name == 'link-drive-title' then [200,{name:'Plan <&> title'}]
+ elsif name == 'link-drive-title-forbidden' then [403,{error:{message:'private file'}}] end
+ if google_reply
+  ENV['GOOGLE_CLIENT_ID']='test-client-id'; ENV['GOOGLE_CLIENT_SECRET']='FAKE-google-client-secret'
+  GoogleAccount.where(user_id: user_id).delete_all
+  GoogleAccount.create!(user_id:user_id,email:'david@gmail.test',access_token:'access-token',refresh_token:'refresh-token',access_token_expires_at:1.hour.from_now,scopes:"#{Google::Client::CALENDAR_SCOPE} #{Google::Client::DRIVE_SCOPE}")
+ else
+  ENV.delete('GOOGLE_CLIENT_ID'); ENV.delete('GOOGLE_CLIENT_SECRET')
+ end
  user = User.find(user_id)
  request = ActionDispatch::Request.new(Rails.application.env_config.merge('HTTP_HOST'=>'campfire.test','rack.input'=>StringIO.new))
  request.cookie_jar.signed[:session_token] = user.sessions.where.not(two_factor_verified_at:nil).first!.token
@@ -165,7 +192,7 @@ rows = cases.map do |name,user_id,method,path,input,setup,headers,status|
  end
  expected = status || (name == 'handoff-plain-member' ? 403 : %w[handoff-nonmember handoff-unknown].include?(name) ? 404 : name == 'handoff-untracked' ? 422 : 200)
  raise "#{name}: expected #{expected}, got #{browser.response.status}" unless browser.response.status == expected
- {name:,user_id:,method:,path:,input:,setup:common+setup,headers:headers.except('Cookie','User-Agent'),status:browser.response.status,body:browser.response.body,location:browser.response.headers['Location'],cache_control:browser.response.headers['Cache-Control'],content_type:browser.response.headers['Content-Type']}
+ {name:,user_id:,method:,path:,input:,setup:common+setup,headers:headers.except('Cookie','User-Agent'),status:browser.response.status,body:browser.response.body,location:browser.response.headers['Location'],cache_control:browser.response.headers['Cache-Control'],content_type:browser.response.headers['Content-Type'],google_reply:}
 end
 puts JSON.pretty_generate(reference:'d7c7de92 plus approved board drift',sources:hashes,rows:)
 warn "Rails human work HTTP oracle: #{rows.size} complete responses; committed handoffs; 0 masks"

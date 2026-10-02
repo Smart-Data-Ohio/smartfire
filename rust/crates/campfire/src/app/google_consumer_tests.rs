@@ -286,7 +286,7 @@ async fn google_consumer_meet_publishes_rails_card_over_real_socket_after_commit
         tx.conn().execute("INSERT INTO event_references(event_id,message_id,created_at,updated_at) VALUES(?,?,?,?)",rusqlite::params![id,message,tx.now(),tx.now()])?;Ok(())
     }).await.unwrap();
     let mut listener = None;
-    for port in 53100..=53199 {
+    for port in super::google_test_support::socket_ports() {
         match tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
             Ok(l) => {
                 listener = Some(l);

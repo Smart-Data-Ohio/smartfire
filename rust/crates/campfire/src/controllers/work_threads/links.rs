@@ -4,52 +4,48 @@ use crate::integrations::github::{
     jobs::FetchPullRequestJob, pull_requests::PullRequest, references,
 };
 use askama::Template;
+use campfire_db::models::google_account::GoogleAccount;
 use campfire_db::{Event, NewWorkThreadLink, WorkThreadLink};
-use futures_util::future::BoxFuture;
-use std::sync::{Arc, LazyLock, RwLock};
+use rails_compat::ar_encryption::ArEncryption;
 
-/// WS14g installs its real Google::Client adapter, including configured/account/Drive policy.
-/// Errors are deliberately suppressed by LinksController#resolve_drive_title in Rails.
-pub trait DriveTitle: Send + Sync {
-    fn title<'a>(
-        &'a self,
-        user_id: i64,
-        file_id: &'a str,
-    ) -> BoxFuture<'a, campfire_db::Result<Option<String>>>;
-}
-#[derive(Default)]
-pub struct DriveTitles(RwLock<Option<Arc<dyn DriveTitle>>>);
-impl DriveTitles {
-    #[allow(dead_code)] // WS14g's production installer is pending its Google client merge.
-    pub fn install(&self, adapter: Arc<dyn DriveTitle>) {
-        *self.0.write().unwrap_or_else(|p| p.into_inner()) = Some(adapter);
+async fn resolve_drive_title(c: &Ctx, file_id: &str) -> Option<String> {
+    let api = c.app().google.api();
+    if !api.config.configured() {
+        return None;
     }
-    async fn title(&self, user_id: i64, file_id: &str) -> Option<String> {
-        let adapter = self.0.read().unwrap_or_else(|p| p.into_inner()).clone();
-        match adapter {
-            Some(adapter) => adapter
-                .title(user_id, file_id)
-                .await
-                .ok()
-                .flatten()
-                .filter(|s| !campfire_richtext::ruby::is_blank(s)),
-            None => None, // WS14g: wire credentialed resolution when its Google client merges.
-        }
-    }
-}
-/// Google::DriveLink's four pinned patterns; replace this seam with WS14g's parser on merge.
-pub fn drive_file_id(url: &str) -> Option<String> {
-    static PATTERNS: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
-        [
-        r"(?i)^https://docs\.google\.com/(?:u/[0-9]+/)?(?:document|spreadsheets|presentation|forms)/(?:u/[0-9]+/)?d/([A-Za-z0-9_-]{10,})",
-        r"(?i)^https://drive\.google\.com/(?:u/[0-9]+/)?file/(?:u/[0-9]+/)?d/([A-Za-z0-9_-]{10,})",
-        r"(?i)^https://drive\.google\.com/(?:u/[0-9]+/)?drive/(?:u/[0-9]+/)?folders/([A-Za-z0-9_-]{10,})",
-        r"(?i)^https://drive\.google\.com/(?:u/[0-9]+/)?open\?(?:[^#]*&)?id=([A-Za-z0-9_-]{10,})(?:&|#|\z)",
-    ].iter().map(|pattern|regex::Regex::new(pattern).unwrap()).collect()
-    });
-    PATTERNS
-        .iter()
-        .find_map(|pattern| pattern.captures(url).map(|capture| capture[1].to_string()))
+    let user_id = require_current_user(c).ok()?.id;
+    let enc = ArEncryption::new(&c.app().secrets);
+    let account = c
+        .app()
+        .db
+        .write(move |tx| {
+            let Some(mut account) = GoogleAccount::for_user(tx.conn(), user_id)? else {
+                return Ok(None);
+            };
+            Ok((account.usable(tx, &enc)? && account.drive()).then_some(account))
+        })
+        .await
+        .ok()
+        .flatten()?;
+    let file = api
+        .drive_file(
+            &c.app().db,
+            &c.app().secrets,
+            account.user_id,
+            file_id,
+            campfire_db::Timestamp::from_jiff(c.now()),
+        )
+        .await
+        .ok()?;
+    let value = file.get("name")?;
+    let title = match value {
+        Value::Null | Value::Bool(false) => return None,
+        Value::Bool(true) => "t".into(),
+        Value::Array(items) if items.is_empty() => return None,
+        Value::Object(items) if items.is_empty() => return None,
+        value => campfire_richtext::ruby::json_value_to_s(value),
+    };
+    (!campfire_richtext::ruby::is_blank(&title)).then_some(title)
 }
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
@@ -127,16 +123,12 @@ async fn build(c: &mut Ctx, thread: &ChannelThread) -> Result<Build> {
         Some("drive_file") => {
             let raw = scalar(c, "drive_url");
             let url = campfire_richtext::ruby::strip(&raw);
-            let Some(file_id) = drive_file_id(url) else {
+            let Some(file_id) = campfire_db::models::google_drive_link::file_id(&json!(url)) else {
                 return Ok(Build::Invalid(
                     "Enter a Google Drive, Docs, Sheets, Slides, or Forms link.".into(),
                 ));
             };
-            attributes.title = c
-                .app()
-                .work_link_drive_titles
-                .title(user_id, &file_id)
-                .await;
+            attributes.title = resolve_drive_title(c, &file_id).await;
             attributes.url = Some(url.to_string());
         }
         _ => {

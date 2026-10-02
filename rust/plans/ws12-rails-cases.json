@@ -1535,176 +1535,176 @@
       "line": 14,
       "test": "index renders the panel link box for a room member",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 23,
       "test": "a non-manager member can open the link box",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 32,
       "test": "index is 404 for non-members and unknown threads",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 43,
       "test": "index is 422 for a thread without work tracking",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 52,
       "test": "linking a pull request resolves through for_reference and enqueues a card fetch",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 66,
       "test": "linking a pull request is 422 without a PR url",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 75,
       "test": "linking an event in the same room",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 85,
       "test": "linking a cancelled event in the same room still works",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 97,
       "test": "linking an event from another room is 404",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 105,
       "test": "linking an event without a choice is 422",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 113,
       "test": "linking a drive file without credentials stores the url alone",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 124,
       "test": "linking a drive file caches the name when credentials resolve it",
-      "status": "deferred",
-      "owner": "WS14g client + WS12 installer",
-      "evidence": "The public DriveTitle seam passes linker identity and extracts/escapes cached titles; success/error fixture adapters are tested. Real configured Google credentials and transport remain unproven until WS14g merges."
+      "status": "ported",
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 136,
       "test": "linking a drive file stores the url alone when resolution fails",
-      "status": "deferred",
-      "owner": "WS14g client + WS12 installer",
-      "evidence": "The public DriveTitle seam passes linker identity and extracts/escapes cached titles; success/error fixture adapters are tested. Real configured Google credentials and transport remain unproven until WS14g merges."
+      "status": "ported",
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 148,
       "test": "linking a drive file is 422 for an unrecognised url",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 157,
       "test": "linking with an unknown kind is 422",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 164,
       "test": "linking a duplicate is 422",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 174,
       "test": "a non-manager member can add and remove links",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 188,
       "test": "removing a link of each kind refreshes every box",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 207,
       "test": "removing an unknown link is 404",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 213,
       "test": "adding and removing is 404 for non-members",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 226,
       "test": "adding and removing is 422 without work tracking",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/threads/work/links_controller_test.rb",
       "line": 238,
       "test": "html requests redirect back to the thread",
       "status": "ported",
-      "owner": "WS12",
-      "evidence": "human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+      "owner": "WS12 using merged WS14g #190",
+      "evidence": "human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
     },
     {
       "file": "test/controllers/users/sidebars_boards_test.rb",

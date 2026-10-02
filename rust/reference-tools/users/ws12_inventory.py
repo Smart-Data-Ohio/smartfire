@@ -153,10 +153,7 @@ for path in files:
         if relative == "test/controllers/threads/work/handoffs_controller_test.rb":
             status,owner,evidence="ported","WS12","human_work_tests.rs: complete manager/owner/member/nonmember/untracked forms and committed JSON/HTML responses, cap/receiver denials, full queue-failure rollback and escaped saved history; agent_work_test.rs verifies package/ledger/audit snapshots."
         if relative == "test/controllers/threads/work/links_controller_test.rb":
-            if title in {"linking a drive file caches the name when credentials resolve it", "linking a drive file stores the url alone when resolution fails"}:
-                status,owner,evidence="deferred","WS14g client + WS12 installer","The public DriveTitle seam passes linker identity and extracts/escapes cached titles; success/error fixture adapters are tested. Real configured Google credentials and transport remain unproven until WS14g merges."
-            else:
-                status,owner,evidence="ported","WS12","human_work_tests.rs: complete panel/header/row Turbo responses and HTML/frame bodies, actual PR identity + one durable fetch across threads, same-room/cancelled events, URL-only Drive, member writes, duplicate/unknown/cross-room/untracked denials and deletion of all three kinds."
+            status,owner,evidence="ported","WS12 using merged WS14g #190","human_work_tests.rs: complete Rails panel/header/row Turbo and HTML/frame bodies, real PR identity + one durable fetch across threads, same-room/cancelled events, duplicate/unknown/untracked/member writes, and all link deletions. Configured Drive title/error bodies use the real encrypted account and Google API with recorded HTTP transport; missing Drive scope and another users account make no request."
         if relative == "test/models/work_thread_link_test.rb":
             status,owner,evidence="ported","WS12","work_thread_link_test.rs: 29 actual Rails validation/persistence vectors cover all kind/column/room/title/uniqueness cases and the thread-deletion cascade. Existing WS11 payload tests retain the shared payload/privacy boundary."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))

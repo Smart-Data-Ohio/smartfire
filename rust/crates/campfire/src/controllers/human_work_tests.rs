@@ -128,28 +128,9 @@ async fn human_links_save_no_activity_and_claim_one_real_pr_fetch_across_threads
 }
 
 #[tokio::test]
-async fn human_drive_title_adapter_uses_the_linkers_identity_and_falls_back_on_error() {
-    use super::work_threads::links::DriveTitle;
-    use futures_util::future::BoxFuture;
-    use std::sync::Arc;
-    struct Title(bool);
-    impl DriveTitle for Title {
-        fn title<'a>(
-            &'a self,
-            user_id: i64,
-            file_id: &'a str,
-        ) -> BoxFuture<'a, campfire_db::Result<Option<String>>> {
-            Box::pin(async move {
-                assert_eq!(user_id, DAVID);
-                assert_eq!(file_id, "1AbcDefGhIjKlMnOpQrSt");
-                if self.0 {
-                    Ok(Some("Plan <&> title".into()))
-                } else {
-                    Err(campfire_db::Error::Other("Google request failed".into()))
-                }
-            })
-        }
-    }
+async fn human_drive_title_uses_the_real_google_api_and_linkers_encrypted_account() {
+    use crate::app::google_api_tests as support;
+    use campfire_db::Timestamp;
     let oracle: Value =
         serde_json::from_str(include_str!("../../../../vectors/human_work_http.json")).unwrap();
     let row = oracle["rows"]
@@ -158,17 +139,29 @@ async fn human_drive_title_adapter_uses_the_linkers_identity_and_falls_back_on_e
         .iter()
         .find(|r| r["name"] == "link-drive")
         .unwrap();
-    for success in [true, false] {
+    for mode in ["title", "forbidden", "missing-drive", "other-user"] {
         let app = TestApp::boot_frozen()
             .await
             .expect("default seed required")
             .without_job_runner()
             .await;
         setup(&app, row).await;
-        app.booted
-            .app
-            .work_link_drive_titles
-            .install(Arc::new(Title(success)));
+        let transport = support::Recorded::new(vec![]);
+        support::install(&app, transport.clone()).await;
+        let expires = Timestamp::from_jiff(app.booted.app.clock.now())
+            .since(jiff::SignedDuration::from_hours(1));
+        support::grant(
+            &app,
+            if mode == "other-user" { KEVIN } else { DAVID },
+            expires,
+            mode != "missing-drive",
+        )
+        .await;
+        if mode == "title" {
+            transport.answer(200, serde_json::json!({"name":"Plan <&> title"}));
+        } else {
+            transport.answer(403, serde_json::json!({"error":{"message":"private file"}}));
+        }
         let response = app
             .david()
             .write(
@@ -178,9 +171,6 @@ async fn human_drive_title_adapter_uses_the_linkers_identity_and_falls_back_on_e
             )
             .await;
         assert_eq!(response.status, 200, "{}", response.text());
-        if success {
-            assert!(response.text().contains("Plan &lt;&amp;&gt; title"));
-        }
         let title = app
             .db()
             .read(|conn| {
@@ -192,7 +182,23 @@ async fn human_drive_title_adapter_uses_the_linkers_identity_and_falls_back_on_e
             })
             .await
             .unwrap();
-        assert_eq!(title, success.then(|| "Plan <&> title".into()));
+        assert_eq!(title, (mode == "title").then(|| "Plan <&> title".into()));
+        let calls = transport.calls.lock().unwrap();
+        if matches!(mode, "missing-drive" | "other-user") {
+            assert!(calls.is_empty());
+        } else {
+            assert_eq!(calls.len(), 1);
+            assert!(
+                calls[0]["path"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with("/drive/v3/files/1AbcDefGhIjKlMnOpQrSt?")
+            );
+            assert_eq!(calls[0]["access_token"], "access-token");
+        }
+        if mode == "title" {
+            assert!(response.text().contains("Plan &lt;&amp;&gt; title"));
+        }
     }
 }
 
@@ -398,6 +404,15 @@ async fn human_work_http_matches_complete_rails_responses() {
             })
             .await
             .unwrap();
+        if let Some(reply) = row["google_reply"].as_array() {
+            use crate::app::google_api_tests as support;
+            let transport = support::Recorded::new(vec![]);
+            transport.answer(reply[0].as_u64().unwrap() as u16, reply[1].clone());
+            support::install(&app, transport).await;
+            let expires = campfire_db::Timestamp::from_jiff(app.booted.app.clock.now())
+                .since(jiff::SignedDuration::from_hours(1));
+            support::grant(&app, row["user_id"].as_i64().unwrap(), expires, true).await;
+        }
         let mut browser = app.sign_in(row["user_id"].as_i64().unwrap()).await;
         let method = row["method"]
             .as_str()
