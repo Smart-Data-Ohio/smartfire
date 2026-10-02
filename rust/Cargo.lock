@@ -609,6 +609,7 @@ name = "campfire_views"
 version = "0.1.0"
 dependencies = [
  "askama",
+ "bnum",
  "campfire_assets",
  "campfire_richtext",
  "campfire_routes",

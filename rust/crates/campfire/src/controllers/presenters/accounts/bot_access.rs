@@ -5,7 +5,6 @@ pub fn credentials(
     conn: &Connection,
     agent_id: i64,
     zone: &campfire_views::time::Zone,
-    now: campfire_db::Timestamp,
 ) -> Result<Vec<Credential>> {
     let mut statement=conn.prepare("SELECT c.id,c.name,c.token_last_four,u.name,c.created_at,c.expires_at,c.last_used_at,c.revoked_at IS NOT NULL FROM agent_credentials c JOIN users u ON u.id=c.created_by_id WHERE c.agent_id=? ORDER BY c.created_at DESC")?;
     Ok(statement
@@ -22,7 +21,7 @@ pub fn credentials(
                             crate::controllers::accounts::bots::input_casts::extended_datetime(
                                 t, zone, true,
                             ),
-                        expired: t <= now,
+                        microseconds: t.as_wide_microsecond(),
                     }
                 }),
                 last_used_at: r

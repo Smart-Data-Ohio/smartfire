@@ -156,17 +156,13 @@ async fn render_index(
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
     let zone = super::viewer_zone(c).await?;
-    let now = c.now();
-    let expires_now = campfire_db::Timestamp::from_jiff(now);
     let credentials = c
         .app()
         .db
-        .read(move |conn| {
-            presenters::accounts::bot_access::credentials(conn, agent_id, &zone, expires_now)
-        })
+        .read(move |conn| presenters::accounts::bot_access::credentials(conn, agent_id, &zone))
         .await
         .map_err(Error::internal)?;
-    let (bot_id, bot_name) = (bot.id, bot.name.clone());
+    let (bot_id, bot_name, now) = (bot.id, bot.name.clone(), c.now());
     framed_page!(c, status, |ctx| {
         campfire_views::accounts::bot_access::Credentials {
             ctx,

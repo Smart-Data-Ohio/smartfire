@@ -42,6 +42,10 @@ impl Timestamp {
             .expect("timestamp within Jiff calendar range")
     }
 
+    pub fn as_wide_microsecond(self) -> I512 {
+        self.0
+    }
+
     pub fn as_microsecond(self) -> i64 {
         self.0
             .try_into()
