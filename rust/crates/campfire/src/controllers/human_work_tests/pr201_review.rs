@@ -104,11 +104,23 @@ async fn pr201_shared_brand_icon_json_callers_match_complete_rails_outputs() {
                     let mut p = Presenter::new(conn, &copy, Some("campfire.test".into()));
                     p.current_user_id = Some(DAVID);
                     p.cache_base_url = Some("http://campfire.test".into());
-                    p.agent_message_payload(&Message::find(conn, 970000004)?)
+                    let message = Message::find(conn, 970000004)?;
+                    Ok((
+                        p.agent_message_payload(&message)?,
+                        p.agent_message_payloads(std::slice::from_ref(&message))?,
+                        crate::controllers::messages::payload::user(
+                            &p,
+                            &p.user(DAVID)?,
+                            "http://campfire.test",
+                        )?,
+                    ))
                 })
                 .await
                 .unwrap();
-            if actual != row["payload"] {
+            if actual.0 != row["payload"]
+                || actual.1.as_slice() != std::slice::from_ref(&row["payload"])
+                || actual.2 != row["payload"]["creator"]
+            {
                 failed.push(name);
             }
             continue;
