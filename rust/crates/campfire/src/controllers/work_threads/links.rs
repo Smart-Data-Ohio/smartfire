@@ -155,13 +155,25 @@ pub async fn create(c: &mut Ctx) -> Result {
         Build::Missing => return Ok(c.head(StatusCode::NOT_FOUND)),
         Build::Link(attributes) => attributes,
     };
-    let link = match c
+    let saved = c
         .app()
         .db
-        .write(move |tx| WorkThreadLink::create(tx, attributes))
-        .await
-    {
-        Ok(link) => link,
+        .write(move |tx| {
+            let link = WorkThreadLink::create(tx, attributes)?;
+            // The durable fetch and its claim are atomic with the triggering link save.
+            if let Some(id) = link.github_pull_request_id {
+                let mut pr = PullRequest::find(tx.conn(), id)?;
+                if pr.claim_fetch_request(tx)? {
+                    tx.emit_after_commit(Event::job(&FetchPullRequestJob {
+                        pull_request_id: id,
+                    }));
+                }
+            }
+            Ok(())
+        })
+        .await;
+    match saved {
+        Ok(()) => (),
         Err(error) if error.is_record_not_unique() => {
             return invalid(
                 c,
@@ -183,22 +195,6 @@ pub async fn create(c: &mut Ctx) -> Result {
             return invalid(c, &thread, message).await;
         }
         Err(error) => return Err(db_error(error)),
-    };
-    // Rails saves the link before claiming the separate fetch. A failed fetch leaves the link.
-    if let Some(id) = link.github_pull_request_id {
-        c.app()
-            .db
-            .write(move |tx| {
-                let mut pr = PullRequest::find(tx.conn(), id)?;
-                if pr.claim_fetch_request(tx)? {
-                    tx.emit_after_commit(Event::job(&FetchPullRequestJob {
-                        pull_request_id: id,
-                    }));
-                }
-                Ok(())
-            })
-            .await
-            .map_err(db_error)?;
     }
     success(c, &thread, "Link added.", false).await
 }

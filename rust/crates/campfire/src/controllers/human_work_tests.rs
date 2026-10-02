@@ -4,6 +4,46 @@ use axum::http::Method;
 use serde_json::Value;
 
 #[tokio::test]
+async fn human_pr_link_and_fetch_claim_roll_back_when_the_durable_job_is_rejected() {
+    let oracle: Value =
+        serde_json::from_str(include_str!("../../../../vectors/human_work_http.json")).unwrap();
+    let row = oracle["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["name"] == "link-pr")
+        .unwrap();
+    let app = TestApp::boot_frozen()
+        .await
+        .expect("default seed required")
+        .without_job_runner()
+        .await;
+    setup(&app, row).await;
+    app.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_human_link_fetch BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'rejected work link PR fetch'); END")?;
+        Ok(())
+    }).await.unwrap();
+    let response = app
+        .david()
+        .write(
+            Req::new(Method::POST, row["path"].as_str().unwrap())
+                .header("content-type", "application/json")
+                .body(row["input"].to_string()),
+        )
+        .await;
+    assert_eq!(response.status, 500);
+    app.db().read(|conn| {
+        let links = campfire_db::WorkThreadLink::for_thread(conn, 90)?;
+        assert!(links.iter().all(|link| link.github_pull_request_id.is_none()), "rejected enqueue must roll back the new link");
+        // for_reference builds the shared identity before the link save, like Rails.
+        let id: i64 = conn.query_row("SELECT id FROM github_pull_requests WHERE owner='rails' AND repo='rails' AND number=12", [], |row| row.get(0))?;
+        assert!(crate::integrations::github::pull_requests::PullRequest::find(conn, id)?.fetch_requested_at.is_none());
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'", [], |row| row.get::<_,i64>(0))?, 0);
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
 async fn human_links_save_no_activity_and_claim_one_real_pr_fetch_across_threads() {
     let oracle: Value =
         serde_json::from_str(include_str!("../../../../vectors/human_work_http.json")).unwrap();
@@ -307,7 +347,11 @@ async fn human_handoff_http_commits_history_audit_ledger_and_job_together() {
     assert_eq!(response.status, 201, "{}", response.text());
     let history = browser.get("/rooms/699448332/threads/90").await;
     assert_eq!(history.status, 200);
-    assert!(history.text().contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+    assert!(
+        history
+            .text()
+            .contains("&lt;script&gt;alert(1)&lt;/script&gt;")
+    );
     assert!(!history.text().contains("<script>alert(1)</script>"));
     app.db().read(|conn| {
         assert_eq!(campfire_db::ChannelThread::find(conn,90)?.work_owner_id,Some(BENDER));
@@ -387,7 +431,11 @@ async fn human_work_http_matches_complete_rails_responses() {
             response.text()
         );
         assert_eq!(response.location(), row["location"].as_str(), "{name}");
-        assert_eq!(response.header("content-type"), row["content_type"].as_str(), "{name}");
+        assert_eq!(
+            response.header("content-type"),
+            row["content_type"].as_str(),
+            "{name}"
+        );
         assert_eq!(
             response.header("cache-control"),
             row["cache_control"].as_str(),
