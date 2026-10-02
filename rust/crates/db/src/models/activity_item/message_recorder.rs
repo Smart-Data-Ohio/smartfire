@@ -6,7 +6,7 @@ use crate::{
     ActivityItem, Involvement, Message, NotificationKind, NotificationPolicy, Result,
     ThreadInvolvement, Timestamp, Tx, UserStatusSettings,
 };
-use rusqlite::{Connection, params};
+use rusqlite::Connection;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -175,43 +175,15 @@ impl ActivityItem {
         let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;
         let mut items = Vec::new();
         for candidate in candidates.recipients {
-            let user_id = candidate.user_id;
-            let event_type = candidate.event_type;
-            if let Some(thread) = message
-                .thread_id
-                .filter(|_| event_type == "thread_activity")
-            {
-                let grouped: Option<i64> = crate::sql::query_one(
-                    tx.conn(),
-                    "SELECT id FROM activity_items WHERE user_id=? AND handled_at IS NULL AND event_type=? AND ((source_type='Message' AND source_id IN (SELECT id FROM messages WHERE thread_id=?)) OR (source_type='WorkThreadEvent' AND source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id=?))) ORDER BY updated_at DESC,id DESC LIMIT 1",
-                    params![user_id, event_type, thread, thread],
-                    |r| r.get(0),
-                )?;
-                if let Some(id) = grouped {
-                    let before = Self::find(tx.conn(), id)?;
-                    let now = tx.now();
-                    if before.source_type == "Message"
-                        && before.source_id == message.id
-                        && before.read_at.is_none()
-                        && before.updated_at == now
-                    {
-                        items.push(before);
-                        continue;
-                    }
-                    // Grouped updates keep handled_at/type but repoint, become unread and touch.
-                    tx.conn().execute("UPDATE activity_items SET source_type='Message',source_id=?,read_at=NULL,updated_at=? WHERE id=?",params![message.id,tx.now(),id])?;
-                    Self::broadcast_change(tx, user_id, id)?;
-                    items.push(Self::find(tx.conn(), id)?);
-                    continue;
-                }
+            if let Some(item) = Self::record(
+                tx,
+                candidate.user_id,
+                super::ActivitySource::Message(message.id),
+                candidate.event_type,
+                true,
+            )? {
+                items.push(item);
             }
-            let inserted=tx.conn().execute("INSERT INTO activity_items(user_id,source_type,source_id,event_type,created_at,updated_at) VALUES (?,'Message',?,?,?,?) ON CONFLICT(user_id,source_type,source_id) DO NOTHING",params![user_id,message.id,event_type,tx.now(),tx.now()])?;
-            let item = Self::find_by_user_and_source(tx.conn(), user_id, "Message", message.id)?
-                .ok_or(crate::Error::RecordNotFound("ActivityItem"))?;
-            if inserted == 1 {
-                Self::broadcast_change(tx, user_id, item.id)?;
-            }
-            items.push(item);
         }
         Ok(items)
     }

@@ -116,6 +116,11 @@ impl Env {
 type AfterCommitHook = Box<dyn FnOnce(&mut Tx<'_>) -> Result<()> + Send>;
 
 enum AfterCommit {
+    RecordHook {
+        key: &'static str,
+        id: i64,
+        hook: AfterCommitHook,
+    },
     RecordJob {
         table: &'static str,
         id: i64,
@@ -296,6 +301,21 @@ impl<'c> Tx<'c> {
         }
     }
 
+    /// One record callback per transaction, at its first registration's position, with the
+    /// last save's state. Append registrations so savepoint rollback restores earlier hooks.
+    /// These hooks run after commit; durable jobs must use the job APIs instead.
+    pub fn after_commit_record_latest(&mut self, key: &'static str, id: i64, hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static) {
+        if self.in_transaction {
+            self.after_commit.push(AfterCommit::RecordHook { key, id, hook: Box::new(hook) });
+        } else {
+            self.after_commit(hook);
+        }
+    }
+
+    pub(crate) fn has_commit_record(&self, key: &'static str, id: i64) -> bool {
+        self.after_commit.iter().any(|pending| matches!(pending, AfterCommit::RecordHook {key: previous, id: previous_id, ..} if *previous == key && *previous_id == id))
+    }
+
     /// Queues database work to run after commit, in its own implicit transaction.
     pub fn after_commit(&mut self, hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static) {
         if self.in_transaction {
@@ -393,7 +413,18 @@ pub fn run_write<T>(
             return Err(error);
         }
     };
-    let mut queue = std::mem::take(&mut tx.after_commit);
+    let mut queue = Vec::new();
+    for pending in std::mem::take(&mut tx.after_commit) {
+        if let AfterCommit::RecordHook { key, id, hook } = pending {
+            if let Some(AfterCommit::RecordHook { hook: previous, .. }) = queue.iter_mut().find(|pending| matches!(pending, AfterCommit::RecordHook {key: previous, id: previous_id, ..} if *previous == key && *previous_id == id)) {
+                *previous = hook;
+            } else {
+                queue.push(AfterCommit::RecordHook { key, id, hook });
+            }
+        } else {
+            queue.push(pending);
+        }
+    }
     let persist_callbacks = (|| -> Result<()> {
         for item in &mut queue {
             if let AfterCommit::RecordJob {
@@ -463,6 +494,7 @@ pub fn run_write<T>(
                 }
                 None
             }
+            AfterCommit::RecordHook {hook, ..} => hook(&mut after).err(),
             AfterCommit::RecordHooks {hooks, ..} => hooks.into_iter().try_for_each(|hook| hook(&mut after)).err(),
             AfterCommit::Hook(hook) => hook(&mut after).err(),
         };

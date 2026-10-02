@@ -1,0 +1,81 @@
+{% extends "layouts/application.html" %}
+{% block head %}<meta name="turbo-cache-control" content="no-preview">{{ "  \n" }}  <meta name="current-room-id" content="{{ board.room.id }}">
+  {{ h::first_paint_controller_preloads(ctx) }}
+{% endblock %}
+{% block nav %}{% let room = &board.room %}{% include "rooms/boards/_nav.html" %}{% endblock %}
+{% block sidebar %}{{ h::sidebar_turbo_frame_tag(Some(h::routes::user_sidebar().as_str()), "") }}{% endblock %}
+{% block member_panel %}  {{ self.member_panel()? }}
+{% endblock %}
+{% block content %}{{ "  \n" }}
+
+
+
+<main class="board" aria-labelledby="board-title">
+  <header class="board__header">
+    <div>
+      <span class="board__eyebrow">Board</span>
+      <h1 id="board-title">{{ board.room.display_name }}</h1>
+      <p>Work threads with a status, an owner, tags, and a pinned result. Open a post to discuss it and record its outcome.</p>
+    </div>
+
+    <nav class="board__views" aria-label="Board rendering">
+      {{ self.list_link() }}
+      {{ self.board_link() }}
+{% if board.can_administer %}        {{ h::link_to_text("Automations", h::routes::board_automations(board.room.id).as_str(), h::attrs().class("btn board__view")) }}
+{% endif %}    </nav>
+  </header>
+
+{% if let Some((date,text)) = board.digest %}    <section class="board__digest" aria-label="Latest stale-work digest">
+      <h2>Stale-work digest · {{ date }}</h2>
+      {{ self.digest_text(text) }}
+    </section>
+{% endif %}
+  {% let form = h::form_with(h::routes::room(board.room.id)).method("get").class("board__filters") %}{% filter form_with(form) %}
+    <input value="{{ self.view() }}" type="hidden" name="view" id="view" />
+{% if !board.board_view %}      <label class="board__filter">
+        <span>Status</span>
+        <select name="status" id="status">{{ self.status_options() }}</select>
+      </label>
+{% endif %}    <label class="board__filter">
+      <span>Owner</span>
+      <select name="owner" id="owner">{{ self.owner_options() }}</select>
+    </label>
+    <label class="board__filter">
+      <span>Tag</span>
+      <select name="tag" id="tag">{{ self.tag_options() }}</select>
+    </label>
+    <input type="submit" name="commit" value="Filter" class="btn" data-disable-with="Filter" />
+{% if board.status != "open" || board.owner != "anyone" || !board.tag.is_empty() %}      {{ self.clear_link() }}
+{% endif %}{% endfilter %}
+{% if board.posts.is_empty() %}    <p class="board__empty">
+{% if board.any_posts %}        No posts match these filters.
+{% else %}        No posts yet. {{ h::link_to_text("Start the first one", h::routes::new_room_thread(board.room.id).as_str(), h::attrs()) }}.
+{% endif %}    </p>
+{% else if board.board_view %}    <div class="board__columns" data-controller="board-list"
+         data-board-list-status-value="{{ self.filter_status() }}"
+         data-board-list-owner-value="{{ board.owner }}"
+         data-board-list-tag-value="{{ board.tag }}"
+         data-board-list-current-user-id-value="{{ board.current_user_id }}">
+{% for (status,label) in [("planned","Planned"),("in_progress","In progress"),("blocked","Blocked"),("done","Done")] %}        <section class="board__column" aria-label="{{ label }}">
+          <h2 class="board__column-title">
+            {{ label }}
+            <span class="board__column-count">{{ self.column_count(status) }}</span>
+          </h2>
+          <div id="board_column_{{ status }}" class="board__column-list" role="list">
+            {{ self.rows(Some(status)) }}
+          </div>
+        </section>
+{% endfor %}    </div>
+{% else %}    <div id="board_posts" class="board__list" role="list" data-controller="board-list"
+         data-board-list-status-value="{{ self.filter_status() }}"
+         data-board-list-owner-value="{{ board.owner }}"
+         data-board-list-tag-value="{{ board.tag }}"
+         data-board-list-current-user-id-value="{{ board.current_user_id }}">
+      {{ self.rows(None) }}
+    </div>
+{% endif %}
+{% if board.has_more %}    <p class="board__more">{{ self.more_link() }}</p>
+{% endif %}
+  <turbo-cable-stream-source channel="RoomMessagesChannel" signed-stream-name="{{ board.stream_name }}"></turbo-cable-stream-source>
+</main>{{ "\n" }}
+{% endblock %}
