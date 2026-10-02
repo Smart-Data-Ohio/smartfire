@@ -30,7 +30,7 @@ The user explicitly instructed this worker to leave that branch alone; none is d
 
 The representation proxy's extra Content-Transfer-Encoding header was the only additional
 confirmed unblocked implementation gap found in this audit. It is fixed on this branch
-for healthy200 and handled empty404 responses, with six failing-first regressions and
+for HTTP 200 and handled empty HTTP 404 responses, with six failing-first regressions and
 a nine-header Rails oracle. Streaming blob proxies share the corrected helper. Disk
 downloads and byte-range send_data responses retain their Rails transfer-encoding headers.
 
@@ -42,8 +42,8 @@ unregistered agent/bot job or dead transport path was found.
 
 The 35 non-MCP JSON actions in config/routes.rb all have controller bindings and boundary
 vectors. Thirty-one use installed services; four are the #202 writes above. The six by-bot
-actions and MCP POST/GET/DELETE transports have real bindings. All38 metadata tools have
-explicit dispatch; five are #202 writes, the other33 call installed service/model adapters.
+actions and MCP POST/GET/DELETE transports have real bindings. All 38 metadata tools have
+explicit dispatch; five are #202 writes, the other 33 call installed service/model adapters.
 
 | Surface | Behavior implemented | Evidence in this tree |
 | --- | --- | --- |
@@ -57,10 +57,10 @@ explicit dispatch; five are #202 writes, the other33 call installed service/mode
 | GitHub | REST approval-only PR actions, owner identity/account policy, grants/budgets/replay and no external write before approval | github/agent_actions.rs; WS15g approval_requests and Accounts; owner HTTP tests |
 | Legacy/agent bot API | Index/create/update/destroy and boost create/destroy, board/thread/system-note policy, replacements/fanout/grants/budgets | messages/by_bots.rs and boosts/by_bots.rs; bot/legacy/reaction/permission vectors |
 | MCP transport | Stateless single-object JSON-RPC, four versions, Origin, modern header mirroring/base64, method/error/status rules, no sessions/SSE, tools metadata/envelopes | mcp.rs; 84 base vectors; surface and per-service vectors |
-| Throttling | Per-credential/controller/action minute buckets, global MCP600 and per-tool limits, concurrency, exact429/Retry-After | agent_api.rs; surface/permission vectors; concurrency HTTP regressions |
+| Throttling | Per-credential/controller/action minute buckets, global MCP600 and per-tool limits, concurrency, exact 429 bodies and Retry-After | agent_api.rs; surface/permission vectors; concurrency HTTP regressions |
 | Agent tokens | Digest/constant-time auth, unknown/blank/revoked/expired/inactive states, fresh grants, no agent token on human endpoint | concerns.rs; agent_access/credential; authentication/HTTP/security vectors |
-| Bot keys/reply tokens | Digest keys, plaintext scrub registered once per process, create-only room-bound15min replies, membership/deactivation, reset/show-once/sudo | concerns.rs; User::Bot domains; verifiers; by-bot HTTP tests and WS11-ui account controllers |
-| Webhook transport | Timestamp/HMAC headers, encrypted signing secrets, SSRF/DNS/IP pinning,7s timeout, transient legacy retries, five-attempt agent backoff/Retry-After | integrations/{webhook,jobs,agent_jobs}.rs; agents_webhook_contract.json; real socket/claim tests |
+| Bot keys/reply tokens | Digest keys, plaintext scrub registered once per process, create-only room-bound 15-minute replies, membership/deactivation, reset/show-once/sudo | concerns.rs; User::Bot domains; verifiers; by-bot HTTP tests and WS11-ui account controllers |
+| Webhook transport | Timestamp/HMAC headers, encrypted signing secrets, SSRF/DNS/IP pinning, 7s timeout, transient legacy retries, five-attempt agent backoff/Retry-After | integrations/{webhook,jobs,agent_jobs}.rs; agents_webhook_contract.json; real socket/claim tests |
 | Webhook production paths | Message/slash/work/approval/action payloads, thread-aware sync replies, hop/fanout rules, durable jobs/claims/recovery and token scrubbing | agent_delivery/payloads/work_events; agent_jobs; jobs/periodic.rs; installed path/callback vectors |
 
 Existing approved JPEG/video crash and committed-file-retention differences remain explicit
@@ -70,8 +70,8 @@ exact byte comparisons; sizes/checksums are never masked.
 
 ## Broader WS11 evidence still partial
 
-The domain worker's tracked deferred-domain-cases.json retains81 exact named comparisons
-across eight files. The domain inventory has378 source cases;297 are mapped comparisons.
+The domain worker's tracked deferred-domain-cases.json retains 81 exact named comparisons
+across eight files. The domain inventory has 378 source cases; 297 are mapped comparisons.
 An unmapped name is evidence debt, not proof that its production behavior is unimplemented.
 No names are silently credited as closed by the API vectors, this header fix or a source grep.
 The domain manifest stays unchanged; its owning workers reconcile those individual ports.
