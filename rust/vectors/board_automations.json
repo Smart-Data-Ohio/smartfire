@@ -1,0 +1,2169 @@
+{
+  "reference": "d7c7de92 plus approved board drift",
+  "now": "2026-03-02 16:00:00.000000",
+  "models": [
+    {
+      "name": "valid",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "blocked",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "blocked",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "planned",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "planned",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "done",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "done",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "takes no SLA timer: done posts never breach"
+        ]
+      },
+      "full_messages": [
+        "Work status takes no SLA timer: done posts never breach"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "unknown",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "shipped",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Work status is not included in the list"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "blank-status",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "can't be blank",
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Work status can't be blank",
+        "Work status is not included in the list"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "nil-status",
+      "input": {
+        "room_id": 486777696,
+        "work_status": null,
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "can't be blank",
+          "is not included in the list"
+        ]
+      },
+      "full_messages": [
+        "Work status can't be blank",
+        "Work status is not included in the list"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "missing-room",
+      "input": {
+        "room_id": 0,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "room": [
+          "must exist"
+        ]
+      },
+      "full_messages": [
+        "Room must exist"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "channel",
+      "input": {
+        "room_id": 654632876,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "room": [
+          "must be a board"
+        ]
+      },
+      "full_messages": [
+        "Room must be a board"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "duplicate",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": true,
+      "valid": false,
+      "errors": {
+        "work_status": [
+          "has already been taken"
+        ]
+      },
+      "full_messages": [
+        "Work status has already been taken"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "self-id-zero",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": 0,
+      "duplicate": true,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-nil",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": null,
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "can't be blank",
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes can't be blank",
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": null,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "can't be blank",
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes can't be blank",
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": null,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\" \"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": " ",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "can't be blank",
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes can't be blank",
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": null,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"0\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "0",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "must be greater than 0"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes must be greater than 0"
+      ],
+      "nudge": 0,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"-5\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "-5",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "must be greater than 0"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes must be greater than 0"
+      ],
+      "nudge": -5,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"43201\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "43201",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "must be less than or equal to 43200"
+        ],
+        "escalate_after_minutes": [
+          "must be after the nudge threshold"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes must be less than or equal to 43200",
+        "Escalate after minutes must be after the nudge threshold"
+      ],
+      "nudge": 43201,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"60.0\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60.0",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "must be an integer"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes must be an integer"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"1e2\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "1e2",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "must be an integer"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes must be an integer"
+      ],
+      "nudge": 1,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\" 60 \"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": " 60 ",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "must be an integer"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes must be an integer"
+      ],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"+60\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "+60",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"060\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "060",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "nudge": 60,
+      "escalate": 240
+    },
+    {
+      "name": "nudge-\"xyz\"",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "xyz",
+        "escalate_after_minutes": "240"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "nudge_after_minutes": [
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Nudge after minutes is not a number"
+      ],
+      "nudge": 0,
+      "escalate": 240
+    },
+    {
+      "name": "nil-escalation",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": null
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "escalate_after_minutes": [
+          "can't be blank",
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Escalate after minutes can't be blank",
+        "Escalate after minutes is not a number"
+      ],
+      "nudge": 60,
+      "escalate": null
+    },
+    {
+      "name": "blank-escalation",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": ""
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "escalate_after_minutes": [
+          "can't be blank",
+          "is not a number"
+        ]
+      },
+      "full_messages": [
+        "Escalate after minutes can't be blank",
+        "Escalate after minutes is not a number"
+      ],
+      "nudge": 60,
+      "escalate": null
+    },
+    {
+      "name": "equal-escalation",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "60"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "escalate_after_minutes": [
+          "must be after the nudge threshold"
+        ]
+      },
+      "full_messages": [
+        "Escalate after minutes must be after the nudge threshold"
+      ],
+      "nudge": 60,
+      "escalate": 60
+    },
+    {
+      "name": "earlier-escalation",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "30"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": false,
+      "errors": {
+        "escalate_after_minutes": [
+          "must be after the nudge threshold"
+        ]
+      },
+      "full_messages": [
+        "Escalate after minutes must be after the nudge threshold"
+      ],
+      "nudge": 60,
+      "escalate": 30
+    },
+    {
+      "name": "max",
+      "input": {
+        "room_id": 486777696,
+        "work_status": "in_progress",
+        "nudge_after_minutes": "43199",
+        "escalate_after_minutes": "43200"
+      },
+      "existing_id": null,
+      "duplicate": false,
+      "valid": true,
+      "errors": {},
+      "full_messages": [],
+      "nudge": 43199,
+      "escalate": 43200
+    }
+  ],
+  "sla": [
+    {
+      "name": "under",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 15:30:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "nudge-boundary",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 15:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 15:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "before-nudge",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 15:00:00.000001','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "escalation-boundary",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659,
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "before-escalation",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00.000001','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:00:00.000001"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "unassigned",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',NULL,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                127326141,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "creator-owner",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',127326141,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                127326141,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "agent-owner",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',394959859,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                127326141,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "inactive-owner",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET status=1 WHERE id=149087659"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                127326141,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "revoked-owner",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM memberships WHERE room_id=486777696 AND user_id=149087659"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                127326141,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "bot-creator",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE rooms SET creator_id=394959859 WHERE id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "no-recipient",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',NULL,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE rooms SET creator_id=394959859 WHERE id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "deleted",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "channel",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE rooms SET type='Rooms::Open' WHERE id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "done",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','done',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'done',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "unruled",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','planned',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "nil-entry",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,NULL,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "untracked",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post',NULL,149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [],
+            "items": [],
+            "pushes": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "repeat",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659,
+              127326141
+            ]
+          }
+        },
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659,
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "new-crossing",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659,
+              127326141
+            ]
+          }
+        },
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [
+            "UPDATE channel_threads SET work_status_changed_at='2026-03-02 11:00:00' WHERE id=970000001"
+          ],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 11:00:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 11:00:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ],
+              [
+                149087659,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659,
+              127326141,
+              149087659,
+              127326141
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "later-escalation",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Stale <&> post','in_progress',149087659,'2026-03-02 12:01:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:01:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659
+            ]
+          }
+        },
+        {
+          "now": "2026-03-02 16:01:00.000000",
+          "setup": [],
+          "facts": {
+            "claims": [
+              [
+                970000001,
+                "in_progress",
+                "nudge",
+                149087659,
+                "2026-03-02 12:01:00.000000"
+              ],
+              [
+                970000001,
+                "in_progress",
+                "escalation",
+                127326141,
+                "2026-03-02 12:01:00.000000"
+              ]
+            ],
+            "items": [
+              [
+                149087659,
+                "work_sla"
+              ],
+              [
+                127326141,
+                "work_sla"
+              ]
+            ],
+            "pushes": [
+              149087659,
+              127326141
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "digests": [
+    {
+      "name": "empty",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "under",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 15:30:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "boundary",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 15:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1.0 hour",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1.0 hour",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "before-boundary",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 15:00:00.000001','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "quiet",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "escaping",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'**Bold** <&> title','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE users SET name='*Kevin* <&>' WHERE id=149087659",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\n**Bold** &lt;&amp;&gt; title — In progress · *Kevin* &lt;&amp;&gt; · 2.0 hours",
+                "plain": "Stale work digest: 1 post past its SLA\n**Bold** <&> title — In progress · *Kevin* <&> · 2.0 hours",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "many",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000002,486777696,127326141,'Old work 2','in_progress',NULL,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000003,486777696,127326141,'Old work 3','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000004,486777696,127326141,'Old work 4','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000005,486777696,127326141,'Old work 5','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000006,486777696,127326141,'Old work 6','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000007,486777696,127326141,'Old work 7','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000008,486777696,127326141,'Old work 8','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000009,486777696,127326141,'Old work 9','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000010,486777696,127326141,'Old work 10','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000011,486777696,127326141,'Old work 11','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000012,486777696,127326141,'Old work 12','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000013,486777696,127326141,'Old work 13','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000014,486777696,127326141,'Old work 14','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000015,486777696,127326141,'Old work 15','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000016,486777696,127326141,'Old work 16','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000017,486777696,127326141,'Old work 17','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000018,486777696,127326141,'Old work 18','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000019,486777696,127326141,'Old work 19','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000020,486777696,127326141,'Old work 20','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000021,486777696,127326141,'Old work 21','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000022,486777696,127326141,'Old work 22','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000023,486777696,127326141,'Old work 23','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 23 posts past its SLA\nOld work 1 — In progress · Jason · 2.0 hours\nOld work 2 — In progress · Unassigned · 2.0 hours\nOld work 3 — In progress · Jason · 2.0 hours\nOld work 4 — In progress · Jason · 2.0 hours\nOld work 5 — In progress · Jason · 2.0 hours\nOld work 6 — In progress · Jason · 2.0 hours\nOld work 7 — In progress · Jason · 2.0 hours\nOld work 8 — In progress · Jason · 2.0 hours\nOld work 9 — In progress · Jason · 2.0 hours\nOld work 10 — In progress · Jason · 2.0 hours\nOld work 11 — In progress · Jason · 2.0 hours\nOld work 12 — In progress · Jason · 2.0 hours\nOld work 13 — In progress · Jason · 2.0 hours\nOld work 14 — In progress · Jason · 2.0 hours\nOld work 15 — In progress · Jason · 2.0 hours\nOld work 16 — In progress · Jason · 2.0 hours\nOld work 17 — In progress · Jason · 2.0 hours\nOld work 18 — In progress · Jason · 2.0 hours\nOld work 19 — In progress · Jason · 2.0 hours\nOld work 20 — In progress · Jason · 2.0 hours\nand 3 more",
+                "plain": "Stale work digest: 23 posts past its SLA\nOld work 1 — In progress · Jason · 2.0 hours\nOld work 2 — In progress · Unassigned · 2.0 hours\nOld work 3 — In progress · Jason · 2.0 hours\nOld work 4 — In progress · Jason · 2.0 hours\nOld work 5 — In progress · Jason · 2.0 hours\nOld work 6 — In progress · Jason · 2.0 hours\nOld work 7 — In progress · Jason · 2.0 hours\nOld work 8 — In progress · Jason · 2.0 hours\nOld work 9 — In progress · Jason · 2.0 hours\nOld work 10 — In progress · Jason · 2.0 hours\nOld work 11 — In progress · Jason · 2.0 hours\nOld work 12 — In progress · Jason · 2.0 hours\nOld work 13 — In progress · Jason · 2.0 hours\nOld work 14 — In progress · Jason · 2.0 hours\nOld work 15 — In progress · Jason · 2.0 hours\nOld work 16 — In progress · Jason · 2.0 hours\nOld work 17 — In progress · Jason · 2.0 hours\nOld work 18 — In progress · Jason · 2.0 hours\nOld work 19 — In progress · Jason · 2.0 hours\nOld work 20 — In progress · Jason · 2.0 hours\nand 3 more",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "done",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','done',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "nil-entry",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,NULL,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "untracked",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1',NULL,149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "deleted",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=486777696",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "channel",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE rooms SET type='Rooms::Open' WHERE id=486777696",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "no-rules",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [],
+            "message_delta": 0,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "repeat",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        },
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "next-day",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        },
+        {
+          "now": "2026-03-03 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 hours",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              },
+              {
+                "room_id": 486777696,
+                "on": "2026-03-03",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1.1 days",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1.1 days",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 2,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "age-minute",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',1,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 15:59:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1 minute",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1 minute",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "age-hour",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-03-02 14:30:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1.5 hours",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 1.5 hours",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "age-day",
+      "setup": [
+        "DELETE FROM board_sla_nudges",
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM activity_items",
+        "UPDATE rooms SET type='Rooms::Board',creator_id=127326141,deleted_at=NULL WHERE id=486777696",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(486777696,'in_progress',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(970000001,486777696,127326141,'Old work 1','in_progress',149087659,'2026-02-28 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE memberships SET unread_at=NULL WHERE room_id=486777696"
+      ],
+      "runs": [
+        {
+          "now": "2026-03-02 16:00:00.000000",
+          "facts": {
+            "digests": [
+              {
+                "room_id": 486777696,
+                "on": "2026-03-02",
+                "body": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 days",
+                "plain": "Stale work digest: 1 post past its SLA\nOld work 1 — In progress · Jason · 2.0 days",
+                "system_note": true,
+                "thread_id": null,
+                "streaming": false
+              }
+            ],
+            "message_delta": 1,
+            "items": 0,
+            "unread": 0,
+            "jobs": []
+          }
+        }
+      ]
+    }
+  ],
+  "cadence": [
+    {
+      "name": "board sla nudges",
+      "seconds": 300
+    },
+    {
+      "name": "board stale digests",
+      "seconds": 3600
+    }
+  ],
+  "query_counts": [
+    {
+      "kind": "sla",
+      "size": 10,
+      "repeat": false,
+      "reads": 82
+    },
+    {
+      "kind": "sla",
+      "size": 10,
+      "repeat": true,
+      "reads": 32
+    },
+    {
+      "kind": "sla",
+      "size": 100,
+      "repeat": false,
+      "reads": 802
+    },
+    {
+      "kind": "sla",
+      "size": 100,
+      "repeat": true,
+      "reads": 302
+    },
+    {
+      "kind": "digest",
+      "size": 10,
+      "repeat": false,
+      "reads": 61
+    },
+    {
+      "kind": "digest",
+      "size": 10,
+      "repeat": true,
+      "reads": 41
+    },
+    {
+      "kind": "digest",
+      "size": 100,
+      "repeat": false,
+      "reads": 601
+    },
+    {
+      "kind": "digest",
+      "size": 100,
+      "repeat": true,
+      "reads": 401
+    }
+  ]
+}

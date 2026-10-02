@@ -137,13 +137,7 @@ impl BoardSlaNudge {
     pub fn claim_and_notify(tx: &mut Tx<'_>, input: NewBoardSlaNudge, push: bool) -> Result<Self> {
         tx.savepoint(move |tx| {
             let nudge = Self::create(tx, input)?;
-            ActivityItem::record(
-                tx,
-                nudge.recipient_id,
-                super::activity_item::ActivitySource::BoardSlaNudge(nudge.id),
-                "work_sla",
-                false,
-            )?;
+            ActivityItem::record_board_sla_nudge(tx, &nudge)?;
             if push {
                 tx.emit_after_commit(Event::job(&super::notification_push::BoardNudgeJob {
                     nudge_id: nudge.id,

@@ -133,11 +133,23 @@ impl ActivityItem {
                 return Self::find(tx.conn(), before.id).map(Some);
             }
         }
+        Self::insert_authorized_source(tx, user_id, source_type, source_id, event_type, None)
+    }
+
+    /// The newly claimed nudge already identifies its authorized source and sole recipient.
+    pub(crate) fn record_board_sla_nudge(tx: &mut Tx<'_>, nudge: &crate::BoardSlaNudge) -> Result<Option<Self>> {
+        let Some(user) = User::find_by_id(tx.conn(), nudge.recipient_id)? else { return Ok(None); };
+        if !user.is_active() || user.is_bot() { return Ok(None); }
+        Self::insert_authorized_source(tx, user.id, "BoardSlaNudge", nudge.id, "work_sla", Some(&user))
+    }
+
+    fn insert_authorized_source(tx: &mut Tx<'_>, user_id: i64, source_type: &str, source_id: i64, event_type: &str, recipient: Option<&User>) -> Result<Option<Self>> {
         let inserted = tx.conn().execute("INSERT INTO activity_items(user_id,source_type,source_id,event_type,created_at,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id,source_type,source_id) DO NOTHING",params![user_id,source_type,source_id,event_type,tx.now(),tx.now()])?;
         let item = Self::find_by_user_and_source(tx.conn(), user_id, source_type, source_id)?
             .ok_or(Error::RecordNotFound("ActivityItem"))?;
         if inserted == 1 {
-            Self::broadcast_change(tx, user_id, item.id)?;
+            if let Some(user) = recipient { Self::broadcast_item_for_user(tx, user, &item)?; }
+            else { Self::broadcast_change(tx, user_id, item.id)?; }
         }
         Ok(Some(item))
     }
