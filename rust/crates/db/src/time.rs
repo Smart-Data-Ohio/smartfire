@@ -77,7 +77,7 @@ impl Timestamp {
         )
     }
 
-    /// Jiff's civil calendar ends at 9999; Rails credentials also accept 10000.
+    /// Jiff's civil calendar ends at 9999; Rails credentials accept wider years.
     /// Readers that render such input must use calendar_proxy rather than jiff.
     pub fn try_jiff(self) -> Option<JiffTimestamp> {
         JiffTimestamp::from_microsecond(i64::try_from(self.0).ok()?).ok()
@@ -177,8 +177,7 @@ impl Timestamp {
         } else {
             2000 + i16::try_from(year.rem_euclid(I512::from(400))).ok()?
         };
-        let date =
-            jiff::civil::Date::new(proxy_year.try_into().ok()?, num(0..2)?, num(3..5)?).ok()?;
+        let date = jiff::civil::Date::new(proxy_year, num(0..2)?, num(3..5)?).ok()?;
         let fraction = remainder.get(14..)?;
         let micros = match fraction.strip_prefix('.') {
             Some(d) if !d.is_empty() && d.bytes().all(|b| b.is_ascii_digit()) => {
