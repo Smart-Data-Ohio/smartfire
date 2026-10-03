@@ -2,6 +2,7 @@
 // geometry retains the original predicates; wait_until polls for 5s at 50ms.
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';
+import {CABLE_WAIT} from './behavior-deadlines.mjs';
 import {actOnVisible,visibleCount,visibleMatch,waitForVisibility,filterVisibleText,waitForCondition} from './behavior-visibility.mjs';
 export const motionCases=[
   'mobile drawer animates in, lands in place, and returns focus with motion on',
@@ -42,6 +43,9 @@ async function reopenedCurrentFocus(page,selector) {
 export async function motion({author:page,base,caseName,fixture}) {
   await page.setViewportSize({width:1400,height:1400});
   const response=await page.goto(`${base}/rooms/${fixture.motion_room_id}`);assert.equal(response.status(),200);
+  // SystemTestHelper#join_room waits for all three or more streams, not just
+  // the room stream: the sidebar frame must load and subscribe too (:71-84).
+  await waitForCondition(()=>page.locator('turbo-cable-stream-source').evaluateAll(nodes=>nodes.length>=3&&nodes.every(node=>node.hasAttribute('connected'))),{timeout:CABLE_WAIT});
   // Supply only Rails.env.test?'s layout input. The server-emission declaration
   // remains deferred; it cannot be credited by this browser setup.
   await page.evaluate(()=>document.documentElement.dataset.testMotion='off');

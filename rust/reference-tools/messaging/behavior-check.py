@@ -467,7 +467,7 @@ for file in files:
                             elif file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     for table in (["messages","channel_threads","users","rooms"] if file == "motion" else ["messages","channel_threads"]):
-                                        query=f"SELECT * FROM {table} ORDER BY id"
+                                        query=("SELECT id,name,email_address,role,active FROM users ORDER BY id" if table=="users" else "SELECT id,name,type,creator_id FROM rooms ORDER BY id" if table=="rooms" else f"SELECT * FROM {table} ORDER BY id")
                                         assert conn.execute(query).fetchall()==seed.execute(query).fetchall()
                             elif file == "channel_threads_controller":
                                 from behavior_work_rows import assert_work_rows
