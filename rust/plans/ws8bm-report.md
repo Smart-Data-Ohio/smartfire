@@ -1,4 +1,14 @@
-# WS8bm #221: requested changes verified
+# WS8bm #221 re-review: unconditional diagnostic teardown
+
+The new P2 is fixed: a missing history row fails at the intended `work-history identity:` assertion and cannot bypass Rust/Rails/container shutdown. Diagnostic exceptions are protected by a nested `finally`, and shared teardown always attempts Rails cleanup even when Rust termination fails. The audit also covers other messaging SQL/browser diagnostics. [The cleanup review report](ws8bm-review221-cleanup.md) contains the audit table, before/after resource lists, commands and raw receipts.
+
+The real deleted-history producer reproduces the leak at `2e711650`: two host processes, three listeners and one Rails container remain after the identity assertion and diagnostic TypeError. An independent supervisor then cleans the baseline's deliberately leaked resources. At fixed tools source `b2d7369d8`, the same producer is rejected at the original identity assertion with two `FAIL` readbacks, no TypeError, and zero remaining processes, listeners or containers **before** supervisor cleanup.
+
+All **eight** real producer faults reject on both apps at their intended assertions, including the reviewer's wrong type, wrong actor and displaced-history variants. All **eight** positive controller cases pass on both apps; Python checks pass **28/28**, browser helpers **36/36**, and strict workspace clippy passes. Verification runs from the independent clone. No Rust product, Rails client, golden, mask, deadline, ignore or concurrency changes are included. No new declaration is credited: inventory remains **156/156 controllers; 118 passed / 17 deferred / 0 owner-blocked systems**. The exact seventeen deferrals below are unchanged.
+
+The sole own scratch target was deleted: `Removed 12200 files, 10.3GiB total`. The final owned resource inventory lists `processes: []`, `listeners: []`, `containers: []`, `scratch_targets: []`. Raw logs are retained. This is the requested coherent review-fix checkpoint; work stops after pushing and confirming cleanup. The previous P2 fixes and their canonical-media receipts below are historical and remain intact.
+
+# Historical WS8bm #221: requested changes verified
 
 Both P2 coverage gaps are fixed: global WorkThreadEvent deltas are checked around every real PATCH, including refusals, and the original history message is found through `work-history` and required to retain its ID. The audit of all ten new controller declarations also restores the missing global +2 assertion for separate stale-instance updates in both the Rails runner and Rust regression. [The full scope table, failing-first proofs, commands and raw receipts are in the review report](ws8bm-review221.md).
 
