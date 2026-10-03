@@ -146,7 +146,11 @@ class HuddlePresenceTest < ApplicationSystemTestCase
       idle = page.evaluate_script <<~JS
         (() => {
           const element = document.querySelector('[data-controller~="huddle-presence"]')
-          return window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence")?.inFlightRefresh === false
+          const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence")
+          if (!controller) return false
+          // Stop periodic refreshes before observing idle; no tick may invalidate it.
+          clearInterval(controller.refreshTimer)
+          return controller.inFlightRefresh === false
         })()
       JS
       raise Capybara::ExpectationNotMet, "initial presence poll is still in flight" unless idle
@@ -199,20 +203,10 @@ class HuddlePresenceTest < ApplicationSystemTestCase
       window.presenceFetches = 0
       const element = document.querySelector('[data-controller~="huddle-presence"]')
       const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence")
-      const fetch = window.fetch
-      let release
-      const responseGate = new Promise(resolve => release = resolve)
-      window.fetch = async (...args) => {
-        const response = await fetch(...args)
-        await responseGate
-        return response
-      }
       const first = controller.refresh()
       const second = controller.refresh()
       const fetches = window.presenceFetches
-      release()
       Promise.all([first, second]).then(() => {
-        window.fetch = fetch
         done(fetches)
       }, error => done(String(error)))
     JS

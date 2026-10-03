@@ -298,7 +298,15 @@ class ComposerTest < ApplicationSystemTestCase
         connected = page.evaluate_script <<~JS
           (() => {
             const element = document.querySelector('[data-controller~="typing-notifications"]')
-            return !!window.Stimulus.getControllerForElementAndIdentifier(element, "typing-notifications")?.channel
+            const channel = window.Stimulus.getControllerForElementAndIdentifier(element, "typing-notifications")?.channel
+            if (!channel) return false
+
+            const { connection, subscriptions } = channel.consumer
+            // A current welcome excludes the gap before the first subscribe is sent.
+            // The guarantor removes a registered subscription only on confirmation.
+            return connection.isOpen() && !!connection.monitor.pingedAt && !connection.monitor.disconnectedAt &&
+              subscriptions.findAll(channel.identifier).includes(channel) &&
+              !subscriptions.guarantor.pendingSubscriptions.includes(channel)
           })()
         JS
         raise Capybara::ExpectationNotMet, "typing subscription is not connected" unless connected
