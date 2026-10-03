@@ -90,7 +90,7 @@ const mutations=new Map([
   ['From this device triggers the file input',['controllers/attach_menu_controller-','chooseDevice(event) {','chooseDevice(event) { return;']],
   ['+ opens the file picker directly without Drive',['controllers/attach_menu_controller-','if (!this.hasMenuTarget) {\n      this.fileInputTarget.click()','if (!this.hasMenuTarget) {\n      void(this.fileInputTarget)']],
   ['arrow keys move between items and Escape closes back onto +',['controllers/attach_menu_controller-','nextIndex = (currentIndex + 1) % items.length','nextIndex = currentIndex']],
-  ['a tap outside closes the menu',['controllers/attach_menu_controller-','this.onDocumentPointerDown = this.#onDocumentPointerDown.bind(this)','this.onDocumentPointerDown = () => {}']],
+  ['a tap outside closes the menu',['controllers/attach_menu_controller-','this.onDocumentPointerDown = this.#onDocumentPointerDown.bind(this)','this.onDocumentPointerDown = event => { window.__ws8bmMutatedActions?.push({action: "outsideTap", target: event.target?.closest(".room-header__name") ? "room-header" : "other"}); }']],
   ['phone layout keeps the menu above the composer with no horizontal overflow',['controllers/attach_menu_controller-','const top = buttonRect.top - menuHeight - VIEWPORT_PADDING','const top = buttonRect.bottom + VIEWPORT_PADDING']],
   ['device files, paste, and drag-and-drop still preview uploads',[composer,'this.#files.push(...files)','this.#files.push()']],
   ['boosting a message',['boost-create-response']],
@@ -300,6 +300,31 @@ for(const [name,variants] of categoryMutations) {
   if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
   for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
 }
+const pickerAsset='controllers/emoji_picker_controller-';
+const stripLiteralAttribute=label=>[pickerAsset,'connect() {',`connect() {
+  const strip=()=>document.querySelectorAll('.message__toolbar button[aria-label="${label}"]').forEach(button=>button.removeAttribute('aria-label'));
+  new MutationObserver(strip).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-label']});strip();`];
+export const literalAttributeMutations=new Map([
+  ['the toolbar stays hidden until hover or focus and labels every action',new Map([
+    ['missing-thumb-aria-label',stripLiteralAttribute('React with thumbs up')],
+    ['missing-picker-aria-label',stripLiteralAttribute('Add reaction')],
+    ['missing-reply-aria-label',stripLiteralAttribute('Reply to message')],
+    ['missing-thread-aria-label',stripLiteralAttribute('Open thread')],
+    ['missing-more-aria-label',stripLiteralAttribute('More message actions')],
+  ])],
+  ['the emoji picker searches and reacts',new Map([
+    ['missing-option-aria-label',[pickerAsset,'connect() {',`connect() {
+      const strip=()=>document.querySelectorAll('.emoji-picker__option[aria-label="Grinning face"]').forEach(button=>{
+        const label=document.createElement('span');label.id='ws8bm-option-label';label.textContent='Grinning face';label.hidden=true;document.body.append(label);
+        button.setAttribute('aria-labelledby',label.id);button.removeAttribute('aria-label');
+      });
+      new MutationObserver(strip).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-label']});strip();`]],
+  ])],
+]);
+for(const [name,variants] of literalAttributeMutations) {
+  if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
+  for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
+}
 export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
   const variants=[...(mutations.has(caseName)?['default']:[]),...(reviewMutations.get(caseName)?.keys()||[])];
@@ -310,6 +335,15 @@ export async function installMutation(page,caseName,probe,variant='default') {
   assert.ok(mutation,`no discrimination mutant for ${caseName}`);
   if(process.env.WS8BM_NEGATIVE==='1') probe.target=mutationTarget(caseName,variant);
   const [asset,,replacement]=mutation;
+  if(variant==='default') {
+    probe.requiredAction=caseName==='the picker shows category tabs and switches between them'
+      ?{action:'chooseTab',target:'emoji-picker-tab-people'}:
+      caseName==='a tap outside closes the menu'?{action:'outsideTap',target:'room-header'}:undefined;
+    if(probe.requiredAction) {
+      await page.addInitScript(()=>{window.__ws8bmMutatedActions=[];});
+      (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmMutatedActions||[]).catch(()=>[]));
+    }
+  }
   if(caseName==='a release click landing on the just-opened menu does not activate it'&&variant==='default') {
     probe.requiresReleaseClick=true;
     await page.addInitScript(()=>{
@@ -328,7 +362,11 @@ export async function installMutation(page,caseName,probe,variant='default') {
     asset==='models/code_highlighter-'&&replacement?.includes('code.dataset.highlighted = "no"')?'code[data-highlighted="no"]':
     asset==='models/code_highlighter-'&&replacement?.includes('missing-code-token')?'.missing-code-token':null;
   const injectedStyleSelector=asset==='controllers/thread_panel_controller-'?replacement?.match(/style\.textContent = '([^'{]+)\{/ )?.[1].trim():null;
-  const stateSelector=cssSelector||scriptedSelector||injectedStyleSelector;
+  const missingLabels={'missing-thumb-aria-label':'React with thumbs up','missing-picker-aria-label':'Add reaction',
+    'missing-reply-aria-label':'Reply to message','missing-thread-aria-label':'Open thread','missing-more-aria-label':'More message actions'};
+  const attributeSelector=missingLabels[variant]?`.message__toolbar button[title="${missingLabels[variant]}"]:not([aria-label])`:
+    variant==='missing-option-aria-label'?'.emoji-picker__option[aria-labelledby="ws8bm-option-label"]:not([aria-label])':null;
+  const stateSelector=cssSelector||scriptedSelector||injectedStyleSelector||attributeSelector;
   probe.requiresHiddenState ||= !!injectedStyleSelector&&/opacity:\s*0/.test(replacement)|| !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);
   if(stateSelector) (probe.observers??=[]).push(async()=>{
     if(page.isClosed()) return [];

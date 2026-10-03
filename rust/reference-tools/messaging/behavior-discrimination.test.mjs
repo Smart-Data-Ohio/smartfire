@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {mutationNames,mutationVariants} from './behavior-mutations.mjs';
+import {actionMutations} from './behavior-action-mutations.mjs';
 import {mutationTarget,rejectionEvidence} from './behavior-discrimination.mjs';
 function failure(module,anchor,name='TimeoutError') {
   const url=new URL(module,import.meta.url),source=readFileSync(url,'utf8');
@@ -17,7 +18,7 @@ test('every registered mutant names an existing intended assertion',()=>{
     for(const target of mutationTarget(name,variant)) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
     count++;
   }
-  assert.equal(count,179);
+  assert.equal(count,185);
 });
 test('earlier Loading timeout earns no delayed-marker rejection credit',()=>{
   const early=failure('behavior-search-forward.mjs',"waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post')");
@@ -69,4 +70,76 @@ test('the profile width probe targets main content overflow, not the earlier doc
   const document=failure('behavior-mobile-continuation.mjs','assert.ok(result.documentOverflow<=0');
   assert.equal(rejectionEvidence(name,'default',valid,content).valid,true);
   assert.equal(rejectionEvidence(name,'default',valid,document).valid,false);
+});
+
+test('initial Recent-tab setup cannot credit the post-click people assertion',()=>{
+  const name='the picker shows category tabs and switches between them';
+  const early=failure('behavior-toolbar.mjs',"await waitForVisibility(page.locator('#emoji-picker-tab-recent:not([aria-selected=\"true\"])'))");
+  assert.equal(rejectionEvidence(name,'default',valid,early).valid,false);
+  const post=failure('behavior-toolbar.mjs',"await tab('people')");
+  assert.equal(rejectionEvidence(name,'default',valid,post).valid,true);
+});
+
+test('outside-tap setup cannot credit the post-outside closed assertion',()=>{
+  const name='a tap outside closes the menu';
+  const early=failure('behavior-attach-menu.mjs','async function expanded(value)');
+  const post=failure('behavior-attach-menu.mjs','await expanded(false)');
+  assert.equal(rejectionEvidence(name,'default',valid,early).valid,false);
+  assert.equal(rejectionEvidence(name,'default',valid,post).valid,true);
+});
+
+test('the initial const checkpoint cannot credit the missing def variant',()=>{
+  const name='editing a code block replaces its language colors and copied source';
+  const early=failure('behavior-code.mjs',"await waitForVisibility(filterVisibleText(code.locator('.code-token')");
+  assert.equal(rejectionEvidence(name,'missing-def',valid,early).valid,false);
+  assert.equal(rejectionEvidence(name,'missing-def',valid,failure('behavior-code.mjs',"await highlight(marked(replacement,'python'),'def')")).valid,true);
+});
+
+test('the restored draft checkpoint cannot credit the cleared-draft variant',()=>{
+  const name='thread drafts persist per thread without touching the channel draft';
+  const early=failure('behavior-composer.mjs',"await waitForVisibleProperty(reply,'value','Thread draft')");
+  assert.equal(rejectionEvidence(name,'transparent-cleared-thread-draft',valid,early).valid,false);
+  assert.equal(rejectionEvidence(name,'transparent-cleared-thread-draft',valid,failure('behavior-composer.mjs',"await waitForVisibleProperty(reply,'value','')")).valid,true);
+});
+
+
+test('post-action source alone cannot credit an unexercised mutated handler',()=>{
+  const name='the picker shows category tabs and switches between them';
+  const error=failure('behavior-toolbar.mjs',"await tab('people')");
+  const probe={...valid,requiredAction:{action:'chooseTab',target:'emoji-picker-tab-people'}};
+  assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{action:'chooseTab',target:'emoji-picker-tab-flags'}]},error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{action:'chooseTab',target:'emoji-picker-tab-people'}]},error).valid,true);
+});
+
+test('lazy data mutation names its initial-connect assertion, not its later fetch assertion',()=>{
+  const name='the picker loads its emoji data only on first open';
+  const early=failure('behavior-toolbar.mjs',"assert.equal((await resources()).some(url=>url.endsWith('.json')&&url.includes('emoji')),false)");
+  const later=failure('behavior-toolbar.mjs',"assert.equal((await resources()).some(url=>url.endsWith('.json')&&url.includes('emoji')),true)");
+  assert.equal(rejectionEvidence(name,'default',valid,early).valid,true);
+  assert.equal(rejectionEvidence(name,'default',valid,later).valid,false);
+});
+
+test('the post-save draft variant cannot credit cancellation or shared field setup',()=>{
+  const name='edits through the normal composer and restores the saved draft on cancel and success';
+  const early=failure('behavior-actions.mjs',"await field(page,'A draft that must survive editing')");
+  assert.equal(rejectionEvidence(name,'transparent-saved-draft',valid,early).valid,false);
+});
+
+test('older-search text mutation cannot credit the pre-pagination absence assertion',()=>{
+  const name='search tolerates operators, shows an empty state and pages older results';
+  const early=failure('behavior-search-forward.mjs',"await waitForVisibleCount(filterVisibleText(page.locator('#search-results .message'),'system paging alpha'),0)");
+  assert.equal(rejectionEvidence(name,'transparent-older-search-text',valid,early).valid,false);
+});
+
+test('menu-owner opacity mutation cannot credit an unrelated closed-menu assertion',()=>{
+  const early=failure('behavior-actions.mjs',"await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'hidden'})");
+  for(const [name,variant] of [['the more button opens the shared menu for its message','transparent-more-owner'],['copies message text and link and forwards to a server-provided thread destination','transparent-menu-owner']])
+    assert.equal(rejectionEvidence(name,variant,valid,early).valid,false);
+});
+
+
+test('the served tab-handler witness is syntactically executable JavaScript',()=>{
+  const replacement=actionMutations.find(([name])=>name==='the picker shows category tabs and switches between them')[1][2];
+  assert.doesNotThrow(()=>new Function(`return class {${replacement}}}`));
 });

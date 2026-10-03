@@ -59,7 +59,7 @@ add(['thread drafts persist per thread without touching the channel draft'],'com
 add(['+ shows both attach options when Drive is available'],'attach-menu','aria-expanded=');
 add(['From this device triggers the file input','+ opens the file picker directly without Drive'],'attach-menu','window.filePickerClicks),1');
 add(['arrow keys move between items and Escape closes back onto +'],'attach-menu',"[role=\"menuitem\"]:nth-child(2)");
-add(['a tap outside closes the menu'],'attach-menu','aria-expanded=');
+add(['a tap outside closes the menu'],'attach-menu','await expanded(false)');
 add(['phone layout keeps the menu above the composer with no horizontal overflow'],'attach-menu','geometry.menu.bottom<=geometry.buttonTop');
 add(['device files, paste, and drag-and-drop still preview uploads'],'attach-menu',"'hello'");
 add(['boosting a message'],'boosts',"value)}");
@@ -69,8 +69,8 @@ add(['the toolbar stays hidden until hover or focus and labels every action'],'t
 add(['quick-react creates a boost from the toolbar','keyboard users reach the toolbar from a focused message','the emoji picker searches and reacts','the picker remembers recent reactions'],'toolbar','reaction-chip__count');
 add(['reply and thread buttons drive the composer and the thread panel'],'toolbar','[data-thread-panel-target="create"]');
 add(['the more button opens the shared menu for its message','opens message actions from context menu and keyboard, and cancels a moving long press'],'actions',"page.locator('#message-actions-menu:not([hidden])')");
-add(['the picker shows category tabs and switches between them'],'toolbar','[aria-selected="true"]');
-add(['the picker loads its emoji data only on first open'],'toolbar',"(await resources()).some");
+add(['the picker shows category tabs and switches between them'],'toolbar',"await tab('people')");
+add(['the picker loads its emoji data only on first open'],'toolbar',"assert.equal((await resources()).some(url=>url.endsWith('.json')&&url.includes('emoji')),false)");
 add(['the picker Custom tab reacts with a workspace icon'],'toolbar',"option('Acme Corp').locator('img')");
 add(['the picker reacts with a brand icon shortcode'],'toolbar',"option('OpenAI').locator('img')");
 add(['picker arrows move through options, Enter selects, and Escape returns focus'],'toolbar','document.activeElement?.getAttribute');
@@ -78,7 +78,7 @@ add(['picker tabs move with arrow keys and switch the grid'],'toolbar','document
 add(['message action menu is a bottom sheet with touch-sized targets on phones','shows the message action menu as a bottom sheet on phones'],'actions','viewport.height-menu.bottom');
 add(['message action menu stays a floating popover on desktop'],'actions','g.menu.width<g.viewport.width');
 D.set('a release click landing on the just-opened menu does not activate it',[target('actions','await assertMenuOpen(page)'),target('actions','[data-composer-target="context"][hidden]')]);
-add(['edits through the normal composer and restores the saved draft on cancel and success'],'actions','field(page,\'A draft that must survive editing\')');
+add(['edits through the normal composer and restores the saved draft on cancel and success'],'actions','await restoredDraftAfterCancel()');
 add(['a duplicate delivery does not replace the message while its actions are open'],'actions','window.originalDeliveredMessage.isConnected');
 add(['keeps newer typing through an asynchronous edit and leaves failures in edit mode'],'actions',"field(page,'A newer draft typed while saving'");
 add(['replies with notify off and renders a tombstone when the target is deleted'],'actions',"row,{state:'hidden'}");
@@ -139,18 +139,20 @@ add(['keeps an anchored older thread unread when a new reply arrives'],'thread-c
 for(const specs of D.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 const V=new Map();
 const variant=(names,module,anchor)=>{for(const name of names) V.set(name,[target(module,anchor)]);};
-variant(['missing-const','missing-def'],'code',"code.locator('.code-token')");
+variant(['missing-const'],'code',"code.locator('.code-token')");
+variant(['missing-def'],'code',"await highlight(marked(replacement,'python'),'def')");
 variant(['hidden-clapping','transparent-clapping','transparent-reaction-ancestor'],'actions',"fixture.reaction_count");
 variant(['delayed-boost-write'],'toolbar','reaction-chip__count');
 variant(['transparent-edit-field'],'actions',"actOnVisible(editor,'fill'");
-variant(['transparent-cancelled-draft','transparent-saved-draft'],'actions',"field(page,'A draft that must survive editing')");
+variant(['transparent-cancelled-draft'],'actions','await restoredDraftAfterCancel()');
+variant(['transparent-saved-draft'],'actions','await restoredDraftAfterSuccess()');
 variant(['transparent-redelivery-field'],'actions',`field(page,"Third time's a charm.")`);
 // Ruby :166 explicitly asserts this checkpoint with default visibility.
 variant(['transparent-redelivery-flag'],'actions',"page.locator('html[data-duplicate-delivery-rendered]')");
 variant(['transparent-newer-draft'],'actions',"field(page,'A newer draft typed while saving'");
 variant(['transparent-cleared-code-field'],'code','actOnVisible(page.getByRole(\'combobox\'');
 variant(['transparent-notify-field'],'actions',"page.getByLabel('Notify author'");
-variant(['transparent-menu-owner','transparent-more-owner'],'actions',"page.locator('.message[data-message-actions-open]')");
+variant(['transparent-menu-owner','transparent-more-owner'],'actions',"waitForVisibility(page.locator('.message[data-message-actions-open]'),{timeout:CAPYBARA_DEFAULT})");
 variant(['transparent-ruby-code'],'search-forward',"source.locator('pre code')");
 variant(['transparent-forwarded-code'],'search-forward',"forwarded.locator('pre code.language-ruby')");
 variant(['transparent-search-back-link'],'code',"name:'Back to Designers'");
@@ -177,9 +179,9 @@ variant(['transparent-combobox-lookup'],'composer','waitForVisibility(editor,');
 // Global field opacity also invalidates the original visible fill_in before
 // its later value assertion. Name that causal action, never a setup elsewhere.
 variant(['transparent-restored-thread-draft'],'composer',"actOnVisible(panel.getByRole('combobox',{name:'Write a thread reply'");
-variant(['transparent-cleared-thread-draft'],'composer',"waitForVisibleProperty(reply,'value'");
+variant(['transparent-cleared-thread-draft'],'composer',"waitForVisibleProperty(reply,'value','')");
 variant(['transparent-boost-draft-after-edit','transparent-boost-draft-after-delivery'],'boosts',"locator('input[name=\"boost[content]\"]'),'fill'");
-variant(['transparent-older-search-text'],'search-forward',"'system paging alpha'");
+variant(['transparent-older-search-text'],'search-forward',"byVisibleText(page.locator('#search-results'),'system paging alpha',{exact:true})");
 variant(['transparent-initial-url-text'],'search-forward',"'nothing linked yet'");
 variant(['hidden-initial-composer-conversation'],'composer','panel.locator(\'[data-thread-panel-target="conversation"]\')');
 variant(['delayed-negative-removal'],'message-list',"row(id),{state:'hidden'}");
@@ -193,8 +195,20 @@ variant(['transparent-drive-text','transparent-phone-drive-text'],'attach-menu',
 variant(['transparent-boost-delete-text'],'boosts',"boost.locator('button'),'Delete this boost'");
 variant(['wrong-permission-status','wrong-validation-status'],'work-controllers','assert.equal(response.status,expected');
 for(const specs of V.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
+for(const [name,label] of [
+  ['missing-thumb-aria-label','React with thumbs up'],['missing-picker-aria-label','Add reaction'],
+  ['missing-reply-aria-label','Reply to message'],['missing-thread-aria-label','Open thread'],['missing-more-aria-label','More message actions'],
+]) variant([name],'toolbar',`row.locator('button[aria-label="${label}"]`);
+variant(['missing-option-aria-label'],'toolbar',"await waitForVisibility(option('Grinning face'),{timeout:DELIVERY_WAIT})");
+// More also requires the literal aria-haspopup attribute in the same selector.
+variant(['missing-more-aria-label'],'toolbar',`row.locator('button[aria-label="More message actions"][aria-haspopup="menu"]')`);
 export function mutationTarget(caseName,variant) {
-  const specs=variant==='default'?D.get(caseName):V.get(variant);
+  const keywordCases={
+    'editing a code block replaces its language colors and copied source': "await highlight(marked(row,'ts'),'const')",
+    'search results highlight code on initial load and after returning to the channel': "await highlight(marked(row,'javascript'),'const')",
+  };
+  const specs=(variant==='default'||variant==='missing-const')&&keywordCases[caseName]
+    ?[target('code',keywordCases[caseName])]:variant==='default'?D.get(caseName):V.get(variant);
   if(!specs) throw new Error(`Missing intended assertion for ${caseName}: ${variant}`);
   return specs;
 }
@@ -209,6 +223,7 @@ export function rejectionEvidence(caseName,variant,probe,error) {
   else if(error.code!=='ERR_ASSERTION'&&error.name!=='TimeoutError') reasons.push('infrastructure failed');
   if(!matched) reasons.push('intended assertion did not fail');
   if(probe.observers?.length&&!probe.observed?.length) reasons.push('mutated DOM state not encountered');
+  if(probe.requiredAction&&!probe.observed?.some(state=>state.action===probe.requiredAction.action&&state.target===probe.requiredAction.target)) reasons.push('mutated action not encountered');
   if(probe.requiresReleaseClick&&!probe.observed?.some(state=>state.releaseClick&&state.brokenGuard&&state.menuVisible)) reasons.push('mutated release click not encountered');
   if(probe.requiresHiddenState&&!probe.observed?.some(state=>state.opacity==='0'||state.visibility==='hidden'||state.display==='none')) reasons.push('hidden mutation state not encountered');
   return {valid:reasons.length===0,reasons,expected,actual:frames,observed:probe.observed||[]};

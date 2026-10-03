@@ -252,6 +252,7 @@ with sqlite3.connect(RUST / "parity/.seed/default/db/production.sqlite3") as con
 passed = 0
 passed_named = set()
 failed_cases = []
+escaped_cases = set()
 invalid_attempts=0
 retry_attempts={}
 mutation_names = set(json.loads(subprocess.check_output([
@@ -398,6 +399,19 @@ for file in files:
                     command = ["node", str(RUST / "reference-tools/messaging/behavior.mjs"), f"http://127.0.0.1:{ports[0]}", f"http://127.0.0.1:{ports[1]}", file, json.dumps(batch), json.dumps(metadata)]
                     result = subprocess.run(command, cwd=ROOT, env=run_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
                     print(result.stdout, end="", flush=True)
+                    if args.negative:
+                        # An escape belongs to the entire run, not just this
+                        # attempt. Record it before retrying an invalid peer.
+                        for line in result.stdout.splitlines():
+                            if not line.startswith("WS8bm escaped discrimination run: "):
+                                continue
+                            record = json.JSONDecoder().raw_decode(line.split(": ", 1)[1])[0]
+                            assert record["caseName"] in batch and record["variant"] == variant
+                            assert record["app"] in {"Rails", "Rust"}
+                            escaped_cases.add((file, record["caseName"], variant))
+                            failure = f"{file}: {record['caseName']}"
+                            if failure not in failed_cases:
+                                failed_cases.append(failure)
                     if args.negative and result.returncode and "WS8bm invalid discrimination run:" in result.stdout:
                         invalid_attempts+=1
                         if retry_attempts[retry_key]<int(env.get("WS8BM_DISCRIMINATION_RETRIES","3")):
@@ -410,7 +424,8 @@ for file in files:
                         variants = json.loads(subprocess.check_output(["node", "--input-type=module", "-e",
                             "import {mutationVariants} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
                             f"console.log(JSON.stringify({json.dumps(batch)}.map(name=>mutationVariants(name))))"], cwd=ROOT, env=run_env, text=True))
-                        succeeded = [name for name, names in zip(batch, variants) if names and all(
+                        succeeded = [name for name, names in zip(batch, variants) if names and not any(
+                            (file, name, registered) in escaped_cases for registered in names) and all(
                             any(line.startswith(f"WS8bm discrimination: {file}: {name}: {variant}: {app} served mutant REJECTED (") for line in result.stdout.splitlines())
                             for variant in names for app in ["Rails", "Rust"])]
                     elif args.mutant or args.mutant_set:
@@ -418,7 +433,8 @@ for file in files:
                             f"WS8bm review escape: {file}: {name}: {variant}: {app} ACCEPTED" in result.stdout.splitlines() for app in ["Rails", "Rust"])]
                     else:
                         succeeded = [name for name in batch if f"WS8bm browser flow: {file}: {name}: Rails PASS; Rust PASS" in result.stdout.splitlines()]
-                    failed_cases.extend(f"{file}: {name}" for name in batch if name not in succeeded)
+                    failed_cases.extend(f"{file}: {name}" for name in batch if name not in succeeded
+                                        and (not args.negative or f"{file}: {name}" not in failed_cases))
                     if args.negative:
                         passed += sum(len(names) for name, names in zip(batch, variants) if name in succeeded)
                         passed_named.update((file, name) for name in succeeded)

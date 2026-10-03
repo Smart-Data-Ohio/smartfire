@@ -6,7 +6,7 @@ import {DELIVERY_WAIT} from './behavior-deadlines.mjs';
 export async function toolbar({author:page,recipient,caseName}) {
   const row=originalMessage(page),panel=page.locator('#emoji-picker-panel');
   const search=page.getByLabel('Search emoji and icons',{exact:true});
-  const option=name=>panel.getByRole('button',{name,exact:true});
+  const option=name=>panel.locator(`.emoji-picker__option[aria-label=${JSON.stringify(name)}]`);
   async function hover() {await waitForVisibility(row.locator('.message__toolbar'),{state:'attached',timeout:2000});await actOnVisible(row.locator('[data-reply-target="body"]'),'hover');await waitForVisibility(row.locator('.message__toolbar'),{timeout:DELIVERY_WAIT});}
   async function picker(waitForPanel=true) {
     await hover();await actOnVisible(row.getByRole('button',{name:'Add reaction',exact:true}),'click',{});
@@ -24,8 +24,11 @@ export async function toolbar({author:page,recipient,caseName}) {
   if(caseName.startsWith('the toolbar stays')) {
     await waitForVisibleCount(page.locator('.message__toolbar'),0);
     await hover();
-    for(const name of ['React with thumbs up','Add reaction','Reply to message','Open thread','More message actions']) await waitForVisibility(row.getByRole('button',{name,exact:true}));
-    await waitForVisibleAttribute(row.getByRole('button',{name:'More message actions',exact:true}),'aria-haspopup','menu');
+    await waitForVisibility(row.locator('button[aria-label="React with thumbs up"]'));
+    await waitForVisibility(row.locator('button[aria-label="Add reaction"]'));
+    await waitForVisibility(row.locator('button[aria-label="Reply to message"]'));
+    await waitForVisibility(row.locator('button[aria-label="Open thread"]'));
+    await waitForVisibility(row.locator('button[aria-label="More message actions"][aria-haspopup="menu"]'));
   } else if(caseName.startsWith('quick-react')) {
     await hover();await actOnVisible(row.getByRole('button',{name:'React with thumbs up',exact:true}),'click',{});await reacted('👍');
   } else if(caseName.startsWith('reply and thread')) {
@@ -47,7 +50,7 @@ export async function toolbar({author:page,recipient,caseName}) {
     await picker();await tab('smileys');await waitForVisibility(option('Grinning face'),{timeout:DELIVERY_WAIT});await focused('Search emoji and icons');
     await actOnVisible(search,'fill',{},['fire']);await waitForVisibility(option('Fire'),{timeout:DELIVERY_WAIT});await actOnVisible(option('Fire'),'click',{});await waitForVisibility(panel,{state:'hidden'});await reacted('🔥');
   } else if(caseName.startsWith('the picker shows category')) {
-    await picker();await waitForVisibleCount(panel.getByRole('tab'),11);
+    await picker();await waitForVisibleCount(panel.locator('[role="tab"]'),11);
     await waitForVisibility(page.locator('#emoji-picker-tab-recent:not([aria-selected="true"])'));
     await actOnVisible(page.locator('#emoji-picker-tab-people'),'click',{});await tab('people');await waitForVisibility(option('Waving hand'));
     await waitForVisibleCount(option('Grinning face'),0);await actOnVisible(page.locator('#emoji-picker-tab-flags'),'click');await tab('flags');await waitForVisibility(option('Chequered flag'),{timeout:DELIVERY_WAIT});
