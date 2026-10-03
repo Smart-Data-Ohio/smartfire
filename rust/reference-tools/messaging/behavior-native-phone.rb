@@ -33,7 +33,12 @@ class Ws8bmNativePhoneTest < Minitest::Test
     page.document.synchronize(15) do
       raise Capybara::ExpectationNotMet, "Stimulus startup" unless page.evaluate_script('!!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById("composer"),"composer")')
     end
-    assert_selector 'turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]', visible: :all, wait: 15
+    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "motion"
+      wait_for_cable_connection
+      dismiss_pwa_install_prompt
+    else
+      assert_selector 'turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]', visible: :all, wait: 15
+    end
     # Match Rails.env.test?'s pinned layout input; this is not server parity credit.
     page.execute_script('document.documentElement.setAttribute("data-test-motion","off")')
     page.execute_script(<<~'JS')
@@ -51,6 +56,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
     Capybara.reset_sessions!
   end
   # Generated from git show of the exact Rails pin, not local/untracked helpers.
-  class_eval File.read("/proof/phone-body.rb"), "test/system/threads_test.rb", 293
-  class_eval File.read("/proof/phone-helpers.rb"), "test/system/threads_test.rb"
+  location = JSON.parse(File.read("/proof/native-location.json"))
+  class_eval File.read("/proof/phone-body.rb"), location.fetch("sourcePath"), location.fetch("line")
+  class_eval File.read("/proof/phone-helpers.rb"), location.fetch("sourcePath")
 end

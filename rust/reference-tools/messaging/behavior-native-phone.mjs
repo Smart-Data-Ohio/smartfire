@@ -19,7 +19,7 @@ export function extractPhone(source) {
   // and original wait is otherwise byte-for-byte from the pinned test body.
   return {body:body.replace('    save_thread_screenshot "mobile-drawer.png"\n',''),helpers:source.slice(helpers,source.lastIndexOf('\nend'))};
 }
-export async function nativePhone(base) {
+export async function nativePhone(base,{sourcePath='test/system/threads_test.rb',extract=extractPhone,line=293,label='phone'}={}) {
   const root=fileURLToPath(new URL('../../../',import.meta.url));
   const tools=fileURLToPath(new URL('./',import.meta.url));
   const scratch=root+'.scratch/ws8bm-native-phone';
@@ -31,9 +31,10 @@ export async function nativePhone(base) {
   const temp=mkdtempSync(cache+'/s-');
   let driver,log;
   try {
-    const source=execFileSync('git',['show',`${PIN}:test/system/threads_test.rb`],{cwd:root,encoding:'utf8'});
-    const {body,helpers}=extractPhone(source);
+    const source=execFileSync('git',['show',`${PIN}:${sourcePath}`],{cwd:root,encoding:'utf8'});
+    const {body,helpers}=extract(source);
     writeFileSync(proof+'/phone-body.rb',body);writeFileSync(proof+'/phone-helpers.rb',helpers);
+    writeFileSync(proof+'/native-location.json',JSON.stringify({sourcePath,line,label}));
     writeFileSync(proof+'/system_test_helper.rb',execFileSync('git',['show',`${PIN}:test/test_helpers/system_test_helper.rb`],{cwd:root}));
     writeFileSync(proof+'/sessions.json',readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url)));
     // Refuse an occupied port; never reuse or stop someone else's driver.
@@ -49,7 +50,7 @@ export async function nativePhone(base) {
       if(Date.now()>=deadline) throw new Error('ChromeDriver startup timeout');
       await new Promise(resolve=>setTimeout(resolve,50));
     }
-    console.log(`WS8bm native phone source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; unchanged behavior body/helpers, screenshots omitted`);
+    console.log(`WS8bm native ${label} source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; unchanged behavior body/helpers, screenshots omitted`);
     const result=spawnSync('docker',['run','--rm','--network','host','--cpus','2','-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'],{encoding:'utf8',timeout:120000,maxBuffer:8*1024*1024});
     process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');
     assert.equal(result.status,0,`native pinned phone failed: ${result.error||result.signal||result.status}`);

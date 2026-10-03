@@ -22,6 +22,7 @@ import {mobileContinuation} from './behavior-mobile-continuation.mjs';
 import {workspace,WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motion,motionCases} from './behavior-motion.mjs';
 import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
+import {nativeMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
@@ -41,6 +42,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
     // Served negatives retain their translated initial creation checkpoint.
     if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
       await nativePhone(base);return;
+    }
+    if(caseName===NATIVE_MOTION_CASE&&!negative&&!selectedMutant) {
+      await nativeMotion(base);return;
     }
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
