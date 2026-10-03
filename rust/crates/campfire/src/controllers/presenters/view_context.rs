@@ -56,7 +56,16 @@ pub async fn time_zone(c: &Ctx) -> Result<Zone> {
     {
         return Ok(loaded.time_zone());
     }
-    Ok(Layout::load(c).await?.time_zone)
+    let Some(user) = concerns::current_user(c) else {
+        return Ok(Zone::utc());
+    };
+    // Write/error paths have no authentication preload. Only SetTimeZone's
+    // scalar is needed here; associations belong to the eventual layout load.
+    let id = user.id;
+    let zone: Option<String> = c.app().db.read(move |conn| {
+        Ok(conn.query_row("SELECT time_zone FROM users WHERE id=?", [id], |row| row.get(0))?)
+    }).await.map_err(Error::internal)?;
+    Ok(Zone::for_user(zone.as_deref()))
 }
 
 impl Layout {

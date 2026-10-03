@@ -161,9 +161,15 @@ pub fn sidebar_in_zone(conn: &Connection, secrets: &Secrets, user: &User, zone: 
     let mut stmt=conn.prepare_cached("SELECT memberships.room_id AS sidebar_room_id, users.* FROM memberships INNER JOIN users ON users.id=memberships.user_id WHERE memberships.room_id IN (SELECT rooms.id FROM rooms INNER JOIN memberships ON rooms.id=memberships.room_id WHERE memberships.user_id=? AND rooms.type='Rooms::Direct' AND rooms.deleted_at IS NULL) ORDER BY memberships.id")?;
     let mut members=std::collections::HashMap::<i64,Vec<User>>::new();
     for row in stmt.query_map([user.id],|r|Ok((r.get::<_,i64>("sidebar_room_id")?,User::from_row(r)?)))? { let (id,u)=row?;members.entry(id).or_default().push(u); }
+    // Icons.custom is a single Rails catalog read, reused by every shared row.
+    // Keep brand precedence and custom overrides identical to resolve_room_icon.
+    let mut icons = conn.prepare_cached("SELECT name,title FROM workspace_icons")?;
+    let icon_titles: std::collections::HashMap<String,String> = icons
+        .query_map([], |row| Ok((row.get(0)?,row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
     let shared=|m:&Membership,r:&Room| SidebarRoom {
         id:r.id,param_key:room_param_key(r.room_type).into(),name:r.name.clone().unwrap_or_default(),unread:m.unread(),
-        menu:room_menu(r,Some(m),Some(user),0,None),icon:resolve_room_icon(conn,r.icon_name.as_deref()),huddle_participants:None,
+        menu:room_menu(r,Some(m),Some(user),0,None),icon:room_icon_with_title(r.icon_name.as_deref(),r.icon_name.as_ref().and_then(|name|icon_titles.get(name)).cloned()),huddle_participants:None,
     };
     let direct=|m:&Membership,r:&Room| sidebar_direct_users(secrets,m,r,members.get(&r.id).map(Vec::as_slice).unwrap_or_default(),user,zone);
     let mut favorites: Vec<_>=all.iter().filter(|(m,_)|m.favorited()).collect();
@@ -437,5 +443,13 @@ pub fn resolve_room_icon(conn: &Connection, name: Option<&str>) -> Option<campfi
     let icon=static_icon(name);
     if matches!(icon,Some(AvatarIcon::Image{brand:true,..})){return icon;}
     let title: Option<String>=conn.query_row("SELECT title FROM workspace_icons WHERE name=?",[name],|row|row.get(0)).optional().ok().flatten();
-    title.map(|title|AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
+    room_icon_with_title(Some(name),title)
+}
+
+fn room_icon_with_title(name: Option<&str>, title: Option<String>) -> Option<campfire_views::helpers::AvatarIcon> {
+    use campfire_views::{helpers::AvatarIcon,messages::reactions::static_icon};
+    let name = name?;
+    let icon = static_icon(name);
+    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})) { return icon; }
+    title.map(|title| AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
 }

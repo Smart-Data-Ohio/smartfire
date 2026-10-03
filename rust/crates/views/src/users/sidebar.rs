@@ -130,16 +130,12 @@ fn direct_room_fragment_key(row: &SidebarDirect) -> String {
         row.participant_ids.as_deref(),
         row.viewer_administrator,
     );
-    // The avatar version is rendered in the viewer's zone. A zone switch must
-    // not reuse an otherwise identical membership fragment from the old zone.
-    let key = crate::fragment_cache::keys::Key::Array(vec![
-        membership_key,
-        crate::fragment_cache::keys::Key::Text(row.avatar_zone.name().into()),
-    ]);
+    // Rails keys the fragment by membership, participants and administrator
+    // status. A viewer-zone change preserves an already cached avatar version.
     crate::fragment_cache::keys::fragment(
         "users/sidebars/rooms/_direct",
         direct_room_digest(),
-        &key,
+        &membership_key,
         &crate::time::Zone::utc(),
     )
 }

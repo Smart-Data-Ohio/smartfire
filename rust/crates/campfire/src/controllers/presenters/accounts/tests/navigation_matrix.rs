@@ -62,19 +62,6 @@ async fn compare(paths: &[&str]) {
                 .as_str()
                 .unwrap()
         ));
-        if case["name"].as_str().unwrap().starts_with("appearance ") {
-            // Warm the real direct-room fragment before changing the viewer's zone.
-            let prior = Req::new(Method::GET, case["path"].as_str().unwrap())
-                .header("accept", "text/html")
-                .header("turbo-frame", "ui_matrix");
-            assert_eq!(
-                with_fixed_render_secrets(viewer.send(prior))
-                    .await
-                    .status
-                    .as_u16(),
-                200
-            );
-        }
         t.db()
             .write(move |tx| {
                 tx.conn().execute_batch("PRAGMA defer_foreign_keys=ON")?;

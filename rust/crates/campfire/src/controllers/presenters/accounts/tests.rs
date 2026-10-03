@@ -1347,3 +1347,6 @@ fn browser_cookie_deletion_requires_real_attribute() {
 mod navigation_matrix;
 #[path = "tests/named_ui_broadcasts.rs"]
 mod named_ui_broadcasts;
+
+#[path = "tests/sidebar_review.rs"]
+mod sidebar_review;
