@@ -17,6 +17,10 @@ class HostSourceTests(unittest.TestCase):
                     b"async fn ws8bm_browser_host_without_jobs() {}",
                 "rust/reference-tools/messaging/older_provider_callbacks.rb": b"callback",
                 "public/500.html": b"original error page",
+                "rust/reference-tools/views/agents_ui/extreme_cast_inputs.json.gz": b"extreme",
+                "rust/reference-tools/views/agents_ui/normalized_cast_inputs.json.gz": b"normalized",
+                "rust/reference-tools/views/agents_ui/render_replay_inputs.json.gz": b"replay",
+                "rust/reference-tools/views/agents_ui/casting_followups_inputs.json": b"followups",
                 "rust/target/debug/stale": b"not an input",
             }
             for relative, content in inputs.items():
@@ -29,6 +33,9 @@ class HostSourceTests(unittest.TestCase):
                 self.assertEqual((generated.parent / "public/500.html").read_bytes(), inputs["public/500.html"])
                 callback = generated / "reference-tools/messaging/older_provider_callbacks.rb"
                 self.assertEqual(callback.read_bytes(), b"callback")
+                for name in ("extreme_cast_inputs.json.gz", "normalized_cast_inputs.json.gz", "render_replay_inputs.json.gz", "casting_followups_inputs.json"):
+                    relative = "reference-tools/views/agents_ui/" + name
+                    self.assertEqual((generated / relative).read_bytes(), inputs["rust/" + relative])
                 self.assertFalse((generated / "target").exists())
                 (generated / "stale.rs").write_bytes(b"old generated source")
                 (root / "public/500.html").write_bytes(b"updated error page")
