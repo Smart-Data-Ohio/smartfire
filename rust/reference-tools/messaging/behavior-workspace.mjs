@@ -51,6 +51,12 @@ export async function workspace({author:page,source,submit}) {
   const db=JSON.parse(process.env.WS8BM_WORK_DATABASES)[new URL(page.url()).origin];
   const count=Number(execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True); print(c.execute(\"SELECT COUNT(*) FROM messages WHERE markdown_source='Mobile draft'\").fetchone()[0]); c.close()",db],{encoding:'utf8'}));
   assert.equal(count,0,'workspace: coarse Enter creates no message');
+  const written=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname==='/rooms/201306877/messages',{timeout:10000});
   await actOnVisible(filterVisibleText(page.locator('#composer button'),'Send Message'),'click');
   await waitForVisibility(filterVisibleText(page.locator('.message__body'),'Mobile draft'),{timeout:10000});
+  // Capybara drains its app server before closing the session. Drain the real
+  // browser write too: an optimistic body alone cannot supply persisted rows.
+  const response=await written;assert.equal(response.status(),200);
+  await response.finished();
+
 }

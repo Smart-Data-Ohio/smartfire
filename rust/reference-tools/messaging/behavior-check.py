@@ -472,7 +472,9 @@ for file in files:
                                 reference_source = subprocess.check_output(["git","show",f"{PIN}:test/system/workspace_markdown_test.rb"],cwd=ROOT,text=True)
                                 literal=textwrap.dedent(reference_source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("  MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=654632876 AND markdown_source=?",(literal,)).fetchone()[0]==1
-                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=201306877 AND markdown_source=?",("Mobile draft\n",)).fetchone()[0]==1
+                                mobile=conn.execute("SELECT creator_id,room_id,markdown_source FROM messages WHERE markdown_source LIKE 'Mobile draft%' ORDER BY id").fetchall()
+                                print(f"WS8bm workspace final write: {database}: {mobile!r}",flush=True)
+                                assert mobile==[(773523953,201306877,"Mobile draft\n")]
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]==seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]+2
                             elif file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
