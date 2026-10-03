@@ -380,7 +380,7 @@ async fn slack_client_maps_non_200_json_errors_without_retrying() {
     assert_eq!(server.received().len(), 1);
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn slack_client_pacing_is_shared_per_tier_and_separate_between_tiers() {
     let (_, network) = fake(vec![]).await;
     let mut c = client(network);
@@ -388,7 +388,7 @@ async fn slack_client_pacing_is_shared_per_tier_and_separate_between_tiers() {
     c.pace(Tier::Two).await;
     let first = Instant::now();
     c.pace(Tier::Three).await;
-    assert!(first.elapsed() < Duration::from_millis(250));
+    assert_eq!(first.elapsed(), Duration::ZERO);
     c.pace(Tier::Two).await;
     assert!(first.elapsed() >= Tier::Two.interval());
     let first = Instant::now();

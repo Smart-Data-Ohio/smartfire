@@ -273,17 +273,19 @@ async fn calendar_api_durable_callbacks_coalesce_and_reject_atomically() {
     let head = app
         .db
         .write(|tx| {
+            // Keep three weekly occurrences even when the start crosses UTC midnight.
+            let starts_at = tx.now().since(jiff::SignedDuration::from_mins(10));
             CalendarEvent::create(
                 tx,
                 NewCalendarEvent {
                     room_id: identify("designers"),
                     organizer_id: identify("david"),
                     title: "Calendar API".into(),
-                    starts_at: Some(tx.now().since(jiff::SignedDuration::from_mins(10))),
+                    starts_at: Some(starts_at),
                     time_zone: "UTC".into(),
                     recurrence_rule: Some("weekly".into()),
                     recurrence_until: Some(
-                        tx.now()
+                        starts_at
                             .jiff()
                             .to_zoned(jiff::tz::TimeZone::UTC)
                             .date()

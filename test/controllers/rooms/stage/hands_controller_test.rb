@@ -68,16 +68,20 @@ class Rooms::Stage::HandsControllerTest < ActionDispatch::IntegrationTest
   test "raising hands is rate limited per membership" do
     sign_in :jason
 
-    with_memory_cache do
-      10.times do
+    # All eleven requests must hit the same minute bucket, even when the
+    # real clock crosses a minute boundary while they run.
+    freeze_time do
+      with_memory_cache do
+        10.times do
+          post room_stage_hand_url(@room)
+          assert_redirected_to room_url(@room)
+        end
+
         post room_stage_hand_url(@room)
-        assert_redirected_to room_url(@room)
+
+        assert_response :too_many_requests
+        assert_predicate @listener.reload, :hand_raised?
       end
-
-      post room_stage_hand_url(@room)
-
-      assert_response :too_many_requests
-      assert_predicate @listener.reload, :hand_raised?
     end
   end
 
