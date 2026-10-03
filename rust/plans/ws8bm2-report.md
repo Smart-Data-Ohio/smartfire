@@ -1,3 +1,189 @@
+# WS8b-m2 H merge checkpoint
+
+Both requested merge commits are complete, without rebase or stash:
+- `cebbd64f8`: G `b31d3d65e216fb1419589062613f99146be49f4c` into H.
+- `bfb55dc43`: main `7e35a5fd6bb64de2e14c3f0e11725f0d1bd0a22a` into H.
+
+## Conflict resolutions
+
+`controllers/saved_items.rs` and `views/src/saved_items.rs` retain H's wide
+presentation strings and viewer-zone rendering. They cover G's extended-year
+reminders as well as H's wide created/reminded fields; G's redundant closure
+adapter is unnecessary. G's microsecond arithmetic in `db/src/time.rs` and
+`slash_commands/time_parser.rs` is unchanged. All G overflow regressions and
+fresh Rails vectors are retained.
+
+`message_features/container_input_tests.rs` retains both the warm four-zone
+fragment comparison and the actual Saved-page item comparison, including G's
+new event/reminder tests. `verify_oracles.py` retains all H oracles plus both G
+overflow oracles, the named generator mode and the optional subset selector.
+Main had no textual conflict. Its newly added jobless browser fixture host
+needed G's lazy publication-capture field initialized; the compiler rejected
+the merged constructor first, then the added default preserves both paths.
+
+## Lossless overflow fixture
+
+The new overflow consumer vector uses the same recorded-baseline/changed-row
+encoding as H's relative and periodic vectors. Candidate state is still read
+in full. Expansion proves equality for all ten HTTP envelopes, complete stored
+rows, Saved-page items, read counts and ordered publication/wire bytes.
+Independent fresh Rails regeneration is byte-identical. G's existing per-request token handling is retained. No masks or allowlists
+were widened, and no deadlines or expected-output substitutions changed.
+
+## Current verification
+
+Tested source: `f96f70e4e72e5f285ad3694e0a6adcd92b4be6ec`, from fresh clone
+`.scratch/ws8bm2-h-merge/fresh`. All three seeds (`default`, `first_run`,
+`agents_ui`) were rebuilt from pinned Rails. `CI=1` makes missing seeds fail.
+One Cargo build runs at a time, with two build jobs and the existing rustc
+throttle. The four-thread test invocations reserve shared capacity; no test
+concurrency or timing threshold was changed. The workspace suite ran once.
+
+Exact invocations (the native wrapper supplies the CI image and throttle):
+
+```sh
+bash rust/parity/bin/seed build default first_run agents_ui
+WS8BM2_ORACLE_SCRATCH=<owned replay directory> python3 rust/reference-tools/messaging/verify_oracles.py
+bash rust/ci/cargo.sh metadata --locked --format-version 1
+bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 --no-run
+bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnings
+(cd rust && bash ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins)
+bash rust/ci/cargo.sh test --locked -p campfire_db relative_overflow -j2 -- --test-threads=4 --nocapture
+```
+
+Five focused `campfire` selectors used this exact command, individually:
+`bash rust/ci/cargo.sh test --locked -p campfire --bin campfire <selector> -j2 -- --test-threads=4 --nocapture`.
+The selectors were `controllers::message_features::container_input_tests`,
+`wide_html_tests`, `periodic_delivery_tests`, `saved_tests` and
+`relative_split_input_tests`, each with the same full namespace prefix.
+The single workspace execution was
+`bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 -- --test-threads=4 --nocapture`.
+The lossless expansion command was
+`python3 .scratch/ws8bm2-h-merge/verify-compaction.py`.
+
+Raw summaries (ANSI color removed only):
+
+```text
+focused-db:
+PR223 overflow Rust: 10^142 hours parse/render matched fresh Rails
+PR223 overflow Rust: 13 render/since/ago boundaries matched fresh Rails
+PR223 overflow Rust: 39 matched; 0 differed
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1364 filtered out; finished in 0.02s
+focused-container_input_tests:
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2751 filtered out; finished in 58.02s
+focused-wide_html_tests:
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2753 filtered out; finished in 22.43s
+focused-periodic_delivery_tests:
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2754 filtered out; finished in 10.21s
+focused-saved_tests:
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 2737 filtered out; finished in 2.68s
+focused-relative_split_input_tests:
+PR223 overflow Rust: 13 parsed JSON renders matched fresh Rails
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2753 filtered out; finished in 0.07s
+WS8bm2 merged workspace aggregate: 4851 passed; 0 failed; 15 ignored; 61 result groups
+clippy:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 12s
+release:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 57.23s
+WS8bm2 oracle replay: 57/57 independently replayed fixtures byte-identical
+cargo metadata --locked: exit 0
+WS8bm2 lossless relative_overflow_consumers: 2493769 -> 976831 bytes; all 10 envelopes, complete rows, read counts, Saved-page items and frame bytes identical; expanded SHA256 a55c7d1fbf132ad9802264463958e711364cd10e4af649e7c6a7b3df6f637151
+```
+
+Full workspace raw result groups:
+
+```text
+test result: ok. 2749 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 1074.60s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.06s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 1364 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 162.43s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.50s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.07s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.10s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.27s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.34s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.50s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.21s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.84s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.53s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.46s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Logs: `.scratch/ws8bm2-h-merge/logs/`. The clean-clone target and any
+release-input scratch targets are removed after verification; the pre-existing
+worktree compiler cache remains. No owned test process or container remains at
+handoff. No browser suite or deployment was run.
+
+## Remaining and owners
+
+The requested merge checkpoint is complete. Existing broader scope remains:
+- **Lead:** the final paired browser rerun at cutover (historical 45/45 each).
+- **WS8 / WS11-UI:** values beyond the fixed-width I512 representation, outside
+  the pinned corpus. G now covers the sampled huge relative values and the
+  representable arithmetic boundary, including sub-microsecond offsets.
+- **WS8b-m2:** visible Saved/scheduled-list batching, whose scaling is still
+  unproven when visible-row or due-job counts grow. The current date matrices
+  hold those counts fixed and vary old references.
+- **WS12:** broader board/work parity and its owned query work.
+Atomic durable enqueue rollback remains an approved difference under decision 2,
+not an owner block. G's requested review fixes are merged, so that former
+follow-up flag is closed. This checkpoint adds no new owner-blocked seam.
+
+---
+
+# Previous H report (historical at 65c15089)
+
+The following receipts describe the pre-merge H checkpoint. Its older source
+SHAs, test counts and G-follow-up flag are historical; the verification and
+remaining list above supersede them for this handoff.
+
 # WS8b-m2 slice H checkpoint (partial)
 
 Stacked branch `rust/ws8bm2-message-features-h` starts at G `c4cdef6c7`.
