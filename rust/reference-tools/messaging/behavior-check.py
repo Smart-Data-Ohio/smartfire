@@ -299,7 +299,9 @@ for file in files:
         batches += [[case for case in selected if case in navigation]]
     batches += [[case] for case in selected if case not in readonly + navigation]
     if file == "composer_attach_menu":
-        batches = [selected]  # No server writes; new contexts for each case.
+        enhanced=[case for case in selected if case.startswith("From Google Drive starts the enhanced")]
+        ordinary=[case for case in selected if case not in enhanced]
+        batches=([ordinary] if ordinary else [])+[[case] for case in enhanced] # Distinct server configuration.
     jobs = probe_jobs(batches, selected, negative=args.negative, mutant=args.mutant,
                       mutation_variants=mutation_variants,
                       diagnostic_variants=diagnostic_variants if args.mutant_set else None)

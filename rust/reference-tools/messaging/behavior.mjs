@@ -55,6 +55,10 @@ async function acceptance(base,caseName,probe={},variant='default') {
       // the production reference image. Supply that test-only input before
       // parsing either app; this does not claim the server emits the attribute.
       const pinnedTestMotion = caseName===WORKSPACE_CASE || caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      if(file==='motion') await context.addInitScript(()=>{
+        const apply=()=>{if(!document.documentElement)return false;document.documentElement.dataset.testMotion='off';return true;};
+        if(!apply()){const observer=new MutationObserver(()=>{if(apply())observer.disconnect();});observer.observe(document,{childList:true,subtree:true});}
+      });
       if(pinnedTestMotion) await context.addInitScript(()=>{
         const apply=()=>document.documentElement?.setAttribute('data-test-motion','off');
         apply();new MutationObserver(apply).observe(document,{childList:true,subtree:true});
