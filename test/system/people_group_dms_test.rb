@@ -316,6 +316,9 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     find("nav a[href='#{edit_rooms_direct_path(room)}']").click
     fill_in "Group name", with: "Weekend Plans"
     click_button "Save"
+    # The input already has this value while the rename is still in flight.
+    # Wait for its response before submitting the next form on this page.
+    assert_text "Group renamed."
     assert_field "Group name", with: "Weekend Plans"
 
     check "add_member_#{users(:jz).id}"
@@ -334,6 +337,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
     # Root forwards to the last accessible room; the point is the leaver
     # is out of the group.
+    assert_no_current_path edit_rooms_direct_path(room), wait: 10
     assert_no_current_path room_path(room), wait: 10
     assert_not room.reload.user_ids.include?(users(:david).id)
   end

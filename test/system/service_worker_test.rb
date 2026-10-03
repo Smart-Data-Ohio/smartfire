@@ -42,8 +42,8 @@ class ServiceWorkerTest < ApplicationSystemTestCase
 
   private
     def wait_for_service_worker(timeout: 15)
-      # evaluate_script does not await promises, so the page records its
-      # worker state on window and Ruby polls that flag instead.
+      # Registration and claiming are separate: observe the current
+      # controller on every poll, even after registration becomes ready.
       page.document.synchronize(timeout) do
         state = service_worker_state
         raise Capybara::ExpectationNotMet, "service worker state: #{state}" unless state == "ready"
@@ -53,23 +53,13 @@ class ServiceWorkerTest < ApplicationSystemTestCase
     def service_worker_state
       page.evaluate_script(<<~JS)
         (function () {
-          if (!window.__sw_state) {
-            window.__sw_state = "installing";
+          if (!window.__sw_registration_ready) {
             navigator.serviceWorker.ready.then((registration) => {
-              if (!registration.active) {
-                window.__sw_state = "installing";
-                return;
-              }
-              window.__sw_state = navigator.serviceWorker.controller ? "ready" : "unclaimed";
-              if (window.__sw_state === "unclaimed") {
-                // claim() lands a beat after activation; re-check shortly.
-                setTimeout(() => {
-                  window.__sw_state = navigator.serviceWorker.controller ? "ready" : "unclaimed";
-                }, 500);
-              }
+              window.__sw_registration_ready = !!registration.active;
             });
           }
-          return window.__sw_state;
+          if (!window.__sw_registration_ready) return "installing";
+          return navigator.serviceWorker.controller ? "ready" : "unclaimed";
         })()
       JS
     end
