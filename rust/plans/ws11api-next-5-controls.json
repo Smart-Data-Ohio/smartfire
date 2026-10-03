@@ -1,0 +1,614 @@
+{
+  "baseline": "f85fb420",
+  "fresh_reference": "d7c7de92",
+  "assignment": [
+    {
+      "key": "active",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an active member agent with post_messages is an eligible work owner",
+      "rust_test": "ws12_agent_named_active_member_post_owner",
+      "mutation": "owner_active",
+      "intended_assertion": "active: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/active.log",
+      "log_sha256": "29ad372c70ca21f2e0d2b6bd3b1c202e49e164e740e0b5585e752b84f848ceea"
+    },
+    {
+      "key": "legacy",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a legacy agent keeps post eligibility through the fallback",
+      "rust_test": "ws12_agent_named_legacy_post_owner",
+      "mutation": "owner_active",
+      "intended_assertion": "legacy: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/legacy.log",
+      "log_sha256": "d089b7725eedd07d2ad47afcfe4d4817360da3ccff985ba459728d23b10184eb"
+    },
+    {
+      "key": "suspended",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a suspended agent is rejected with a validation error",
+      "rust_test": "ws12_agent_named_suspended_owner_validation",
+      "mutation": "owner_post",
+      "intended_assertion": "suspended: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/suspended.log",
+      "log_sha256": "a6898c2524a2158ddccc5a9fddcd3661f13e76375736c0c5d9ca507f88d23e5e"
+    },
+    {
+      "key": "nonmember",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a non-member agent is rejected with a validation error",
+      "rust_test": "ws12_agent_named_nonmember_owner_validation",
+      "mutation": "owner_nonmember",
+      "intended_assertion": "nonmember: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/nonmember.log",
+      "log_sha256": "aa8c976ddf5b9ec8cc003e1e1ff637922255e9e72e88c48e8c4246f9bb142f75"
+    },
+    {
+      "key": "no_post",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent without post_messages is rejected with a validation error",
+      "rust_test": "ws12_agent_named_missing_post_owner_validation",
+      "mutation": "owner_post",
+      "intended_assertion": "no_post: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/no_post.log",
+      "log_sha256": "b887e75ae001888b43c19f9eb5bd3bb0d1478b25cff4ea970f4dfd043e2057dd"
+    },
+    {
+      "key": "outside_human",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a human outside the parent room keeps the human eligibility error",
+      "rust_test": "ws12_agent_named_outside_human_owner_validation",
+      "mutation": "owner_human",
+      "intended_assertion": "outside_human: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/outside_human.log",
+      "log_sha256": "1d2e7bb27620ab22123c85b19e8494bfdda28830712e60cffdedd7454013d974"
+    },
+    {
+      "key": "plain_bot",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a bot without an agent row is rejected with a validation error",
+      "rust_test": "ws12_agent_named_bot_without_agent_validation",
+      "mutation": "owner_plain_bot",
+      "intended_assertion": "plain_bot: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/plain_bot.log",
+      "log_sha256": "6428eaecdb6625cf47a6bd2624d47beb32ec08d0ee29dec19b9d37cc2e056fa6"
+    },
+    {
+      "key": "unavailable",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "suspending the agent or revoking its membership reads as an unavailable owner",
+      "rust_test": "ws12_agent_named_owner_unavailable_after_access_change",
+      "mutation": "owner_unavailable",
+      "intended_assertion": "unavailable: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 5,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.07s"
+      ],
+      "log": "logs/unavailable.log",
+      "log_sha256": "37d1c846800ee717be51108283342c59509daac0c19ef9775ade8e54e4e13f18"
+    },
+    {
+      "key": "status_note",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent status update records a work event with the note",
+      "rust_test": "ws12_agent_named_status_event_with_note",
+      "mutation": "status_note",
+      "intended_assertion": "status_note: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/status_note.log",
+      "log_sha256": "63f056fc1ab5581b9a1a85db8c916e2bf6c4f9bd1130763f29287065406dcc2c"
+    },
+    {
+      "key": "status_inbox",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent status update reaches the inbox through the human path",
+      "rust_test": "ws12_agent_named_status_inbox_human_path",
+      "mutation": "status_inbox",
+      "intended_assertion": "status_inbox: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 3,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/status_inbox.log",
+      "log_sha256": "73c5d26903a42649ff240e9eadfa0b8f1af0b230e2b7e100ad03b3541ec089d1"
+    },
+    {
+      "key": "tags",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent tags update replaces the set without touching the status",
+      "rust_test": "ws12_agent_named_tag_set_preserves_status",
+      "mutation": "tags_string",
+      "intended_assertion": "tags: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/tags.log",
+      "log_sha256": "4b39838daace0c370267b48fb294cff8a4f3ed300c1d3c5b204bf1c004da867e"
+    },
+    {
+      "key": "invalid_fields",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent work update validates tags and run_url",
+      "rust_test": "ws12_agent_named_tags_run_url_missing_fields_validation",
+      "mutation": "run_validation",
+      "intended_assertion": "invalid_fields: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/invalid_fields.log",
+      "log_sha256": "9fe6460b89e29267935a0146b65c49a779bfc905429f77d2b40aa203fe265674"
+    },
+    {
+      "key": "result",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent result update records the event with the agent as actor",
+      "rust_test": "ws12_agent_named_result_event_agent_actor",
+      "mutation": "result_actor",
+      "intended_assertion": "result: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/result.log",
+      "log_sha256": "afcd9e76adac9bd57e6865f8b513232e7ac2d90f64851818a53d253dc8e45528"
+    },
+    {
+      "key": "unowned_result",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent cannot write the result of work it does not own",
+      "rust_test": "ws12_agent_named_result_requires_ownership",
+      "mutation": "model_ownership",
+      "intended_assertion": "unowned_result: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/unowned_result.log",
+      "log_sha256": "742373e70bfa8079807e732eb35516818a4fbd62f84ee8c0c971f0569f0510b3"
+    },
+    {
+      "key": "unowned_status",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent cannot move work it does not own",
+      "rust_test": "ws12_agent_named_status_requires_ownership",
+      "mutation": "model_ownership",
+      "intended_assertion": "unowned_status: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/unowned_status.log",
+      "log_sha256": "b5205468a4326b763abcc715e507e18af5c1677a199a29d8dfadffca32d85173"
+    },
+    {
+      "key": "invalid_status_note",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent status update rejects unknown statuses and long notes",
+      "rust_test": "ws12_agent_named_status_and_note_validation",
+      "mutation": "note_limit",
+      "intended_assertion": "invalid_status_note: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/invalid_status_note.log",
+      "log_sha256": "930b54bc775551d8484cf6967ba9a1b6ebf5ec270bd043dd49fcdfb2da2393f8"
+    }
+  ],
+  "recorder": [
+    {
+      "key": "recorder_preflight",
+      "rust_test": "ws11_recorder_real_output_and_read_growth_match_fresh_rails",
+      "mutation": "recorder_preflight",
+      "intended_assertion": "Recorder preflight stays flat",
+      "exit": 101,
+      "hits": 10,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1361 filtered out; finished in 0.11s"
+      ],
+      "log": "logs/recorder_preflight.log",
+      "log_sha256": "ba59ea1aab67e4a2e2f556eb3f2e20350b57086f870ed0baf81f3247f2f24680"
+    },
+    {
+      "key": "recorder_rows",
+      "rust_test": "ws11_recorder_real_output_and_read_growth_match_fresh_rails",
+      "mutation": "recorder_rows",
+      "intended_assertion": "Recorder complete persisted rows and committed frames",
+      "exit": 101,
+      "hits": 10,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1361 filtered out; finished in 0.10s"
+      ],
+      "log": "logs/recorder_rows.log",
+      "log_sha256": "e4c54b7d912bb6b66eee6aa10d194283e50fc28e3be11b430cc567ee6d24478c"
+    }
+  ],
+  "named_api": [
+    {
+      "key": "mcp_not_owner",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_test": "handoff_work denies a thread the agent does not own",
+      "rust_test": "ws11_named_mcp_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "mcp_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.82s"
+      ],
+      "log": "logs/mcp_not_owner.log",
+      "log_sha256": "2fbd68acaafd4d3de2ef853b1b920e79c9822df3c0013ed0cd6ccc8be4778aa6"
+    },
+    {
+      "key": "mcp_suspended_receiver",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_test": "handoff_work denies a kill-switched receiver",
+      "rust_test": "ws11_named_mcp_suspended_receiver",
+      "mutation": "receiver_denial",
+      "intended_assertion": "mcp_suspended_receiver: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.72s"
+      ],
+      "log": "logs/mcp_suspended_receiver.log",
+      "log_sha256": "9f3e7ee80cbbed5c56454517d9845421d4fda03328690c98b9e4fc3c2328a72e"
+    },
+    {
+      "key": "posts_nonmember",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "is 404 for rooms the agent is not a member of",
+      "rust_test": "ws11_named_posts_nonmember",
+      "mutation": "member_denial",
+      "intended_assertion": "posts_nonmember: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.73s"
+      ],
+      "log": "logs/posts_nonmember.log",
+      "log_sha256": "61ec3dd94cba8f43cc0a01e5d0b53a26529e4a21ce8445da118d6fe3186bfeda"
+    },
+    {
+      "key": "posts_credentials",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "rejects session and bot-key requests",
+      "rust_test": "ws11_named_posts_credentials",
+      "mutation": "bearer_only",
+      "intended_assertion": "posts_credentials: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.84s"
+      ],
+      "log": "logs/posts_credentials.log",
+      "log_sha256": "d085688d0cb02262c4485478d59098ef9153767e308aedd8a7510d32d20f5bba"
+    },
+    {
+      "key": "show_owned",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "show returns one owned thread",
+      "rust_test": "ws11_named_show_owned",
+      "mutation": "payload_thread",
+      "intended_assertion": "show_owned: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.68s"
+      ],
+      "log": "logs/show_owned.log",
+      "log_sha256": "774cc761cda910dabda9da8d7affa449372d0c6a9a1e9de2616daadfb11d23cb"
+    },
+    {
+      "key": "show_not_owner",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "show is 404 for threads the agent does not own",
+      "rust_test": "ws11_named_show_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "show_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.70s"
+      ],
+      "log": "logs/show_not_owner.log",
+      "log_sha256": "74e9a6ecdaabfe5103ba3101407b59bb6ec10e87aafa6d3d16b829e1aae4525f"
+    },
+    {
+      "key": "patch_not_owner",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch is 404 for threads the agent does not own",
+      "rust_test": "ws11_named_patch_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "patch_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.70s"
+      ],
+      "log": "logs/patch_not_owner.log",
+      "log_sha256": "b765a2b729b8108d97b7f91168dc5a971e9b1998b2aee294da9cced52fc5086e"
+    },
+    {
+      "key": "manage_other_room",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch is 403 when manage_threads covers another room",
+      "rust_test": "ws11_named_manage_other_room",
+      "mutation": "manage_denial",
+      "intended_assertion": "manage_other_room: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/manage_other_room.log",
+      "log_sha256": "2711838e2b28ac8273559802122a8160604b50c7f539351cccf428c57e4b5e94"
+    },
+    {
+      "key": "ignore_assignment",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch cannot reassign, convert, or stop tracking",
+      "rust_test": "ws11_named_ignore_assignment",
+      "mutation": "ignored_assignment",
+      "intended_assertion": "ignore_assignment: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.72s"
+      ],
+      "log": "logs/ignore_assignment.log",
+      "log_sha256": "71bda0ca91794d7e9be7f43c29416d5da3190770b76e64ad9552e54540e5f5c6"
+    },
+    {
+      "key": "tags_only",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch updates tags alone in array and string forms",
+      "rust_test": "ws11_named_tags_only",
+      "mutation": "tags_string",
+      "intended_assertion": "tags_only: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/tags_only.log",
+      "log_sha256": "0773fcc88dedb551a9f3f75c92cfbc15e6531f4a013b4b6f7385a34db4884ad5"
+    },
+    {
+      "key": "blank_status",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch cannot stop tracking with a blank status",
+      "rust_test": "ws11_named_blank_status",
+      "mutation": "status_validation",
+      "intended_assertion": "blank_status: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/blank_status.log",
+      "log_sha256": "d80f8abcef845f9603375a259ecb053b9551328c87f40a7ced1f4600a73e8969"
+    },
+    {
+      "key": "note_only",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch with only a note and no field is 422",
+      "rust_test": "ws11_named_note_only",
+      "mutation": "missing_field",
+      "intended_assertion": "note_only: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/note_only.log",
+      "log_sha256": "d9efffef7c1a2c62a49cb88fe4847de9a396abd813d7c1e2dbd851d025c522fe"
+    },
+    {
+      "key": "tags_no_manage",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch tags without manage_threads is 403",
+      "rust_test": "ws11_named_tags_no_manage",
+      "mutation": "manage_denial",
+      "intended_assertion": "tags_no_manage: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.68s"
+      ],
+      "log": "logs/tags_no_manage.log",
+      "log_sha256": "272249d633ae0436972ad0ecf13a3ae16743085cbf48ec81e1ed02f3e41a069e"
+    },
+    {
+      "key": "result_limit",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result rejects missing markdown and overlong results with 422",
+      "rust_test": "ws11_named_result_limit",
+      "mutation": "result_limit",
+      "intended_assertion": "result_limit: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.70s"
+      ],
+      "log": "logs/result_limit.log",
+      "log_sha256": "a3bcf16178b887ff91d9273d80fa97447d2b30d401d2987a43d5a413cef2a36c"
+    },
+    {
+      "key": "result_clear",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result with blank markdown clears",
+      "rust_test": "ws11_named_result_clear",
+      "mutation": "result_blank",
+      "intended_assertion": "result_clear: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/result_clear.log",
+      "log_sha256": "0de24991339c9e93c156ce036a41446b0ef642df64a42198ff2704b221a2946e"
+    },
+    {
+      "key": "result_noop",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result with unchanged markdown writes nothing",
+      "rust_test": "ws11_named_result_noop",
+      "mutation": "result_noop",
+      "intended_assertion": "result_noop: committed state",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.70s"
+      ],
+      "log": "logs/result_noop.log",
+      "log_sha256": "a7c18455f390b996d8feaf43afba5c8bcad8d776ca9a1f444f922279c7297c53"
+    },
+    {
+      "key": "writes_credentials",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch and put result are Bearer-only",
+      "rust_test": "ws11_named_writes_credentials",
+      "mutation": "bearer_only",
+      "intended_assertion": "writes_credentials: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.82s"
+      ],
+      "log": "logs/writes_credentials.log",
+      "log_sha256": "d7845ef12441abb10876f5dfac987435f247e89d0908c60de79a02968180867d"
+    },
+    {
+      "key": "show_other_read_room",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "a read grant for another room does not unlock an owned thread",
+      "rust_test": "ws11_named_show_other_read_room",
+      "mutation": "read_access",
+      "intended_assertion": "show_other_read_room: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/show_other_read_room.log",
+      "log_sha256": "6686ac9199011d4da7d50ce992b3cf88fa020b8f742075da7db0e914af3ee4d4"
+    },
+    {
+      "key": "rest_not_owner",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "a thread the agent does not own is 404",
+      "rust_test": "ws11_named_rest_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "rest_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/rest_not_owner.log",
+      "log_sha256": "5d8d34103e8027bd01c672d7665ddef3251887a0e2297a8ccd82a33c3a63918c"
+    },
+    {
+      "key": "rest_human_handoff",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "a human session is 403",
+      "rust_test": "ws11_named_rest_human_handoff",
+      "mutation": "bearer_only",
+      "intended_assertion": "rest_human_handoff: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.79s"
+      ],
+      "log": "logs/rest_human_handoff.log",
+      "log_sha256": "566827c9ba86ae6b9fe872c7eb442d5ba59f1ccf46cc13734fa6569973586531"
+    }
+  ]
+}
