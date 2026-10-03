@@ -2,7 +2,7 @@
 {% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
 {% block content %}
 <section class="txt-align-center">
-  <div class="panel {% if ctx.flash_alert.is_some() %}shake{% endif %}">
+  <div class="panel {% if ctx.flash_alert().is_some() %}shake{% endif %}">
     {{ h::account_logo_tag(ctx, Some("center margin-block-end txt-xx-large")) }}
 
     <h1 class="txt-large">Confirm it's you</h1>

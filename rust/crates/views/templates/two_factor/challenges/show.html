@@ -2,7 +2,7 @@
 {% block head %}{% endblock %}
 {% block content %}
 <section class="txt-align-center">
-  <div class="panel {% if ctx.flash_alert.is_some() %}shake{% endif %} flex flex-column gap">
+  <div class="panel {% if ctx.flash_alert().is_some() %}shake{% endif %} flex flex-column gap">
     <h1 class="margin-none">Enter your code</h1>
     <p class="margin-none">Open your authenticator app and enter the 6-digit code. Lost your phone? Use one of your backup codes instead.</p>
 

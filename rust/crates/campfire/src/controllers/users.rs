@@ -105,12 +105,13 @@ pub async fn show(c: &mut Ctx) -> Result {
     let id = user.id;
     let viewer_id = concerns::require_current_user(c)?.id;
     let now = c.app().db.env().now();
+    let status_zone = presenters::view_context::time_zone(c).await?;
     let status_secrets = secrets.clone();
     let profile_status = c
         .app()
         .db
         .read(move |conn| {
-            presenters::status_settings::profile_status(conn, &status_secrets, id, viewer_id, now)
+            presenters::status_settings::profile_status_in_zone(conn, &status_secrets, id, viewer_id, now, status_zone.tz())
         })
         .await
         .map_err(Error::internal)?;

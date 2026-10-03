@@ -12,7 +12,7 @@
 {% endfilter %}    </header>
 
     <div id="category_rooms_{{ category.id }}" class="sidebar-list{% if category.rooms.is_empty() %} sidebar-list--empty{% endif %}"{% if category.collapsed %} hidden{% endif %}>
-{% for room in category.rooms %}        {% include "users/sidebars/rooms/_shared.html" %}
+{% for room in category.rooms %}        {% include "users/sidebars/rooms/_categorized_shared.html" %}
 {% endfor %}    </div>
   </section>
 {% endfor %}

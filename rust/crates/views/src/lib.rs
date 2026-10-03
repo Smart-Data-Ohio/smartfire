@@ -4,6 +4,7 @@
 //! as sanitized HTML. Every template renders with the per-request [`ViewContext`] below.
 
 pub mod fragment_cache;
+pub mod flash;
 pub mod helpers;
 pub mod layouts;
 pub mod link_embeds;
@@ -87,6 +88,16 @@ pub struct ViewContext<'a> {
 }
 
 impl ViewContext<'_> {
+    /// Access to these values corresponds to flash[:notice]/flash[:alert] in ERB.
+    pub fn flash_notice(&self) -> Option<&String> {
+        flash::read();
+        self.flash_notice.as_ref()
+    }
+    pub fn flash_alert(&self) -> Option<&String> {
+        flash::read();
+        self.flash_alert.as_ref()
+    }
+
     pub fn asset(&self, logical_path: &str) -> String {
         (self.asset_path)(logical_path)
     }
