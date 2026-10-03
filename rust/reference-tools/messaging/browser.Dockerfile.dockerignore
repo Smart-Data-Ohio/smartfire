@@ -1,0 +1,9 @@
+# Keep the test-only reference context independent of targets and local fixtures.
+**
+!parity/
+!parity/docker/
+!parity/docker/Procfile
+!parity/docker/resque-pool.yml
+!reference-tools/
+!reference-tools/messaging/
+!reference-tools/messaging/browser-test-jobs.rb

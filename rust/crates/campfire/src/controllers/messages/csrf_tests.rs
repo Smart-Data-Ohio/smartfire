@@ -10,7 +10,8 @@ fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors
 
 async fn fixture() -> TestApp {
     // Rails queues a fetch for a new reference even when its fixture card is fresh.
-    // These cache/form tests supply the fetched card and never execute network jobs.
+    // These cache/form tests supply fixed fetched cards; provider execution has
+    // separate tests. Stop the consumer before mounting the shared cached bytes.
     let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
     app.db().write(|tx| {
         let pr=crate::integrations::github::pull_requests::PullRequest::for_reference(tx,"rails","rails",3141)?;
@@ -68,7 +69,9 @@ async fn cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_acros
             if new.as_str()!=expected {rails_mismatch(new,&expected,"cached CSRF fragment");}
             assert!(!new.contains("authenticity_token"));
             assert!(!new.contains(&a)&&!new.contains(&b));
-            assert!(response.text().contains(new.as_str()),"cached bytes mounted unchanged");
+            if !response.text().contains(new.as_str()) {
+                rails_mismatch(&response.text(),new,&format!("cached bytes mounted unchanged at {path}"));
+            }
         }
     }
 }
