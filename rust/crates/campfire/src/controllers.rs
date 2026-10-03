@@ -1240,3 +1240,6 @@ mod agent_review_r3_tests;
 mod agent_review_r4_tests;
 #[cfg(test)]
 mod agent_review_r5_tests;
+
+#[cfg(test)]
+mod agent_array_read_tests;
