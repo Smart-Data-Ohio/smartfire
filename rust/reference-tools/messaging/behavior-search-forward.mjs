@@ -25,14 +25,32 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     await actOnVisible(page.getByRole('menuitem',{name:'Forward',exact:true}),'click',{});
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:10000});
     await actOnVisible(filterVisibleText(dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)'),'Designers'),'click',{timeout:10000});
-    const forwardedResponses=[];
-    page.on('response',response=>{if(response.request().method()==='POST'&&/\/forwards(?:\.json)?$/.test(new URL(response.url()).pathname)) forwardedResponses.push(response);});
+    // Observe the payload already parsed by the app. Playwright's external
+    // Response.json() can hang on an intercepted response after the app has
+    // consumed it; no second body read or extra wait belongs in this check.
+    await page.evaluate(()=>{
+      window.__ws8bmForwardResults=[];const originalFetch=window.fetch;
+      window.fetch=async function(...args) {
+        const response=await originalFetch.apply(this,args);
+        const request=args[0],options=args[1],url=new URL(typeof request==='string'?request:request.url,location.href);
+        if((options?.method||request?.method||'GET').toUpperCase()==='POST'&&/\/forwards(?:\.json)?$/.test(url.pathname)) {
+          const originalJson=response.json.bind(response);
+          response.json=async function(...jsonArgs) {
+            const payload=await originalJson(...jsonArgs);
+            window.__ws8bmForwardResults.push({status:response.status,payload});
+            return payload;
+          };
+        }
+        return response;
+      };
+    });
     await actOnVisible(dialog.getByRole('button',{name:'Forward',exact:true}),'click',{});
     await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),/Forwarded to 1 destination/),{timeout:10000});
     // The original status assertion already observes the completed request.
     // Read its identity without inserting another wait before that assertion.
-    assert.equal(forwardedResponses.length,1);const response=forwardedResponses[0];assert.equal(response.status(),201);
-    const payload=await response.json(),forwardedId=payload.forwards[0].message.id;
+    const responses=await page.evaluate(()=>window.__ws8bmForwardResults);
+    assert.equal(responses.length,1);const response=responses[0];assert.equal(response.status,201);
+    const forwardedId=response.payload.forwards[0].message.id;
     for(const viewer of [page,recipient]) {
       // Rails :57-60 scopes to the persisted copy's identity. Its code's
       // visibility must not decide whether the preceding table lookup succeeds.
