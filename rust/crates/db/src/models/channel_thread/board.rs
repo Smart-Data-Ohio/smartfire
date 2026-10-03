@@ -309,7 +309,7 @@ impl ChannelThread {
             }
             for membership in recipients {
                 tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
-                    stream: format!("user_{}_unread_rooms", membership.user_id),
+                    stream: crate::broadcasts::unread_rooms_stream_name(membership.user_id),
                     payload: serde_json::json!({"roomId": room.id}),
                 }));
             }
