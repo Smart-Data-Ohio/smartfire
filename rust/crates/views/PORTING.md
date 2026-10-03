@@ -166,8 +166,11 @@ These providers are still incomplete; empty-container goldens do not prove popul
 
 HTML fragments now include `ViewContext::base_url` in their key because Rails message attributes
 contain absolute URLs. A presenter using `cached_message_fragment(id, updated_at, base_url)` must
-pass the same origin used to render. `MessageItem::cached_fragments` also takes that origin.
-This preserves the forged-host security property and makes fragments independent of the viewer.
+pass the same origin used to render. That retained reader uses the default UTC zone;
+non-UTC legacy renders use `cached_message_fragment_with_cards_in_zone` with the render's
+zone. Writer and reader share the zone key. Collection fragments retain the domain
+presentation key, including #179's viewer zone and origin. This preserves the forged-host
+security property and prevents a warmed UTC fragment from serving another zone.
 
 PR #151 corrects the Edge image to `external/install-edge.svg`. The current pin includes it;
 the Edge golden renders the actual partial with no source substitution.
