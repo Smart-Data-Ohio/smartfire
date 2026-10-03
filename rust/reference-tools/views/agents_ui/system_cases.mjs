@@ -36,7 +36,34 @@ async function run(file, name, user, check) {
   finally { await context.close(); }
 }
 try {
-  if (scenario === 'budget') {
+  if (scenario === 'work') {
+    await run('agent_work_assignment_test.rb (UI prefix)', 'creates a thread, tracks work and assigns an agent through the real UI', 'jz', async page => {
+      await joinRoom(page, labels['rooms.designers']);
+      if (!await page.locator("#thread-panel[aria-hidden='false']").isVisible()) await page.getByRole('button',{name:'Show threads',exact:true}).click();
+      await page.locator("#thread-panel[aria-hidden='false']").waitFor({state:'visible',timeout:10000});
+      await page.getByRole('button',{name:'New thread',exact:true}).click();
+      await page.locator("#thread-panel [data-thread-panel-target='create']").waitFor({state:'visible',timeout:10000});
+      await page.locator("#thread-panel [data-thread-panel-target='createName']").fill('Agent owned thread');
+      await page.locator("#thread-panel [data-thread-panel-target='createMessage']").fill('Work the agent will pick up.');
+      await page.locator("#thread-panel [data-thread-panel-target='createSubmit']").click();
+      await contains(page.locator("#thread-panel [data-thread-panel-target='conversationTitle']"),'Agent owned thread',10000);
+      await page.locator("#thread-panel [data-thread-panel-target='manage'] summary").click();
+      await page.getByRole('menuitem',{name:'Track as work',exact:true}).click();
+      await page.locator("#thread-panel [data-thread-panel-target='work']").waitFor({state:'visible',timeout:10000});
+      await page.locator("#thread-panel [data-thread-panel-target='workManage'] summary").click();
+      const owner=page.locator("#thread-panel [data-thread-panel-target='workOwner']");
+      await owner.locator("optgroup[label='Agents'] option").filter({hasText:'Work Agent'}).waitFor({state:'attached',timeout:10000});
+      await owner.selectOption({label:'Work Agent'});
+      await contains(page.locator("#thread-panel [data-thread-panel-target='workOwnerLabel'] .agent-badge"),'agent',10000);
+      // Read persisted state and the assignment producer's ledger; do not write
+      // SQL or substitute a human request for the missing agent work mutation.
+      const {spawnSync}=await import('node:child_process');
+      const result=spawnSync('python3',['-c',`import sqlite3,json,sys
+c=sqlite3.connect(sys.argv[1]);bot=int(sys.argv[2]);thread=c.execute("SELECT id,work_status,work_owner_id FROM channel_threads WHERE name='Agent owned thread'").fetchone();assert thread and thread[1]=='planned' and thread[2]==bot
+rows=c.execute("SELECT metadata FROM agent_events WHERE event_type='work_assigned'").fetchall();assert any(json.loads(r[0]).get('thread_id')==thread[0] for r in rows)`,database,String(labels['system.work_bot'])]);
+      if(result.status!==0) throw new Error('work owner or assignment ledger did not persist');
+    });
+  } else if (scenario === 'budget') {
     await run('agent_streaming_test.rb','owner sees budgets, one budget item, and hits the kill switch','kevin',async page => {
       const editUrl=`${base}/account/bots/${labels['users.bender']}/edit`;
       const editReply=await page.request.get(editUrl);
@@ -116,7 +143,7 @@ try {
   }
   for (const [file,[ok,bad]] of groups) console.log(`${file}: ${ok} passed; ${bad} failed`);
   console.log('agent_streaming_test.rb: 1 deferred (live message mutation API)');
-  console.log('agent_work_assignment_test.rb: 1 deferred (work mutation API)');
+  console.log('agent_work_assignment_test.rb: 1 deferred (Bearer PATCH /agents/work/:id and subsequent status/note refresh; UI prefix is supplementary)');
   console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 2 deferred`);
 } finally {await browser.close();}
 process.exitCode = failed ? 1 : 0;

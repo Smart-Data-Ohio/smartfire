@@ -1,0 +1,119 @@
+{
+  "reference": "d7c7de92",
+  "expiry": [
+    {
+      "zone": "UTC",
+      "attributes": {
+        "name": "Extreme UTC 0",
+        "expires_at": "9999-12-31 00:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "9999-12-31 00:00:00",
+      "audits": 1,
+      "read_back": {
+        "stored": "9999-12-31 00:00:00"
+      }
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "name": "Extreme UTC 1",
+        "expires_at": "-9999-01-01 00:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "-9999-01-01 00:00:00",
+      "audits": 1,
+      "read_back": {
+        "stored": "-9999-01-01 00:00:00"
+      }
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "name": "Extreme UTC 2",
+        "expires_at": "9999-12-30 23:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "9999-12-30 23:00:00",
+      "audits": 1,
+      "read_back": {
+        "stored": "9999-12-30 23:00:00"
+      }
+    },
+    {
+      "zone": "UTC",
+      "attributes": {
+        "name": "Extreme UTC 3",
+        "expires_at": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-12-31 24:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1,
+      "read_back": {
+        "stored": null
+      }
+    },
+    {
+      "zone": "Asia/Tokyo",
+      "attributes": {
+        "name": "Extreme Asia/Tokyo 0",
+        "expires_at": "9999-12-31 00:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "9999-12-30 15:00:00",
+      "audits": 1,
+      "read_back": {
+        "stored": "9999-12-30 15:00:00"
+      }
+    },
+    {
+      "zone": "Asia/Tokyo",
+      "attributes": {
+        "name": "Extreme Asia/Tokyo 1",
+        "expires_at": "-9999-01-01 00:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "-10000-12-31 14:41:01",
+      "audits": 1,
+      "read_back": {
+        "stored": "-10000-12-31 14:41:01"
+      }
+    },
+    {
+      "zone": "Asia/Tokyo",
+      "attributes": {
+        "name": "Extreme Asia/Tokyo 2",
+        "expires_at": "9999-12-30 23:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": "9999-12-30 14:00:00",
+      "audits": 1,
+      "read_back": {
+        "stored": "9999-12-30 14:00:00"
+      }
+    },
+    {
+      "zone": "Asia/Tokyo",
+      "attributes": {
+        "name": "Extreme Asia/Tokyo 3",
+        "expires_at": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-12-31 24:00:00"
+      },
+      "status": 201,
+      "persisted": true,
+      "stored": null,
+      "audits": 1,
+      "read_back": {
+        "stored": null
+      }
+    }
+  ],
+  "github_tokens": [],
+  "errors": {}
+}

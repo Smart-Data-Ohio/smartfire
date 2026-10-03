@@ -76,7 +76,8 @@ fn bot_access_pages_match_pinned_rails_bytes() {
                     last_four: text(&c["last_four"]).unwrap(),
                     created_by: text(&c["created_by"]).unwrap(),
                     created_at: time(&c["created_at"]).unwrap(),
-                    expires_at: time(&c["expires_at"]),
+                    expires_at: time(&c["expires_at"])
+                        .map(campfire_views::accounts::bot_access::CredentialExpiry::Time),
                     last_used_at: time(&c["last_used_at"]),
                     revoked: c["revoked"].as_bool().unwrap(),
                 })
