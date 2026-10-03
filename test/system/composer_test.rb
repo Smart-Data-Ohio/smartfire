@@ -178,18 +178,24 @@ class ComposerTest < ApplicationSystemTestCase
   test "two typers with the same name do not merge" do
     users(:kevin).update!(name: "David")
 
+    # This tests identity and explicit stop notifications, not the five-second
+    # inactivity timeout. Session switches on a loaded runner can exceed it.
+    page.execute_script "Date.now = () => #{(Time.current.to_f * 1000).to_i}"
+    wait_for_typing_channel
+
     using_session("David") do
       sign_in "david@37signals.com"
       join_room @room
+      wait_for_typing_channel
     end
 
     using_session("Kevin") do
       sign_in "kevin@37signals.com"
       join_room @room
+      wait_for_typing_channel
     end
 
-    # Typing expires after 5 seconds, and signing in takes longer than
-    # that, so refresh both back to back before asserting them at once.
+    # Send after both subscriptions have connected.
     using_session("David") do
       fill_in "Write a message", with: "hi from david"
     end
@@ -199,9 +205,8 @@ class ComposerTest < ApplicationSystemTestCase
 
     assert_selector "[data-typing-notifications-target='author']", exact_text: "David, David", wait: 10
 
-    using_session("Kevin") do
-      fill_in "Write a message", with: "hi from kevin"
-    end
+    # The receiver's clock is frozen, so Kevin needs no keep-alive input
+    # between these assertions about explicit stop notifications.
     using_session("David") do
       find_field("Write a message").set("")
     end
@@ -272,6 +277,9 @@ class ComposerTest < ApplicationSystemTestCase
       fill_in "Write a thread reply", with: "Thread draft sent"
       click_button "Send Reply"
       assert_selector ".thread-panel__thread-content .message__body", text: "Thread draft sent", wait: 10
+      # The cable broadcast can arrive before Turbo handles the send response.
+      # Wait for the response to clear the draft before navigating away.
+      assert_field "Write a thread reply", with: ""
     end
 
     join_room rooms(:pets)
@@ -285,6 +293,18 @@ class ComposerTest < ApplicationSystemTestCase
   end
 
   private
+    def wait_for_typing_channel
+      page.document.synchronize(BROADCAST_WAIT) do
+        connected = page.evaluate_script <<~JS
+          (() => {
+            const element = document.querySelector('[data-controller~="typing-notifications"]')
+            return !!window.Stimulus.getControllerForElementAndIdentifier(element, "typing-notifications")?.channel
+          })()
+        JS
+        raise Capybara::ExpectationNotMet, "typing subscription is not connected" unless connected
+      end
+    end
+
     def send_reply(target, source)
       open_message_menu(target)
       click_on "Reply", exact: true
