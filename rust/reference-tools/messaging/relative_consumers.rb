@@ -28,6 +28,16 @@ scenarios = zones.flat_map do |zone|
   end
   items
 end
+if ARGV[1] == 'overflow'
+  # PR #223: event URLs, reminder notices, rows and the Saved page render the same wide
+  # timestamps. `relative_consumers.rb OUT overflow` writes relative_overflow_consumers.json.
+  scenarios = [[130, 'days'], [140, 'days'], [142, 'hours']].map do |exponent, unit|
+    {name: "UTC/event_#{exponent}_#{unit}", zone: 'UTC', action: 'slash', params: {text: "/event Review in 1#{'0' * exponent} #{unit}"}}
+  end
+  scenarios += [[140, 'days'], [142, 'hours']].map do |exponent, unit|
+    {name: "UTC/remind_#{exponent}_#{unit}", zone: 'UTC', action: 'slash', params: {text: "/remind in 1#{'0' * exponent} #{unit} Review"}, saved_page: true}
+  end
+end
 tables = %w[messages action_text_rich_texts saved_items scheduled_messages]
 groups = []
 outer_reset = MessagingOracleDatabase.scenarios(ARGV.fetch(0) + '.groups.json')
@@ -61,6 +71,11 @@ source.fetch('groups').each do |group|
       cases << {name: scenario[:name], zone: scenario[:zone], path:, params:, status: browser.response.status, content_type: browser.response.headers['Content-Type'], body: browser.response.body, location: browser.response.headers['Location'], reads: queries.length,
                 state: tables.to_h { |table| [table, conn.select_all("SELECT * FROM #{table} ORDER BY id").to_a] }.reject { |table, rows| rows == baseline[table] },
                 frames: frames.select { |f| f[:stream] == "#{room.to_gid_param}:messages" }.dup}
+      if scenario[:saved_page]
+        # app/views/saved_items/_item.html.erb renders each reminder with local_datetime_tag.
+        browser.get('/saved', headers: headers.slice('Cookie'))
+        cases.last[:saved_page] = {status: browser.response.status, items: browser.response.body.scan(%r{<article id="saved_item_.*?</article>}m)}
+      end
     end
   end
   groups << group.slice('size', 'rows').merge(baseline:, cases:)
