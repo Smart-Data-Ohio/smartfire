@@ -49,7 +49,7 @@ The frozen review inventory remains its historical **102 passed / 27 deferred / 
 
 ## Current raw receipts
 
-Commands below ran sequentially from the fresh clone `.scratch/ws8bm-review-tabs/fresh`, with `CARGO_BUILD_JOBS=2`, `RUST_TEST_THREADS=8`, and `CARGO_TARGET_DIR` / `CAMPFIRE_REFERENCE` pointing into that clone. The existing machine-wide rustc throttle was unchanged. The clone started without a target, and its first normal build completed in 3m 01s. Logs are under `.scratch/ws8bm-review-tabs/`; they are evidence, never prerequisites for tracked tests.
+Except the explicit baseline-unit command, which ran from the worktree against its old-source copy, commands below ran sequentially from the fresh clone `.scratch/ws8bm-review-tabs/fresh`, with `CARGO_BUILD_JOBS=2`, `RUST_TEST_THREADS=8`, and `CARGO_TARGET_DIR` / `CAMPFIRE_REFERENCE` pointing into that clone. The existing machine-wide rustc throttle was unchanged. The clone started without a target, and its first normal build completed in 3m 01s. Logs are under `.scratch/ws8bm-review-tabs/`; they are evidence, never prerequisites for tracked tests.
 
 The broad positive run retains two failures: Rails missed the original 10 s attachment reply-preview assertion in the already-deferred Markdown attachment flow, and Rails timed out at the unchanged 15 s Stimulus startup gate in `viewer`, before the reply-preview fallback assertions ran. Rust was attempted independently. The thirty reviewed declarations pass separately. No broad-run failure is erased by an isolated rerun.
 
@@ -194,3 +194,188 @@ WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixe
 ```
 
 This exact isolated fresh-fixture control passes on both apps; the broad-run Rails 15 s Stimulus startup timeout remains recorded, with no deadline change and no additional declaration credit.
+## Continuation merge receipts and unresolved controls
+
+The accepted continuation was merged with review branch `8e2489437` in merge commit `c14e1585ef3da814c343a63d659696518c183c4b`. The subsequent `f3f289100` merge carries only the documentation correction distinguishing the Rails startup failure from navigation. The fresh clone's merged executable verification input is `c14e1585e`; no runtime tool or product code changes after that input. Merge resolutions retain both suites, all 185 registered variants, continuation's generated-host public/callback inputs, its main-content-overflow target, the injected-panel hidden-state witness, and the new literal-attribute/action witnesses.
+
+The review branch's full 159-variant run and the continuation's distinct 26-variant cohort cover the complete merged 185-variant registry in explicitly separate runs: 184 paired rejections and one final invalid filename variant, with zero observed escapes. This is not a claimed single sealed full-185 invocation. The additional merged literal-ARIA, tab and outside-click negatives repeat review variants; their counts are not added again. The merged positive file cohort has 31 cases: the thirty reviewed declarations plus the accepted continuation's thread-code check. It passes all 31. All three hidden-allowed probes still pass.
+
+The continuation positive cohort retains **22 passed / 1 failed**. Rust failed its original two-second post-Escape panel-visible assertion in the phone drawer case, while Rails passed that batch attempt. The exact isolated case then failed **all three pairs on both apps** at that same assertion (`threads_test.rb:329`). No original wait, action or expectation was changed to obtain a pass. Pinned client code focuses the message menu in requestAnimationFrame and the thread-panel Escape handler depends on the event target; this suggests a sequencing issue but does not establish its cause. The phone sequence is unresolved follow-up, not a new Rust-only product finding. The accepted declaration map remains **156/156 controller attributions and 118 mapped systems / 17 deferred / 0 owner-blocked**; those historical mapping counts do not imply a green current suite. The exact seventeen deferred reasons remain in the continuation's primary report, with this separately disclosed newly failing paired control.
+
+The continuation negative run retains three startup/network invalid attempts, then rejects all 26 variants on fresh-fixture retries. The merged held-job URL control passes three fresh-fixture pairs; each Rust receipt shows one ready job and zero attempts. The PR Discuss control passes on both apps through the generated current-source host. No Rust workspace, clippy or release-input result is claimed for these tools/docs-only changes.
+
+Commands below were run sequentially in the same fresh clone and environment described above. Own logs are `.scratch/ws8bm-review-tabs/merged-*.log`.
+
+`merged-helpers.log`:
+
+```sh
+node --test rust/reference-tools/messaging/behavior-visibility.test.mjs rust/reference-tools/messaging/behavior-discrimination.test.mjs
+```
+
+```text
+ℹ tests 26
+ℹ pass 26
+ℹ fail 0
+ℹ skipped 0
+```
+
+`merged-python.log`:
+
+```sh
+python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
+```
+
+```text
+Ran 15 tests in 0.030s
+OK
+```
+
+`merged-system-inventory.log`:
+
+```sh
+python3 rust/reference-tools/messaging/deferred-system-inventory.py
+```
+
+```text
+WS8bm system inventory: 135 named declarations; 118 mapped behaviour passes; 17 deferred; 0 WS12 blocked; no pixel checks
+```
+
+`merged-controller-inventory.log`:
+
+```sh
+python3 rust/reference-tools/messaging/controller-case-inventory.py
+```
+
+```text
+WS8bm controller inventory: 156 named declarations; 156 scoped attributions; 0 owner-blocked
+```
+
+`merged-continuation-positive.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py --slice continuation --keep-going
+```
+
+```text
+WS8bm behaviour check: 22 named cases passed on Rails and Rust; 1 failed; no pixel checks
+```
+
+`merged-continuation-negative.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py --slice continuation --negative --keep-going
+```
+
+```text
+WS8bm invalid discrimination attempts: 3; bounded fresh-fixture retries only
+WS8bm discrimination check: 26 served mutants rejected on Rails and Rust across 23 named checks; 0 invalid or escaped
+```
+
+`merged-thirty.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_interactions message_actions_mobile message_toolbar code_highlighting --keep-going
+```
+
+```text
+WS8bm behaviour check: 31 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+`merged-aria-negative.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar --case 'the toolbar stays hidden until hover or focus and labels every action' --negative --keep-going
+```
+
+```text
+WS8bm invalid discrimination attempts: 0; bounded fresh-fixture retries only
+WS8bm discrimination check: 6 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+```
+
+`merged-option-negative.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar --case 'the emoji picker searches and reacts' --mutant missing-option-aria-label --negative --keep-going
+```
+
+```text
+WS8bm invalid discrimination attempts: 0; bounded fresh-fixture retries only
+WS8bm discrimination check: 1 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+```
+
+`merged-tab-negative.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_toolbar --case 'the picker shows category tabs and switches between them' --mutant default --negative --keep-going
+```
+
+```text
+WS8bm invalid discrimination attempts: 0; bounded fresh-fixture retries only
+WS8bm discrimination check: 1 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+```
+
+`merged-outside-negative.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py composer_attach_menu --case 'a tap outside closes the menu' --mutant default --negative --keep-going
+```
+
+```text
+WS8bm invalid discrimination attempts: 0; bounded fresh-fixture retries only
+WS8bm discrimination check: 1 served mutants rejected on Rails and Rust across 1 named checks; 0 invalid or escaped
+```
+
+`merged-hidden.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py message_list_a11y message_toolbar --mutant-set hidden-scopes --keep-going
+```
+
+```text
+WS8bm review escape check: 3 served mutants accepted on Rails and Rust; 0 failed probes; no parity credit
+```
+
+`merged-phone-isolated.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py threads --case 'keeps the thread drawer usable on a phone and preserves the channel' --repeat 3 --keep-going
+```
+
+```text
+WS8bm behaviour repetition: 0 paired attempts; 1 named declaration; 3 failed
+```
+
+`merged-url-three.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py search_forward_edit --case 'editing to add a URL renders its card live and the edited marker on load' --repeat 3 --keep-going
+```
+
+```text
+WS8bm held URL jobs: Rust 1 ready; 0 attempts
+WS8bm held URL jobs: Rust 1 ready; 0 attempts
+WS8bm held URL jobs: Rust 1 ready; 0 attempts
+WS8bm behaviour repetition: 3 paired attempts; 1 named declaration; 0 failed
+```
+
+`merged-pr-control.log`:
+
+```sh
+python3 rust/reference-tools/messaging/behavior-check.py threads --case 'discusses a pull request from its card' --keep-going
+```
+
+```text
+WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
+```
+
+## Cleanup
+
+After every own browser/compiler process completed, the only scratch Cargo target was removed from the worktree. A final directory search found no `.scratch` target directory. Logs and generated source proofs remain; no other worker's target, listener or service was touched.
+
+```sh
+mise exec rust@1.98.1 -- cargo clean --manifest-path .scratch/ws8bm-review-tabs/fresh/rust/Cargo.toml --target-dir /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-review-tabs/fresh/rust/target
+```
+
+```text
+     Removed 14600 files, 30.5GiB total
+```
