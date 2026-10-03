@@ -52,6 +52,8 @@ pub async fn create(c:&mut Ctx)->Result {
 pub async fn create_operation(c:&Ctx, identity:CurrentAgent, fields:Value)->Result<ServiceResult> {
     let zone = crate::controllers::message_features::user_zone(c).await?;
     c.app().db.write(move |tx| {
+        let mut fields=fields;
+        super::id_args::normalize(tx.conn(),identity.agent_id,"request_approval",&mut fields)?;
         let expires_in=fields.get("expires_in").filter(|v|!super::mcp::blank(v));
         let expires_at=fields.get("expires_at").filter(|v|!super::mcp::blank(v));
         let mut input_error=None;

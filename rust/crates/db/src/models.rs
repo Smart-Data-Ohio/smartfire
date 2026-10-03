@@ -4,6 +4,8 @@ pub mod account;
 pub mod slack_import;
 pub mod slack;
 pub mod agent;
+pub mod agent_budget_notice;
+pub use agent_budget_notice::AgentBudgetNotice;
 pub mod agent_work;
 pub mod agent_access;
 pub mod agent_api_pending;
