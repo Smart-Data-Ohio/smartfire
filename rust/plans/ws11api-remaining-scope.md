@@ -27,9 +27,9 @@ Both approved JPEG/video crash differences and unconditional committed-file rete
 remain explicitly documented; they are deliberate differences, not unported API paths.
 
 The preceding rounds trimmed repeated capability/serialization-identity reads and
-batched array candidates. This round fixes nested/singleton/null/hash integer
+batched array candidates. The preceding API round fixed nested/singleton/null/hash integer
 candidate coercion, sweeps scalar-ID service adapters with the shared Rails matrix,
-and corrects executor query caching in the uncached oracle. WS12 services retain
+and corrected executor query caching in the uncached oracle. WS12 services retain
 authorization, history, audit and queue ownership. The named-case checker now
 recognizes the nine assignment macro invocations, preserves pinned delivery case
 order and runs in CI seed preparation. Race differences from Astra's #205
@@ -174,7 +174,7 @@ Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/valida
 
 ## Peer-owned fixed read costs
 
-This round removes repeated adapter capability and room lookups, repeated ledger
+The preceding API round removed repeated adapter capability and room lookups, repeated ledger
 identity/hop/actor facts, eligibility reads and post-insert/update ledger reloads.
 Complete current authorization and fresh private-account sealing remain. Query
 growth stays flat at 5/50 owned rows; exact before/after totals are recorded in
