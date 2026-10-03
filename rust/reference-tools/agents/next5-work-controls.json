@@ -352,6 +352,12 @@
           "before": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        Self {",
           "after": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        let error: String = error.into();\n        let status = if error==\"Work not found\" && ws12_coverage_mutant(\"named_work_not_found\") {418} else {status};\n        Self {",
           "occurrences": 1
+        },
+        {
+          "file": "rust/crates/db/src/models/agent_service.rs",
+          "before": "error: Some(error.into()),",
+          "after": "error: Some(if error==\"Work not found\" && ws12_coverage_mutant(\"named_work_not_found\") { \"Wrong work denial\".into() } else if error.starts_with(\"Receiver must be an active\") && ws12_coverage_mutant(\"receiver_denial\") { \"Wrong receiver denial\".into() } else { error.into() }),",
+          "occurrences": 1
         }
       ]
     }
