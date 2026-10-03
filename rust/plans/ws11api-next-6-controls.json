@@ -1,0 +1,518 @@
+{
+  "baseline": "491b9425e7d3190072f833690e285f2d6dbdfb2e",
+  "fresh_reference": "d7c7de92",
+  "named_api": [
+    {
+      "key": "posts_order",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "lists the board's open posts newest activity first",
+      "rust_test": "ws11_next6_posts_order",
+      "mutation": "next6_posts_order",
+      "intended_assertion": "posts_order: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.77s"
+      ],
+      "log": "logs/posts_order.log",
+      "log_sha256": "06bda3fda07a71839fa1b542f77372bbd3cb10b1ebc63d1a5ad1a4a3d8373ae8"
+    },
+    {
+      "key": "posts_reply",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "a reply moves the post to the top of the list",
+      "rust_test": "ws11_next6_posts_reply",
+      "mutation": "next6_posts_reply",
+      "intended_assertion": "posts_reply: response 1 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.80s"
+      ],
+      "log": "logs/posts_reply.log",
+      "log_sha256": "33f9de25a3bf52432f318e86721552ec1aaf557ce4fd033e106b3cf4805d0842"
+    },
+    {
+      "key": "posts_status",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "lists by single status, done, and all",
+      "rust_test": "ws11_next6_posts_status",
+      "mutation": "next6_posts_status",
+      "intended_assertion": "posts_status: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.80s"
+      ],
+      "log": "logs/posts_status.log",
+      "log_sha256": "bcecd82f78db53f90ada428612d4c3135818182f8fe15baedae807e966c6d61e"
+    },
+    {
+      "key": "posts_owner",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "lists by owner me, agents, and id",
+      "rust_test": "ws11_next6_posts_owner",
+      "mutation": "next6_posts_owner",
+      "intended_assertion": "posts_owner: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.78s"
+      ],
+      "log": "logs/posts_owner.log",
+      "log_sha256": "ebc84a4d73c3a9b93cfa6960cdc3063880298690a6eb10a426356b86e8b32dea"
+    },
+    {
+      "key": "posts_cap",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "caps the list at 100 posts",
+      "rust_test": "ws11_next6_posts_cap",
+      "mutation": "next6_posts_cap",
+      "intended_assertion": "posts_cap: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.15s"
+      ],
+      "log": "logs/posts_cap.log",
+      "log_sha256": "e860017bc89fba9007a41777dc0a6134cf81bcd002b1f8b06ecdfcd8f1f2f56e"
+    },
+    {
+      "key": "posts_legacy",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "a legacy agent without grants can list but cannot create",
+      "rust_test": "ws11_next6_posts_legacy",
+      "mutation": "next6_posts_legacy",
+      "intended_assertion": "posts_legacy: response 0 status",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.87s"
+      ],
+      "log": "logs/posts_legacy.log",
+      "log_sha256": "84cef396db06a1ec22ac53a4f69bb4c7de3943ecd951d656a3fcd9ea6f63d308"
+    },
+    {
+      "key": "posts_left",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "listing is 404 once the agent leaves the board",
+      "rust_test": "ws11_next6_posts_left",
+      "mutation": "next6_posts_left",
+      "intended_assertion": "posts_left: response 1 status",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.90s"
+      ],
+      "log": "logs/posts_left.log",
+      "log_sha256": "13e95133bd2ad1be78cf3b26c2543c5609aeb3de16699920c5b2ca2780b7fa38"
+    },
+    {
+      "key": "shared_payload",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "creation, listing, and event delivery share one work payload",
+      "rust_test": "ws11_next6_shared_payload",
+      "mutation": "next6_shared_payload",
+      "intended_assertion": "shared_payload: response 2 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.86s"
+      ],
+      "log": "logs/shared_payload.log",
+      "log_sha256": "0496f30548c88e71f6d85a030ce56df2b5dc716bfc6b62d27f2ed69c81b48fff"
+    },
+    {
+      "key": "work_order",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "list shows only owned threads newest first with the work fields",
+      "rust_test": "ws11_next6_work_order",
+      "mutation": "next6_work_order",
+      "intended_assertion": "work_order: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.82s"
+      ],
+      "log": "logs/work_order.log",
+      "log_sha256": "5cebdf82458d3dc9109bc5f388be9756099a688bc628cddaa50870112dcfca1d"
+    },
+    {
+      "key": "work_empty",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "list is Bearer-only and empty without owned threads",
+      "rust_test": "ws11_next6_work_empty",
+      "mutation": "next6_work_empty",
+      "intended_assertion": "work_empty: response 1 status",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.90s"
+      ],
+      "log": "logs/work_empty.log",
+      "log_sha256": "3bf5992b84e00df5ec183fa7884da6766ea0eeff1fb023d4d5db69a4692ded6e"
+    },
+    {
+      "key": "work_links_show",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "show includes links with pull request, event, and drive entries",
+      "rust_test": "ws11_next6_work_links_show",
+      "mutation": "next6_work_links_show",
+      "intended_assertion": "work_links_show: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.88s"
+      ],
+      "log": "logs/work_links_show.log",
+      "log_sha256": "ddb7ede200ee0ece7e425268d6aeb13ab025b53d0f8ab2f17a6fb301db7406ac"
+    },
+    {
+      "key": "work_links_list",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "list includes links on owned threads",
+      "rust_test": "ws11_next6_work_links_list",
+      "mutation": "next6_work_links_list",
+      "intended_assertion": "work_links_list: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.79s"
+      ],
+      "log": "logs/work_links_list.log",
+      "log_sha256": "eaeffdf518cb009f20aacbe97c7c55da7e297e17e87ce30e557d4fd11b048e70"
+    },
+    {
+      "key": "work_note_history",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch changes the status and records the note in work history",
+      "rust_test": "ws11_next6_work_note_history",
+      "mutation": "next6_work_note_history",
+      "intended_assertion": "work_note_history: response 1 HTML projection",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.92s"
+      ],
+      "log": "logs/work_note_history.log",
+      "log_sha256": "903148830b307771eca4995032954a5b88230c975a86e59268af2c55757c2329"
+    },
+    {
+      "key": "work_orphaned",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "list excludes rooms the agent no longer belongs to",
+      "rust_test": "ws11_next6_work_orphaned",
+      "mutation": "next6_work_orphaned",
+      "intended_assertion": "work_orphaned: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.87s"
+      ],
+      "log": "logs/work_orphaned.log",
+      "log_sha256": "7a3e07dfa8f67f06aee0df46b2ba8d2aaa9836b628f7de376ed5e6f92b49c216"
+    },
+    {
+      "key": "result_permissions",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result requires ownership and manage_threads",
+      "rust_test": "ws11_next6_result_permissions",
+      "mutation": "next6_result_permissions",
+      "intended_assertion": "result_permissions: response 0 status",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.77s"
+      ],
+      "log": "logs/result_permissions.log",
+      "log_sha256": "cb959fa259d5fee0de5e0d956be27e79fc42add394dac89c6060488c2b7d1f31"
+    },
+    {
+      "key": "result_precedence",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result checks ownership and grants before markdown presence",
+      "rust_test": "ws11_next6_result_precedence",
+      "mutation": "next6_result_precedence",
+      "intended_assertion": "result_precedence: response 1 status",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.77s"
+      ],
+      "log": "logs/result_precedence.log",
+      "log_sha256": "9692137745d6a50ed76c0cda961332926dcc6f9e01fad1baee6159740b9784cf"
+    },
+    {
+      "key": "assignment_poll",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "assignment appears in event polling with the work payload",
+      "rust_test": "ws11_next6_assignment_poll",
+      "mutation": "next6_assignment_poll",
+      "intended_assertion": "assignment_poll: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.81s"
+      ],
+      "log": "logs/assignment_poll.log",
+      "log_sha256": "e8355bb550ceffcac1bf036df13b72239d7df2ff7e6a48706e60954257818e85"
+    },
+    {
+      "key": "assignment_links",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "assignment work payload includes links",
+      "rust_test": "ws11_next6_assignment_links",
+      "mutation": "next6_assignment_links",
+      "intended_assertion": "assignment_links: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.90s"
+      ],
+      "log": "logs/assignment_links.log",
+      "log_sha256": "b15ae5ed7c0ab9316e5f7d3c3904a24a9bf98eaebcacade70a7f88ebee5183fd"
+    },
+    {
+      "key": "unassignment_poll",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "unassignment appears in event polling",
+      "rust_test": "ws11_next6_unassignment_poll",
+      "mutation": "next6_unassignment_poll",
+      "intended_assertion": "unassignment_poll: response 0 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.82s"
+      ],
+      "log": "logs/unassignment_poll.log",
+      "log_sha256": "32aaf3dd00169a6bc2f0300ed1d8cd945abe3b323fef1ce81eab97a6ce3ead4f"
+    },
+    {
+      "key": "assignment_ack",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "ack works on work rows",
+      "rust_test": "ws11_next6_assignment_ack",
+      "mutation": "next6_assignment_ack",
+      "intended_assertion": "assignment_ack: committed state",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.85s"
+      ],
+      "log": "logs/assignment_ack.log",
+      "log_sha256": "4cd6495c5299e5288d609b81988b284252ed51b779b24787db6f373a07f08fbf"
+    },
+    {
+      "key": "assignment_webhook",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "assignment enqueues the webhook instead of blocking on it",
+      "rust_test": "ws11_next6_assignment_webhook",
+      "mutation": "next6_assignment_webhook",
+      "intended_assertion": "assignment_webhook: \"deliver\" producer output",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.62s"
+      ],
+      "log": "logs/assignment_webhook.log",
+      "log_sha256": "19e705b2af1b0ebf768f11d5b4887956210bfe8e6293462e768665c3c60bf37d"
+    },
+    {
+      "key": "assignment_no_read",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "assignment posts no webhook without read_messages",
+      "rust_test": "ws11_next6_assignment_no_read",
+      "mutation": "next6_assignment_no_read",
+      "intended_assertion": "assignment_no_read: \"deliver\" producer output",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.64s"
+      ],
+      "log": "logs/assignment_no_read.log",
+      "log_sha256": "06e05b4967e6e7ea03679e52e5d3b9f58537b3ea796e7e3d68430ac7038e4225"
+    },
+    {
+      "key": "assignment_revoked",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "polling omits work rows for rooms the agent lost read_messages in",
+      "rust_test": "ws11_next6_assignment_revoked",
+      "mutation": "next6_assignment_revoked",
+      "intended_assertion": "assignment_revoked: response 1 bytes",
+      "exit": 101,
+      "hits": 6,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.80s"
+      ],
+      "log": "logs/assignment_revoked.log",
+      "log_sha256": "afb6e895ec90c7269eb7bf41aa9669d619cb5bf4eee7c3f7a7ecdde1000dcc46"
+    },
+    {
+      "key": "assignment_left",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "polling omits work rows after membership removal",
+      "rust_test": "ws11_next6_assignment_left",
+      "mutation": "next6_assignment_left",
+      "intended_assertion": "assignment_left: response 1 bytes",
+      "exit": 101,
+      "hits": 6,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.87s"
+      ],
+      "log": "logs/assignment_left.log",
+      "log_sha256": "d901dfc211a34b7469d2b2f75362f48e62052fa77e00865297dbfd85d5100e0c"
+    },
+    {
+      "key": "work_message_rate",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_test": "work events do not count toward the message rate limit",
+      "rust_test": "ws11_next6_work_message_rate",
+      "mutation": "next6_work_message_rate",
+      "intended_assertion": "work_message_rate: response 1 bytes",
+      "exit": 101,
+      "hits": 42,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.18s"
+      ],
+      "log": "logs/work_message_rate.log",
+      "log_sha256": "abc3dbd7038ada51414b3f0abe3635fee073c5bb23c7328db1d55d0c2b1578d0"
+    },
+    {
+      "key": "handoff_poll",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "the receiver polls the handoff with its context package",
+      "rust_test": "ws11_next6_handoff_poll",
+      "mutation": "next6_handoff_poll",
+      "intended_assertion": "handoff_poll: response 1 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.86s"
+      ],
+      "log": "logs/handoff_poll.log",
+      "log_sha256": "b47fded1837c1652a408d3ecad265442bc50d046e1a845dd97d20485049613d3"
+    },
+    {
+      "key": "handoff_ack",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "the receiver acks the handoff row",
+      "rust_test": "ws11_next6_handoff_ack",
+      "mutation": "next6_handoff_ack",
+      "intended_assertion": "handoff_ack: committed state",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.35s"
+      ],
+      "log": "logs/handoff_ack.log",
+      "log_sha256": "0d5b7e1be47aecb935c75899a4ff895a1c392927db79d48fb288474b7b6f048f"
+    },
+    {
+      "key": "handoff_webhook",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "the handoff enqueues the receiver webhook with the package",
+      "rust_test": "ws11_next6_handoff_webhook",
+      "mutation": "next6_handoff_webhook",
+      "intended_assertion": "handoff_webhook: \"deliver\" producer output",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.91s"
+      ],
+      "log": "logs/handoff_webhook.log",
+      "log_sha256": "489bfd0d9a20f1804d79dabbc5fb772121318fc808f478bf43a75dd83ff30524"
+    },
+    {
+      "key": "handoff_throttle",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "handoffs throttle at 60 a minute per credential",
+      "rust_test": "ws11_next6_handoff_throttle",
+      "mutation": "next6_handoff_throttle",
+      "intended_assertion": "handoff_throttle: response 60 status",
+      "exit": 101,
+      "hits": 61,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.77s"
+      ],
+      "log": "logs/handoff_throttle.log",
+      "log_sha256": "d5ff562e77dad3414dfb3d20585d8c5b1e18e1f8a07b9fc0f920f460b0fdef03"
+    },
+    {
+      "key": "handoff_shared_throttle",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_test": "handoff_work shares its throttle bucket with the rest endpoint",
+      "rust_test": "ws11_next6_handoff_shared_throttle",
+      "mutation": "next6_handoff_shared_throttle",
+      "intended_assertion": "handoff_shared_throttle: response 61 status",
+      "exit": 101,
+      "hits": 61,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.68s"
+      ],
+      "log": "logs/handoff_shared_throttle.log",
+      "log_sha256": "11b408b1ba3704b3dbe653441abc349a9fdabb3167ea4c089cd8ce215c1e5933"
+    },
+    {
+      "key": "board_flow",
+      "rails_file": "test/integration/agent_boards_test.rb",
+      "rails_test": "an agent post flows from creation through reply to result",
+      "rust_test": "ws11_next6_board_flow",
+      "mutation": "next6_board_flow",
+      "intended_assertion": "board_flow: response 5 bytes",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.15s"
+      ],
+      "log": "logs/board_flow.log",
+      "log_sha256": "0262e7a1a53894bcb9e17913eba7b0623e1b532c1147ec8d50773bc87798b561"
+    }
+  ],
+  "queries": [
+    {
+      "key": "polling_reads",
+      "rust_test": "ws11_next6_request_reads_stay_flat_at_two_sizes",
+      "mutation": "next6_polling_reads",
+      "intended_assertion": "events: request reads must remain flat at 5/50 rows",
+      "exit": 101,
+      "hits": 110,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 2.99s"
+      ],
+      "log": "logs/polling_reads.log",
+      "log_sha256": "51d2a665688bc338f4967b481a3e804442ff4df526de77f055c8451fb27f8535"
+    }
+  ]
+}

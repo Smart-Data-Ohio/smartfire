@@ -36,8 +36,14 @@
       "rails_line": 100,
       "rails_test": "handoff_work shares its throttle bucket with the rest endpoint",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "handoff_shared_throttle",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_handoff_shared_throttle",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
@@ -72,80 +78,140 @@
       "rails_line": 288,
       "rails_test": "lists the board's open posts newest activity first",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: The credited board REST corpus has one planned post; its shared model cap fixture has planned/blocked posts. The mixed open/done newest-activity output is not asserted."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "posts_order",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_posts_order",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 312,
       "rails_test": "a reply moves the post to the top of the list",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: No credited test writes a reply and then reads a multi-post list to assert reordering."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "posts_reply",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_posts_reply",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 328,
       "rails_test": "lists by single status, done, and all",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: The REST done-filter probe is empty because there are no done posts; the original positive done/all/open membership assertions do not run."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "posts_status",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_posts_status",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 360,
       "rails_test": "lists by owner me, agents, and id",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: The REST fixture has one agent-owned post and no second agent or human-owned row; negative human filtering is covered, but the complete positive owner selection assertion set is not."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "posts_owner",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_posts_owner",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 395,
       "rails_test": "caps the list at 100 posts",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: The credited wire fixture has one board post. The shared model cap assertion loads 100 work-list rows, but its board-post query filters to three rows. Neither assertion exercises the board-post 100-row cap."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "posts_cap",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_posts_cap",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 416,
       "rails_test": "a legacy agent without grants can list but cannot create",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: No credited HTTP test couples a legacy no-grant successful list with its forbidden create request."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "posts_legacy",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_posts_legacy",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 430,
       "rails_test": "listing is 404 once the agent leaves the board",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The board-list failure is malformed-object room_id (mcp_posts_room_shape_3), not revoking a real board membership."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "posts_left",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_posts_left",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 438,
       "rails_test": "creation, listing, and event delivery share one work payload",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "shared_payload",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_shared_payload",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 12,
       "rails_test": "list shows only owned threads newest first with the work fields",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: The wire list has one owned thread; the cap fixture orders same-timestamp rows by ID. Different timestamp newest-first ordering and the original multi-row payload are not asserted."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "work_order",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_work_order",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 63,
       "rails_test": "list is Bearer-only and empty without owned threads",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: The wire corpus does not issue the successful no-owned-threads list and the non-Bearer list request in this declaration."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "work_empty",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_work_empty",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -166,16 +232,28 @@
       "rails_line": 114,
       "rails_test": "show includes links with pull request, event, and drive entries",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "work_links_show",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_work_links_show",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 158,
       "rails_test": "list includes links on owned threads",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "work_links_list",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_work_links_list",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -196,8 +274,14 @@
       "rails_line": 184,
       "rails_test": "patch changes the status and records the note in work history",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 assertion audit: The work-write corpus asserts persisted note/history facts, but does not request JSON history and served human history after the same agent mutation."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "work_note_history",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_work_note_history",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -218,8 +302,14 @@
       "rails_line": 228,
       "rails_test": "list excludes rooms the agent no longer belongs to",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "work_orphaned",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_work_orphaned",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -310,8 +400,14 @@
       "rails_line": 476,
       "rails_test": "put result requires ownership and manage_threads",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The control exposes missing-markdown validation on a foreign-owner request. The valid result write still hits the model owner guard, not the declared ownership denial/state assertion."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "result_permissions",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_result_permissions",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -332,8 +428,14 @@
       "rails_line": 522,
       "rails_test": "put result checks ownership and grants before markdown presence",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: Only the valid-owner missing-markdown case fails. Neither the foreign-owner nor forbidden-owner precedence assertion is exercised by that failure."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "result_precedence",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_result_precedence",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -396,96 +498,168 @@
       "rails_line": 14,
       "rails_test": "assignment appears in event polling with the work payload",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "assignment_poll",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_assignment_poll",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 34,
       "rails_test": "assignment work payload includes links",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "assignment_links",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_assignment_links",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 51,
       "rails_test": "unassignment appears in event polling",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "unassignment_poll",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_unassignment_poll",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 64,
       "rails_test": "ack works on work rows",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "assignment_ack",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_assignment_ack",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 75,
       "rails_test": "assignment enqueues the webhook instead of blocking on it",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "assignment_webhook",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_assignment_webhook",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 97,
       "rails_test": "assignment posts no webhook without read_messages",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "assignment_no_read",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_assignment_no_read",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 113,
       "rails_test": "polling omits work rows for rooms the agent lost read_messages in",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "assignment_revoked",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_assignment_revoked",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 128,
       "rails_test": "polling omits work rows after membership removal",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "assignment_left",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_assignment_left",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
       "rails_line": 142,
       "rails_test": "work events do not count toward the message rate limit",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "work_message_rate",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_work_message_rate",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_handoff_test.rb",
       "rails_line": 45,
       "rails_test": "the receiver polls the handoff with its context package",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "handoff_poll",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_handoff_poll",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_handoff_test.rb",
       "rails_line": 64,
       "rails_test": "the receiver acks the handoff row",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "handoff_ack",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_handoff_ack",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_handoff_test.rb",
       "rails_line": 76,
       "rails_test": "the handoff enqueues the receiver webhook with the package",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "handoff_webhook",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_handoff_webhook",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_handoff_test.rb",
@@ -520,16 +694,28 @@
       "rails_line": 176,
       "rails_test": "handoffs throttle at 60 a minute per credential",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "handoff_throttle",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_handoff_throttle",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     },
     {
       "rails_file": "test/integration/agent_boards_test.rb",
       "rails_line": 17,
       "rails_test": "an agent post flows from creation through reply to result",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "status": "passed",
+      "reason": "Fresh pinned Rails requests and real producer output with complete original assertion projections and committed state/jobs; individual activated producer control rejected at its intended assertion.",
+      "key": "board_flow",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_next6_named_tests.rs",
+      "rust_test": "ws11_next6_board_flow",
+      "vector": "rust/vectors/agent_next6_named.json",
+      "producer_control": "rust/reference-tools/agents/next6-named-controls.json",
+      "receipt": "rust/plans/ws11api-next-6-controls.json"
     }
   ]
 }

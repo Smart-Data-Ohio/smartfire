@@ -9,7 +9,7 @@ use crate::{ChannelThread, Connection, Message, Result, Room, Timestamp, User, W
 use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::collections::{HashSet,HashMap};
+use std::collections::{HashMap, HashSet};
 
 /// An occurrence in Rails' serialization order. Repository-wide grants alone
 /// cannot distinguish a repeated private repository before and after a 401.
@@ -320,7 +320,7 @@ pub fn work_payload(
     owner_id: Option<i64>,
     access: &RepositoryAccess,
 ) -> Result<Value> {
-    Ok(work_payloads(conn,std::slice::from_ref(thread),owner_id,access)?.remove(0))
+    Ok(work_payloads(conn, std::slice::from_ref(thread), owner_id, access)?.remove(0))
 }
 
 /// Agents::WorkPayload associations are loaded once per bounded window. WS15g still
@@ -330,6 +330,32 @@ pub fn work_payloads(
     threads: &[ChannelThread],
     owner_id: Option<i64>,
     access: &RepositoryAccess,
+) -> Result<Vec<Value>> {
+    work_payload_batch(conn, threads, owner_id, access, None)
+}
+
+/// Polling can render the same thread in different events with different private
+/// repository decisions. Share associations without sharing those decisions.
+pub fn work_payloads_for_events(
+    conn: &Connection,
+    entries: &[(i64, ChannelThread)],
+    owner_id: Option<i64>,
+    access: &RepositoryAccess,
+) -> Result<Vec<Value>> {
+    let scopes = entries.iter().map(|(event, _)| *event).collect::<Vec<_>>();
+    let threads = entries
+        .iter()
+        .map(|(_, thread)| thread.clone())
+        .collect::<Vec<_>>();
+    work_payload_batch(conn, &threads, owner_id, access, Some(&scopes))
+}
+
+fn work_payload_batch(
+    conn: &Connection,
+    threads: &[ChannelThread],
+    owner_id: Option<i64>,
+    access: &RepositoryAccess,
+    scopes: Option<&[i64]>,
 ) -> Result<Vec<Value>> {
     use crate::sql::placeholders;
     use rusqlite::params_from_iter;
@@ -436,7 +462,9 @@ pub fn work_payloads(
     }
     checked.guard = None;
     let render = |access: &RepositoryAccess| -> Result<Vec<Value>> {
-        threads.iter().map(|thread| {
+        threads.iter().enumerate().map(|(index, thread)| {
+            let scoped = scopes.map(|scopes| access.in_event(scopes[index]));
+            let access = scoped.as_ref().unwrap_or(access);
             let room=rooms.get(&thread.room_id).ok_or(crate::Error::RecordNotFound("Room"))?;
             let owner=thread.work_owner_id.and_then(|id|owners.get(&id));
             let mut values=Vec::new();
@@ -517,11 +545,23 @@ fn pull_request_payload(
         conn,
         "SELECT * FROM github_pull_requests WHERE id=?",
         [id],
-        |r| pull_request_row(r,r.get::<_,Option<bool>>("private")?==Some(false) || allowed),
+        |r| {
+            pull_request_row(
+                r,
+                r.get::<_, Option<bool>>("private")? == Some(false) || allowed,
+            )
+        },
     )
 }
-fn pull_request_row(r:&rusqlite::Row<'_>,visible:bool) -> rusqlite::Result<Value> {
-    let owner:String=r.get("owner")?;let repo:String=r.get("repo")?;let number:i64=r.get("number")?;
-    let url=r.get::<_,Option<String>>("html_url")?.filter(|s|!campfire_richtext::ruby::is_blank(s)).unwrap_or_else(||format!("https://github.com/{owner}/{repo}/pull/{number}"));
-    Ok(json!({"url":url,"owner":owner,"repo":repo,"number":number,"title":if visible {r.get::<_,Option<String>>("title")?} else {None},"state":r.get::<_,Option<String>>("state")?,"head_branch":if visible {r.get::<_,Option<String>>("head_branch")?} else {None},"base_branch":if visible {r.get::<_,Option<String>>("base_branch")?} else {None},"review_decision":r.get::<_,Option<String>>("review_decision")?,"checks_state":r.get::<_,Option<String>>("check_status")?}))
+fn pull_request_row(r: &rusqlite::Row<'_>, visible: bool) -> rusqlite::Result<Value> {
+    let owner: String = r.get("owner")?;
+    let repo: String = r.get("repo")?;
+    let number: i64 = r.get("number")?;
+    let url = r
+        .get::<_, Option<String>>("html_url")?
+        .filter(|s| !campfire_richtext::ruby::is_blank(s))
+        .unwrap_or_else(|| format!("https://github.com/{owner}/{repo}/pull/{number}"));
+    Ok(
+        json!({"url":url,"owner":owner,"repo":repo,"number":number,"title":if visible {r.get::<_,Option<String>>("title")?} else {None},"state":r.get::<_,Option<String>>("state")?,"head_branch":if visible {r.get::<_,Option<String>>("head_branch")?} else {None},"base_branch":if visible {r.get::<_,Option<String>>("base_branch")?} else {None},"review_decision":r.get::<_,Option<String>>("review_decision")?,"checks_state":r.get::<_,Option<String>>("check_status")?}),
+    )
 }
