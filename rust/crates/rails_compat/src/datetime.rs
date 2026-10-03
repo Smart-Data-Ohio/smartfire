@@ -213,10 +213,9 @@ pub fn render<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone, suffix: bool) -> S
     };
     let mut result = format!("{year}{}", local.strftime("-%m-%dT%H:%M:%S"));
     if suffix {
-        if zone
-            .iana_name()
-            .is_none_or(|name| name == "Etc/UTC" || name == "UTC")
-        {
+        // ActiveSupport::TimeWithZone initializes @is_utc from its period
+        // abbreviation, not the user-supplied identifier or a zero offset.
+        if matches!(zone.to_offset_info(proxy).abbreviation(), "UTC" | "UCT") {
             result.push('Z');
         } else {
             result.push_str(&format!(
