@@ -57,13 +57,13 @@ Runtime fixes are limited to wide relative arithmetic, slash notice/event URL re
 
 The fixed slash cost exceeds Rails, but does not grow with old-reference count. CSRF preflight and state-observation queries are outside the production request count. No board/work files or inherited reader internals were changed.
 
-## Flagged adapter boundary
+## Approved atomic enqueue difference
 
 `adapter_rejections.rb` pins 24 real Generic/LinkedIn after-commit callback permutations: adapter false return, `ActiveJob::EnqueueError`, and hard exception at sibling 1/2, both sizes. It records exact rows, actual adapter calls/queued jobs, exception and ordered frames. Rails soft refusals commit both claims, queue the other sibling and broadcast; hard exceptions retain the already committed metadata/claims and publish none.
 
 Rust's durable queue has no equivalent soft-refusal adapter API. A durable job INSERT error must roll back the triggering metadata, claims and jobs under decisions.md decision 2. `probe_adapter_rejections.py` executes eight real first/second durable failures, compares complete actual rollback rows to the before-state and observes the real empty publication/queue. It explicitly reports the difference from Rails rather than claiming parity. Suppressing the real enqueue error is rejected at `adapter actual durable refusal`.
 
-Blocking owners: **WS15e / WS3, with lead contract decision**. The boundary is `integrations/link_embed/store.rs:120` (final-state sibling claims before commit), `store.rs:214` (fetch emission), `jobs.rs:306`/`312` (transactional EventSink persistence and propagated queue error), `crates/jobs/src/queue.rs:47` (`Result<i64>` enqueue). Moving enqueue after commit or swallowing durable errors would violate the existing decision and is not implemented.
+The lead approved this difference for slice H under decisions.md decision 2. It is **not owner-blocked**. See `ws8bm2-approved-differences.md`. The boundary is `integrations/link_embed/store.rs:120` (final-state sibling claims before commit), `store.rs:214` (fetch emission), `jobs.rs:306`/`312` (transactional EventSink persistence and propagated queue error), `crates/jobs/src/queue.rs:47` (`Result<i64>` enqueue). Moving enqueue after commit or swallowing durable errors would violate the existing decision and is not implemented.
 
 | Refusal / both providers | Rails hard-error reads 4 / 16 | Rust durable-error reads 4 / 16 |
 | --- | --- | --- |
@@ -75,7 +75,7 @@ The Rails soft-refusal callback reads 14 / 26 and emits 4 / 16 frames. These are
 ## Remaining scope and owners
 
 1. **WS8b-m shared message renderer:** 24 non-UTC slash-post cases in the full 80-request `relative_consumers.json` corpus remain blocked. `views/src/messages.rs:441` explicitly passes `Zone::utc()` to the day/permalink timestamp; `controllers/presenters.rs:432` builds `user_view` with the UTC avatar helper (`presenters.rs:93`). The detached context's viewer zone cannot affect those bytes. `probe_relative_renderer.py` replays the full corpus and retains the real first New York failure: UTC `16:00:00Z` / avatar `v=20260302160000` versus Rails `11:00:00-05:00` / `v=20260302110000`. The normal test explicitly selects the 56 unblocked cases; the full 80-case oracle is independently replayed, no bytes masked. The ineffective local timezone-guard attempt was removed rather than presented as a fix.
-2. **WS15e / WS3 / lead:** after-commit soft adapter refusal contract described above. Real atomic durable failures are proved; Rails adapter byte/state parity is not claimed.
+2. **Approved difference, no blocking owner:** atomic durable enqueue failure rolls back the triggering write under decision 2; Rails after-commit adapter outcomes remain recorded separately.
 3. **WS8b-m2:** wide-year saved/scheduled HTML presentation remains unproven and still narrows through Jiff (`saved_items.rs:84`, `scheduled_messages.rs:133` and `:244`). This checkpoint proves wide JSON creation/output and persisted rows, not those HTML lists/forms. Periodic delivery of these newly covered wide dates is not replayed (`models/saved_item.rs:286`, `models/scheduled_message.rs:261`). Future extreme-duration inputs beyond the existing Timestamp representation are also not claimed exhaustively covered.
 4. **Lead/system-test phase:** final both-app cutover browser run. Prior accepted 45/45 inventory retained below; no browsers or pixel checks run this checkpoint.
 5. **WS12:** broader board/work parity remains with its owner. No changes to `presenters/boards.rs`, `channel_thread/board.rs`, `channel_thread/work.rs`, `board_posts.rs` or `work_threads.rs`.
