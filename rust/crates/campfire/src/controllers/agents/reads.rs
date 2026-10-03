@@ -245,6 +245,28 @@ mod id_cast_tests {
         }
     }
     #[test]
+    fn ws11_next4_numeric_boundaries_match_rails_predicates() {
+        let vector: Value = serde_json::from_str(include_str!(
+            "../../../../../vectors/next4_numeric_ids.json"
+        )).unwrap();
+        let allowed: Vec<i64> = vector["allowed"].as_array().unwrap().iter()
+            .map(|v| v.as_i64().unwrap()).collect();
+        let mut mismatches = Vec::new();
+        for case in vector["cases"].as_array().unwrap() {
+            // Deserialize raw input, rather than reserializing a rounded Value.
+            let input: Value = serde_json::from_str(case["input_json"].as_str().unwrap()).unwrap();
+            let selected: Vec<i64> = super::lookup_ids(&input).into_iter()
+                .filter(|id| allowed.contains(id)).collect();
+            if json!(selected) != case["selected"] {
+                mismatches.push(format!("input={} actual={:?} expected={}",
+                    case["input_json"], selected, case["selected"]));
+            }
+        }
+        println!("WS11 next4 numeric IDs: {} cases; {} mismatches",
+            vector["cases"].as_array().unwrap().len(), mismatches.len());
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+    #[test]
     fn pr214_scalar_array_corpus_matches_rails_predicates() {
         let vector: Value =
             serde_json::from_str(include_str!("../../../../../vectors/pr214_id_corpus.json"))
