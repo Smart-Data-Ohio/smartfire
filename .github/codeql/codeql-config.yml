@@ -1,9 +1,19 @@
 name: Smartfire CodeQL
 
-# Test code, generated comparison fixtures and vendored third-party sources
-# produce alerts that do not describe shipped behavior (fixture keys, golden
-# vectors, upstream rails-ujs). Product sources, including inline
-# #[cfg(test)] modules, are still analyzed.
+# Test code and generated comparison fixtures raise alerts (fixture keys, golden
+# vectors) that do not describe shipped behavior. Product sources, including
+# inline #[cfg(test)] modules, are still analyzed.
+#
+# Vendored browser libraries under vendor/ and rust/crates/assets/vendor/ ARE
+# served to users (Turbo, Stimulus, Trix, Action Cable, Rails UJS, Highlight.js,
+# LiveKit, RNNoise). They are excluded deliberately: their alerts describe
+# upstream code we update by version rather than patch, so track them through
+# upstream advisories and dependency updates instead. Vendored Onigmo C under
+# rust/crates/rails_compat/vendor/ is not excluded.
+#
+# rust/crates/db/src/tests/ws17_settings_zones.json is runtime data embedded by
+# models/user_status_settings/writes.rs. JSON is not analyzed, so excluding it
+# hides nothing; its Rust consumer is still scanned.
 paths-ignore:
   - test/**
   - vendor/**

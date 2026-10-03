@@ -10,8 +10,9 @@ on:
 
 permissions: {}
 
+# Key pull requests by number so same-named branches from forks never share a group.
 concurrency:
-  group: codeql-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  group: codeql-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -19,13 +20,15 @@ jobs:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      security-events: write
+      contents: read # check out the repository
+      security-events: write # upload analysis results
 
     strategy:
       fail-fast: false
       matrix:
-        language: [ actions, javascript-typescript, python, ruby, rust ]
+        # c-cpp covers rails_compat's native keyword matcher and vendored Onigmo,
+        # which build.rs compiles into the release binary.
+        language: [ actions, c-cpp, javascript-typescript, python, ruby, rust ]
 
     steps:
       - name: Checkout code
