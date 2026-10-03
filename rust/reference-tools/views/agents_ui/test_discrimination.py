@@ -42,6 +42,33 @@ class DiscriminationTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             require_rejected(result, {TEST: (SOURCE, MESSAGE)})
 
+    def test_compiler_warning_gutters_are_not_failed_test_names(self):
+        result = failure()
+        result.stderr = "warning: function is never used\n    |\n    | fn unused() {}\n" + result.stderr
+        with redirect_stdout(io.StringIO()):
+            require_rejected(result, {TEST: (SOURCE, MESSAGE)})
+
+    def test_each_assertion_must_belong_to_its_own_test(self):
+        result = failure(message="second assertion")
+        result.stderr += f"thread 'example::second_test' (2) panicked at {SOURCE}:1:1:\n{MESSAGE}\n"
+        result.stdout = f"failures:\n    example::{TEST}\n    example::second_test\n\ntest result: FAILED. 0 passed; 2 failed; 0 ignored;\n"
+        with self.assertRaises(RuntimeError):
+            require_rejected(result, {
+                TEST: (SOURCE, MESSAGE), "second_test": (SOURCE, "second assertion"),
+            })
+
+    def test_unrelated_status_failure_at_the_same_assertion_is_invalid(self):
+        for status in ["500", "406"]:
+            result = failure()
+            result.stderr += f"  left: {status}\n right: 303\n"
+            assertions = {TEST: (SOURCE, MESSAGE, ("406", "303"))}
+            if status == "500":
+                with self.assertRaises(RuntimeError):
+                    require_rejected(result, assertions)
+            else:
+                with redirect_stdout(io.StringIO()):
+                    require_rejected(result, assertions)
+
     def test_baseline_must_pass_the_expected_test_count(self):
         for result in [
             failure(),

@@ -66,7 +66,7 @@ inputs={
  'original_normalized_day'=>'2026-02-31 12:00:00',
  'original_date'=>'2026-01-01'
 }.merge(inputs)
-# Additional review-209 values, then BLOB variants of every string input.
+# Additional review-209 values, then BLOB variants of every non-null input.
 inputs.merge!({
  'null_byte'=>"2026-01-01\0", 'empty_spaces'=>'   ', 'ascii_whitespace'=>"\t\n\r ",
  'nonbreaking_spaces'=>"\u00a0", 'padded_tabs'=>"\t2026-01-01\n", 'thin_space'=>"2026\u2009Jan\u20091",
@@ -90,8 +90,9 @@ specs=inputs.map do |name,value|
  {name:,value:,sql:"UPDATE users SET tour_completed_at=#{quoted} WHERE id=127326141"}
 end
 inputs.each do |name,value|
- next unless value.is_a?(String)
- specs << {name:"blob_#{name}",value:nil,sql:"UPDATE users SET tour_completed_at=X'#{value.unpack1('H*')}' WHERE id=127326141"}
+ next if value.nil?
+ blob=value.is_a?(String) ? "X'#{value.unpack1('H*')}'" : "CAST(#{conn.quote(value)} AS BLOB)"
+ specs << {name:"blob_#{name}",value:nil,sql:"UPDATE users SET tour_completed_at=#{blob} WHERE id=127326141"}
 end
 {
  'valid'=>"2026-01-01 00:00:00", 'named'=>"Jan. 1, 2026", 'empty'=>"", 'invalid'=>"not-a-date",
@@ -117,7 +118,7 @@ cases=specs.map do |spec|
   out
  end
  main_auto_start=value.nil? ? 'true' : 'false'
- known_difference=responses.any? { |r| r[:body][/data-tour-auto-start-value="(.*?)"/,1] != main_auto_start }
+ known_difference=!name.start_with?('blob_') && responses.any? { |r| r[:body][/data-tour-auto-start-value="(.*?)"/,1] != main_auto_start }
  {name:,value:,sql:,responses:,known_difference:known_difference ? 'Known main datetime-cast difference; fix after #196 merges' : nil}
 end
 puts JSON.pretty_generate(reference:'d7c7de92',cases:)

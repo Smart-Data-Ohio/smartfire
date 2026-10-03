@@ -60,7 +60,13 @@ pub fn deserialize_sqlite_blob<T: TimeValue>(value: &[u8]) -> Option<T> {
     }
     let text: String = value
         .iter()
-        .map(|byte| if byte.is_ascii() { char::from(*byte) } else { ' ' })
+        .map(|byte| {
+            if byte.is_ascii() {
+                char::from(*byte)
+            } else {
+                ' '
+            }
+        })
         .collect();
     deserialize(&text)
 }

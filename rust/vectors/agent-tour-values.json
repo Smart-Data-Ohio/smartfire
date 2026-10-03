@@ -1709,7 +1709,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_original_empty",
@@ -1766,6 +1766,24 @@
       "known_difference": null
     },
     {
+      "name": "blob_original_integer_zero",
+      "value": null,
+      "sql": "UPDATE users SET tour_completed_at=CAST(0 AS BLOB) WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
       "name": "blob_original_normalized_day",
       "value": null,
       "sql": "UPDATE users SET tour_completed_at=X'323032362d30322d33312031323a30303a3030' WHERE id=127326141",
@@ -1781,7 +1799,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_original_date",
@@ -1799,7 +1817,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_whitespace",
@@ -1835,7 +1853,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_long_leading_spaces",
@@ -1889,7 +1907,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_RFC_2822",
@@ -1907,7 +1925,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_offset",
@@ -1925,7 +1943,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_fractional",
@@ -1943,7 +1961,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_ISO_week_date",
@@ -1979,7 +1997,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_short_year",
@@ -1997,7 +2015,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_one",
@@ -2015,7 +2033,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_10000",
@@ -2033,7 +2051,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_BC_date",
@@ -2051,7 +2069,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_month",
@@ -2105,7 +2123,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_leap_second",
@@ -2123,7 +2141,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_date_slashes",
@@ -2141,7 +2159,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_US_date",
@@ -2159,7 +2177,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_named_month",
@@ -2177,7 +2195,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_time_only",
@@ -2201,6 +2219,42 @@
       "name": "blob_month_day_only",
       "value": null,
       "sql": "UPDATE users SET tour_completed_at=X'4f63746f6265722032' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "blob_unix_decimal",
+      "value": null,
+      "sql": "UPDATE users SET tour_completed_at=CAST(1.5 AS BLOB) WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "blob_negative_integer",
+      "value": null,
+      "sql": "UPDATE users SET tour_completed_at=CAST(-1 AS BLOB) WHERE id=127326141",
       "responses": [
         {
           "path": "/agents",
@@ -2249,7 +2303,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_datetime_prefix_junk",
@@ -2267,7 +2321,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_month_name",
@@ -2285,7 +2339,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_month_full",
@@ -2303,7 +2357,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_month_year_hyphen",
@@ -2321,7 +2375,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_ISO_year_month",
@@ -2357,7 +2411,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_first_words",
@@ -2375,7 +2429,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_month_abbrev_dot",
@@ -2393,7 +2447,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_day_month_abbrev_dot",
@@ -2411,7 +2465,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_month_day_AD_year",
@@ -2429,7 +2483,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_asctime",
@@ -2447,7 +2501,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_ISO_without_seconds",
@@ -2465,7 +2519,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_hour",
@@ -2519,7 +2573,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_unsigned_extended_year",
@@ -2537,7 +2591,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_eastern_zone",
@@ -2555,7 +2609,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_null_byte",
@@ -2573,7 +2627,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_empty_spaces",
@@ -2645,7 +2699,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_thin_space",
@@ -2663,7 +2717,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_fraction_12",
@@ -2681,7 +2735,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_fraction_zero",
@@ -2699,7 +2753,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_fraction_comma",
@@ -2717,7 +2771,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_offset_seconds",
@@ -2735,7 +2789,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_offset_negative",
@@ -2753,7 +2807,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_offset_max",
@@ -2771,7 +2825,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_offset_24",
@@ -2789,7 +2843,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_offset_fraction",
@@ -2807,7 +2861,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_two_digit_00",
@@ -2825,7 +2879,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_two_digit_38",
@@ -2843,7 +2897,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_two_digit_68",
@@ -2861,7 +2915,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_two_digit_69",
@@ -2879,7 +2933,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_two_digit_99",
@@ -2897,7 +2951,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_quoted_year",
@@ -2915,7 +2969,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_only",
@@ -2951,7 +3005,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_feb_29_nonleap",
@@ -2969,7 +3023,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_zero_month",
@@ -3095,7 +3149,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_min",
@@ -3113,7 +3167,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_year_max",
@@ -3131,7 +3185,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_huge_year",
@@ -3149,7 +3203,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_date_128",
@@ -3167,12 +3221,48 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_date_129",
       "value": null,
       "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020' WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "blob_float_zero",
+      "value": null,
+      "sql": "UPDATE users SET tour_completed_at=CAST(0.0 AS BLOB) WHERE id=127326141",
+      "responses": [
+        {
+          "path": "/agents",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        },
+        {
+          "path": "/users/me/profile",
+          "status": 200,
+          "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"true\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
+        }
+      ],
+      "known_difference": null
+    },
+    {
+      "name": "blob_negative_float",
+      "value": null,
+      "sql": "UPDATE users SET tour_completed_at=CAST(-12.5 AS BLOB) WHERE id=127326141",
       "responses": [
         {
           "path": "/agents",
@@ -3203,7 +3293,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_week_year",
@@ -3239,7 +3329,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_unicode_suffix",
@@ -3257,7 +3347,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_valid",
@@ -3275,7 +3365,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_named",
@@ -3293,7 +3383,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_empty",
@@ -3365,7 +3455,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_utf8_suffix",
@@ -3383,7 +3473,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_utf8_middle",
@@ -3401,7 +3491,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_utf8_nul",
@@ -3419,7 +3509,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_utf8_overlong",
@@ -3437,7 +3527,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_utf8_truncated",
@@ -3455,7 +3545,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_utf8_128",
@@ -3473,7 +3563,7 @@
           "body": "<div id=\"tour\" hidden\n     data-controller=\"tour\"\n     data-action=\"tour:start@window->tour#start\"\n     data-tour-auto-start-value=\"false\"\n     data-tour-complete-url-value=\"/users/me/tour\">\n  <div class=\"tour__scrim\" aria-hidden=\"true\"></div>\n  <div class=\"tour__card shadow\"\n       role=\"dialog\"\n       aria-modal=\"true\"\n       aria-labelledby=\"tour-title\"\n       aria-describedby=\"tour-body\"\n       data-tour-target=\"card\"\n       data-action=\"keydown->tour#onKeydown\">\n    <p class=\"tour__progress\" data-tour-target=\"progress\"></p>\n    <h2 id=\"tour-title\" class=\"tour__title\" data-tour-target=\"title\"></h2>\n    <p id=\"tour-body\" class=\"tour__body\" data-tour-target=\"body\"></p>\n    <div class=\"tour__actions\">\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"back\" data-action=\"tour#back\">Back</button>\n      <span class=\"tour__spacer\" aria-hidden=\"true\"></span>\n      <button type=\"button\" class=\"btn btn--borderless\" data-tour-target=\"skip\" data-action=\"tour#skip\">Skip tour</button>\n      <button type=\"button\" class=\"btn\" data-tour-target=\"next\" data-action=\"tour#next\">Next</button>\n    </div>\n  </div>\n</div>"
         }
       ],
-      "known_difference": "Known main datetime-cast difference; fix after #196 merges"
+      "known_difference": null
     },
     {
       "name": "blob_invalid_utf8_129",

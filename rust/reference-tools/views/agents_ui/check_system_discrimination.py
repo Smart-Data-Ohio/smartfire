@@ -26,6 +26,6 @@ for scenario,injection,name,controls,assertion in cases:
  if result.returncode != 1 or len(failures) != 1 or f'FAIL {name}' not in failures[0] or assertion not in failures[0]:
   raise RuntimeError(f'Invalid discrimination: {scenario} did not fail at its intended assertion\n{output}')
  rails,rust=output.split('Rust system behavior:',1)
- assert f'Agent system behavior: {controls+1} passed; 0 failed; 0 deferred' in rails, output
- assert f'Agent system behavior: {controls} passed; 1 failed; 0 deferred' in rust, output
+ if f'Agent system behavior: {controls+1} passed; 0 failed; 0 deferred' not in rails or f'Agent system behavior: {controls} passed; 1 failed; 0 deferred' not in rust:
+  raise RuntimeError(f'Invalid discrimination: {scenario} control counts changed\n{output}')
  print(f'{scenario} writer discrimination: Rails {controls+1} passed; Rust {controls} passed, 1 deliberate failure; gate rejected; waits unchanged')

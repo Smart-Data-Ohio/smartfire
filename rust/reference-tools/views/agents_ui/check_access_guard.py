@@ -15,9 +15,9 @@ try:
     result = run_tests('agent_directory_')
     require_rejected(result, {
         'agent_directory_rejects_credentials_bots_and_unsigned_visitors':
-            ('crates/campfire/src/controllers/presenters/accounts/tests.rs', 'directory credentials must be forbidden'),
+            ('crates/campfire/src/controllers/presenters/accounts/tests.rs', 'directory credentials must be forbidden', ('200', '403')),
         'agent_directory_bot_session_is_forbidden':
-            ('crates/campfire/src/controllers/presenters/accounts/tests.rs', 'directory bot sessions must be forbidden'),
+            ('crates/campfire/src/controllers/presenters/accounts/tests.rs', 'directory bot sessions must be forbidden', ('200', '403')),
     }, passed=1)
     print('Directory access injection: rejected at both credential and bot-session assertions; source restored')
 finally:

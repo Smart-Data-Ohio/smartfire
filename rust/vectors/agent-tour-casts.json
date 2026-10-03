@@ -492,6 +492,11 @@
       "stored": null
     },
     {
+      "name": "blob_original_integer_zero",
+      "sql": "UPDATE users SET tour_completed_at=CAST(0 AS BLOB) WHERE id=127326141",
+      "stored": null
+    },
+    {
       "name": "blob_original_normalized_day",
       "sql": "UPDATE users SET tour_completed_at=X'323032362d30322d33312031323a30303a3030' WHERE id=127326141",
       "stored": "2026-03-03 12:00:00"
@@ -614,6 +619,16 @@
     {
       "name": "blob_month_day_only",
       "sql": "UPDATE users SET tour_completed_at=X'4f63746f6265722032' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_unix_decimal",
+      "sql": "UPDATE users SET tour_completed_at=CAST(1.5 AS BLOB) WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_negative_integer",
+      "sql": "UPDATE users SET tour_completed_at=CAST(-1 AS BLOB) WHERE id=127326141",
       "stored": null
     },
     {
@@ -884,6 +899,16 @@
     {
       "name": "blob_date_129",
       "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_float_zero",
+      "sql": "UPDATE users SET tour_completed_at=CAST(0.0 AS BLOB) WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_negative_float",
+      "sql": "UPDATE users SET tour_completed_at=CAST(-12.5 AS BLOB) WHERE id=127326141",
       "stored": null
     },
     {

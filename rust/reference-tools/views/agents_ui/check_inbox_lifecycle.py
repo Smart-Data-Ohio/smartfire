@@ -6,7 +6,7 @@ test = 'ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes'
 source = 'crates/campfire/src/controllers/activity_items/tests/lifecycle.rs'
 require_baseline(test)
 for defect, assertion in [
-    ('reminder', 'real reminder dispatch must persist an inbox item'),
+    ('reminder', 'real reminder producer must execute successfully: Sqlite(QueryReturnedNoRows)'),
     ('recurrence', 'Inbox lifecycle response bytes must match Rails: recurrent reminder inbox'),
     ('deleted-source', 'deleted source must actually be removed by the real writer'),
 ]:

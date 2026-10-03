@@ -18,7 +18,7 @@ try:
     result=run_tests('ws11ui_human_')
     require_rejected(result, {
         test: ('crates/campfire/src/controllers/agent_approvals/execution_tests.rs',
-               'execution decision must use the negotiated HTML/JSON format')
+               'execution decision must use the negotiated HTML/JSON format', ('406', '303'))
         for test in tests
     })
     print('HTML execution discrimination: both real controller/job/transport replays reject a JSON-only controller at the negotiated response assertion; source restored')

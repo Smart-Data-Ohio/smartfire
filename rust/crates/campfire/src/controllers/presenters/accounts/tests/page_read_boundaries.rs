@@ -138,10 +138,10 @@ async fn ws11ui_next_tour_differential_matches_all_rails_values() {
             checked += 1;
         }
     }
-    assert_eq!(cases.len(), 194);
-    assert_eq!(checked, 388);
+    assert_eq!(cases.len(), 199);
+    assert_eq!(checked, 398);
     println!(
-        "Tour Rails differential: 194 values; {checked} responses; {} mismatches; 0 skipped; raw fragments unchanged",
+        "Tour Rails differential: 199 values; {checked} responses; {} mismatches; 0 skipped; raw fragments unchanged",
         failures.len()
     );
     assert!(failures.is_empty(), "{failures:?}");
@@ -300,7 +300,7 @@ async fn ws11ui_next_stored_datetime_cast_values_match_rails() {
         }
     }
     println!(
-        "Shared stored datetime cast differential: 194 values; {} mismatches",
+        "Shared stored datetime cast differential: 199 values; {} mismatches",
         failures.len()
     );
     assert!(failures.is_empty(), "{}", failures.join("\n"));
