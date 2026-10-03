@@ -1,6 +1,6 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-6`, stacked on next-5 `491b9425`, based on main `f85fb420`. #215 and #216
+Updated on `rust/ws11api-next-6`, stacked on next-5 `491b9425`, merged with main `b6444b7a7` (merge `b493ad024`). #215 and #216
 are merged. The pinned Rails reference remains `d7c7de92`. Domain named-case
 mapping and broader API assertion evidence are separate inventories.
 
