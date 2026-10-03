@@ -22,6 +22,9 @@ CASES = {
     'missing-agent-events': 'a manager can assign an eligible agent and the agent is notified',
     'extra-foreign-event': 'converts a thread to work, assigns an eligible owner, and keeps an audit trail',
     'rewrite-history-client-id': 'converts a thread to work, assigns an eligible owner, and keeps an audit trail',
+    'wrong-event-type': 'converts a thread to work, assigns an eligible owner, and keeps an audit trail',
+    'wrong-event-actor': 'converts a thread to work, assigns an eligible owner, and keeps an audit trail',
+    'displaced-history-identity': 'converts a thread to work, assigns an eligible owner, and keeps an audit trail',
 }
 
 
@@ -48,6 +51,18 @@ def mutated_work(original):
             if ws8bm_producer("extra-foreign-event") {
                 tx.conn().execute("INSERT INTO work_thread_events (actor_id,channel_thread_id,created_at,event_type,from_status,to_status,updated_at) SELECT ?1,id,CURRENT_TIMESTAMP,'work_update','planned','in_progress',CURRENT_TIMESTAMP FROM channel_threads WHERE name='Revoked work owner'", [actor.id])?;
             }
+            if ws8bm_producer("wrong-event-type") {
+                tx.conn().execute("UPDATE work_thread_events SET event_type='work_update' WHERE channel_thread_id=?1 AND event_type='work_assignment'", [id])?;
+            }
+            if ws8bm_producer("wrong-event-actor") {
+                tx.conn().execute("UPDATE work_thread_events SET actor_id=712064548 WHERE channel_thread_id=?1", [id])?;
+            }
+            if ws8bm_producer("displaced-history-identity") {
+                let displaced = tx.conn().execute("UPDATE messages SET client_message_id='displaced-original-history' WHERE thread_id=?1 AND client_message_id='work-history' AND NOT EXISTS (SELECT 1 FROM messages WHERE thread_id=?1 AND client_message_id='displaced-original-history')", [id])?;
+                if displaced == 1 {
+                    tx.conn().execute("INSERT INTO messages (client_message_id,room_id,thread_id,creator_id,markdown_source,created_at,updated_at) SELECT 'work-history',room_id,thread_id,creator_id,markdown_source,created_at,updated_at FROM messages WHERE thread_id=?1 AND client_message_id='displaced-original-history'", [id])?;
+                }
+            }
             Ok(())
         });
         *self = fresh;'''),
@@ -60,24 +75,13 @@ def mutated_work(original):
 
 
 READBACK = '''                finally:
-                    if file == "channel_threads_controller" and 'metadata' in locals():
-                        from behavior_work_rows import assert_work_rows
-                        for app, db in [("Rails", work / f".instances/{ports[0]}/db/production.sqlite3"), ("Rust", work / "db/production.sqlite3")]:
-                            with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as candidate, sqlite3.connect(f"file:{fixture / 'db/production.sqlite3'}?mode=ro", uri=True) as original:
-                                state={"app":app,"producer":env['WS8BM_WORK_PRODUCER']}
-                                state['thread']=candidate.execute('SELECT work_status,work_owner_id FROM channel_threads WHERE id=?',(metadata['thread_id'],)).fetchone()
-                                state['events']=candidate.execute('SELECT actor_id,event_type,from_status,to_status,from_owner_id,to_owner_id FROM work_thread_events WHERE channel_thread_id=? ORDER BY id',(metadata['thread_id'],)).fetchall()
-                                state['agent_events']=candidate.execute("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND event_type='work_assigned'",(metadata['eligible_agent_id'],)).fetchone()[0]
-                                state['history_client_id']=candidate.execute('SELECT client_message_id FROM messages WHERE id=?',(metadata['history_message_id'],)).fetchone()[0]
-                                state['global_event_delta']=candidate.execute('SELECT COUNT(*) FROM work_thread_events').fetchone()[0]-original.execute('SELECT COUNT(*) FROM work_thread_events').fetchone()[0]
-                                state['target_event_delta']=len(state['events'])-original.execute('SELECT COUNT(*) FROM work_thread_events WHERE channel_thread_id=?',(metadata['thread_id'],)).fetchone()[0]
-                                try:
-                                    assert_work_rows(candidate,original,case,metadata)
-                                    state['row_assertion']='PASS'
-                                except AssertionError as error:
-                                    state['row_assertion']='FAIL';state['row_error']=str(error)
-                                print('WS8bm real producer rows: '+json.dumps(state),flush=True)
-                    if process is not None:'''
+                    try:
+                        if file == "channel_threads_controller" and 'metadata' in locals():
+                            from behavior_work_diagnostics import work_readback
+                            work_readback(work, fixture, ports, metadata, case, env)
+                    finally:
+                        stop_behavior_servers('''
+
 
 
 def driver_source(root, output):
@@ -90,7 +94,7 @@ def driver_source(root, output):
     text = '\n'.join('pass # inputs built by this invocation\n' if line.startswith(starts) else line for line in text.splitlines())
     text = text.replace('reference_up=[reference,', 'reference_up=[str(ROOT / ".scratch/ws8bm-work-producers/reference-producer"),')
     text = text.replace('str(target / "debug/campfire")', 'str(ROOT / ".scratch/ws8bm-work-producers/producer-campfire")')
-    needle = '                finally:\n                    if process is not None:'
+    needle = '                finally:\n                    stop_behavior_servers('
     assert text.count(needle) == 1
     text = text.replace(needle, READBACK)
     body = output / 'driver-body.py'
@@ -166,9 +170,12 @@ def main():
                                     cwd=root, env=dict(env,WS8BM_WORK_PRODUCER=mode),stdout=log,stderr=subprocess.STDOUT)
         text = (output / f'{mode}.log').read_text()
         rows = [json.loads(line.removeprefix('WS8bm real producer rows: ')) for line in text.splitlines() if line.startswith('WS8bm real producer rows: ')]
-        assert len(rows) == 2, mode + ': missing independent paired readback'
+        paired=(len(rows)==2 and {row['app'] for row in rows}=={'Rails','Rust'}
+                and all(row.get('row_assertion')!='INVALID' for row in rows))
         escape = args.expect_escapes and mode in {'extra-foreign-event','rewrite-history-client-id'}
-        if escape:
+        if not paired:
+            valid=False
+        elif escape:
             valid = result.returncode == 0 and all(row['row_assertion']=='PASS' for row in rows)
             valid &= (all(row['global_event_delta']==4 and row['target_event_delta']==2 for row in rows)
                       if mode=='extra-foreign-event' else all(row['history_client_id']=='corrupted-work-history' for row in rows))
@@ -178,6 +185,17 @@ def main():
         elif mode == 'rewrite-history-client-id':
             valid = (result.returncode != 0 and all(row['history_client_id']=='corrupted-work-history'
                      and row['row_assertion']=='FAIL' and 'work-history identity:' in row.get('row_error','') for row in rows))
+        elif mode == 'displaced-history-identity':
+            valid = (result.returncode != 0 and all(row['history_client_id']=='displaced-original-history'
+                     and row['history_lookup'] is not None and row['history_lookup'][0]!=row['original_history_id']
+                     and row['history_lookup'][1]=='Keep this history' and row['row_assertion']=='FAIL'
+                     and 'work-history identity:' in row.get('row_error','') for row in rows))
+        elif mode in {'wrong-event-type','wrong-event-actor'}:
+            markers=("'work_update'","'work_assignment'") if mode=='wrong-event-type' else ('712064548','773523953')
+            index,expected=(1,'work_update') if mode=='wrong-event-type' else (0,712064548)
+            valid=(result.returncode!=0 and all(intended_failure_on_both(text,marker) for marker in markers)
+                   and all(row['events'] and row['events'][-1][index]==expected
+                           and row['row_assertion']=='FAIL' for row in rows))
         elif mode == 'missing-history':
             valid = (result.returncode != 0 and intended_failure_on_both(text,'work-event-count:')
                      and all(row['events']==[] and row['thread'][0]=='planned' for row in rows))

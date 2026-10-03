@@ -19,6 +19,7 @@ import time
 import textwrap
 import urllib.request
 from behavior_action_rows import assert_action_rows
+from behavior_server_cleanup import stop_behavior_servers
 from behavior_mutation_jobs import probe_jobs
 from browser_host import build_host
 
@@ -651,14 +652,7 @@ for file in files:
                         passed += 1
                         print(f"WS8bm behaviour: {file}: {case}: Rails PASS; Rust PASS; persisted rows PASS", flush=True)
                 finally:
-                    if process is not None:
-                        process.terminate()
-                        try:
-                            process.wait(timeout=15)
-                        except subprocess.TimeoutExpired:
-                            process.kill()
-                            process.wait()
-                    subprocess.run([reference, "down", "--port", str(ports[0])], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
+                    stop_behavior_servers(process, reference, ports[0], cwd=ROOT, env=run_env, log=log)
     print(f"WS8bm behaviour source: {source_path} SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
 if args.negative:
     print(f"WS8bm invalid discrimination attempts: {invalid_attempts}; bounded fresh-fixture retries only",flush=True)
