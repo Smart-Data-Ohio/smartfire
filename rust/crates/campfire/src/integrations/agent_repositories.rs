@@ -100,6 +100,9 @@ impl State {
         events.dedup();
         let requests = db
             .read(move |conn| {
+                if events.is_empty() {
+                    return Ok(vec![]);
+                }
                 let mut query = conn.prepare("SELECT e.id,e.event_type,e.metadata,m.thread_id FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id WHERE e.agent_id=? AND e.id IN (SELECT value FROM json_each(?)) ORDER BY e.id")?;
                 let rows = query.query_map(params![agent,serde_json::json!(events).to_string()],|row| {
                     let kind:String=row.get(1)?;
