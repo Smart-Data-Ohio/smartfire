@@ -2,7 +2,7 @@
 //! Only adapter coercion, board authorization and payload rendering live here.
 use super::{attribute_string, mcp::blank, reads::lookup_ids, ruby_i64};
 use crate::{app::AppCtx, concerns, controllers::presenters::page::db_error};
-use campfire_db::models::{agent_payloads, agent_service::ServiceResult, agent_work, audit_log};
+use campfire_db::models::{agent_access, agent_payloads, agent_service::ServiceResult, agent_work, audit_log};
 use campfire_db::{Agent, AgentWorkChanges, ChannelThread, HandoffPackage, Room, WorkHandoff};
 use campfire_kit::{Ctx, Result};
 use campfire_richtext::ruby::json_value_to_s;
@@ -51,7 +51,10 @@ pub(super) async fn operation(
             let Some(room_id)=room_id else {return Ok(Written::Denied(ServiceResult::fail("Room not found",404)));};
             let room=Room::find(tx.conn(),room_id)?;
             for capability in ["post_messages","manage_threads"] {
-                if !agent.can(tx.conn(),capability,Some(room_id))? {
+                // One current statement per capability instead of reloading
+                // the same active-agent, legacy-grant and room facts four times.
+                let key=(agent.id,Some(room_id));
+                if !agent_access::capabilities_for_agents(tx.conn(),capability,&[key])?[&key] {
                     return Ok(Written::Denied(ServiceResult::fail(format!("Forbidden: agent lacks {capability} capability"),403)));
                 }
             }
@@ -120,7 +123,10 @@ pub(super) async fn operation(
         .read(move |conn| {
             // Tag assignment has its own after_commit write. Render the committed row.
             let thread = ChannelThread::find(conn, id)?;
-            let owner = Agent::find(conn, agent_id)?.and_then(|agent| agent.owner_id);
+            // The live batch already names the owner of each allowance and
+            // work_payloads revalidates its account snapshot during rendering.
+            // With no allowance there is no owner-specific data to expose.
+            let owner = access.iter().next().map(|(owner, _, _)| *owner);
             let mut payload =
                 agent_payloads::work_payloads(conn, &[thread], owner, &access)?.remove(0);
             if let Some(handoff) = handoff {

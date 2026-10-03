@@ -1,0 +1,1063 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "assigned": {
+      "owner": 394959859,
+      "status": "planned",
+      "ledger": [
+        {
+          "id": 1901610001,
+          "agent_id": 773018776,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        }
+      ],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620002,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": 394959859,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": false,
+      "inside_jobs": null
+    },
+    "unassigned": {
+      "owner": null,
+      "status": "planned",
+      "ledger": [
+        {
+          "id": 1901610001,
+          "agent_id": 773018776,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        },
+        {
+          "id": 1901610002,
+          "agent_id": 773018776,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        }
+      ],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620002,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": 394959859,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620003,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": 394959859,
+          "to_owner_id": null,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": false,
+      "inside_jobs": null
+    },
+    "nonmember": {
+      "owner": null,
+      "status": "planned",
+      "ledger": [
+        {
+          "id": 1901610001,
+          "agent_id": 773018776,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "pending"
+        },
+        {
+          "id": 1901610002,
+          "agent_id": 773018776,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        }
+      ],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620002,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": 394959859,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620003,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": 394959859,
+          "to_owner_id": null,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": false,
+      "inside_jobs": null
+    },
+    "human": {
+      "owner": 149087659,
+      "status": "planned",
+      "ledger": [
+        {
+          "id": 1901610001,
+          "agent_id": 773018776,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        },
+        {
+          "id": 1901610002,
+          "agent_id": 773018776,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        }
+      ],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620002,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": 394959859,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620003,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": 394959859,
+          "to_owner_id": 149087659,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 149087659,
+                "name": "Jason",
+                "status": "active",
+                "role": "administrator"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": false,
+      "inside_jobs": null
+    },
+    "agent": {
+      "owner": 1901600011,
+      "status": "planned",
+      "ledger": [
+        {
+          "id": 1901610001,
+          "agent_id": 773018776,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        },
+        {
+          "id": 1901610002,
+          "agent_id": 773018776,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        },
+        {
+          "id": 1901610003,
+          "agent_id": 1901600012,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        }
+      ],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620002,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": 394959859,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620003,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": 394959859,
+          "to_owner_id": 1901600011,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 1901600011,
+                "name": "Second Owner Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": false,
+      "inside_jobs": null
+    },
+    "status_only": {
+      "owner": 394959859,
+      "status": "blocked",
+      "ledger": [
+        {
+          "id": 1901610001,
+          "agent_id": 773018776,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "in_progress",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none"
+        }
+      ],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620002,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": 149087659,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 149087659,
+                "name": "Jason",
+                "status": "active",
+                "role": "administrator"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620003,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": 149087659,
+          "to_owner_id": 149087659,
+          "from_status": "planned",
+          "to_status": "in_progress",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": {
+                "id": 149087659,
+                "name": "Jason",
+                "status": "active",
+                "role": "administrator"
+              }
+            },
+            "after": {
+              "status": "in_progress",
+              "owner": {
+                "id": 149087659,
+                "name": "Jason",
+                "status": "active",
+                "role": "administrator"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620004,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": 149087659,
+          "to_owner_id": 127326141,
+          "from_status": "in_progress",
+          "to_status": "in_progress",
+          "metadata": {
+            "before": {
+              "status": "in_progress",
+              "owner": {
+                "id": 149087659,
+                "name": "Jason",
+                "status": "active",
+                "role": "administrator"
+              }
+            },
+            "after": {
+              "status": "in_progress",
+              "owner": {
+                "id": 127326141,
+                "name": "David",
+                "status": "active",
+                "role": "administrator"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620005,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": 127326141,
+          "to_owner_id": 394959859,
+          "from_status": "in_progress",
+          "to_status": "in_progress",
+          "metadata": {
+            "before": {
+              "status": "in_progress",
+              "owner": {
+                "id": 127326141,
+                "name": "David",
+                "status": "active",
+                "role": "administrator"
+              }
+            },
+            "after": {
+              "status": "in_progress",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620006,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": 394959859,
+          "to_owner_id": 394959859,
+          "from_status": "in_progress",
+          "to_status": "blocked",
+          "metadata": {
+            "before": {
+              "status": "in_progress",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "after": {
+              "status": "blocked",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": false,
+      "inside_jobs": null
+    },
+    "outer_commit": {
+      "owner": 394959859,
+      "status": "planned",
+      "ledger": [
+        {
+          "id": 1901610001,
+          "agent_id": 773018776,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "message_id": null,
+          "room_id": 486777696,
+          "actor_id": 127326141,
+          "metadata": {
+            "thread_id": 1901600001,
+            "title": "Agent work",
+            "work_status": "planned",
+            "assigned_by": "David",
+            "hop": 0
+          },
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "pending"
+        }
+      ],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        },
+        {
+          "id": 1901620002,
+          "event_type": "work_assignment",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": 394959859,
+          "from_status": "planned",
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": "planned",
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "status": "active",
+                "role": "bot"
+              }
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "event_id": 1901610001
+        }
+      ],
+      "error": false,
+      "inside_jobs": 0
+    },
+    "history_failure": {
+      "owner": null,
+      "status": "planned",
+      "ledger": [],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": true,
+      "inside_jobs": null
+    },
+    "ledger_failure": {
+      "owner": null,
+      "status": "planned",
+      "ledger": [],
+      "history": [
+        {
+          "id": 1901620001,
+          "event_type": "work_update",
+          "actor_id": 127326141,
+          "from_owner_id": null,
+          "to_owner_id": null,
+          "from_status": null,
+          "to_status": "planned",
+          "metadata": {
+            "before": {
+              "status": null,
+              "owner": null
+            },
+            "after": {
+              "status": "planned",
+              "owner": null
+            },
+            "actor": {
+              "id": 127326141,
+              "name": "David",
+              "status": "active",
+              "role": "administrator"
+            },
+            "note": null
+          }
+        }
+      ],
+      "jobs": [],
+      "error": true,
+      "inside_jobs": null
+    }
+  }
+}

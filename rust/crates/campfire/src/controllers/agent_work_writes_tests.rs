@@ -288,6 +288,7 @@ fn vectors() -> Value {
 #[tokio::test]
 async fn agent_work_writes_reader_queries_are_flat_for_every_surface() {
     let vectors = vectors();
+    let mut excessive = Vec::new();
     for surface in SURFACES {
         let mut counts = Vec::new();
         let mut rails = Vec::new();
@@ -324,7 +325,22 @@ async fn agent_work_writes_reader_queries_are_flat_for_every_surface() {
             "WORK_WRITE_QUERIES {surface} owned_rows=5/50 Rust_all_SELECTs={}/{} Rails_all_SELECTs={}/{}",
             counts[0], counts[1], rails[0], rails[1]
         );
+        // PR202's fixed costs include two redundant owner/account reads on
+        // every path, plus six repeated capability facts on board creation.
+        // WS11 webhook eligibility also collapses three permission reads per ledger row.
+        let limit = match surface {
+            "rest_create" => 197,
+            "mcp_create" => 185,
+            "rest_update" | "mcp_update" | "mcp_board_update" => 83,
+            "rest_result" | "mcp_result" => 33,
+            "rest_handoff" | "mcp_handoff" => 105,
+            _ => unreachable!(),
+        };
+        if counts[0] > limit {
+            excessive.push(format!("{surface}: {} SELECTs exceeds {limit}", counts[0]));
+        }
     }
+    assert!(excessive.is_empty(), "avoidable API reads: {excessive:?}");
 }
 
 async fn domain_snapshot(app: &TestApp) -> Value {
