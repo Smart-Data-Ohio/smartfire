@@ -243,6 +243,9 @@ export const hiddenScopeProbes=new Map([
 ]);
 const hiddenAttachText=action=>['controllers/attach_menu_controller-','connect() {',`connect() { for (const button of this.element.querySelectorAll('[data-action*="${action}"]')) { const span = document.createElement("span"); span.style.opacity = "0"; span.textContent = button.textContent; button.replaceChildren(span); }`];
 export const labelMutations=new Map([
+  ['Markdown replies and file attachments remain usable',new Map([
+    ['transparent-attachment-filename',opacity('.message__body [data-reply-target="body"] > .flex-inline span { opacity: 0 !important; }')],
+  ])],
   ['+ shows both attach options when Drive is available',new Map([
     ['transparent-device-text',hiddenAttachText('chooseDevice')],
     ['transparent-drive-text',hiddenAttachText('chooseDrive')],

@@ -112,6 +112,8 @@ add(['a late composer autofocus does not steal focus from a message'],'message-l
 for(const name of ['a stream replacing the focused message keeps focus and the tab stop on its replacement','a direct DOM swap of the focused message keeps focus and the tab stop on its replacement']) D.set(name,[target('message-list','focused(second)'),target('message-list','tabStop(second)')]);
 D.set('a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement',[target('message-list','tabStop(third)')]);
 add(['picker arrows move through options, Enter selects, and Escape returns focus'],'toolbar',"focused('Grinning face with big eyes')");
+D.set('the picker remembers recent reactions',[target('toolbar',"await waitForVisibility(option('Grinning face'))")]);
+D.set('picker tabs move with arrow keys and switch the grid',[target('toolbar',"await tab('people')")]);
 // behavior.mjs is the dispatcher (there is no dash in its basename).
 for(const specs of D.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 const V=new Map();
@@ -148,6 +150,7 @@ variant(['hidden-conversation-visible-children'],'','panel.locator(\'[data-threa
 variant(['hidden-safety-body-visible-code'],'',"message.locator('.message__body'),'Safety check'");
 variant(['hidden-reply-body-visible-presentation'],'',"parent.locator('.message__body'),'A useful point'");
 variant(['transparent-attachment-reply-preview'],'','attachment.locator(\'.message__reply-preview\')');
+variant(['transparent-attachment-filename'],'',"attachment.locator('.message__body'),'markdown-workspace-attachment.txt'");
 variant(['transparent-combobox-lookup'],'composer','waitForVisibility(editor,');
 // Global field opacity also invalidates the original visible fill_in before
 // its later value assertion. Name that causal action, never a setup elsewhere.

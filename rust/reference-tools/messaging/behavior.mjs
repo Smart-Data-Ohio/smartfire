@@ -410,6 +410,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
               await author.locator('#composer').evaluate(node=>({busy:node.getAttribute('aria-busy'),reply:node.querySelector('[data-composer-target="replyTo"]')?.value,feedback:node.querySelector('[data-composer-target="feedback"]')?.textContent})));
             throw error;
           }
+          // Rails workspace_markdown:166 uses assert_message_text (:115),
+          // not an accessible download name. Check the actual visible body.
+          await waitForVisibility(filterVisibleText(attachment.locator('.message__body'),'markdown-workspace-attachment.txt'));
           try {await waitForVisibility(attachment.getByRole('link',{name:'Download markdown-workspace-attachment.txt',exact:true}));}
           catch(error) {console.error('WS8bm attachment delivery:',base,await attachment.textContent());throw error;}
         }
