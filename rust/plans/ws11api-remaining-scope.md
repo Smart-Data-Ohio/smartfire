@@ -1,8 +1,8 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-3`, starting at 914bd16ff; #210's branch is
-untouched. Current main c6c37fb8f is merged with merge commit e26c8f9ac.
-The pinned Rails reference remains `d7c7de92`. This is an implementation audit
+Updated on `rust/ws11api-next-4`, starting from merged main `0d8da877e`.
+#206, #209, #212 and #214 are included. Open #215/#216 branches were not merged
+or used as dependencies. The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
 ## Implementation status
@@ -72,13 +72,21 @@ exact byte comparisons; sizes/checksums are never masked.
 
 ## Broader named-case evidence still partial
 
-The pinned domain inventory has 378 cases in 26 files. The preceding round closed all
-13 remaining WS11-owned names: four streaming projections, three bot cases,
-four assignment callbacks and two budget comparisons. The ledger remains
-**325 comparisons, 53 deferred** (previously 312/66). Executed pass counts are
-reported separately from mapping counts. Each new named comparison has a fresh
-pinned Rails vector and an independently wrong observable negative control.
-No new production behavior mismatch was found in those 13 cases.
+The pinned domain inventory has 378 cases in 26 files. The prior ledger was
+325 comparisons / 53 deferred. This round rechecks every deferred name against main:
+
+| Previously deferred group | Fresh evidence on main | Still deferred |
+| --- | --- | --- |
+| 2 agent badge/directory/no-secret cases | 2 complete rendered socket comparisons from #209/#212 | 0 |
+| 35 WS8 built-in commands | 1 complete OOO badge/notice socket comparison from #209/#212 | 34, owner WS8, PR #216 |
+| 16 WS12 owner eligibility/work mutation cases | Named-case integration remains in review | 16, owner WS12, PR #215 |
+
+The ledger is now **328 comparisons, 50 deferred**. The three newly mapped names
+run the merged owner tests against a freshly regenerated pinned Rails oracle;
+wrong actions, targets, status content and injected secrets are rejected. Runtime
+pass counts are recorded separately in the next-4 report. No new WS11-API behavior
+difference was found in those merged comparisons. Domain implementations already
+exist; the remaining items are peer-owned named-case evidence, not API service seams.
 
 Streaming uses real model callbacks, actual WebSocket frames and both human
 subscribers' unread broadcasts, activity/ledger/index projections and logical
@@ -95,22 +103,13 @@ The array lookup sweep additionally fixes thread/cursor/reaction N+1 lookups,
 preserves Rails' global/scoped selection and permission order, and handles
 40,000 candidates with one JSON bind. All WS11-owned named comparisons are now
 closed. **Only peer-owned evidence remains**; none is called an unmerged service
-blocker. The exact remaining names follow.
-
-### test/models/agent_test.rb
-
-Owner: WS11-ui rendered broadcast cases; WS11 domain cases compared.
-
-Reason: WS11-ui owns rendered badge/directory broadcasts and secret-leak HTML assertions.
-
-- status change broadcasts badge and directory row replaces to agents:all
-- status broadcasts carry no credentials or grants
+blocker. The remaining owner test integrations await #215 and #216. The exact remaining names follow.
 
 ### test/services/slash_commands/dispatcher_test.rb
 
-Owner: WS11 agent dispatch; WS8 built-in commands.
+Owner: WS8 built-in commands, open PR #216; WS11 agent dispatch comparisons are complete.
 
-Reason: WS8 owns built-in command behavior; WS11 custom agent registration/invocation comparisons are complete.
+Reason: WS8 owns the named-case integration in #216. The merged OOO badge/notice comparison is now mapped; the other 34 names await that owner PR. WS11 custom agent registration/invocation comparisons are complete.
 
 - registry holds every shipped command with metadata
 - command_text? matches slash commands but not escapes or play passthrough
@@ -133,7 +132,6 @@ Reason: WS8 owns built-in command behavior; WS11 custom agent registration/invoc
 - ooo bare dates run to the end of the day
 - ooo bare month dates roll to next year when this year's passed
 - ooo day durations stay exact
-- ooo broadcasts the badge and the notice
 - ooo off while calendar OOO covers says the calendar still shows it
 - ooo rejects blank arguments, garbage, past times, and long notes
 - shrug posts with the shrug
@@ -150,9 +148,9 @@ Reason: WS8 owns built-in command behavior; WS11 custom agent registration/invoc
 
 ### test/models/channel_thread_agent_assignment_test.rb
 
-Owner: WS11 agent callbacks; WS12 mutation producers.
+Owner: WS12 eligibility/mutation named comparisons, open PR #215; WS11 agent callbacks are complete.
 
-Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/validation named comparisons. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
+Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/validation named comparisons in #215; its Recorder read costs stay with that owner. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
 
 - an active member agent with post_messages is an eligible work owner
 - a legacy agent keeps post eligibility through the fallback

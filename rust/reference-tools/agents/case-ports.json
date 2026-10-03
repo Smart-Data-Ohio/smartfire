@@ -1546,15 +1546,40 @@
           "rust": "ws11_next2_budget_handoff_ignores_exhausted_caps"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_test.rb",
+      "rust_file": "rust/crates/campfire/src/controllers/presenters/accounts/tests/named_ui_broadcasts.rs",
+      "cases": [
+        {
+          "rails": "status change broadcasts badge and directory row replaces to agents:all",
+          "rust": "ws11ui_status_change_broadcasts_badge_and_directory_row_replaces_to_agents_all"
+        },
+        {
+          "rails": "status broadcasts carry no credentials or grants",
+          "rust": "ws11ui_status_broadcasts_carry_no_credentials_or_grants"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/services/slash_commands/dispatcher_test.rb",
+      "rust_file": "rust/crates/campfire/src/controllers/presenters/accounts/tests/named_ui_broadcasts.rs",
+      "cases": [
+        {
+          "rails": "ooo broadcasts the badge and the notice",
+          "rust": "ws11ui_ooo_broadcasts_the_badge_and_the_notice"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "All named cases are mapped. Absent, blank and malformed HTTP credentials have REST/MCP boundary vectors.",
-    "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
-    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
+    "test/models/agent_test.rb": "All 41 names mapped. The two WS11-ui complete badge/directory and no-secret socket comparisons are merged via #209/#212; the reset-lock comparison checks the actual serialized writer transaction.",
+    "test/services/slash_commands/dispatcher_test.rb": "Six names mapped, including the merged WS11-ui complete OOO badge/notice broadcast comparison. Thirty-four WS8 command comparisons await PR #216.",
     "test/models/message_streaming_test.rb": "All 23 named cases are mapped, including start, trailing replacement and finalize side effects through actual callbacks and WebSocket frames.",
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
     "test/models/user/bot_test.rb": "All 15 named cases are mapped, including reply-token room binding/expiry/revocation, fixed-entropy factory/reset and actual durable queued delivery.",
-    "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations."
+    "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations.",
+    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 eligibility/mutation comparisons and Recorder read costs await PR #215; no branch dependency taken."
   }
 }
