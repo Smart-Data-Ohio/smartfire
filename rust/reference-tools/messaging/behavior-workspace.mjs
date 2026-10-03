@@ -1,7 +1,26 @@
 // workspace_markdown_test.rb:242-290 and :295-323 at d7c7de92.
 import assert from 'node:assert/strict';
+import {performance} from 'node:perf_hooks';
+import {CAPYBARA_DEFAULT} from './behavior-deadlines.mjs';
 import {actOnVisible,waitForVisibility,waitForVisibleProperty,waitForVisibleCount,waitForCondition,filterVisibleText} from './behavior-visibility.mjs';
 export const WORKSPACE_CASE='workspace follows the system theme and mobile navigation remains reachable';
+// Capybara 3.40's Selenium driver sets evaluate_async_script's timeout to
+// default_max_wait_time; :352-359 does not inherit an unlimited script wait.
+export async function settleVisualTransitions(page) {
+  const expired=Symbol('async script timeout'),started=performance.now();let timer;
+  const timeout=new Promise(resolve=>{timer=setTimeout(()=>resolve(expired),CAPYBARA_DEFAULT);});
+  try {
+    const result=await Promise.race([page.evaluate(async()=>{
+      const finite=document.getAnimations().filter(animation=>Number.isFinite(animation.effect.getComputedTiming().endTime));
+      await Promise.all(finite.map(animation=>animation.finished.catch(()=>{})));
+    }),timeout]);
+    if(result===expired||performance.now()-started>CAPYBARA_DEFAULT) {
+      const error=new Error(`Capybara async script timed out after ${CAPYBARA_DEFAULT}ms`);
+      error.name='TimeoutError';throw error;
+    }
+    return result;
+  } finally {clearTimeout(timer);}
+}
 export async function workspace({author:page,source,submit}) {
   const literal=source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split('  MARKDOWN')[0].split('\n').map(line=>line.slice(4)).join('\n');
   await page.emulateMedia({colorScheme:'light'});
@@ -18,10 +37,10 @@ export async function workspace({author:page,source,submit}) {
     await waitForVisibleCount(filterVisibleText(page.locator('#composer'),'Enter to send'),0);
     await waitForVisibleCount(filterVisibleText(page.locator('#composer button'),'Rich text'),0);
     await waitForVisibility(filterVisibleText(page.locator('#composer button'),'Send Message'));
-    await waitForVisibility(page.locator('#composer input[type="file"]'),{state:'attached'}); // :302 visible: :all
+    await waitForVisibility(page.locator('#composer input[type="file"]'),{state:'attached'}); // :301 visible: :all
     assert.ok(await page.evaluate(()=>{const surface=document.querySelector('#composer .composer__surface').getBoundingClientRect(),field=document.querySelector('#composer textarea').getBoundingClientRect(),send=document.querySelector('#composer button[name="send"]').getBoundingClientRect();return surface.height<=72&&send.top>=surface.top&&send.bottom<=surface.bottom+1&&send.left>=field.right-1;}),'workspace: compact composer');
   };
-  const settled=()=>page.evaluate(async()=>{const finite=document.getAnimations().filter(animation=>Number.isFinite(animation.effect.getComputedTiming().endTime));await Promise.all(finite.map(animation=>animation.finished.catch(()=>{})));});
+  const settled=()=>settleVisualTransitions(page);
   const background=()=>page.locator('#main-content').evaluate(node=>getComputedStyle(node).backgroundColor);
   const open=()=>actOnVisible(page.locator('button[aria-label="Open workspace navigation"]'),'click');
   await overflow();await compact();await profile();
@@ -30,7 +49,7 @@ export async function workspace({author:page,source,submit}) {
   assert.ok(await page.evaluate(()=>matchMedia('(prefers-color-scheme: dark)').matches));
   assert.notEqual(await background(),light,'workspace: system theme changes background');await settled();await profile();
   await page.setViewportSize({width:390,height:844});await overflow();await compact();await open();
-  await waitForVisibility(page.getByRole('button',{name:'Close workspace navigation',exact:true,includeHidden:true}),{state:'detached'}); // :267 visible: :all
+  await waitForVisibility(page.getByRole('button',{name:'Close workspace navigation',exact:true,includeHidden:true}),{state:'detached'}); // :265 visible: :all
   await waitForCondition(()=>page.evaluate(()=>document.activeElement?.matches('#sidebar a[aria-current="page"]')));
   await actOnVisible(page.locator('#sidebar a[href]').first(),'press',{},['Shift+Tab']);
   assert.ok(await page.evaluate(()=>document.querySelector('#sidebar').contains(document.activeElement)),'workspace: drawer traps focus');
