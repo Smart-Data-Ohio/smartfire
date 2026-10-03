@@ -1,0 +1,12 @@
+{
+  "setup_sql": "UPDATE sqlite_sequence SET seq=699448332 WHERE name='rooms'",
+  "room_id": 699448333,
+  "frames": [
+    {
+      "stream": "user_127326141_unreads",
+      "payload": {
+        "roomId": 699448333
+      }
+    }
+  ]
+}

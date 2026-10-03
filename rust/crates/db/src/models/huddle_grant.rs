@@ -391,6 +391,17 @@ impl HuddleGrant {
     ) -> Result<Vec<crate::User>> {
         query_all(conn, "SELECT DISTINCT u.* FROM users u JOIN huddle_grants g ON g.user_id=u.id WHERE g.room_id=? AND g.revoked_at IS NULL AND g.last_seen_at>?", params![room_id, now.ago(SignedDuration::from_secs(IN_CALL_WINDOW))], crate::models::user::User::from_row).map(|mut users| { users.sort_by_key(|u| unicode::downcase(&u.name)); users })
     }
+    /// Rails direct_huddle_recipients: other active humans whose current DM
+    /// membership is neither muted nor invisible. No inbox preference shortcut.
+    pub fn activity_recipient_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
+        query_all(conn,
+            "SELECT DISTINCT u.id FROM users u JOIN memberships m ON m.user_id=u.id
+             JOIN rooms r ON r.id=m.room_id WHERE r.id=? AND r.type='Rooms::Direct'
+             AND u.id!=? AND u.status=0 AND u.role!=2
+             AND (m.involvement IS NULL OR m.involvement NOT IN ('nothing','invisible')) ORDER BY u.id",
+            params![self.room_id,self.user_id], |row| row.get(0))
+    }
+
     pub fn participant_identities_for(
         conn: &Connection,
         room_id: i64,

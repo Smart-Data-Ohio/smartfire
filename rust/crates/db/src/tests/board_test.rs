@@ -139,6 +139,15 @@ fn stale_sweeps_skip_board_posts_and_archive_ordinary_threads() {
 #[test]
 fn creation_prepends_both_renderings_and_marks_only_visible_disconnected_unmuted_members() {
     let t = channel_thread_test::frozen();
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../vectors/ws12_board_unread_streams.json"
+    ))
+    .unwrap();
+    let setup = oracle["setup_sql"].as_str().unwrap().to_owned();
+    t.write(move |tx| {
+        tx.conn().execute_batch(&setup)?;
+        Ok(())
+    });
     let room = board(&t);
     t.write(move |tx| {
         let mut membership =
@@ -174,10 +183,23 @@ fn creation_prepends_both_renderings_and_marks_only_visible_disconnected_unmuted
             .unwrap()
             .unread())
     }));
-    assert!(t.events()[from..].iter().any(|event| matches!(event.as_broadcast(), Some(Broadcast::Cable {stream, payload}) if stream == format!("user_{}_unread_rooms", id("david")) && payload == serde_json::json!({"roomId": room.id}))));
+    let actual = t.events()[from..]
+        .iter()
+        .filter_map(|event| match event.as_broadcast()? {
+            Broadcast::Cable { stream, payload } if payload.get("roomId").is_some() => {
+                Some(serde_json::json!({"stream":stream,"payload":payload}))
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(room.id, oracle["room_id"].as_i64().unwrap());
+    assert_eq!(
+        serde_json::json!(actual),
+        oracle["frames"],
+        "Rails board unread stream names and complete payloads"
+    );
     assert_eq!(thread.work_status_changed_at, Some(t.now()));
 }
-
 #[test]
 fn direct_tag_create_and_destroy_replace_both_rows_without_touching_the_thread() {
     let t = channel_thread_test::frozen();

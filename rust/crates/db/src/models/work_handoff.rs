@@ -141,20 +141,23 @@ impl WorkHandoff {
                 "Receiver must be an active agent member of this room with permission to post",
             ));
         };
-        if !agent.active(conn)?
-            || Membership::find_by_room_and_user(conn, thread.room_id, agent.user_id)?.is_none()
-            || !agent.can(conn, "post_messages", Some(thread.room_id))?
+        let can = |capability| -> Result<bool> {
+            Ok(Agent::capabilities_for_rooms(conn, capability, &[(agent.id, Some(thread.room_id))])?
+                .get(&(agent.id, Some(thread.room_id))).copied().unwrap_or(false))
+        };
+        if Membership::find_by_room_and_user(conn, thread.room_id, agent.user_id)?.is_none()
+            || !can("post_messages")?
         {
             return Ok(Some(
                 "Receiver must be an active agent member of this room with permission to post",
             ));
         }
-        if !agent.can(conn, "manage_threads", Some(thread.room_id))? {
+        if !can("manage_threads")? {
             return Ok(Some(
                 "Receiver must hold the manage_threads capability in this room",
             ));
         }
-        if !agent.can(conn, "read_messages", Some(thread.room_id))? {
+        if !can("read_messages")? {
             return Ok(Some(
                 "Receiver must hold the read_messages capability in this room",
             ));

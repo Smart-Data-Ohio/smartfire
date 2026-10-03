@@ -56,6 +56,17 @@ impl ThreadTag {
     /// `thread.tags.create!(name:)`
     pub fn create(tx: &mut Tx<'_>, thread_id: i64, name: &str) -> Result<Self> {
         Self::validate(tx.conn(), thread_id, name)?.into_result()?;
+        Self::insert(tx, thread_id, name)
+    }
+
+    // The parent was just persisted or reloaded under this writer lock. This removes
+    // only the association existence read; uniqueness and name validation still run.
+    pub(crate) fn create_for_thread(tx: &mut Tx<'_>, thread: &ChannelThread, name: &str) -> Result<Self> {
+        Self::validate_name(tx.conn(), thread.id, name, Errors::default())?.into_result()?;
+        Self::insert(tx, thread.id, name)
+    }
+
+    fn insert(tx: &mut Tx<'_>, thread_id: i64, name: &str) -> Result<Self> {
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "thread_tags" ("channel_thread_id", "created_at", "name", "updated_at") VALUES (?, ?, ?, ?) RETURNING "id""#,
@@ -63,7 +74,7 @@ impl ThreadTag {
             |r| r.get(0),
         )?;
         Self::register_row_callback(tx, id, thread_id);
-        Self::find(tx.conn(), id)
+        Ok(Self { id, channel_thread_id: thread_id, name: name.into(), created_at: now, updated_at: now })
     }
 
     /// `validates :name, presence: true, length: { maximum: 30 }, format: NAME_FORMAT,
@@ -73,6 +84,10 @@ impl ThreadTag {
         if ChannelThread::find_by_id(conn, thread_id)?.is_none() {
             errors.add("channel_thread", "must exist");
         }
+        Self::validate_name(conn, thread_id, name, errors)
+    }
+
+    fn validate_name(conn: &Connection, thread_id: i64, name: &str, mut errors: Errors) -> Result<Errors> {
         if name.trim().is_empty() {
             errors.add("name", "can't be blank");
         }

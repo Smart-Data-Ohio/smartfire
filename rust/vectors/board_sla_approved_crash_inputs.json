@@ -1,0 +1,265 @@
+[
+  {
+    "sla_rules": {
+      "planned": []
+    }
+  },
+  {
+    "sla_rules": {
+      "planned": [
+        {
+          "nudge_after_minutes": "60",
+          "escalate_after_minutes": "240"
+        }
+      ]
+    }
+  },
+  {
+    "sla_rules": [
+      {
+        "nudge_after_minutes": "60",
+        "escalate_after_minutes": "240"
+      }
+    ]
+  },
+  {
+    "sla_rules": {
+      "planned": [
+        "60"
+      ]
+    }
+  },
+  {
+    "sla_rules": ""
+  },
+  {
+    "sla_rules": false
+  },
+  {
+    "sla_rules": null
+  },
+  {},
+  {
+    "sla_rules": 0
+  },
+  {
+    "sla_rules": [
+      {}
+    ]
+  },
+  {
+    "sla_rules": {
+      "planned": [
+        null
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "planned": [
+        "60"
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "planned": [
+        {}
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "planned": [
+        {
+          "nudge_after_minutes": "61",
+          "escalate_after_minutes": "241"
+        }
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "planned": [
+        [
+          {
+            "nudge_after_minutes": "61",
+            "escalate_after_minutes": "241"
+          }
+        ]
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "in_progress": [
+        null
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "in_progress": [
+        "60"
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "in_progress": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "in_progress": [
+        {
+          "nudge_after_minutes": "61",
+          "escalate_after_minutes": "241"
+        }
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "in_progress": [
+        [
+          {
+            "nudge_after_minutes": "61",
+            "escalate_after_minutes": "241"
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "blocked": [],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "blocked": [
+        null
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "blocked": [
+        "60"
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "blocked": [
+        {}
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "blocked": [
+        {
+          "nudge_after_minutes": "61",
+          "escalate_after_minutes": "241"
+        }
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "done": []
+    }
+  },
+  {
+    "sla_rules": {
+      "done": [
+        null
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "done": [
+        "60"
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "done": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "done": [
+        {
+          "nudge_after_minutes": "61",
+          "escalate_after_minutes": "241"
+        }
+      ]
+    }
+  },
+  {
+    "sla_rules": {
+      "done": [
+        [
+          {
+            "nudge_after_minutes": "61",
+            "escalate_after_minutes": "241"
+          }
+        ]
+      ],
+      "unrecognized": [
+        {}
+      ]
+    }
+  },
+  {
+    "sla_rules": true
+  },
+  {
+    "sla_rules": 60
+  },
+  {
+    "sla_rules": 1.5
+  },
+  {
+    "sla_rules": "60"
+  }
+]
