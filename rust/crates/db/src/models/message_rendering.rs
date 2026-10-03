@@ -103,6 +103,15 @@ fn rows<T>(
         .collect::<rusqlite::Result<Vec<_>>>()?)
 }
 impl RenderingRecords {
+    /// WS8bm2 pin excerpts consume bodies only; one bind covers the complete list.
+    pub fn load_plain_text(conn: &Connection, messages: &[Message]) -> Result<Self> {
+        let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+        let bodies = crate::sql::query_all(conn,
+            "SELECT record_id,body FROM action_text_rich_texts WHERE record_type='Message' AND name='body' AND record_id IN (SELECT value FROM json_each(?)) ORDER BY id",
+            [serde_json::json!(ids).to_string()], |r| Ok((r.get(0)?,r.get(1)?)))?
+            .into_iter().rev().collect();
+        Ok(Self { bodies, ..Default::default() })
+    }
     pub fn load(conn: &Connection, messages: &[Message]) -> Result<Self> {
         Self::load_for(conn,messages,false)
     }

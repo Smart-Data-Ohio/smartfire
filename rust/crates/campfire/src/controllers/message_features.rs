@@ -173,16 +173,16 @@ pub(crate) fn poll_view(
         })
         .collect();
     let votes = poll
-        .votes(conn)?
+        .votes_with_names(conn)?
         .into_iter()
-        .map(|vote| {
-            Ok(campfire_views::messages::parts::PollVote {
+        .map(|(vote,name)| {
+            campfire_views::messages::parts::PollVote {
                 option_id: vote.poll_option_id,
                 user_id: vote.user_id,
-                user_name: campfire_db::User::find_by_id(conn, vote.user_id)?.map(|user| user.name),
-            })
+                user_name: name,
+            }
         })
-        .collect::<campfire_db::Result<_>>()?;
+        .collect();
     Ok(campfire_views::messages::parts::Poll {
         id,
         room_id: message.room_id,
@@ -213,6 +213,8 @@ mod quote_integration_tests;
 mod root_cache_tests;
 #[cfg(test)]
 mod panel_tests;
+#[cfg(test)]
+mod pin_poll_scaling_tests;
 #[cfg(test)]
 mod date_tests;
 

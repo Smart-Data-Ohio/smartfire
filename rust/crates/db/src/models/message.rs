@@ -209,8 +209,8 @@ impl Message {
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
         if ids.is_empty() { return Ok(Vec::new()); }
         query_all(conn,
-            &format!(r#"SELECT * FROM "messages" WHERE id IN ({})"#, sql::placeholders(ids.len())),
-            rusqlite::params_from_iter(ids), Self::from_row)
+            r#"SELECT * FROM "messages" WHERE id IN (SELECT value FROM json_each(?))"#,
+            [serde_json::json!(ids).to_string()], Self::from_row)
     }
 
     /// `Message.last`
