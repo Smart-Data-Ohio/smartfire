@@ -1,0 +1,323 @@
+{
+  "reviewed_head": "dbab9218a6bd3cad971372a50c9ce955c863ad68",
+  "fixed_code": "3c97cfecb",
+  "old_inline_test_survives": {
+    "test": "controllers::agent_next6_named_tests::ws11_next6_assignment_webhook",
+    "command": [
+      "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11api/.scratch/pr227-fresh/rust/target/debug/deps/campfire-51e126f6c4acd111",
+      "controllers::agent_next6_named_tests::ws11_next6_assignment_webhook",
+      "--exact",
+      "--test-threads=8",
+      "--nocapture"
+    ],
+    "exit": 0,
+    "hits": 1,
+    "original_test_survived": true,
+    "summaries": [
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2777 filtered out; finished in 1.06s"
+    ],
+    "observer_started_before_test": true,
+    "observer_bind": "127.0.0.1:42249",
+    "observed_inline_posts": [
+      {
+        "method": "POST",
+        "path": "/hook",
+        "body": "{\"event_id\":1901303001,\"agent_id\":773018776,\"event_type\":\"work_assigned\",\"thread_id\":1900700020,\"title\":\"Hooked work\",\"room_id\":486777696,\"assigned_by\":\"David\",\"configured_webhook_url\":\"http://93.184.216.34:8080/hook\"}",
+        "host": "93.184.216.34:8080",
+        "content_type": "application/json"
+      }
+    ],
+    "producer_facts": [
+      {
+        "event_id": 1901303001,
+        "agent_id": 773018776,
+        "event_type": "work_assigned",
+        "thread_id": 1900700020,
+        "title": "Hooked work",
+        "room_id": 486777696,
+        "assigned_by": "David",
+        "configured_webhook_url": "http://93.184.216.34:8080/hook"
+      }
+    ],
+    "binary_sha256": "087f8faab14fa0c47d3d4720e3598e521051e0dce05ab962cc7cc9b7e7664679",
+    "log": "inline-survivor.log",
+    "log_sha256": "26ab99d3cdc5ca49b968eef84a9783815d75dff773d89f04837ce81595994ba4",
+    "source_original_sha256": "affef5798caa9fe191b770e66b978188c2dd8c6c2e8f59b133cbdf8d96896cc1",
+    "source_instrumented_sha256": "972609942bcbbb04cd6e80c6ab4b5311b0d121287f84236f250714c742570a17"
+  },
+  "inline_controls": [
+    {
+      "case": "assignment_webhook",
+      "enabled": false,
+      "command": [
+        "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11api/.scratch/pr227-fresh/rust/target/debug/deps/campfire-51e126f6c4acd111",
+        "controllers::agent_next6_named_tests::ws11_next6_assignment_webhook",
+        "--exact",
+        "--test-threads=8",
+        "--nocapture"
+      ],
+      "exit": 0,
+      "hits": 0,
+      "assertion": "assignment must not block on HTTP before draining jobs",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2777 filtered out; finished in 0.80s"
+      ],
+      "log": "assignment_webhook-baseline.log",
+      "log_sha256": "07ed5aebf8e21f0cd50575a48fdbfd83e443cdbdb28631253deffcfa0f134881"
+    },
+    {
+      "case": "assignment_webhook",
+      "enabled": true,
+      "command": [
+        "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11api/.scratch/pr227-fresh/rust/target/debug/deps/campfire-51e126f6c4acd111",
+        "controllers::agent_next6_named_tests::ws11_next6_assignment_webhook",
+        "--exact",
+        "--test-threads=8",
+        "--nocapture"
+      ],
+      "exit": 101,
+      "hits": 1,
+      "assertion": "assignment must not block on HTTP before draining jobs",
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2777 filtered out; finished in 0.51s"
+      ],
+      "log": "assignment_webhook-mutant.log",
+      "log_sha256": "7e9f6983d4086905dddf85fe483e54d2baf7aa94691b4a764932753d1aec4142"
+    },
+    {
+      "case": "assignment_no_read",
+      "enabled": false,
+      "command": [
+        "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11api/.scratch/pr227-fresh/rust/target/debug/deps/campfire-51e126f6c4acd111",
+        "controllers::agent_next6_named_tests::ws11_next6_assignment_no_read",
+        "--exact",
+        "--test-threads=8",
+        "--nocapture"
+      ],
+      "exit": 0,
+      "hits": 0,
+      "assertion": "assignment must not block on HTTP before draining jobs",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2777 filtered out; finished in 0.78s"
+      ],
+      "log": "assignment_no_read-baseline.log",
+      "log_sha256": "83ee9493044bc0056d440c646d3aa5f9566a7e72ebf865f671052280fcfcfbc0"
+    },
+    {
+      "case": "assignment_no_read",
+      "enabled": true,
+      "command": [
+        "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11api/.scratch/pr227-fresh/rust/target/debug/deps/campfire-51e126f6c4acd111",
+        "controllers::agent_next6_named_tests::ws11_next6_assignment_no_read",
+        "--exact",
+        "--test-threads=8",
+        "--nocapture"
+      ],
+      "exit": 101,
+      "hits": 1,
+      "assertion": "assignment must not block on HTTP before draining jobs",
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2777 filtered out; finished in 0.52s"
+      ],
+      "log": "assignment_no_read-mutant.log",
+      "log_sha256": "9749a6720efd04182338d5fc2eb13f714fe93b5e390430a02647e59cd581621e"
+    },
+    {
+      "case": "handoff_webhook",
+      "enabled": false,
+      "command": [
+        "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11api/.scratch/pr227-fresh/rust/target/debug/deps/campfire-51e126f6c4acd111",
+        "controllers::agent_next6_named_tests::ws11_next6_handoff_webhook",
+        "--exact",
+        "--test-threads=8",
+        "--nocapture"
+      ],
+      "exit": 0,
+      "hits": 0,
+      "assertion": "assignment must not block on HTTP before draining jobs",
+      "summaries": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2777 filtered out; finished in 0.81s"
+      ],
+      "log": "handoff_webhook-baseline.log",
+      "log_sha256": "28d5bc3211df01e38a5d0c3841e8d1999a3653467225f4abdaa6f4f4c02cb14d"
+    },
+    {
+      "case": "handoff_webhook",
+      "enabled": true,
+      "command": [
+        "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11api/.scratch/pr227-fresh/rust/target/debug/deps/campfire-51e126f6c4acd111",
+        "controllers::agent_next6_named_tests::ws11_next6_handoff_webhook",
+        "--exact",
+        "--test-threads=8",
+        "--nocapture"
+      ],
+      "exit": 101,
+      "hits": 1,
+      "assertion": "assignment must not block on HTTP before draining jobs",
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2777 filtered out; finished in 0.79s"
+      ],
+      "log": "handoff_webhook-mutant.log",
+      "log_sha256": "9986d5d7a2b6c0d7a34140c9295a74ce4a2dd05607769a14d9fa894afabf2d56"
+    }
+  ],
+  "fresh_rails_inline_controls": [
+    {
+      "case": "assignment_webhook",
+      "exit": 1,
+      "hits": 1,
+      "intended_assertion": "assignment blocked on external HTTP",
+      "log_sha256": "94cf964a478cc3bc15caf68de718999c9304e4c4680e4e81256eeb0063ad8079"
+    },
+    {
+      "case": "assignment_no_read",
+      "exit": 1,
+      "hits": 1,
+      "intended_assertion": "assignment blocked on external HTTP",
+      "log_sha256": "b0fa5e178d1a3486083e58e6c8fcd05362950e28fb59b5d5e27599b6d99ae78c"
+    },
+    {
+      "case": "handoff_webhook",
+      "exit": 1,
+      "hits": 1,
+      "intended_assertion": "assignment blocked on external HTTP",
+      "log_sha256": "03bfb240e56245ced461b058d58a8c14c69a1424343c4c35a845cd6ecfd8690f"
+    }
+  ],
+  "deleted_snapshot_failing_first": {
+    "summaries": [
+      "test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 2776 filtered out; finished in 1.26s"
+    ],
+    "intended_assertions": [
+      "deleted work rest: complete fresh Rails response bytes",
+      "deleted work mcp: complete fresh Rails response bytes"
+    ],
+    "log_sha256": "a3c18fac35279bb0794c2b5989b66b44568d7c497ece42c2e8068887aacb20d5"
+  },
+  "source_restoration": {
+    "original": "affef5798caa9fe191b770e66b978188c2dd8c6c2e8f59b133cbdf8d96896cc1",
+    "instrumented": "b6ac9ed7a09b0df895b216d9938088e90d686d2a396178551fa129152bea7e93",
+    "restored_byte_identical": true
+  },
+  "affected_baseline": {
+    "summaries": [
+      "test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 2744 filtered out; finished in 10.07s"
+    ],
+    "log_sha256": "6c9018f18f933e8b5fe3123d334832d4718eb78d563008a5a199ce0055917dd1",
+    "temporary_mutant_disabled": true
+  },
+  "read_counts": {
+    "deleted_work_rest": {
+      "rust": [
+        21,
+        21
+      ],
+      "rails": [
+        18,
+        63
+      ]
+    },
+    "deleted_work_mcp": {
+      "rust": [
+        22,
+        22
+      ],
+      "rails": [
+        20,
+        65
+      ]
+    },
+    "existing_work_rest": {
+      "rust": [
+        25,
+        25
+      ],
+      "rails": [
+        17,
+        17
+      ]
+    },
+    "existing_work_mcp": {
+      "rust": [
+        26,
+        26
+      ],
+      "rails": [
+        19,
+        19
+      ]
+    }
+  },
+  "clean_workspace": {
+    "exit": 0,
+    "invocations": 1,
+    "summaries": [
+      "test result: ok. 2766 passed; 0 failed; 6 ignored; 0 measured; 6 filtered out; finished in 551.83s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 2772 filtered out; finished in 2.40s",
+      "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s",
+      "test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.97s",
+      "test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.82s",
+      "test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.99s",
+      "test result: ok. 1360 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 124.82s",
+      "test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.68s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s",
+      "test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s",
+      "test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s",
+      "test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s",
+      "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s",
+      "test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.47s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+      "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.21s",
+      "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s",
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.86s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.60s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.11s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s",
+      "test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.63s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.51s",
+      "test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s",
+      "test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.97s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+      "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s",
+      "test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.59s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "totals": [
+      "WS11 workspace totals: 4861 passed; 0 failed; 15 ignored; 60 result summaries",
+      "WS11 missing-seed skips: 0"
+    ],
+    "log_sha256": "c1cd84b69876039c014f2484b8b44255589796f2251fdb81dc8ce95d73727ea0"
+  },
+  "latest_main": "7e35a5fd6"
+}
