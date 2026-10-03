@@ -43,15 +43,14 @@ async fn check_window(app: &TestApp, group: &Value) {
         );
     }
 }
-async fn check_frames(client: &mut crate::channels::tests::support::Client, expected: &Value) {
-    for frame in expected.as_array().unwrap() {
-        let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
-        assert_eq!(
-            actual["message"], frame["html"],
-            "older-window callback bytes"
-        );
-    }
+async fn check_frames(
+    app: &TestApp,
+    client: &mut crate::channels::tests::support::Client,
+    expected: &Value,
+) {
+    super::comparison_support::frames(app, client, expected, "older_provider_tests.rs").await;
 }
+
 #[tokio::test]
 async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer_cost() {
     let mut counts = HashMap::new();
@@ -119,7 +118,7 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
                 .await
                 .unwrap();
             app.db().stop_capturing_read_queries();
-            check_frames(&mut client, &step["frames"]).await;
+            check_frames(&app, &mut client, &step["frames"]).await;
             let reads = queries
                 .lock()
                 .unwrap()
@@ -193,7 +192,7 @@ async fn durable_github_fetch_jobs_replace_older_public_private_and_unknown_card
             })
             .await
             .unwrap();
-        check_frames(&mut client, &group["job"]["frames"]).await;
+        check_frames(&app, &mut client, &group["job"]["frames"]).await;
         let message_id = group["old_ids"][0].as_i64().unwrap();
         app.db()
             .read(move |conn| {

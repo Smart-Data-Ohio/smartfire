@@ -30,6 +30,24 @@ pub(crate) struct Preloads {
     pub link_references: HashMap<i64, Vec<crate::integrations::link_embed::Reference>>,
 }
 impl Preloads {
+    /// Pin excerpts use the same plain-text resolver, without provider/cache/card facts.
+    pub fn load_plain_text(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
+        let records = RenderingRecords::load_plain_text(p.conn, messages)?;
+        let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+        let mentions: Vec<_> = records.bodies.values().flatten().flat_map(|b| mention_ids(b,0))
+            .chain(messages.iter().map(|m|m.creator_id)).collect();
+        let users = User::where_ids(p.conn,&mentions)?.into_iter().map(|user| {
+            let id=user.id;
+            let icon_name=user.icon_name.clone();
+            (id,RenderingUser { user, uploaded_avatar:false, icon_name })
+        }).collect();
+        let attachments=campfire_storage::Blob::attached_messages(p.conn,&ids)
+            .map_err(super::super::presenters::storage_error)?;
+        let icons=crate::rich_text::icons(p.conn).map_err(campfire_db::Error::Other)?;
+        Ok(Self { records,users,attachments,icons,threads:None,github:Default::default(),
+            event_views:Default::default(),cache:Default::default(),custom_icons:Default::default(),
+            fizzy_cards:Default::default(),link_references:Default::default() })
+    }
     pub fn load(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
         Self::load_for(p, messages, false, true)
     }

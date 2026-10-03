@@ -1,5 +1,8 @@
 //! Real bounded fetch jobs: TLS/HTTP, old root/reply frames, stale sibling claims and rollbacks.
-use super::quote_integration_tests::{app_rows, stream};
+use super::{
+    comparison_support::{embed_groups, embed_streams},
+    quote_integration_tests::app_rows,
+};
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{
@@ -29,20 +32,9 @@ fn reads(sql: &[String]) -> usize {
 #[tokio::test]
 async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
     let mut counts = HashMap::new();
-    for group in oracle()["groups"].as_array().unwrap() {
+    for group in embed_groups(oracle()) {
         let app = app_rows(group["rows"].clone()).await;
-        let (mut client, server) = stream(&app).await;
-        let gid = campfire_views::helpers::gid_param(
-            "ChannelThread",
-            group["thread_id"].as_i64().unwrap(),
-        );
-        let signed =
-            rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&gid, "messages"]);
-        client
-            .confirm(&crate::channels::tests::support::identifier(
-                json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}),
-            ))
-            .await;
+        let (mut client, server) = embed_streams(&app, group["thread_id"].as_i64().unwrap()).await;
         for path in [
             format!("/rooms/{QUIET_CORNER}/messages"),
             format!(
@@ -167,14 +159,13 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
             .await;
             release.notify_one();
             stopping.await;
-            for frame in job["frames"].as_array().unwrap() {
-                let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
-                assert_eq!(
-                    actual["message"], frame["html"],
-                    "{} {}",
-                    group["kind"], job["name"]
-                );
-            }
+            super::comparison_support::frames(
+                &app,
+                &mut client,
+                &job["frames"],
+                &format!("{} {}", group["kind"], job["name"]),
+            )
+            .await;
             client.assert_silent().await;
             let calls = http
                 .received
@@ -184,10 +175,10 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                 .map(|r| {
                     assert!(r.header("Cookie").is_none());
                     assert!(r.header("Authorization").is_none());
-                    json!({"host":host,"method":r.method,"path":r.target})
+                    json!({"host":r.header("Host").expect("received HTTP Host header"),"method":r.method,"path":r.target})
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(json!(calls), job["calls"]);
+            assert_eq!(json!(calls), job["calls"], "actual wire HTTP calls");
             let expected = job["state"].clone();
             let pending = job["pending"].clone();
             let ids = [

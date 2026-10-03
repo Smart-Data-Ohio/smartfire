@@ -1,0 +1,840 @@
+[
+  {
+    "kind": "generic",
+    "mode": "removed",
+    "rows": {
+      "link_embeds": [
+        {
+          "id": 3,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-03 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": null,
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://embed.example.test/generic-removed",
+          "site_name": null,
+          "title": "Before parent",
+          "updated_at": "2026-03-02 16:00:00"
+        },
+        {
+          "id": 4,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-01 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": "2026-03-02 15:49:00",
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://embed.example.test/generic-removed-sibling",
+          "site_name": null,
+          "title": "Before sibling",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "messages": [
+        {
+          "id": 935962058,
+          "action": 0,
+          "board_post_opener": 0,
+          "client_message_id": "ws8-final-state-generic-removed",
+          "created_at": "2026-03-02 16:00:00",
+          "creator_id": 127326141,
+          "edited_at": null,
+          "embeds_suppressed": 0,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": 0,
+          "markdown_source": "Before message",
+          "reply_notify_author": 1,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 699448326,
+          "stream_broadcast_at": null,
+          "streaming": 0,
+          "streaming_updated_at": null,
+          "system_note": 0,
+          "thread_id": null,
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "action_text_rich_texts": [
+        {
+          "id": 935962058,
+          "body": "<p>Before message</p>",
+          "created_at": "2026-03-02 16:00:00",
+          "name": "body",
+          "record_id": 935962058,
+          "record_type": "Message",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "link_embed_references": [
+        {
+          "id": 3,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 3,
+          "message_id": 935962058,
+          "position": 0,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://embed.example.test/generic-removed"
+        },
+        {
+          "id": 4,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 4,
+          "message_id": 935962058,
+          "position": 1,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://embed.example.test/generic-removed-sibling"
+        }
+      ]
+    },
+    "primary_id": 3,
+    "sibling_id": 4,
+    "message_id": 935962058,
+    "pending": [],
+    "sibling": {
+      "id": 4,
+      "created_at": "2026-03-02 16:00:00",
+      "description": null,
+      "expires_at": "2026-03-01 16:00:00",
+      "fetch_error": null,
+      "fetch_requested_at": "2026-03-02 15:49:00",
+      "fetched_at": null,
+      "image_url": null,
+      "normalized_url": "https://embed.example.test/generic-removed-sibling",
+      "site_name": null,
+      "title": "Before sibling",
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "message": {
+      "id": 935962058,
+      "action": 0,
+      "board_post_opener": 0,
+      "client_message_id": "ws8-final-state-generic-removed",
+      "created_at": "2026-03-02 16:00:00",
+      "creator_id": 127326141,
+      "edited_at": null,
+      "embeds_suppressed": 0,
+      "forward_note": null,
+      "forwarded_at": null,
+      "forwarded_from_message_id": null,
+      "forwarded_markdown": 0,
+      "markdown_source": "Newer message state",
+      "reply_notify_author": 1,
+      "reply_target_deleted_at": null,
+      "reply_to_message_id": null,
+      "room_id": 699448326,
+      "stream_broadcast_at": null,
+      "streaming": 0,
+      "streaming_updated_at": null,
+      "system_note": 0,
+      "thread_id": null,
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "frames": []
+  },
+  {
+    "kind": "generic",
+    "mode": "suppressed",
+    "rows": {
+      "link_embeds": [
+        {
+          "id": 5,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-03 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": null,
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://embed.example.test/generic-suppressed",
+          "site_name": null,
+          "title": "Before parent",
+          "updated_at": "2026-03-02 16:00:00"
+        },
+        {
+          "id": 6,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-01 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": "2026-03-02 15:49:00",
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://embed.example.test/generic-suppressed-sibling",
+          "site_name": null,
+          "title": "Before sibling",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "messages": [
+        {
+          "id": 935962059,
+          "action": 0,
+          "board_post_opener": 0,
+          "client_message_id": "ws8-final-state-generic-suppressed",
+          "created_at": "2026-03-02 16:00:00",
+          "creator_id": 127326141,
+          "edited_at": null,
+          "embeds_suppressed": 0,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": 0,
+          "markdown_source": "Before message",
+          "reply_notify_author": 1,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 699448326,
+          "stream_broadcast_at": null,
+          "streaming": 0,
+          "streaming_updated_at": null,
+          "system_note": 0,
+          "thread_id": null,
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "action_text_rich_texts": [
+        {
+          "id": 935962059,
+          "body": "<p>Before message</p>",
+          "created_at": "2026-03-02 16:00:00",
+          "name": "body",
+          "record_id": 935962059,
+          "record_type": "Message",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "link_embed_references": [
+        {
+          "id": 5,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 5,
+          "message_id": 935962059,
+          "position": 0,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://embed.example.test/generic-suppressed"
+        },
+        {
+          "id": 6,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 6,
+          "message_id": 935962059,
+          "position": 1,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://embed.example.test/generic-suppressed-sibling"
+        }
+      ]
+    },
+    "primary_id": 5,
+    "sibling_id": 6,
+    "message_id": 935962059,
+    "pending": [],
+    "sibling": {
+      "id": 6,
+      "created_at": "2026-03-02 16:00:00",
+      "description": null,
+      "expires_at": "2026-03-01 16:00:00",
+      "fetch_error": null,
+      "fetch_requested_at": "2026-03-02 15:49:00",
+      "fetched_at": null,
+      "image_url": null,
+      "normalized_url": "https://embed.example.test/generic-suppressed-sibling",
+      "site_name": null,
+      "title": "Before sibling",
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "message": {
+      "id": 935962059,
+      "action": 0,
+      "board_post_opener": 0,
+      "client_message_id": "ws8-final-state-generic-suppressed",
+      "created_at": "2026-03-02 16:00:00",
+      "creator_id": 127326141,
+      "edited_at": null,
+      "embeds_suppressed": 1,
+      "forward_note": null,
+      "forwarded_at": null,
+      "forwarded_from_message_id": null,
+      "forwarded_markdown": 0,
+      "markdown_source": "Newer message state",
+      "reply_notify_author": 1,
+      "reply_target_deleted_at": null,
+      "reply_to_message_id": null,
+      "room_id": 699448326,
+      "stream_broadcast_at": null,
+      "streaming": 0,
+      "streaming_updated_at": null,
+      "system_note": 0,
+      "thread_id": null,
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "frames": [
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
+        "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_ws8-final-state-generic-suppressed\"><template>  <div id=\"link_embed_cards_message_ws8-final-state-generic-suppressed\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>"
+      }
+    ]
+  },
+  {
+    "kind": "generic",
+    "mode": "savepoint_then_removed",
+    "rows": {
+      "link_embeds": [
+        {
+          "id": 7,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-03 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": null,
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://embed.example.test/generic-savepoint_then_removed",
+          "site_name": null,
+          "title": "Before parent",
+          "updated_at": "2026-03-02 16:00:00"
+        },
+        {
+          "id": 8,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-01 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": "2026-03-02 15:49:00",
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://embed.example.test/generic-savepoint_then_removed-sibling",
+          "site_name": null,
+          "title": "Before sibling",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "messages": [
+        {
+          "id": 935962060,
+          "action": 0,
+          "board_post_opener": 0,
+          "client_message_id": "ws8-final-state-generic-savepoint_then_removed",
+          "created_at": "2026-03-02 16:00:00",
+          "creator_id": 127326141,
+          "edited_at": null,
+          "embeds_suppressed": 0,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": 0,
+          "markdown_source": "Before message",
+          "reply_notify_author": 1,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 699448326,
+          "stream_broadcast_at": null,
+          "streaming": 0,
+          "streaming_updated_at": null,
+          "system_note": 0,
+          "thread_id": null,
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "action_text_rich_texts": [
+        {
+          "id": 935962060,
+          "body": "<p>Before message</p>",
+          "created_at": "2026-03-02 16:00:00",
+          "name": "body",
+          "record_id": 935962060,
+          "record_type": "Message",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "link_embed_references": [
+        {
+          "id": 7,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 7,
+          "message_id": 935962060,
+          "position": 0,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://embed.example.test/generic-savepoint_then_removed"
+        },
+        {
+          "id": 8,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 8,
+          "message_id": 935962060,
+          "position": 1,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://embed.example.test/generic-savepoint_then_removed-sibling"
+        }
+      ]
+    },
+    "primary_id": 7,
+    "sibling_id": 8,
+    "message_id": 935962060,
+    "pending": [],
+    "sibling": {
+      "id": 8,
+      "created_at": "2026-03-02 16:00:00",
+      "description": null,
+      "expires_at": "2026-03-01 16:00:00",
+      "fetch_error": null,
+      "fetch_requested_at": "2026-03-02 15:49:00",
+      "fetched_at": null,
+      "image_url": null,
+      "normalized_url": "https://embed.example.test/generic-savepoint_then_removed-sibling",
+      "site_name": null,
+      "title": "Before sibling",
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "message": {
+      "id": 935962060,
+      "action": 0,
+      "board_post_opener": 0,
+      "client_message_id": "ws8-final-state-generic-savepoint_then_removed",
+      "created_at": "2026-03-02 16:00:00",
+      "creator_id": 127326141,
+      "edited_at": null,
+      "embeds_suppressed": 0,
+      "forward_note": null,
+      "forwarded_at": null,
+      "forwarded_from_message_id": null,
+      "forwarded_markdown": 0,
+      "markdown_source": "Newer message state",
+      "reply_notify_author": 1,
+      "reply_target_deleted_at": null,
+      "reply_to_message_id": null,
+      "room_id": 699448326,
+      "stream_broadcast_at": null,
+      "streaming": 0,
+      "streaming_updated_at": null,
+      "system_note": 0,
+      "thread_id": null,
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "frames": []
+  },
+  {
+    "kind": "linkedin",
+    "mode": "removed",
+    "rows": {
+      "link_embeds": [
+        {
+          "id": 9,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-03 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": null,
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000006",
+          "site_name": null,
+          "title": "Before parent",
+          "updated_at": "2026-03-02 16:00:00"
+        },
+        {
+          "id": 10,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-01 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": "2026-03-02 15:49:00",
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000007",
+          "site_name": null,
+          "title": "Before sibling",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "messages": [
+        {
+          "id": 935962061,
+          "action": 0,
+          "board_post_opener": 0,
+          "client_message_id": "ws8-final-state-linkedin-removed",
+          "created_at": "2026-03-02 16:00:00",
+          "creator_id": 127326141,
+          "edited_at": null,
+          "embeds_suppressed": 0,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": 0,
+          "markdown_source": "Before message",
+          "reply_notify_author": 1,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 699448326,
+          "stream_broadcast_at": null,
+          "streaming": 0,
+          "streaming_updated_at": null,
+          "system_note": 0,
+          "thread_id": null,
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "action_text_rich_texts": [
+        {
+          "id": 935962061,
+          "body": "<p>Before message</p>",
+          "created_at": "2026-03-02 16:00:00",
+          "name": "body",
+          "record_id": 935962061,
+          "record_type": "Message",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "link_embed_references": [
+        {
+          "id": 9,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 9,
+          "message_id": 935962061,
+          "position": 0,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:1000006"
+        },
+        {
+          "id": 10,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 10,
+          "message_id": 935962061,
+          "position": 1,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:1000007"
+        }
+      ]
+    },
+    "primary_id": 9,
+    "sibling_id": 10,
+    "message_id": 935962061,
+    "pending": [],
+    "sibling": {
+      "id": 10,
+      "created_at": "2026-03-02 16:00:00",
+      "description": null,
+      "expires_at": "2026-03-01 16:00:00",
+      "fetch_error": null,
+      "fetch_requested_at": "2026-03-02 15:49:00",
+      "fetched_at": null,
+      "image_url": null,
+      "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000007",
+      "site_name": null,
+      "title": "Before sibling",
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "message": {
+      "id": 935962061,
+      "action": 0,
+      "board_post_opener": 0,
+      "client_message_id": "ws8-final-state-linkedin-removed",
+      "created_at": "2026-03-02 16:00:00",
+      "creator_id": 127326141,
+      "edited_at": null,
+      "embeds_suppressed": 0,
+      "forward_note": null,
+      "forwarded_at": null,
+      "forwarded_from_message_id": null,
+      "forwarded_markdown": 0,
+      "markdown_source": "Newer message state",
+      "reply_notify_author": 1,
+      "reply_target_deleted_at": null,
+      "reply_to_message_id": null,
+      "room_id": 699448326,
+      "stream_broadcast_at": null,
+      "streaming": 0,
+      "streaming_updated_at": null,
+      "system_note": 0,
+      "thread_id": null,
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "frames": []
+  },
+  {
+    "kind": "linkedin",
+    "mode": "suppressed",
+    "rows": {
+      "link_embeds": [
+        {
+          "id": 11,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-03 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": null,
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000008",
+          "site_name": null,
+          "title": "Before parent",
+          "updated_at": "2026-03-02 16:00:00"
+        },
+        {
+          "id": 12,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-01 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": "2026-03-02 15:49:00",
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000009",
+          "site_name": null,
+          "title": "Before sibling",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "messages": [
+        {
+          "id": 935962062,
+          "action": 0,
+          "board_post_opener": 0,
+          "client_message_id": "ws8-final-state-linkedin-suppressed",
+          "created_at": "2026-03-02 16:00:00",
+          "creator_id": 127326141,
+          "edited_at": null,
+          "embeds_suppressed": 0,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": 0,
+          "markdown_source": "Before message",
+          "reply_notify_author": 1,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 699448326,
+          "stream_broadcast_at": null,
+          "streaming": 0,
+          "streaming_updated_at": null,
+          "system_note": 0,
+          "thread_id": null,
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "action_text_rich_texts": [
+        {
+          "id": 935962062,
+          "body": "<p>Before message</p>",
+          "created_at": "2026-03-02 16:00:00",
+          "name": "body",
+          "record_id": 935962062,
+          "record_type": "Message",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "link_embed_references": [
+        {
+          "id": 11,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 11,
+          "message_id": 935962062,
+          "position": 0,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:1000008"
+        },
+        {
+          "id": 12,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 12,
+          "message_id": 935962062,
+          "position": 1,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:1000009"
+        }
+      ]
+    },
+    "primary_id": 11,
+    "sibling_id": 12,
+    "message_id": 935962062,
+    "pending": [],
+    "sibling": {
+      "id": 12,
+      "created_at": "2026-03-02 16:00:00",
+      "description": null,
+      "expires_at": "2026-03-01 16:00:00",
+      "fetch_error": null,
+      "fetch_requested_at": "2026-03-02 15:49:00",
+      "fetched_at": null,
+      "image_url": null,
+      "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000009",
+      "site_name": null,
+      "title": "Before sibling",
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "message": {
+      "id": 935962062,
+      "action": 0,
+      "board_post_opener": 0,
+      "client_message_id": "ws8-final-state-linkedin-suppressed",
+      "created_at": "2026-03-02 16:00:00",
+      "creator_id": 127326141,
+      "edited_at": null,
+      "embeds_suppressed": 1,
+      "forward_note": null,
+      "forwarded_at": null,
+      "forwarded_from_message_id": null,
+      "forwarded_markdown": 0,
+      "markdown_source": "Newer message state",
+      "reply_notify_author": 1,
+      "reply_target_deleted_at": null,
+      "reply_to_message_id": null,
+      "room_id": 699448326,
+      "stream_broadcast_at": null,
+      "streaming": 0,
+      "streaming_updated_at": null,
+      "system_note": 0,
+      "thread_id": null,
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "frames": [
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
+        "html": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_ws8-final-state-linkedin-suppressed\"><template>  <div id=\"linkedin_cards_message_ws8-final-state-linkedin-suppressed\" class=\"linkedin-post-cards\"></div>\n</template></turbo-stream>"
+      }
+    ]
+  },
+  {
+    "kind": "linkedin",
+    "mode": "savepoint_then_removed",
+    "rows": {
+      "link_embeds": [
+        {
+          "id": 13,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-03 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": null,
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000010",
+          "site_name": null,
+          "title": "Before parent",
+          "updated_at": "2026-03-02 16:00:00"
+        },
+        {
+          "id": 14,
+          "created_at": "2026-03-02 16:00:00",
+          "description": null,
+          "expires_at": "2026-03-01 16:00:00",
+          "fetch_error": null,
+          "fetch_requested_at": "2026-03-02 15:49:00",
+          "fetched_at": null,
+          "image_url": null,
+          "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000011",
+          "site_name": null,
+          "title": "Before sibling",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "messages": [
+        {
+          "id": 935962063,
+          "action": 0,
+          "board_post_opener": 0,
+          "client_message_id": "ws8-final-state-linkedin-savepoint_then_removed",
+          "created_at": "2026-03-02 16:00:00",
+          "creator_id": 127326141,
+          "edited_at": null,
+          "embeds_suppressed": 0,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": 0,
+          "markdown_source": "Before message",
+          "reply_notify_author": 1,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 699448326,
+          "stream_broadcast_at": null,
+          "streaming": 0,
+          "streaming_updated_at": null,
+          "system_note": 0,
+          "thread_id": null,
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "action_text_rich_texts": [
+        {
+          "id": 935962063,
+          "body": "<p>Before message</p>",
+          "created_at": "2026-03-02 16:00:00",
+          "name": "body",
+          "record_id": 935962063,
+          "record_type": "Message",
+          "updated_at": "2026-03-02 16:00:00"
+        }
+      ],
+      "link_embed_references": [
+        {
+          "id": 13,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 13,
+          "message_id": 935962063,
+          "position": 0,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:1000010"
+        },
+        {
+          "id": 14,
+          "created_at": "2026-03-02 16:00:00",
+          "link_embed_id": 14,
+          "message_id": 935962063,
+          "position": 1,
+          "updated_at": "2026-03-02 16:00:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:1000011"
+        }
+      ]
+    },
+    "primary_id": 13,
+    "sibling_id": 14,
+    "message_id": 935962063,
+    "pending": [],
+    "sibling": {
+      "id": 14,
+      "created_at": "2026-03-02 16:00:00",
+      "description": null,
+      "expires_at": "2026-03-01 16:00:00",
+      "fetch_error": null,
+      "fetch_requested_at": "2026-03-02 15:49:00",
+      "fetched_at": null,
+      "image_url": null,
+      "normalized_url": "https://www.linkedin.com/feed/update/urn:li:activity:1000011",
+      "site_name": null,
+      "title": "Before sibling",
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "message": {
+      "id": 935962063,
+      "action": 0,
+      "board_post_opener": 0,
+      "client_message_id": "ws8-final-state-linkedin-savepoint_then_removed",
+      "created_at": "2026-03-02 16:00:00",
+      "creator_id": 127326141,
+      "edited_at": null,
+      "embeds_suppressed": 0,
+      "forward_note": null,
+      "forwarded_at": null,
+      "forwarded_from_message_id": null,
+      "forwarded_markdown": 0,
+      "markdown_source": "Newer message state",
+      "reply_notify_author": 1,
+      "reply_target_deleted_at": null,
+      "reply_to_message_id": null,
+      "room_id": 699448326,
+      "stream_broadcast_at": null,
+      "streaming": 0,
+      "streaming_updated_at": null,
+      "system_note": 0,
+      "thread_id": null,
+      "updated_at": "2026-03-02 16:00:00"
+    },
+    "frames": []
+  }
+]

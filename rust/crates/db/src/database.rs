@@ -125,6 +125,12 @@ impl Env {
     }
 }
 
+struct CommitPreparation {
+    key: &'static str,
+    id: i64,
+    hook: AfterCommitHook,
+}
+
 type AfterCommitHook = Box<dyn FnOnce(&mut Tx<'_>) -> Result<()> + Send>;
 
 enum AfterCommit {
@@ -181,6 +187,7 @@ pub struct Tx<'c> {
     in_transaction: bool,
     after_commit: Vec<AfterCommit>,
     commit_finalizers: Vec<Box<dyn FnOnce() + Send>>,
+    commit_preparations: Vec<CommitPreparation>,
     /// The first error persisting an emitted event (see [`EventSink::persist`]), which rolls the
     /// transaction back.
     persist_error: Option<Error>,
@@ -356,12 +363,54 @@ impl<'c> Tx<'c> {
                 in_transaction: false,
                 after_commit: Vec::new(),
                 commit_finalizers: Vec::new(),
+                commit_preparations: Vec::new(),
                 persist_error: None,
             };
             if let Err(error) = hook(&mut tx) {
                 tracing::error!(%error, "after_commit hook failed");
             }
         }
+    }
+
+    /// Evaluate a record's durable side effects against the final writer state,
+    /// immediately before COMMIT. The last registration wins in the first slot;
+    /// savepoint rollback restores earlier registrations. Queue writes and claims
+    /// still roll back with the triggering write if preparation or persistence fails.
+    pub fn before_commit_record_latest(
+        &mut self,
+        key: &'static str,
+        id: i64,
+        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static,
+    ) -> Result<()> {
+        if self.in_transaction {
+            self.commit_preparations.push(CommitPreparation {
+                key,
+                id,
+                hook: Box::new(hook),
+            });
+            Ok(())
+        } else {
+            hook(self)
+        }
+    }
+
+    fn prepare_commit(&mut self) -> Result<()> {
+        while !self.commit_preparations.is_empty() {
+            let mut positions = std::collections::HashMap::new();
+            let mut pending = Vec::new();
+            for registration in std::mem::take(&mut self.commit_preparations) {
+                if let Some(&index) = positions.get(&(registration.key, registration.id)) {
+                    pending[index] = registration;
+                } else {
+                    positions.insert((registration.key, registration.id), pending.len());
+                    pending.push(registration);
+                }
+            }
+            for preparation in pending {
+                (preparation.hook)(self)?;
+            }
+        }
+        Ok(())
     }
 
     /// Finalizes ownership of resources whose rows committed, before fallible model
@@ -411,6 +460,7 @@ impl<'c> Tx<'c> {
     pub fn savepoint<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let callbacks = self.after_commit.len();
         let finalizers = self.commit_finalizers.len();
+        let preparations = self.commit_preparations.len();
         let record_hooks: Vec<_> = self
             .after_commit
             .iter()
@@ -433,6 +483,7 @@ impl<'c> Tx<'c> {
             Err(error) => {
                 self.after_commit.truncate(callbacks);
                 self.commit_finalizers.truncate(finalizers);
+                self.commit_preparations.truncate(preparations);
                 for (index, length) in record_hooks {
                     if let AfterCommit::RecordHooks { hooks, .. } = &mut self.after_commit[index] {
                         hooks.truncate(length);
@@ -464,12 +515,18 @@ pub fn run_write<T>(
         in_transaction: true,
         after_commit: Vec::new(),
         commit_finalizers: Vec::new(),
+        commit_preparations: Vec::new(),
         persist_error: None,
     };
-    let value = match f(&mut tx).and_then(|value| match tx.persist_error.take() {
-        Some(error) => Err(error),
-        None => Ok(value),
-    }) {
+    let value = match f(&mut tx)
+        .and_then(|value| {
+            tx.prepare_commit()?;
+            Ok(value)
+        })
+        .and_then(|value| match tx.persist_error.take() {
+            Some(error) => Err(error),
+            None => Ok(value),
+        }) {
         Ok(value) => value,
         Err(error) => {
             let _ = conn.execute_batch("ROLLBACK TRANSACTION");
@@ -537,6 +594,7 @@ pub fn run_write<T>(
         in_transaction: false,
         after_commit: Vec::new(),
         commit_finalizers: Vec::new(),
+        commit_preparations: Vec::new(),
         persist_error: None,
     };
     let mut callbacks = queue.into_iter();
@@ -1063,6 +1121,77 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(*log.lock().unwrap(), before);
+    }
+
+    #[test]
+    fn before_commit_uses_final_state_and_restores_latest_hook_on_savepoint_rollback() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE state(value INTEGER); INSERT INTO state VALUES(1); CREATE TABLE observations(label TEXT,value INTEGER)").unwrap();
+        let env = Env::default();
+        run_write(&conn, &env, |tx| {
+            tx.before_commit_record_latest("record", 1, |tx| {
+                tx.conn()
+                    .execute("INSERT INTO observations SELECT 'old',value FROM state", [])?;
+                Ok(())
+            })?;
+            tx.before_commit_record_latest("record", 1, |tx| {
+                tx.conn().execute(
+                    "INSERT INTO observations SELECT 'latest',value FROM state",
+                    [],
+                )?;
+                Ok(())
+            })?;
+            let error: Result<()> = tx.savepoint(|tx| {
+                tx.before_commit_record_latest("record", 1, |tx| {
+                    tx.conn().execute(
+                        "INSERT INTO observations SELECT 'rolled-back',value FROM state",
+                        [],
+                    )?;
+                    Ok(())
+                })?;
+                Err(Error::Other("savepoint rollback".into()))
+            });
+            assert!(error.is_err());
+            tx.conn().execute("UPDATE state SET value=2", [])?;
+            Ok(())
+        })
+        .unwrap();
+        let observations = conn
+            .prepare("SELECT label,value FROM observations")
+            .unwrap()
+            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .unwrap();
+        assert_eq!(observations, vec![("latest".to_string(), 2)]);
+    }
+
+    #[test]
+    fn before_commit_failures_roll_back_every_write_and_discard_callbacks() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE state(value INTEGER); INSERT INTO state VALUES(1)")
+            .unwrap();
+        let sink = crate::events::RecordingSink::new();
+        let env = Env {
+            sink: Arc::new(sink.clone()),
+            ..Env::default()
+        };
+        let result = run_write(&conn, &env, |tx| {
+            tx.conn().execute("UPDATE state SET value=2", [])?;
+            tx.before_commit_record_latest("record", 1, |tx| {
+                tx.conn().execute("UPDATE state SET value=3", [])?;
+                tx.emit_after_commit(Event::PurgeBlob { blob_id: 1 });
+                Err(Error::Other("preparation failure".into()))
+            })?;
+            Ok(())
+        });
+        assert!(result.is_err());
+        assert_eq!(
+            conn.query_row("SELECT value FROM state", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert!(sink.events().is_empty());
     }
 
     #[test]

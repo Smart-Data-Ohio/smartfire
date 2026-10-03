@@ -1,0 +1,4036 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "zone": "UTC",
+      "input": "5th March 2026",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "Thu Mar 5 14:30:00 2026",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "H38.03.05",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "R08.03.05",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-064",
+      "calendar": {
+        "result": "2026-03-01 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-01 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-W10-4",
+      "calendar": {
+        "result": "2026-03-02 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "--0305",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "---05",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026.064",
+      "calendar": {
+        "result": "2026-03-02 00:20:26.064000"
+      },
+      "slash": {
+        "result": "2026-03-02 00:20:26.064000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026.03.05",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026/3/5",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "March 5 AD 2026",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "5 Mar 26 BC",
+      "calendar": {
+        "result": "-0025-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "-0025-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "'26 Mar 5",
+      "calendar": {
+        "result": "0026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "0026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305T143000.123456789+0530",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.123456"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.123456"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305 14:30 +05:30",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "20260305143000[+05:30]",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:30:00 +5.5",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:30:00 UTC+5",
+      "calendar": {
+        "result": "2026-03-05 09:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:30:00 Eastern Standard Time",
+      "calendar": {
+        "result": "2026-03-05 19:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:30:00 +2500",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "utc_offset out of range"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:30:00.9999999999Z",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.999999"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 12:30:60Z",
+      "calendar": {
+        "result": "2026-03-05 12:31:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 12:31:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05T24:00:00.5Z",
+      "calendar": {
+        "result": "2026-03-06 00:00:00.500000"
+      },
+      "slash": {
+        "result": "2026-03-06 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-02-31",
+      "calendar": {
+        "result": "2026-03-03 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-13-05",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "mon out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-32",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "14:60",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "min out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "25:00",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "hour out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 2147483648:00",
+      "calendar": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      },
+      "slash": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "999999999999999999999999-03-05",
+      "calendar": {
+        "result": "999999999999999999999999-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "999999999999999999999999-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "-0001-03-05",
+      "calendar": {
+        "result": "-0001-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "-0001-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "1.30pm",
+      "calendar": {
+        "result": "2026-03-02 18:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 18:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "14h30m15s",
+      "calendar": {
+        "result": "2026-03-02 14:30:15.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 14:30:15.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "123",
+      "calendar": {
+        "result": "2026-03-02 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "15",
+      "calendar": {
+        "result": "2026-03-15 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-15 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "0305",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "202603",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "Mar",
+      "calendar": {
+        "result": "2026-03-01 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-01 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "junk",
+      "calendar": {
+        "result": "2026-06-01 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-06-01 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "line\nMarch 5 2026",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": " March 5 2026 ",
+      "calendar": {
+        "result": "2026-03-05 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-08 02:00",
+      "calendar": {
+        "result": "2026-03-08 02:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 02:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-08 02:30",
+      "calendar": {
+        "result": "2026-03-08 02:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 02:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-11-01 01:00",
+      "calendar": {
+        "result": "2026-11-01 01:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 01:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-11-01 01:30",
+      "calendar": {
+        "result": "2026-11-01 01:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-10-04 02:00",
+      "calendar": {
+        "result": "2026-10-04 02:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 02:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-10-04 02:15",
+      "calendar": {
+        "result": "2026-10-04 02:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 02:15:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-04-05 01:30",
+      "calendar": {
+        "result": "2026-04-05 01:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-04-05 01:45",
+      "calendar": {
+        "result": "2026-04-05 01:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 01:45:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2011-12-30 12:00",
+      "calendar": {
+        "result": "2011-12-30 12:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 12:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-08 02:00 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 02:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-08 02:30 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 02:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-11-01 01:00 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 01:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-11-01 01:30 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-10-04 02:00 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 02:00:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-10-04 02:15 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 02:15:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-04-05 01:30 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-04-05 01:45 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 01:45:00.000000"
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2011-12-30 12:00 -05:00",
+      "calendar": {
+        "result": "2011-12-30 17:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 12:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "5th March 2026",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "Thu Mar 5 14:30:00 2026",
+      "calendar": {
+        "result": "2026-03-05 19:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 19:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "H38.03.05",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "R08.03.05",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-064",
+      "calendar": {
+        "result": "2026-03-01 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-01 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-W10-4",
+      "calendar": {
+        "result": "2026-03-02 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "--0305",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "---05",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026.064",
+      "calendar": {
+        "result": "2026-03-02 05:20:26.064000"
+      },
+      "slash": {
+        "result": "2026-03-02 05:20:26.064000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026.03.05",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026/3/5",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "March 5 AD 2026",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "5 Mar 26 BC",
+      "calendar": {
+        "result": "-0025-03-05 04:56:02.000000"
+      },
+      "slash": {
+        "result": "-0025-03-05 04:56:02.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "'26 Mar 5",
+      "calendar": {
+        "result": "0026-03-05 04:56:02.000000"
+      },
+      "slash": {
+        "result": "0026-03-05 04:56:02.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305T143000.123456789+0530",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.123456"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.123456"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305 14:30 +05:30",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "20260305143000[+05:30]",
+      "calendar": {
+        "result": "2026-03-05 19:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 19:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:30:00 +5.5",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 19:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:30:00 UTC+5",
+      "calendar": {
+        "result": "2026-03-05 09:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 19:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:30:00 Eastern Standard Time",
+      "calendar": {
+        "result": "2026-03-05 19:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 19:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:30:00 +2500",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "utc_offset out of range"
+      },
+      "slash": {
+        "result": "2026-03-05 19:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:30:00.9999999999Z",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.999999"
+      },
+      "slash": {
+        "result": "2026-03-05 19:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 12:30:60Z",
+      "calendar": {
+        "result": "2026-03-05 12:31:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 17:31:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05T24:00:00.5Z",
+      "calendar": {
+        "result": "2026-03-06 00:00:00.500000"
+      },
+      "slash": {
+        "result": "2026-03-06 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-02-31",
+      "calendar": {
+        "result": "2026-03-03 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-13-05",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "mon out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-32",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "14:60",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "min out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "25:00",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "hour out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 2147483648:00",
+      "calendar": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      },
+      "slash": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "999999999999999999999999-03-05",
+      "calendar": {
+        "result": "999999999999999999999999-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "999999999999999999999999-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "-0001-03-05",
+      "calendar": {
+        "result": "-0001-03-05 04:56:02.000000"
+      },
+      "slash": {
+        "result": "-0001-03-05 04:56:02.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "1.30pm",
+      "calendar": {
+        "result": "2026-03-02 23:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 23:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "14h30m15s",
+      "calendar": {
+        "result": "2026-03-02 19:30:15.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 19:30:15.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "123",
+      "calendar": {
+        "result": "2026-03-02 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "15",
+      "calendar": {
+        "result": "2026-03-15 04:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-15 04:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "0305",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "202603",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "Mar",
+      "calendar": {
+        "result": "2026-03-01 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-01 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "junk",
+      "calendar": {
+        "result": "2026-06-01 04:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-06-01 04:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "line\nMarch 5 2026",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": " March 5 2026 ",
+      "calendar": {
+        "result": "2026-03-05 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-08 02:00",
+      "calendar": {
+        "result": "2026-03-08 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 07:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-08 02:30",
+      "calendar": {
+        "result": "2026-03-08 07:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 07:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-11-01 01:00",
+      "calendar": {
+        "result": "2026-11-01 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-11-01 01:30",
+      "calendar": {
+        "result": "2026-11-01 05:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 05:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-10-04 02:00",
+      "calendar": {
+        "result": "2026-10-04 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-10-04 02:15",
+      "calendar": {
+        "result": "2026-10-04 06:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 06:15:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-04-05 01:30",
+      "calendar": {
+        "result": "2026-04-05 05:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 05:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-04-05 01:45",
+      "calendar": {
+        "result": "2026-04-05 05:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 05:45:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2011-12-30 12:00",
+      "calendar": {
+        "result": "2011-12-30 17:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 17:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-08 02:00 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 07:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-08 02:30 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 07:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-11-01 01:00 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-11-01 01:30 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 05:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-10-04 02:00 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-10-04 02:15 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 06:15:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-04-05 01:30 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 05:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-04-05 01:45 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 05:45:00.000000"
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2011-12-30 12:00 -05:00",
+      "calendar": {
+        "result": "2011-12-30 17:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 17:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "5th March 2026",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "Thu Mar 5 14:30:00 2026",
+      "calendar": {
+        "result": "2026-03-05 20:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 20:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "H38.03.05",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "R08.03.05",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-064",
+      "calendar": {
+        "result": "2026-03-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-01 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-W10-4",
+      "calendar": {
+        "result": "2026-03-02 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "--0305",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "---05",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026.064",
+      "calendar": {
+        "result": "2026-03-02 06:20:26.064000"
+      },
+      "slash": {
+        "result": "2026-03-02 06:20:26.064000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026.03.05",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026/3/5",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "March 5 AD 2026",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "5 Mar 26 BC",
+      "calendar": {
+        "result": "-0025-03-05 05:50:36.000000"
+      },
+      "slash": {
+        "result": "-0025-03-05 05:50:36.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "'26 Mar 5",
+      "calendar": {
+        "result": "0026-03-05 05:50:36.000000"
+      },
+      "slash": {
+        "result": "0026-03-05 05:50:36.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "20260305T143000.123456789+0530",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.123456"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.123456"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "20260305 14:30 +05:30",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "20260305143000[+05:30]",
+      "calendar": {
+        "result": "2026-03-05 20:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 20:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05 14:30:00 +5.5",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 20:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05 14:30:00 UTC+5",
+      "calendar": {
+        "result": "2026-03-05 09:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 20:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05 14:30:00 Eastern Standard Time",
+      "calendar": {
+        "result": "2026-03-05 19:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 20:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05 14:30:00 +2500",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "utc_offset out of range"
+      },
+      "slash": {
+        "result": "2026-03-05 20:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05 14:30:00.9999999999Z",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.999999"
+      },
+      "slash": {
+        "result": "2026-03-05 20:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05 12:30:60Z",
+      "calendar": {
+        "result": "2026-03-05 12:31:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 18:31:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05T24:00:00.5Z",
+      "calendar": {
+        "result": "2026-03-06 00:00:00.500000"
+      },
+      "slash": {
+        "result": "2026-03-06 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-02-31",
+      "calendar": {
+        "result": "2026-03-03 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-13-05",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "mon out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-32",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "14:60",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "min out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "25:00",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "hour out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-05 2147483648:00",
+      "calendar": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      },
+      "slash": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "999999999999999999999999-03-05",
+      "calendar": {
+        "result": "999999999999999999999999-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "999999999999999999999999-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "-0001-03-05",
+      "calendar": {
+        "result": "-0001-03-05 05:50:36.000000"
+      },
+      "slash": {
+        "result": "-0001-03-05 05:50:36.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "1.30pm",
+      "calendar": {
+        "result": "2026-03-03 00:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 00:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "14h30m15s",
+      "calendar": {
+        "result": "2026-03-02 20:30:15.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 20:30:15.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "123",
+      "calendar": {
+        "result": "2026-03-02 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "15",
+      "calendar": {
+        "result": "2026-03-15 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-15 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "0305",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "202603",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "Mar",
+      "calendar": {
+        "result": "2026-03-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-01 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "junk",
+      "calendar": {
+        "result": "2026-06-01 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-06-01 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "line\nMarch 5 2026",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": " March 5 2026 ",
+      "calendar": {
+        "result": "2026-03-05 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-08 02:00",
+      "calendar": {
+        "result": "2026-03-08 08:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 08:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-08 02:30",
+      "calendar": {
+        "result": "2026-03-08 08:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 08:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-11-01 01:00",
+      "calendar": {
+        "result": "2026-11-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-11-01 01:30",
+      "calendar": {
+        "result": "2026-11-01 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 06:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-10-04 02:00",
+      "calendar": {
+        "result": "2026-10-04 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 07:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-10-04 02:15",
+      "calendar": {
+        "result": "2026-10-04 07:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 07:15:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-04-05 01:30",
+      "calendar": {
+        "result": "2026-04-05 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 06:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-04-05 01:45",
+      "calendar": {
+        "result": "2026-04-05 06:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 06:45:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2011-12-30 12:00",
+      "calendar": {
+        "result": "2011-12-30 18:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 18:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-08 02:00 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 08:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-03-08 02:30 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-08 08:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-11-01 01:00 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 06:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-11-01 01:30 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-11-01 06:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-10-04 02:00 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 07:00:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-10-04 02:15 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-04 07:15:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-04-05 01:30 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 06:30:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2026-04-05 01:45 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-05 06:45:00.000000"
+      }
+    },
+    {
+      "zone": "America/Chicago",
+      "input": "2011-12-30 12:00 -05:00",
+      "calendar": {
+        "result": "2011-12-30 17:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 18:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "5th March 2026",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "Thu Mar 5 14:30:00 2026",
+      "calendar": {
+        "result": "2026-03-05 03:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 03:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "H38.03.05",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "R08.03.05",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-064",
+      "calendar": {
+        "result": "2026-02-28 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-02-28 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-W10-4",
+      "calendar": {
+        "result": "2026-03-02 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "--0305",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "---05",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026.064",
+      "calendar": {
+        "result": "2026-03-02 13:20:26.064000"
+      },
+      "slash": {
+        "result": "2026-03-02 13:20:26.064000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026.03.05",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026/3/5",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "March 5 AD 2026",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "5 Mar 26 BC",
+      "calendar": {
+        "result": "-0025-03-04 13:23:40.000000"
+      },
+      "slash": {
+        "result": "-0025-03-04 13:23:40.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "'26 Mar 5",
+      "calendar": {
+        "result": "0026-03-04 13:23:40.000000"
+      },
+      "slash": {
+        "result": "0026-03-04 13:23:40.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "20260305T143000.123456789+0530",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.123456"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.123456"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "20260305 14:30 +05:30",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "20260305143000[+05:30]",
+      "calendar": {
+        "result": "2026-03-05 03:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 03:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:30:00 +5.5",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 03:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:30:00 UTC+5",
+      "calendar": {
+        "result": "2026-03-05 09:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 03:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:30:00 Eastern Standard Time",
+      "calendar": {
+        "result": "2026-03-05 19:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 03:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:30:00 +2500",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "utc_offset out of range"
+      },
+      "slash": {
+        "result": "2026-03-05 03:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:30:00.9999999999Z",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.999999"
+      },
+      "slash": {
+        "result": "2026-03-05 03:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 12:30:60Z",
+      "calendar": {
+        "result": "2026-03-05 12:31:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 01:31:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05T24:00:00.5Z",
+      "calendar": {
+        "result": "2026-03-06 00:00:00.500000"
+      },
+      "slash": {
+        "result": "2026-03-05 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-02-31",
+      "calendar": {
+        "result": "2026-03-02 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-13-05",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "mon out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-32",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "14:60",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "min out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "25:00",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "hour out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 2147483648:00",
+      "calendar": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      },
+      "slash": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "999999999999999999999999-03-05",
+      "calendar": {
+        "result": "999999999999999999999999-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "999999999999999999999999-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "-0001-03-05",
+      "calendar": {
+        "result": "-0001-03-04 13:23:40.000000"
+      },
+      "slash": {
+        "result": "-0001-03-04 13:23:40.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "1.30pm",
+      "calendar": {
+        "result": "2026-03-03 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 07:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "14h30m15s",
+      "calendar": {
+        "result": "2026-03-03 03:30:15.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 03:30:15.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "123",
+      "calendar": {
+        "result": "2026-03-02 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "15",
+      "calendar": {
+        "result": "2026-03-14 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-14 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "0305",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "202603",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "Mar",
+      "calendar": {
+        "result": "2026-02-28 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-02-28 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "junk",
+      "calendar": {
+        "result": "2026-05-31 13:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-05-31 13:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "line\nMarch 5 2026",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": " March 5 2026 ",
+      "calendar": {
+        "result": "2026-03-04 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-08 02:00",
+      "calendar": {
+        "result": "2026-03-07 15:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 15:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-08 02:30",
+      "calendar": {
+        "result": "2026-03-07 15:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 15:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-11-01 01:00",
+      "calendar": {
+        "result": "2026-10-31 14:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 14:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-11-01 01:30",
+      "calendar": {
+        "result": "2026-10-31 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-10-04 02:00",
+      "calendar": {
+        "result": "2026-10-03 16:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 16:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-10-04 02:15",
+      "calendar": {
+        "result": "2026-10-03 16:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 16:15:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-04-05 01:30",
+      "calendar": {
+        "result": "2026-04-04 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-04-05 01:45",
+      "calendar": {
+        "result": "2026-04-04 14:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 14:45:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2011-12-30 12:00",
+      "calendar": {
+        "result": "2011-12-30 01:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 01:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-08 02:00 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 15:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-08 02:30 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 15:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-11-01 01:00 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 14:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-11-01 01:30 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-10-04 02:00 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 16:00:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-10-04 02:15 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 16:15:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-04-05 01:30 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-04-05 01:45 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 14:45:00.000000"
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2011-12-30 12:00 -05:00",
+      "calendar": {
+        "result": "2011-12-30 17:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 01:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "5th March 2026",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "Thu, 05 Mar 2026 14:30:00 GMT",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 14:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "Thu Mar 5 14:30:00 2026",
+      "calendar": {
+        "result": "2026-03-05 01:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "H38.03.05",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "R08.03.05",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-064",
+      "calendar": {
+        "result": "2026-02-28 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-02-28 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-W10-4",
+      "calendar": {
+        "result": "2026-03-02 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "--0305",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "---05",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026.064",
+      "calendar": {
+        "result": "2026-03-02 11:20:26.064000"
+      },
+      "slash": {
+        "result": "2026-03-02 11:20:26.064000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026.03.05",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026/3/5",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "March 5 AD 2026",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "5 Mar 26 BC",
+      "calendar": {
+        "result": "-0025-03-04 11:26:56.000000"
+      },
+      "slash": {
+        "result": "-0025-03-04 11:26:56.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "'26 Mar 5",
+      "calendar": {
+        "result": "0026-03-04 11:26:56.000000"
+      },
+      "slash": {
+        "result": "0026-03-04 11:26:56.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305T143000.123456789+0530",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.123456"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.123456"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305 14:30 +05:30",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 09:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "20260305143000[+05:30]",
+      "calendar": {
+        "result": "2026-03-05 01:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:30:00 +5.5",
+      "calendar": {
+        "result": "2026-03-05 09:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:30:00 UTC+5",
+      "calendar": {
+        "result": "2026-03-05 09:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:30:00 Eastern Standard Time",
+      "calendar": {
+        "result": "2026-03-05 19:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:30:00 +2500",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "utc_offset out of range"
+      },
+      "slash": {
+        "result": "2026-03-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:30:00.9999999999Z",
+      "calendar": {
+        "result": "2026-03-05 14:30:00.999999"
+      },
+      "slash": {
+        "result": "2026-03-05 01:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 12:30:60Z",
+      "calendar": {
+        "result": "2026-03-05 12:31:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 23:31:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05T24:00:00.5Z",
+      "calendar": {
+        "result": "2026-03-06 00:00:00.500000"
+      },
+      "slash": {
+        "result": "2026-03-05 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-02-31",
+      "calendar": {
+        "result": "2026-03-02 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-13-05",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "mon out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-32",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "14:60",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "min out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "25:00",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "hour out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 2147483648:00",
+      "calendar": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      },
+      "slash": {
+        "error": "RangeError",
+        "message": "integer 2147483648 too big to convert to 'int'"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "999999999999999999999999-03-05",
+      "calendar": {
+        "result": "999999999999999999999999-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "999999999999999999999999-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "-0001-03-05",
+      "calendar": {
+        "result": "-0001-03-04 11:26:56.000000"
+      },
+      "slash": {
+        "result": "-0001-03-04 11:26:56.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "1.30pm",
+      "calendar": {
+        "result": "2026-03-03 05:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 05:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "14h30m15s",
+      "calendar": {
+        "result": "2026-03-03 01:30:15.000000"
+      },
+      "slash": {
+        "result": "2026-03-03 01:30:15.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "123",
+      "calendar": {
+        "result": "2026-03-02 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-02 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "15",
+      "calendar": {
+        "result": "2026-03-14 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-14 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "0305",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "202603",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03",
+      "calendar": {
+        "error": "ArgumentError",
+        "message": "argument out of range"
+      },
+      "slash": {
+        "result": null
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "Mar",
+      "calendar": {
+        "result": "2026-02-28 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-02-28 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "junk",
+      "calendar": {
+        "result": "2026-05-31 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-05-31 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "line\nMarch 5 2026",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": " March 5 2026 ",
+      "calendar": {
+        "result": "2026-03-04 11:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-04 11:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-08 02:00",
+      "calendar": {
+        "result": "2026-03-07 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-08 02:30",
+      "calendar": {
+        "result": "2026-03-07 13:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 13:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-11-01 01:00",
+      "calendar": {
+        "result": "2026-10-31 12:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 12:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-11-01 01:30",
+      "calendar": {
+        "result": "2026-10-31 12:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 12:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-10-04 02:00",
+      "calendar": {
+        "result": "2026-10-03 13:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-10-04 02:15",
+      "calendar": {
+        "result": "2026-10-03 13:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 13:15:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-04-05 01:30",
+      "calendar": {
+        "result": "2026-04-04 12:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 12:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-04-05 01:45",
+      "calendar": {
+        "result": "2026-04-04 12:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 12:45:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2011-12-30 12:00",
+      "calendar": {
+        "result": "2011-12-30 10:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 10:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-08 02:00 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-08 02:30 -05:00",
+      "calendar": {
+        "result": "2026-03-08 07:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-03-07 13:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-11-01 01:00 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 12:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-11-01 01:30 -05:00",
+      "calendar": {
+        "result": "2026-11-01 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-31 12:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-10-04 02:00 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:00:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 13:00:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-10-04 02:15 -05:00",
+      "calendar": {
+        "result": "2026-10-04 07:15:00.000000"
+      },
+      "slash": {
+        "result": "2026-10-03 13:15:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-04-05 01:30 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:30:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 12:30:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-04-05 01:45 -05:00",
+      "calendar": {
+        "result": "2026-04-05 06:45:00.000000"
+      },
+      "slash": {
+        "result": "2026-04-04 12:45:00.000000"
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2011-12-30 12:00 -05:00",
+      "calendar": {
+        "result": "2011-12-30 17:00:00.000000"
+      },
+      "slash": {
+        "result": "2011-12-30 10:00:00.000000"
+      }
+    }
+  ],
+  "rows": {
+    "messages": [
+      {
+        "id": 935962058,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "exceptional-input-reference",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "Exceptional input reference",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "action_text_rich_texts": [
+      {
+        "id": 935962058,
+        "body": "<p>Exceptional input reference</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962058,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "message_references": [
+      {
+        "id": 2,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962058,
+        "referenced_message_id": 309456473,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-05 2147483648:00"
+        }
+      },
+      "status": 500,
+      "content_type": "application/json; charset=UTF-8",
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "2026-03-05 2147483648:00",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 500,
+      "content_type": "application/json; charset=UTF-8",
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "2026-03-05 2147483648:00"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-05 14:60"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "2026-03-05 14:60",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"min out of range\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "2026-03-05 14:60"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-05 14:30 +2500"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "2026-03-05 14:30 +2500",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"utc_offset out of range\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "2026-03-05 14:30 +2500"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"string length (129) exceeds the limit 128\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": []
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": [],
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": []
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": [
+            "2026-03-05 14:30"
+          ]
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": [
+            "2026-03-05 14:30"
+          ],
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": [
+          "2026-03-05 14:30"
+        ]
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": [
+            "2026-03-05 14:30",
+            "junk"
+          ]
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": [
+            "2026-03-05 14:30",
+            "junk"
+          ],
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": [
+          "2026-03-05 14:30",
+          "junk"
+        ]
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": {}
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": {},
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": {}
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": {
+            "at": "2026-03-05 14:30"
+          }
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-05T14:30:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": {
+            "at": "2026-03-05 14:30"
+          },
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": {
+          "at": "2026-03-05 14:30"
+        }
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": null
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": null,
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": null
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": false
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": false,
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": false
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": true
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": true,
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": true
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": 17
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":\"2026-03-17T00:00:00.000Z\",\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": 17,
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"room_id\":699448326,\"thread_id\":null,\"markdown_source\":\"exceptional scheduled\",\"send_at\":\"2026-03-17T00:00:00.000Z\",\"sent_at\":null,\"dropped_at\":null}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": 17
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at(1i)": "2026",
+          "remind_at(2i)": "03",
+          "remind_at(3i)": "05",
+          "remind_at(4i)": "14",
+          "remind_at(5i)": "30"
+        }
+      },
+      "status": 201,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"id\":3,\"message_id\":935962058,\"status\":\"in_progress\",\"remind_at\":null,\"reminded_at\":null,\"url\":\"http://campfire.test/saved/3.json\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at(1i)": "2026",
+          "send_at(2i)": "03",
+          "send_at(3i)": "05",
+          "send_at(4i)": "14",
+          "send_at(5i)": "30",
+          "markdown_source": "multiparameter scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"Send time is invalid\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/searches?q[]=unmatched_exceptional",
+      "accept": "text/html",
+      "marker": "<section id=\"message-area\"",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “[&quot;unmatched_exceptional&quot;]”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>"
+    },
+    {
+      "method": "GET",
+      "path": "/searches?q[x]=unmatched_exceptional",
+      "accept": "text/html",
+      "marker": "<section id=\"message-area\"",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<section id=\"message-area\" class=\"searches__page\" aria-labelledby=\"search-title\">\n  <div class=\"searches__bar\">\n      <a class=\"btn searches__back\" href=\"/rooms/104393281\">\n        <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/arrow-left-abe40556.svg\" width=\"16\" height=\"16\" />\n        <span class=\"overflow-ellipsis\">Back to All Pets</span>\n</a>\n      <p class=\"searches__summary\">\n        0 messages\n      </p>\n  </div>\n\n    \n    \n\n      <p class=\"searches__empty\">No messages match “{&quot;x&quot; =&gt; &quot;unmatched_exceptional&quot;}”.</p>\n\n\n  <div id=\"search-results\" class=\"messages searches__results\" data-controller=\"search-results message-list\" data-search-results-target=\"messages\" data-search-results-me-class=\"message--me\" data-search-results-threaded-class=\"message--threaded\" data-search-results-mentioned-class=\"message--mentioned\" data-search-results-formatted-class=\"message--formatted\">\n</div></section>"
+    },
+    {
+      "method": "GET",
+      "path": "/searches?q=hello&before[]=2",
+      "accept": "text/html",
+      "marker": null,
+      "status": 404,
+      "content_type": "text/html; charset=UTF-8",
+      "body": "<!DOCTYPE html>\n<html>\n\n<head>\n  <title>We can’t find that (404)</title>\n  <meta charset=\"UTF-8\">\n  <style>\n    *,\n    *::before,\n    *::after {\n      box-sizing: border-box;\n    }\n\n    body {\n      --lch-black: 0% 0 0;\n      --lch-gray: 75% 0.005 96;\n      --lch-white: 100% 0 0;\n\n      --color-border: oklch(var(--lch-gray));\n      --color-bg: oklch(var(--lch-white));\n      --color-text: oklch(var(--lch-black));\n\n      --btn-size: 2.65em;\n\n      background-color: var(--color-bg);\n      block-size: 100dvh;\n      color: var(--color-text);\n      display: grid;\n      margin: 0;\n      padding: 0;\n      place-items: center;\n      font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\";\n\n      @media (prefers-color-scheme: dark) {\n        --lch-black: 100% 0 0;\n        --lch-gray: 44.95% 0 0;\n        --lch-white: 0% 0 0;\n      }\n    }\n\n    svg {\n      fill: var(--color-text);\n\n      @media (prefers-color-scheme: dark) {\n        fill: var(--color-text);\n      }\n    }\n\n    .error {\n      align-items: center;\n      display: flex;\n      flex-direction: column;\n      gap: 2em;\n      justify-content: start;\n      margin-block-end: 15dvh;\n    }\n\n    .error__img {\n      aspect-ratio: 1;\n      background-color: var(--color-text);\n      block-size: auto;\n      border-radius: 50%;\n      display: grid;\n      place-items: center;\n      inline-size: 30dvh;\n\n      svg {\n        fill: var(--color-bg);\n        grid-area: 1/1;\n        max-inline-size: 66%;\n\n        @media (prefers-color-scheme: dark) {\n          fill: var(--color-bg);\n        }\n      }\n    }\n\n    .buttons {\n      display: flex;\n      flex-direction: row;\n      gap: 1em;\n      justify-content: center;\n    }\n\n    .btn {\n      align-items: center;\n      aspect-ratio: 1;\n      background-color: var(--color-bg);\n      block-size: var(--btn-size);\n      border-radius: 50%;\n      border: 1px solid var(--color-border);\n      color: var(--color-text);\n      cursor: pointer;\n      display: grid;\n      font-weight: 600;\n      font-size: 1.4rem;\n      gap: 0.5em;\n      inline-size: var(--btn-size);\n      justify-content: center;\n      padding: 0;\n      place-items: center;\n      text-align: center;\n\n      svg {\n        -webkit-touch-callout: none;\n        grid-area: 1/1;\n        inline-size: 1.3em;\n        max-inline-size: unset;\n        user-select: none;\n      }\n    }\n\n    .for-screen-reader {\n      clip-path: inset(50%);\n      height: 1px;\n      width: 1px;\n      overflow: hidden;\n      position: absolute;\n      white-space: nowrap;\n    }\n\n  </style>\n</head>\n\n<body>\n  <div class=\"error\">\n    <div class=\"error__img\">\n      <svg enable-background=\"new 0 0 24 24\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\" aria-label=\"Not found\">\n        <path\n          d=\"m24 4.8c0-1.7-1.3-3-3-3h-18c-1.7 0-3 1.3-3 3v14.5c0 1.7 1.3 3 3 3h18c1.7 0 3-1.3 3-3zm-14.3-1c.3-.5.8-.6 1.3-.4.2.1.3.2.4.4.1.1.1.3.2.5 0 .2-.1.4-.2.5-.3.5-.8.6-1.3.4-.2-.2-.4-.3-.4-.4-.1-.2-.2-.4-.2-.6 0-.1.1-.3.2-.4zm-3.5 0c.2-.5.8-.7 1.3-.4.2.1.3.2.4.4 0 .1.1.3.1.4 0 .2-.1.4-.2.5-.2.5-.8.7-1.3.4-.1-.1-.3-.2-.3-.3-.1-.2-.2-.4-.2-.6 0-.1.1-.3.2-.4zm-3.6 0c.2-.4.5-.6.9-.6s.7.2.8.5c.1.1.1.3.2.5 0 .2-.1.4-.2.5-.2.5-.8.7-1.3.4-.1-.1-.3-.2-.3-.3-.1-.2-.2-.4-.2-.6 0-.1 0-.2.1-.4zm19.4 15.4c0 .6-.4 1-1 1h-18c-.6 0-1-.4-1-1v-12.2c0-.1.1-.2.2-.2h19.5c.2 0 .3.1.3.2z\" />\n        <path\n          d=\"m16.4 10.9c.2-.2.2-.6 0-.9l-.9-.9c-.2-.2-.6-.2-.9 0l-2.6 2.6h-.1l-2.5-2.6c-.2-.2-.6-.2-.9 0l-.9.9c-.2.2-.2.6 0 .9l2.6 2.6v.1l-2.6 2.6c-.2.2-.2.6 0 .9l.9.9c.2.2.6.2.9 0l2.6-2.6h.1l2.6 2.6c.2.2.6.2.9 0l.9-.9c.2-.2.2-.6 0-.9l-2.6-2.6v-.1z\" />\n      </svg>\n    </div>\n    <a href=\"/\" class=\"btn\" autofocus=\"true\">\n      <svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path\n          d=\"m21.864 9.5h-11.607a.25.25 0 0 1 -.174-.43l3.864-3.721a2.609 2.609 0 0 0 -.075-3.682 2.612 2.612 0 0 0 -3.68-.077l-9.792 9.699a1 1 0 0 0 -.008 1.411l9.625 9.724a2.66 2.66 0 0 0 3.755-3.757l-3.729-3.733a.25.25 0 0 1 .177-.427h11.673c1.556 0 2-1.675 2-2.51a2.28 2.28 0 0 0 -2.029-2.497z\" />\n      </svg>\n      <span class=\"for-screen-reader\">Go back</span>\n    </a>\n  </div>\n</body>\n\n</html>\n"
+    },
+    {
+      "method": "GET",
+      "path": "/searches?q=hello&before[x]=2",
+      "accept": "text/html",
+      "marker": null,
+      "status": 404,
+      "content_type": "text/html; charset=UTF-8",
+      "body": "<!DOCTYPE html>\n<html>\n\n<head>\n  <title>We can’t find that (404)</title>\n  <meta charset=\"UTF-8\">\n  <style>\n    *,\n    *::before,\n    *::after {\n      box-sizing: border-box;\n    }\n\n    body {\n      --lch-black: 0% 0 0;\n      --lch-gray: 75% 0.005 96;\n      --lch-white: 100% 0 0;\n\n      --color-border: oklch(var(--lch-gray));\n      --color-bg: oklch(var(--lch-white));\n      --color-text: oklch(var(--lch-black));\n\n      --btn-size: 2.65em;\n\n      background-color: var(--color-bg);\n      block-size: 100dvh;\n      color: var(--color-text);\n      display: grid;\n      margin: 0;\n      padding: 0;\n      place-items: center;\n      font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\";\n\n      @media (prefers-color-scheme: dark) {\n        --lch-black: 100% 0 0;\n        --lch-gray: 44.95% 0 0;\n        --lch-white: 0% 0 0;\n      }\n    }\n\n    svg {\n      fill: var(--color-text);\n\n      @media (prefers-color-scheme: dark) {\n        fill: var(--color-text);\n      }\n    }\n\n    .error {\n      align-items: center;\n      display: flex;\n      flex-direction: column;\n      gap: 2em;\n      justify-content: start;\n      margin-block-end: 15dvh;\n    }\n\n    .error__img {\n      aspect-ratio: 1;\n      background-color: var(--color-text);\n      block-size: auto;\n      border-radius: 50%;\n      display: grid;\n      place-items: center;\n      inline-size: 30dvh;\n\n      svg {\n        fill: var(--color-bg);\n        grid-area: 1/1;\n        max-inline-size: 66%;\n\n        @media (prefers-color-scheme: dark) {\n          fill: var(--color-bg);\n        }\n      }\n    }\n\n    .buttons {\n      display: flex;\n      flex-direction: row;\n      gap: 1em;\n      justify-content: center;\n    }\n\n    .btn {\n      align-items: center;\n      aspect-ratio: 1;\n      background-color: var(--color-bg);\n      block-size: var(--btn-size);\n      border-radius: 50%;\n      border: 1px solid var(--color-border);\n      color: var(--color-text);\n      cursor: pointer;\n      display: grid;\n      font-weight: 600;\n      font-size: 1.4rem;\n      gap: 0.5em;\n      inline-size: var(--btn-size);\n      justify-content: center;\n      padding: 0;\n      place-items: center;\n      text-align: center;\n\n      svg {\n        -webkit-touch-callout: none;\n        grid-area: 1/1;\n        inline-size: 1.3em;\n        max-inline-size: unset;\n        user-select: none;\n      }\n    }\n\n    .for-screen-reader {\n      clip-path: inset(50%);\n      height: 1px;\n      width: 1px;\n      overflow: hidden;\n      position: absolute;\n      white-space: nowrap;\n    }\n\n  </style>\n</head>\n\n<body>\n  <div class=\"error\">\n    <div class=\"error__img\">\n      <svg enable-background=\"new 0 0 24 24\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\" aria-label=\"Not found\">\n        <path\n          d=\"m24 4.8c0-1.7-1.3-3-3-3h-18c-1.7 0-3 1.3-3 3v14.5c0 1.7 1.3 3 3 3h18c1.7 0 3-1.3 3-3zm-14.3-1c.3-.5.8-.6 1.3-.4.2.1.3.2.4.4.1.1.1.3.2.5 0 .2-.1.4-.2.5-.3.5-.8.6-1.3.4-.2-.2-.4-.3-.4-.4-.1-.2-.2-.4-.2-.6 0-.1.1-.3.2-.4zm-3.5 0c.2-.5.8-.7 1.3-.4.2.1.3.2.4.4 0 .1.1.3.1.4 0 .2-.1.4-.2.5-.2.5-.8.7-1.3.4-.1-.1-.3-.2-.3-.3-.1-.2-.2-.4-.2-.6 0-.1.1-.3.2-.4zm-3.6 0c.2-.4.5-.6.9-.6s.7.2.8.5c.1.1.1.3.2.5 0 .2-.1.4-.2.5-.2.5-.8.7-1.3.4-.1-.1-.3-.2-.3-.3-.1-.2-.2-.4-.2-.6 0-.1 0-.2.1-.4zm19.4 15.4c0 .6-.4 1-1 1h-18c-.6 0-1-.4-1-1v-12.2c0-.1.1-.2.2-.2h19.5c.2 0 .3.1.3.2z\" />\n        <path\n          d=\"m16.4 10.9c.2-.2.2-.6 0-.9l-.9-.9c-.2-.2-.6-.2-.9 0l-2.6 2.6h-.1l-2.5-2.6c-.2-.2-.6-.2-.9 0l-.9.9c-.2.2-.2.6 0 .9l2.6 2.6v.1l-2.6 2.6c-.2.2-.2.6 0 .9l.9.9c.2.2.6.2.9 0l2.6-2.6h.1l2.6 2.6c.2.2.6.2.9 0l.9-.9c.2-.2.2-.6 0-.9l-2.6-2.6v-.1z\" />\n      </svg>\n    </div>\n    <a href=\"/\" class=\"btn\" autofocus=\"true\">\n      <svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">\n        <path\n          d=\"m21.864 9.5h-11.607a.25.25 0 0 1 -.174-.43l3.864-3.721a2.609 2.609 0 0 0 -.075-3.682 2.612 2.612 0 0 0 -3.68-.077l-9.792 9.699a1 1 0 0 0 -.008 1.411l9.625 9.724a2.66 2.66 0 0 0 3.755-3.757l-3.729-3.733a.25.25 0 0 1 .177-.427h11.673c1.556 0 2-1.675 2-2.51a2.28 2.28 0 0 0 -2.029-2.497z\" />\n      </svg>\n      <span class=\"for-screen-reader\">Go back</span>\n    </a>\n  </div>\n</body>\n\n</html>\n"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/files?filename[]=hello",
+      "accept": "text/html",
+      "marker": "<section class=\"room-files\"",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<section class=\"room-files\" aria-labelledby=\"room-files-title\">\n  <header class=\"room-files__header\">\n    <div>\n      <span class=\"room-files__eyebrow\">Channel files</span>\n      <h1 id=\"room-files-title\">Files</h1>\n      <p>Uploads and Drive files shared in Quiet Corner, newest first.</p>\n    </div>\n  </header>\n\n  <form class=\"room-files__search\" action=\"/rooms/699448326/files\" accept-charset=\"UTF-8\" method=\"get\">\n    <input value=\"all\" type=\"hidden\" name=\"type\" id=\"type\" />\n    <label class=\"for-screen-reader\" for=\"filename\">Search by filename</label>\n    <input value=\"[&quot;hello&quot;]\" placeholder=\"Search by filename\" class=\"input\" autocomplete=\"off\" type=\"search\" name=\"filename\" id=\"filename\" />\n    <input type=\"submit\" name=\"commit\" value=\"Search\" class=\"btn\" data-disable-with=\"Search\" />\n      <a class=\"btn\" href=\"/rooms/699448326/files\">Clear</a>\n</form>\n  <nav class=\"room-files__types\" aria-label=\"File type\">\n      <a class=\"btn room-files__type active\" aria-current=\"page\" href=\"/rooms/699448326/files?filename=%5B%22hello%22%5D&amp;type=all\">All</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%5B%22hello%22%5D&amp;type=images\">Images</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%5B%22hello%22%5D&amp;type=videos\">Videos</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%5B%22hello%22%5D&amp;type=documents\">Documents</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%5B%22hello%22%5D&amp;type=other\">Other</a>\n  </nav>\n\n  <h2 class=\"room-files__heading\" id=\"uploaded-files\">Uploads</h2>\n    <p class=\"room-files__empty\">No uploads match.</p>\n\n  <h2 class=\"room-files__heading\" id=\"drive-files\">Drive files</h2>\n  <p class=\"room-files__hint\">Drive file names resolve in your browser with your own Google account, so they are not searchable here.</p>\n    <p class=\"room-files__empty\">No Drive files attached yet.</p>\n</section>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/files?filename[x]=hello",
+      "accept": "text/html",
+      "marker": "<section class=\"room-files\"",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<section class=\"room-files\" aria-labelledby=\"room-files-title\">\n  <header class=\"room-files__header\">\n    <div>\n      <span class=\"room-files__eyebrow\">Channel files</span>\n      <h1 id=\"room-files-title\">Files</h1>\n      <p>Uploads and Drive files shared in Quiet Corner, newest first.</p>\n    </div>\n  </header>\n\n  <form class=\"room-files__search\" action=\"/rooms/699448326/files\" accept-charset=\"UTF-8\" method=\"get\">\n    <input value=\"all\" type=\"hidden\" name=\"type\" id=\"type\" />\n    <label class=\"for-screen-reader\" for=\"filename\">Search by filename</label>\n    <input value=\"{&quot;x&quot; =&gt; &quot;hello&quot;}\" placeholder=\"Search by filename\" class=\"input\" autocomplete=\"off\" type=\"search\" name=\"filename\" id=\"filename\" />\n    <input type=\"submit\" name=\"commit\" value=\"Search\" class=\"btn\" data-disable-with=\"Search\" />\n      <a class=\"btn\" href=\"/rooms/699448326/files\">Clear</a>\n</form>\n  <nav class=\"room-files__types\" aria-label=\"File type\">\n      <a class=\"btn room-files__type active\" aria-current=\"page\" href=\"/rooms/699448326/files?filename=%7B%22x%22+%3D%3E+%22hello%22%7D&amp;type=all\">All</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%7B%22x%22+%3D%3E+%22hello%22%7D&amp;type=images\">Images</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%7B%22x%22+%3D%3E+%22hello%22%7D&amp;type=videos\">Videos</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%7B%22x%22+%3D%3E+%22hello%22%7D&amp;type=documents\">Documents</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?filename=%7B%22x%22+%3D%3E+%22hello%22%7D&amp;type=other\">Other</a>\n  </nav>\n\n  <h2 class=\"room-files__heading\" id=\"uploaded-files\">Uploads</h2>\n    <p class=\"room-files__empty\">No uploads match.</p>\n\n  <h2 class=\"room-files__heading\" id=\"drive-files\">Drive files</h2>\n  <p class=\"room-files__hint\">Drive file names resolve in your browser with your own Google account, so they are not searchable here.</p>\n    <p class=\"room-files__empty\">No Drive files attached yet.</p>\n</section>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/files?page[]=2&type[]=images",
+      "accept": "text/html",
+      "marker": "<section class=\"room-files\"",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<section class=\"room-files\" aria-labelledby=\"room-files-title\">\n  <header class=\"room-files__header\">\n    <div>\n      <span class=\"room-files__eyebrow\">Channel files</span>\n      <h1 id=\"room-files-title\">Files</h1>\n      <p>Uploads and Drive files shared in Quiet Corner, newest first.</p>\n    </div>\n  </header>\n\n  <form class=\"room-files__search\" action=\"/rooms/699448326/files\" accept-charset=\"UTF-8\" method=\"get\">\n    <input value=\"all\" type=\"hidden\" name=\"type\" id=\"type\" />\n    <label class=\"for-screen-reader\" for=\"filename\">Search by filename</label>\n    <input value=\"\" placeholder=\"Search by filename\" class=\"input\" autocomplete=\"off\" type=\"search\" name=\"filename\" id=\"filename\" />\n    <input type=\"submit\" name=\"commit\" value=\"Search\" class=\"btn\" data-disable-with=\"Search\" />\n</form>\n  <nav class=\"room-files__types\" aria-label=\"File type\">\n      <a class=\"btn room-files__type active\" aria-current=\"page\" href=\"/rooms/699448326/files?type=all\">All</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=images\">Images</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=videos\">Videos</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=documents\">Documents</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=other\">Other</a>\n  </nav>\n\n  <h2 class=\"room-files__heading\" id=\"uploaded-files\">Uploads</h2>\n    <p class=\"room-files__empty\">No uploads match.</p>\n\n  <h2 class=\"room-files__heading\" id=\"drive-files\">Drive files</h2>\n  <p class=\"room-files__hint\">Drive file names resolve in your browser with your own Google account, so they are not searchable here.</p>\n    <p class=\"room-files__empty\">No Drive files attached yet.</p>\n</section>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/files?drive_page[x]=2&type[x]=images",
+      "accept": "text/html",
+      "marker": "<section class=\"room-files\"",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<section class=\"room-files\" aria-labelledby=\"room-files-title\">\n  <header class=\"room-files__header\">\n    <div>\n      <span class=\"room-files__eyebrow\">Channel files</span>\n      <h1 id=\"room-files-title\">Files</h1>\n      <p>Uploads and Drive files shared in Quiet Corner, newest first.</p>\n    </div>\n  </header>\n\n  <form class=\"room-files__search\" action=\"/rooms/699448326/files\" accept-charset=\"UTF-8\" method=\"get\">\n    <input value=\"all\" type=\"hidden\" name=\"type\" id=\"type\" />\n    <label class=\"for-screen-reader\" for=\"filename\">Search by filename</label>\n    <input value=\"\" placeholder=\"Search by filename\" class=\"input\" autocomplete=\"off\" type=\"search\" name=\"filename\" id=\"filename\" />\n    <input type=\"submit\" name=\"commit\" value=\"Search\" class=\"btn\" data-disable-with=\"Search\" />\n</form>\n  <nav class=\"room-files__types\" aria-label=\"File type\">\n      <a class=\"btn room-files__type active\" aria-current=\"page\" href=\"/rooms/699448326/files?type=all\">All</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=images\">Images</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=videos\">Videos</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=documents\">Documents</a>\n      <a class=\"btn room-files__type\" href=\"/rooms/699448326/files?type=other\">Other</a>\n  </nav>\n\n  <h2 class=\"room-files__heading\" id=\"uploaded-files\">Uploads</h2>\n    <p class=\"room-files__empty\">No uploads match.</p>\n\n  <h2 class=\"room-files__heading\" id=\"drive-files\">Drive files</h2>\n  <p class=\"room-files__hint\">Drive file names resolve in your browser with your own Google account, so they are not searchable here.</p>\n    <p class=\"room-files__empty\">No Drive files attached yet.</p>\n</section>"
+    },
+    {
+      "method": "GET",
+      "path": "/autocompletable/users.json?page[x]=2",
+      "accept": "application/json",
+      "marker": null,
+      "status": 500,
+      "content_type": "application/json; charset=UTF-8",
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd until 2026-03-05 2147483648:00"
+      },
+      "status": 500,
+      "content_type": "application/json; charset=UTF-8",
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd until 2026-03-05 14:60"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Usage: /dnd [30m|2h|until 5pm|off] — bare /dnd toggles.\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?id[]=2",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?id[x]=2",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?room_id[]=699448326",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?room_id[x]=699448326",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until March 09, 2026 11:00.\"}",
+      "state": {
+        "dnd_until": "2026-03-09 15:00:00.000000",
+        "ooo_until": null
+      },
+      "zone": "America/New_York"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until March 09, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-03-09 15:00:00.000000"
+      },
+      "zone": "America/New_York"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until March 09, 2026 10:00.\"}",
+      "state": {
+        "dnd_until": "2026-03-09 15:00:00.000000",
+        "ooo_until": null
+      },
+      "zone": "America/Chicago"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until March 09, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-03-09 15:00:00.000000"
+      },
+      "zone": "America/Chicago"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 35d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until April 07, 2026 03:00.\"}",
+      "state": {
+        "dnd_until": "2026-04-06 16:30:00.000000",
+        "ooo_until": null
+      },
+      "zone": "Australia/Lord_Howe"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 35d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until April 07, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-04-06 16:30:00.000000"
+      },
+      "zone": "Australia/Lord_Howe"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until March 09, 2026 16:00.\"}",
+      "state": {
+        "dnd_until": "2026-03-09 16:00:00.000000",
+        "ooo_until": null
+      },
+      "zone": "UTC"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until March 09, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-03-09 16:00:00.000000"
+      },
+      "zone": "UTC"
+    }
+  ]
+}

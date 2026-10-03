@@ -1,6 +1,6 @@
 //! Chat commands from app/services/slash_commands, including registered agent invocations.
 //! Call in the request's write transaction; the HTTP membership boundary belongs to WS8b.
-use crate::broadcasts::{self, Broadcast, Partial, Streamable, TurboAction, TurboStream};
+use crate::broadcasts::{self, Broadcast, Partial};
 use crate::{
     ChannelThread, Error, Errors, Event, Membership, Message, NewMessage, Result, Room, SavedItem,
     Timestamp, Tx,
@@ -8,12 +8,12 @@ use crate::{
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-pub mod time_parser;
 mod calendar;
-pub(crate) mod user_settings;
+pub mod time_parser;
 #[cfg(test)]
 #[path = "tests/time_zone_writer_test.rs"]
 mod time_zone_writer_tests;
+pub(crate) mod user_settings;
 use time_parser::{WEEKDAYS, date_end_of_day, end_of_day, present, re, strip, zone};
 
 pub const SHRUG: &str = "¯\\_(ツ)_/¯";
@@ -146,13 +146,33 @@ pub struct Context {
     pub huddles_configured: bool,
 }
 pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<CommandResult> {
+    dispatch_with_time_zone(tx, context, text, false)
+}
+/// Rails requests run after ApplicationController's user-zone callback. Direct
+/// service calls keep Time.current's ambient UTC zone for duration shortcuts.
+pub fn dispatch_in_user_time_zone(
+    tx: &mut Tx<'_>,
+    context: &Context,
+    text: &str,
+) -> Result<CommandResult> {
+    dispatch_with_time_zone(tx, context, text, true)
+}
+fn dispatch_with_time_zone(
+    tx: &mut Tx<'_>,
+    context: &Context,
+    text: &str,
+    use_user_time_zone: bool,
+) -> Result<CommandResult> {
     let Some(c) = command_pattern().captures(strip(text)) else {
         return Ok(CommandResult::error("Type / to see available commands."));
     };
     let name = c["name"].to_ascii_lowercase();
     let args = strip(c.name("args").map(|m| m.as_str()).unwrap_or(""));
     let Some(command) = lookup(&name) else {
-        if let Some(result)=crate::models::agent_slash_command::invoke(tx,context,&name,args)? {return Ok(result)};
+        if let Some(result) = crate::models::agent_slash_command::invoke(tx, context, &name, args)?
+        {
+            return Ok(result);
+        };
         let mut names = available(context.thread_id.is_some())
             .iter()
             .map(|c| format!("/{}", c.name))
@@ -179,7 +199,7 @@ pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<Comman
     }
     // Errors from model writes leave the transaction failed; convert validation results
     // only after the command's savepoint has rolled back its rows and deferred effects.
-    match tx.savepoint(|tx| handle(tx, context, &name, args)) {
+    match tx.savepoint(|tx| handle(tx, context, &name, args, use_user_time_zone)) {
         Ok(result) => Ok(result),
         Err(Error::RecordInvalid(errors)) if name != "dnd" => {
             Ok(CommandResult::error(sentence(errors.full_messages())))
@@ -227,8 +247,19 @@ fn date_long(time: Timestamp, zone_name: &str) -> String {
 fn past(time: Timestamp, zone_name: &str) -> CommandResult {
     CommandResult::error(format!("“{}” is in the past.", long(time, zone_name)))
 }
-fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<CommandResult> {
+fn handle(
+    tx: &mut Tx<'_>,
+    c: &Context,
+    name: &str,
+    args: &str,
+    use_user_time_zone: bool,
+) -> Result<CommandResult> {
     let zone_name = user_zone(tx, c.user_id)?;
+    let duration_zone = if use_user_time_zone {
+        &zone_name
+    } else {
+        "UTC"
+    };
     match name {
         "poll" => Ok(CommandResult::new("open_poll")),
         "huddle" => Ok(huddle_launch(c)),
@@ -307,7 +338,8 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
             )))
         }
         "dnd" => {
-            let Some((action, time)) = dnd_action(args, &zone_name, tx.now()) else {
+            let Some((action, time)) = dnd_action(args, &zone_name, duration_zone, tx.now())?
+            else {
                 return Ok(CommandResult::error(
                     "Usage: /dnd [30m|2h|until 5pm|off] — bare /dnd toggles.",
                 ));
@@ -350,7 +382,8 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
                     "Out of office is off.".into()
                 }));
             }
-            let Some((time, note)) = ooo_time_and_note(args, &zone_name, tx.now()) else {
+            let Some((time, note)) = ooo_time_and_note(args, &zone_name, duration_zone, tx.now())
+            else {
                 return Ok(CommandResult::error(
                     "Usage: /ooo <when> [note] — for example “/ooo tomorrow Back soon”, “/ooo friday”, “/ooo 2026-10-05”, or “/ooo 3d”. Bare days and dates run to the end of the day; “/ooo friday 5pm” keeps the time. “/ooo off” clears it.",
                 ));
@@ -511,39 +544,55 @@ fn elapsed(now: Timestamp, n: i64, unit: &str) -> Option<Timestamp> {
             .ok()?,
     ))
 }
-fn dnd_action(args: &str, zone: &str, now: Timestamp) -> Option<(&'static str, Option<Timestamp>)> {
+/// ActiveSupport durations in days/weeks preserve the invoker's local clock;
+/// minutes/hours remain elapsed time, including across DST boundaries.
+fn duration_expiry(now: Timestamp, n: i64, unit: &str, zone_name: &str) -> Option<Timestamp> {
+    if n <= 0 {
+        return None;
+    }
+    match unit.bytes().next()? {
+        b'd' => time_parser::add_days(now, n, &zone(zone_name)),
+        b'w' => time_parser::add_days(now, n.checked_mul(7)?, &zone(zone_name)),
+        _ => elapsed(now, n, unit),
+    }
+}
+fn dnd_action(
+    args: &str,
+    zone: &str,
+    duration_zone: &str,
+    now: Timestamp,
+) -> Result<Option<(&'static str, Option<Timestamp>)>> {
     if present(args).is_none() {
-        return Some(("toggle", None));
+        return Ok(Some(("toggle", None)));
     }
     if args.eq_ignore_ascii_case("off") {
-        return Some(("off", None));
+        return Ok(Some(("off", None)));
     }
     if args.eq_ignore_ascii_case("on") {
-        return Some(("on", None));
+        return Ok(Some(("on", None)));
     }
     if let Some(c) =
         re(r"(?i)\A(?P<n>[0-9]+)\s*(?P<unit>m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\z")
             .captures(args)
     {
-        return Some((
-            "on",
-            Some(elapsed(
-                now,
-                c["n"].parse().ok()?,
-                &c["unit"].to_ascii_lowercase(),
-            )?),
-        ));
+        return Ok(c["n"]
+            .parse()
+            .ok()
+            .and_then(|n| duration_expiry(now, n, &c["unit"].to_ascii_lowercase(), duration_zone))
+            .map(|time| ("on", Some(time))));
     }
     let text = re(r"(?i)\Auntil\s+").replace(args, "");
-    let time = time_parser::parse(&text, zone, now)?;
-    (time > now).then_some(("on", Some(time)))
+    Ok(time_parser::parse_checked(&text, zone, now)?
+        .filter(|time| *time > now)
+        .map(|time| ("on", Some(time))))
 }
 fn ooo_time_and_note(
     args: &str,
     zone_name: &str,
+    duration_zone: &str,
     now: Timestamp,
 ) -> Option<(Timestamp, Option<String>)> {
-    if let Some(c)=re(r"(?is)\A(?P<n>[0-9]+)\s*(?P<unit>w(?:eeks?)?|m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\b(?P<rest>.*)\z").captures(args){return Some((elapsed(now,c["n"].parse().ok()?,&c["unit"].to_ascii_lowercase())?,present(strip(&c["rest"]))));}
+    if let Some(c)=re(r"(?is)\A(?P<n>[0-9]+)\s*(?P<unit>w(?:eeks?)?|m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\b(?P<rest>.*)\z").captures(args){return Some((duration_expiry(now,c["n"].parse().ok()?,&c["unit"].to_ascii_lowercase(),duration_zone)?,present(strip(&c["rest"]))));}
     ooo_bare_day(args, zone_name, now)
         .or_else(|| time_parser::split_leading_time(args, zone_name, now))
 }
@@ -654,25 +703,8 @@ fn claim_ooo(tx: &Tx<'_>, user: i64, active: bool) -> Result<()> {
     Ok(())
 }
 fn broadcast_ooo(tx: &mut Tx<'_>, user: i64) -> Result<()> {
-    for (name, target, partial) in [
-        (
-            "status",
-            format!("status_badge_user_{user}"),
-            Partial::UserStatus { user_id: user },
-        ),
-        (
-            "ooo_notice",
-            format!("ooo_notice_user_{user}"),
-            Partial::OooNotice { user_id: user },
-        ),
-    ] {
-        tx.emit_after_commit(Event::broadcast(&Broadcast::Turbo(TurboStream {
-            streamables: vec![Streamable::User(user), Streamable::Name(name.into())],
-            action: TurboAction::Update,
-            target,
-            partial: Some(partial),
-            maintain_scroll: false,
-        })));
-    }
-    Ok(())
+    let settings = crate::UserStatusSettings::for_ids(tx.conn(), &[user])?
+        .remove(&user)
+        .ok_or(Error::RecordNotFound("User"))?;
+    settings.announce_ooo(tx)
 }

@@ -172,6 +172,12 @@ impl Poll {
     pub fn votes(&self, conn: &Connection) -> Result<Vec<PollVote>> {
         PollVote::for_poll(conn, self.id)
     }
+    /// Standalone cards use the same ordered votes with optional voter names in one read.
+    pub fn votes_with_names(&self, conn: &Connection) -> Result<Vec<(PollVote, Option<String>)>> {
+        query_all(conn,
+            "SELECT poll_votes.*,users.name AS voter_name FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_votes.poll_id=? ORDER BY poll_votes.id",
+            [self.id],|r|Ok((PollVote::from_row(r)?,r.get("voter_name")?)))
+    }
 
     /// The ids of the polls `close_due!` closes at `now`: unstamped, with a closing time come.
     pub fn due(conn: &Connection, now: Timestamp) -> Result<Vec<i64>> {

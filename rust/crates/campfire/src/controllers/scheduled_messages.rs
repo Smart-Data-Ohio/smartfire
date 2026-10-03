@@ -58,6 +58,24 @@ fn integer(value: Option<&Param>) -> Option<i64> {
         .and_then(Param::to_s)
         .and_then(|raw| cast_integer(&raw))
 }
+enum ParseTimeError {
+    Invalid(String),
+    Exception(campfire_db::Error),
+}
+fn send_time(
+    raw: &str,
+    zone: &campfire_views::time::Zone,
+    now: jiff::Timestamp,
+) -> std::result::Result<campfire_db::Timestamp, ParseTimeError> {
+    match features::parse_time_checked(raw, zone, now) {
+        Ok(Some(time)) => Ok(time),
+        Ok(None) => Err(ParseTimeError::Invalid("Send time is invalid".into())),
+        Err(campfire_db::Error::Other(message)) if message.starts_with("ArgumentError: ") => Err(
+            ParseTimeError::Invalid(message["ArgumentError: ".len()..].into()),
+        ),
+        Err(error) => Err(ParseTimeError::Exception(error)),
+    }
+}
 pub async fn index(c: &mut Ctx) -> Result {
     prepare(c).await?;
     c.respond_to(&[&format::HTML])?;
@@ -183,23 +201,19 @@ pub async fn create(c: &mut Ctx) -> Result {
         .await;
     }
     let zone = features::user_zone(c).await?;
-    let Some(send_at) = features::parse_time(
+    let send_at = match send_time(
         &params
             .get("send_at")
             .and_then(Param::to_s)
             .unwrap_or_default(),
         &zone,
         c.now(),
-    )
-    .unwrap_or_default() else {
-        return invalid(
-            c,
-            "Send time is invalid",
-            None,
-            StatusCode::UNPROCESSABLE_ENTITY,
-            true,
-        )
-        .await;
+    ) {
+        Ok(time) => time,
+        Err(ParseTimeError::Invalid(message)) => {
+            return invalid(c, &message, None, StatusCode::UNPROCESSABLE_ENTITY, true).await;
+        }
+        Err(ParseTimeError::Exception(error)) => return Err(page::db_error(error)),
     };
     let user_id = require_current_user(c)?.id;
     match c
@@ -250,7 +264,7 @@ pub async fn create(c: &mut Ctx) -> Result {
 enum UpdateOutcome {
     Busy,
     InvalidParams(Error),
-    InvalidTime,
+    InvalidTime(String),
     Saved(Box<ScheduledMessage>),
 }
 pub async fn update(c: &mut Ctx) -> Result {
@@ -278,18 +292,19 @@ pub async fn update(c: &mut Ctx) -> Result {
                 .map(string)
                 .unwrap_or_else(|| row.markdown_source.clone());
             let time = if params.contains_key("send_at") {
-                match features::parse_time(
+                match send_time(
                     &params
                         .get("send_at")
                         .and_then(Param::to_s)
                         .unwrap_or_default(),
                     &zone,
                     now,
-                )
-                .unwrap_or_default()
-                {
-                    Some(time) => time,
-                    None => return Ok(UpdateOutcome::InvalidTime),
+                ) {
+                    Ok(time) => time,
+                    Err(ParseTimeError::Invalid(message)) => {
+                        return Ok(UpdateOutcome::InvalidTime(message));
+                    }
+                    Err(ParseTimeError::Exception(error)) => return Err(error),
                 }
             } else {
                 row.send_at
@@ -301,15 +316,8 @@ pub async fn update(c: &mut Ctx) -> Result {
     match result {
         Ok(UpdateOutcome::Busy) => invalid(c, BUSY, None, StatusCode::CONFLICT, false).await,
         Ok(UpdateOutcome::InvalidParams(error)) => Err(error),
-        Ok(UpdateOutcome::InvalidTime) => {
-            invalid(
-                c,
-                "Send time is invalid",
-                None,
-                StatusCode::UNPROCESSABLE_ENTITY,
-                false,
-            )
-            .await
+        Ok(UpdateOutcome::InvalidTime(message)) => {
+            invalid(c, &message, None, StatusCode::UNPROCESSABLE_ENTITY, false).await
         }
         Ok(UpdateOutcome::Saved(row)) => match c.respond_to(&[&format::HTML, &format::JSON])? {
             f if *f == format::JSON => payload(c, &row, StatusCode::OK).await,

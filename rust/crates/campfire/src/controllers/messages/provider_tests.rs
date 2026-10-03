@@ -28,8 +28,7 @@ async fn legacy_rich_text_edit_synchronizes_event_reference_through_ws14e() {
     use axum::http::Method;
     use campfire_kit::clock::FrozenClock;
     let row:Value=serde_json::from_str(include_str!("../../../../../vectors/messaging/event-reference-declaration.json")).unwrap();
-    let mut app=TestApp::boot_with_test_clock(std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
-    app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    let app=TestApp::boot_with_test_clock(std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
     let id=app.db().write(|tx|Message::create(tx,NewMessage{room_id:654632876,creator_id:DAVID,body:Some("<div>no links here</div>".into()),client_message_id:Some("legacy-resync-event".into()),..Default::default()}).map(|m|m.id)).await.unwrap();
     assert_eq!(row["message_id"],id);
     let response=app.david().write(Req::new(Method::PATCH,row["path"].as_str().unwrap()).header("content-type","application/json").body(json!({"message":row["input"]}).to_string())).await;

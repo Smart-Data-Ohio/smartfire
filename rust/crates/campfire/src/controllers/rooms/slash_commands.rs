@@ -29,6 +29,20 @@ pub(crate) async fn thread_id(c: &Ctx, room: &Room) -> Result<Option<i64>> {
         .await
         .map_err(db_error)
 }
+/// App media adapter for built-in posts; kept in the same writer as dispatch.
+pub(crate) fn dispatch(
+    tx: &mut campfire_db::Tx<'_>,
+    context: &Context,
+    text: &str,
+    storage: std::sync::Arc<campfire_storage::Storage>,
+) -> campfire_db::Result<slash_commands::CommandResult> {
+    let result = slash_commands::dispatch_in_user_time_zone(tx, context, text)?;
+    if let Some(id) = result.message_id {
+        let message = campfire_db::Message::find(tx.conn(), id)?;
+        crate::messaging::process_message_attachment(tx, storage, &message)?;
+    }
+    Ok(result)
+}
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = features::room(c).await?;
@@ -41,14 +55,18 @@ pub async fn create(c: &mut Ctx) -> Result {
         thread_id,
         huddles_configured: c.app().config.huddles_configured,
     };
-    let text = c.param("text").map(features::param_string).unwrap_or_default();
+    let text = c
+        .param("text")
+        .map(features::param_string)
+        .unwrap_or_default();
     let origin = c.url_for("");
+    let storage = c.app().storage.clone();
     let result = c
         .app()
         .db
         .write_scoped(
             move || crate::channels::message_features::slash_origin(&origin),
-            move |tx| slash_commands::dispatch(tx, &context, &text),
+            move |tx| dispatch(tx, &context, &text, storage),
         )
         .await
         .map_err(db_error)?;

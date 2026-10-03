@@ -158,25 +158,47 @@ fn callback_rows(events: &[Event]) -> (Value, Value) {
             Event::PushMessage { .. } => jobs.push("Room::PushMessageJob".into()),
             Event::DeliverWebhook { .. } => jobs.push("Bot::WebhookJob".into()),
             Event::Job(job) => jobs.push(job.class.into()),
+            Event::Broadcast(request)
+                if request
+                    .decode::<crate::models::user_status_settings::updates::StatusBadgeBroadcast>()
+                    .is_some() =>
+            {
+                let badge = request
+                    .decode::<crate::models::user_status_settings::updates::StatusBadgeBroadcast>()
+                    .unwrap()
+                    .unwrap();
+                broadcasts.push(json!({"method":"broadcast_update_to","streams":[crate::broadcasts::Streamable::User(badge.user_id).descriptor_name(),"status"],"target":format!("status_badge_user_{}",badge.user_id),"partial":"users/statuses/badge"}));
+            }
+            Event::Broadcast(request)
+                if request
+                    .decode::<crate::models::user_status_settings::updates::OooNoticeBroadcast>()
+                    .is_some() =>
+            {
+                let notice = request
+                    .decode::<crate::models::user_status_settings::updates::OooNoticeBroadcast>()
+                    .unwrap()
+                    .unwrap();
+                broadcasts.push(json!({"method":"broadcast_update_to","streams":[crate::broadcasts::Streamable::User(notice.user_id).descriptor_name(),"ooo_notice"],"target":format!("ooo_notice_user_{}",notice.user_id),"partial":"rooms/show/ooo_notice_line"}));
+            }
             Event::Broadcast(_) => match event.as_broadcast() {
-            Some(Broadcast::Cable { stream, payload }) => {
-                broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload}))
-            }
-            Some(Broadcast::Turbo(s)) => {
-                let partial = match &s.partial {
-                    Some(Partial::Message { .. }) => Some("messages/message"),
-                    Some(Partial::UserStatus { .. }) => Some("users/statuses/badge"),
-                    Some(Partial::OooNotice { .. }) => Some("rooms/show/ooo_notice_line"),
-                    _ => None,
-                };
-                let method = match s.action {
-                    TurboAction::Update => "broadcast_update_to",
-                    TurboAction::Append => "broadcast_append_to",
-                    TurboAction::Replace => "broadcast_replace_to",
-                    _ => "other",
-                };
-                broadcasts.push(json!({"method":method,"streams":s.streamables.iter().map(|s|s.descriptor_name()).collect::<Vec<_>>(),"target":s.target,"partial":partial}));
-            }
+                Some(Broadcast::Cable { stream, payload }) => {
+                    broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload}))
+                }
+                Some(Broadcast::Turbo(s)) => {
+                    let partial = match &s.partial {
+                        Some(Partial::Message { .. }) => Some("messages/message"),
+                        Some(Partial::UserStatus { .. }) => Some("users/statuses/badge"),
+                        Some(Partial::OooNotice { .. }) => Some("rooms/show/ooo_notice_line"),
+                        _ => None,
+                    };
+                    let method = match s.action {
+                        TurboAction::Update => "broadcast_update_to",
+                        TurboAction::Append => "broadcast_append_to",
+                        TurboAction::Replace => "broadcast_replace_to",
+                        _ => "other",
+                    };
+                    broadcasts.push(json!({"method":method,"streams":s.streamables.iter().map(|s|s.descriptor_name()).collect::<Vec<_>>(),"target":s.target,"partial":partial}));
+                }
                 _ => {}
             },
             _ => {}

@@ -66,9 +66,9 @@
       {% if ctx.human_signed_in() %}{% include "layouts/_help_menu.html" %}{% endif %}
     </nav>
 
-{% if let Some(notice) = ctx.flash_notice.as_ref().or(ctx.flash_alert.as_ref()) %}      <div class="flash" data-controller="element-removal" data-action="animationend->element-removal#remove">
-        <div class="flash__inner shadow" style="{% if ctx.flash_alert.is_some() %}--flash-background: var(--color-negative){% endif %}">
-{% if ctx.flash_alert.is_some() %}            {{ h::image_tag(ctx, "alert.svg", h::attrs().aria("hidden", true).size(24).class("colorize--white")) }}</span>
+{% if let Some(notice) = ctx.flash_notice().or(ctx.flash_alert()) %}      <div class="flash" data-controller="element-removal" data-action="animationend->element-removal#remove">
+        <div class="flash__inner shadow" style="{% if ctx.flash_alert().is_some() %}--flash-background: var(--color-negative){% endif %}">
+{% if ctx.flash_alert().is_some() %}            {{ h::image_tag(ctx, "alert.svg", h::attrs().aria("hidden", true).size(24).class("colorize--white")) }}</span>
 {% else %}            {{ h::image_tag(ctx, "check.svg", h::attrs().aria("hidden", true).size(24).class("colorize--white")) }}</span>
 {% endif %}        </div>
         <button type="button" class="flash__dismiss" data-action="element-removal#remove" aria-label="Dismiss notification">×</button>

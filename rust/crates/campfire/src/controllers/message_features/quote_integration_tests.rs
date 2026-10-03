@@ -22,7 +22,7 @@ async fn app_rows_with_job_runner(rows: Value, run_jobs: bool) -> TestApp {
 }
 pub(super) async fn insert_rows(app: &TestApp, rows: Value) {
     app.db().write(move |tx| {
-        for table in ["rooms", "memberships", "events", "event_attendances", "event_calendar_entries", "twitter_posts", "channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references", "event_references", "twitter_post_references"] {
+        for table in ["users", "rooms", "memberships", "webhooks", "calendar_meeting_caches", "events", "event_attendances", "event_calendar_entries", "twitter_posts", "channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "poll_votes", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references", "event_references", "twitter_post_references"] {
             for row in rows[table].as_array().into_iter().flatten() {
                 let row = row.as_object().unwrap();
                 let columns = row.keys().map(|k| format!("\"{k}\"")).collect::<Vec<_>>().join(",");
@@ -125,13 +125,16 @@ async fn preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms(
 }
 
 pub(super) async fn stream(app:&TestApp) -> (crate::channels::tests::support::Client,tokio::task::JoinHandle<()>) {
+    stream_with_cookie(app, &david_cookie()).await
+}
+pub(super) async fn stream_with_cookie(app: &TestApp, cookie: &str) -> (crate::channels::tests::support::Client, tokio::task::JoinHandle<()>) {
     use crate::channels::tests::support::{Client,bind_listener,identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     let listener=bind_listener().await; let address=listener.local_addr().unwrap();
     let router=app.booted.router.clone();
     let server=tokio::spawn(async move { axum::serve(listener,router).await.unwrap() });
     let mut ws=format!("ws://{address}/cable").into_client_request().unwrap();
-    for (key,value) in [("host","campfire.test"),("origin","http://campfire.test"),("cookie",david_cookie().as_str())] {
+    for (key,value) in [("host","campfire.test"),("origin","http://campfire.test"),("cookie",cookie)] {
         ws.headers_mut().insert(key,value.parse().unwrap());
     }
     let (socket,_)=tokio_tungstenite::connect_async(ws).await.unwrap();

@@ -41,10 +41,11 @@ FILES = [
     "app/models/saved_item/reminder_dispatcher.rb", "app/models/saved_item/reminder_pusher.rb",
     "app/jobs/saved_item/reminder_push_job.rb", "app/views/saved_items/index.html.erb", "app/views/saved_items/_item.html.erb",
 ]
+revision = os.environ.get("PARITY_REFERENCE_REVISION", "d7c7de92")
 image = os.environ.get("PARITY_IMAGE", "ws8bm2-reference:d7c7de92")
 output = subprocess.check_output(["docker", "run", "--rm", "--name", f"ws8bm2-reference-check-{os.getpid()}",
                                   "--entrypoint", "sha256sum", image, *[f"/rails/{p}" for p in FILES]], text=True)
-expected = {p: hashlib.sha256(subprocess.check_output(["git", "show", f"d7c7de92:{p}"], cwd=ROOT)).hexdigest() for p in FILES}
+expected = {p: hashlib.sha256(subprocess.check_output(["git", "show", f"{revision}:{p}"], cwd=ROOT)).hexdigest() for p in FILES}
 
 
 def verify(rows):
@@ -68,5 +69,5 @@ for mutation in [changed, rows[:-1]]:
         pass
     else:
         raise AssertionError("Source verification accepted injected drift")
-print(f"WS8bm2 reference source check: {len(FILES)} controller, model, helper and template files match d7c7de92")
+print(f"WS8bm2 reference source check: {len(FILES)} controller, model, helper and template files match {revision}")
 print("WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected")

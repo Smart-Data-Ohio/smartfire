@@ -144,6 +144,7 @@ pub fn parse(input: &str) -> Option<Parts> {
 /// Date._parse's default comp=true, used by ActiveModel's database fallback.
 /// Time.zone.parse explicitly uses comp=false through `parse`.
 pub fn parse_with_completion(input: &str, comp: bool) -> Option<Parts> {
+
     // date_core.c rb_date_s__parse's default limit is RSTRING_LEN, not chars.
     if input.len() > 128 {
         return None;

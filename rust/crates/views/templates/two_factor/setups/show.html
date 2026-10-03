@@ -2,7 +2,7 @@
 {% block head %}{% endblock %}
 {% block content %}
 <section class="txt-align-center">
-  <div class="panel {% if ctx.flash_alert.is_some() %}shake{% endif %} flex flex-column gap">
+  <div class="panel {% if ctx.flash_alert().is_some() %}shake{% endif %} flex flex-column gap">
     <h1 class="margin-none">Set up two-step sign-in</h1>
     <p class="margin-none">Everyone signs in with an authenticator app, on top of their password or Google sign-in.</p>
 

@@ -219,15 +219,18 @@ impl UserStatusSettings {
         self.user.status == Status::Active && self.user.role != Role::Bot
     }
     pub fn zone(&self) -> jiff::tz::TimeZone {
-        crate::slash_commands::time_parser::zone(
-            self.time_zone
-                .as_deref()
-                .filter(|s| !s.trim().is_empty())
-                .unwrap_or("UTC"),
-        )
+        self.zone_or(&jiff::tz::TimeZone::UTC)
     }
     pub fn manual_dnd_active(&self, now: Timestamp) -> bool {
         self.dnd_enabled && self.dnd_until.is_none_or(|until| until > now)
+    }
+    /// Rails time_zone_or_default: a missing member zone falls back to Time.zone.
+    pub fn zone_or(&self, request_zone: &jiff::tz::TimeZone) -> jiff::tz::TimeZone {
+        self.time_zone
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .map(crate::slash_commands::time_parser::zone)
+            .unwrap_or_else(|| request_zone.clone())
     }
     pub fn quiet_hours_active(&self, now: Timestamp) -> bool {
         let (Some(start), Some(end)) = (self.quiet_hours_start_minute, self.quiet_hours_end_minute)
@@ -300,19 +303,36 @@ impl UserStatusSettings {
         self.out_of_office(now) && self.presence_setting != "invisible"
     }
     pub fn ooo_until_date(&self, now: Timestamp) -> Option<String> {
+        self.ooo_until_date_in_zone(now, &jiff::tz::TimeZone::UTC)
+    }
+    pub fn ooo_until_date_in_zone(
+        &self,
+        now: Timestamp,
+        request_zone: &jiff::tz::TimeZone,
+    ) -> Option<String> {
         self.ooo_until_effective(now).map(|until| {
             until
                 .jiff()
-                .to_zoned(self.zone())
+                .to_zoned(self.zone_or(request_zone))
                 .strftime("%B %d, %Y")
                 .to_string()
         })
     }
     pub fn ooo_status_text(&self, now: Timestamp) -> Option<String> {
+        self.ooo_status_text_in_zone(now, &jiff::tz::TimeZone::UTC)
+    }
+    pub fn ooo_status_text_in_zone(
+        &self,
+        now: Timestamp,
+        request_zone: &jiff::tz::TimeZone,
+    ) -> Option<String> {
         if !self.ooo_status_visible(now) {
             return None;
         }
-        let mut text = format!("🌴 Out of office until {}", self.ooo_until_date(now)?);
+        let mut text = format!(
+            "🌴 Out of office until {}",
+            self.ooo_until_date_in_zone(now, request_zone)?
+        );
         if self.manual_ooo_active(now)
             && let Some(note) = self.ooo_note.as_deref().filter(|s| !s.trim().is_empty())
         {
@@ -337,7 +357,14 @@ impl UserStatusSettings {
         self.dnd_active(now) || self.meeting_dnd_active(now) || self.ooo_dnd_active(now)
     }
     pub fn status_text_display(&self, now: Timestamp) -> Option<String> {
-        self.ooo_status_text(now)
+        self.status_text_display_in_zone(now, &jiff::tz::TimeZone::UTC)
+    }
+    pub fn status_text_display_in_zone(
+        &self,
+        now: Timestamp,
+        request_zone: &jiff::tz::TimeZone,
+    ) -> Option<String> {
+        self.ooo_status_text_in_zone(now, request_zone)
             .or_else(|| self.custom_status_display(now))
             .or_else(|| {
                 self.meeting_status_visible(now)

@@ -1,0 +1,2840 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-09-23T12:00:00Z",
+  "cases": [
+    {
+      "name": "registry holds every shipped command with metadata",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "name": "huddle",
+          "description": "Start a call in this room",
+          "arg_hint": "",
+          "takes_arguments": false,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "event",
+          "description": "Open the event form prefilled",
+          "arg_hint": "<title> <when>",
+          "takes_arguments": false,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "poll",
+          "description": "Open the poll builder",
+          "arg_hint": "",
+          "takes_arguments": false,
+          "root": true,
+          "thread": false
+        },
+        {
+          "name": "remind",
+          "description": "Post and remind yourself about it later",
+          "arg_hint": "<when> <text>",
+          "takes_arguments": true,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "status",
+          "description": "Set your custom status",
+          "arg_hint": "<emoji> <text>",
+          "takes_arguments": true,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "dnd",
+          "description": "Toggle Do Not Disturb, optionally for a while",
+          "arg_hint": "[duration|off]",
+          "takes_arguments": true,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "ooo",
+          "description": "Set out of office with an optional note",
+          "arg_hint": "<when> [note]|off",
+          "takes_arguments": true,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "shrug",
+          "description": "Post with a shrug",
+          "arg_hint": "[text]",
+          "takes_arguments": true,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "me",
+          "description": "Post an action line",
+          "arg_hint": "<action>",
+          "takes_arguments": true,
+          "root": true,
+          "thread": true
+        },
+        {
+          "name": "play",
+          "description": "Play a chat sound",
+          "arg_hint": "<sound>",
+          "takes_arguments": true,
+          "root": true,
+          "thread": true
+        }
+      ]
+    },
+    {
+      "name": "command_text? matches slash commands but not escapes or play passthrough",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/poll",
+          "recognized": true
+        },
+        {
+          "text": "/me waves",
+          "recognized": true
+        },
+        {
+          "text": "//poll",
+          "recognized": false
+        },
+        {
+          "text": "hello /poll",
+          "recognized": false
+        },
+        {
+          "text": "just text",
+          "recognized": false
+        }
+      ]
+    },
+    {
+      "name": "huddle starts a call when configured",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": true,
+      "observations": [
+        {
+          "text": "/huddle",
+          "thread_id": null,
+          "result": {
+            "kind": "start_huddle",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "room_id": 654632876
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "huddle errors when unconfigured",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/huddle",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Huddles are not configured in this workspace.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "event opens the prefilled form url",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/event Launch party friday 5pm",
+          "thread_id": null,
+          "result": {
+            "kind": "open_url",
+            "message": null,
+            "url": "/rooms/654632876/events/new?event%5Bstarts_at%5D=2026-09-25T21%3A00%3A00Z&event%5Btime_zone%5D=America%2FNew_York&event%5Btitle%5D=Launch+party",
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "event without a time prefills the title only",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/event Launch party",
+          "thread_id": null,
+          "result": {
+            "kind": "open_url",
+            "message": null,
+            "url": "/rooms/654632876/events/new?event%5Btime_zone%5D=America%2FNew_York&event%5Btitle%5D=Launch+party",
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "event rejects past times",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/event Retro yesterday",
+          "thread_id": null,
+          "result": {
+            "kind": "open_url",
+            "message": null,
+            "url": "/rooms/654632876/events/new?event%5Btime_zone%5D=America%2FNew_York&event%5Btitle%5D=Retro+yesterday",
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/event Retro 2026-09-01 15:00",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "“September 01, 2026 15:00” is in the past.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "bare event opens the blank form",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/event",
+          "thread_id": null,
+          "result": {
+            "kind": "open_url",
+            "message": null,
+            "url": "/rooms/654632876/events/new",
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "poll opens the builder in channels but not threads",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [
+          {
+            "id": 9,
+            "auto_archive_after_minutes": 4320,
+            "closed_at": null,
+            "created_at": "2026-09-23 12:00:00",
+            "creator_id": 127326141,
+            "last_activity_at": "2026-09-23 12:00:00",
+            "locked_at": null,
+            "messages_count": 0,
+            "name": "Side chat",
+            "parent_message_id": null,
+            "result_markdown": null,
+            "result_updated_at": null,
+            "result_updated_by_id": null,
+            "room_id": 654632876,
+            "run_url": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "work_owner_id": null,
+            "work_status": null,
+            "work_status_changed_at": null
+          }
+        ],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/poll",
+          "thread_id": null,
+          "result": {
+            "kind": "open_poll",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/poll",
+          "thread_id": 9,
+          "result": {
+            "kind": "error",
+            "message": "“/poll” is only available in the channel, not in threads.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "remind posts and saves with a reminder",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/remind in 20 minutes review the deploy",
+          "thread_id": null,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": "Reminder set for September 23, 2026 08:20.",
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "review the deploy",
+            "action": false,
+            "streaming": false,
+            "thread_id": null,
+            "plain": "review the deploy",
+            "sound": null
+          },
+          "saved": {
+            "status": "in_progress",
+            "remind_at": "2026-09-23 12:20:00.000000"
+          },
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "remind rejects unusable input without posting",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/remind sometime review the deploy",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Usage: /remind <when> <text> — for example “/remind tomorrow 9am file expenses”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/remind in 20 minutes",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Usage: /remind <when> <text> — for example “/remind tomorrow 9am file expenses”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "status sets emoji and text until end of day",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/status 🚂 On a train",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Status set to “🚂 On a train”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚂",
+            "custom_status_text": "On a train",
+            "custom_status_expires_at": "2026-09-24 03:59:59.999999",
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "status rejects blank arguments",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/status",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Usage: /status <emoji> <text> — for example “/status 🚂 On a train”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "dnd toggles, takes durations, and turns off",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/dnd",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Do Not Disturb is on.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": true,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/dnd",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Do Not Disturb is off.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/dnd 2h",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Do Not Disturb is on until September 23, 2026 10:00.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": true,
+            "dnd_until": "2026-09-23 14:00:00.000000",
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/dnd off",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Do Not Disturb is off.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "dnd rejects garbage durations",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/dnd eventually",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Usage: /dnd [30m|2h|until 5pm|off] — bare /dnd toggles.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo sets an end with a note, and off clears it",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo 2h Back soon",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 23, 2026. Note: “Back soon”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-23 14:00:00.000000",
+            "ooo_note": "Back soon"
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo off",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office is off.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo takes week durations, dates, and datetimes",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo 1 week",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 30, 2026.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-30 12:00:00.000000",
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo friday 5pm Wrapping up",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 25, 2026. Note: “Wrapping up”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-25 21:00:00.000000",
+            "ooo_note": "Wrapping up"
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo 2026-10-01 15:00",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until October 01, 2026.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-10-01 19:00:00.000000",
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo bare tomorrow and weekdays run to the end of the day",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo tomorrow Back soon",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 24, 2026. Note: “Back soon”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-25 03:59:59.999999",
+            "ooo_note": "Back soon"
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo friday",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 25, 2026.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-26 03:59:59.999999",
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo monday Wrapping up",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 28, 2026. Note: “Wrapping up”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-29 03:59:59.999999",
+            "ooo_note": "Wrapping up"
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo bare dates run to the end of the day",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo 2026-10-05",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until October 05, 2026.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-10-06 03:59:59.999999",
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo oct 8 Back soon",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until October 08, 2026. Note: “Back soon”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-10-09 03:59:59.999999",
+            "ooo_note": "Back soon"
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo bare month dates roll to next year when this year's passed",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo sep 1",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 01, 2027.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2027-09-02 03:59:59.999999",
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo day durations stay exact",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo 3d",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 26, 2026.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-26 12:00:00.000000",
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo broadcasts the badge and the notice",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo tomorrow Back soon",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Out of office until September 24, 2026. Note: “Back soon”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": "2026-09-25 03:59:59.999999",
+            "ooo_note": "Back soon"
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": [
+            {
+              "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:status",
+              "html": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">🌴 Out of office until September 24, 2026 — Back soon</span>\n</span>\n</template></turbo-stream>"
+            },
+            {
+              "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:ooo_notice",
+              "html": "<turbo-stream action=\"update\" target=\"ooo_notice_user_127326141\"><template>  <p class=\"ooo-notice txt-small\" role=\"status\">David is out of office until September 24, 2026. Back soon</p>\n</template></turbo-stream>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ooo off while calendar OOO covers says the calendar still shows it",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [
+          {
+            "id": 1,
+            "busy_intervals": "[]",
+            "created_at": "2026-09-23 12:00:00",
+            "fetch_error": null,
+            "fetched_at": "2026-09-23 12:00:00",
+            "in_meeting_broadcast": null,
+            "ooo_intervals": "[[\"2026-09-23T11:55:00Z\",\"2026-09-26T12:00:00Z\"]]",
+            "refresh_pending_at": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "user_id": 127326141
+          }
+        ],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": true,
+        "ooo_until": "2026-09-24 12:00:00.000000",
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo off",
+          "thread_id": null,
+          "result": {
+            "kind": "ephemeral",
+            "message": "Manual out of office is off. Your calendar still shows you out until September 26, 2026.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "ooo rejects blank arguments, garbage, past times, and long notes",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/ooo",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Usage: /ooo <when> [note] — for example “/ooo tomorrow Back soon”, “/ooo friday”, “/ooo 2026-10-05”, or “/ooo 3d”. Bare days and dates run to the end of the day; “/ooo friday 5pm” keeps the time. “/ooo off” clears it.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo eventually",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Usage: /ooo <when> [note] — for example “/ooo tomorrow Back soon”, “/ooo friday”, “/ooo 2026-10-05”, or “/ooo 3d”. Bare days and dates run to the end of the day; “/ooo friday 5pm” keeps the time. “/ooo off” clears it.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo 2026-09-01 15:00",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "“September 01, 2026 15:00” is in the past.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        },
+        {
+          "text": "/ooo tomorrow xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Ooo note is too long (maximum is 140 characters)",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "shrug posts with the shrug",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/shrug ship it",
+          "thread_id": null,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "ship it ¯\\_(ツ)_/¯",
+            "action": false,
+            "streaming": false,
+            "thread_id": null,
+            "plain": "ship it ¯_(ツ)_/¯",
+            "sound": null
+          },
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "posting commands in a board answer an error without posting",
+      "room_id": 699448333,
+      "rows": {
+        "users": [],
+        "rooms": [
+          {
+            "id": 699448333,
+            "created_at": "2026-09-23 12:00:00",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "Launch",
+            "pins_changed_at": null,
+            "type": "Rooms::Board",
+            "updated_at": "2026-09-23 12:00:00"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 1021579704,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 699448333,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 127326141
+          }
+        ],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/shrug ship it",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Thread must be present in a board",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "posting commands in a board thread still post",
+      "room_id": 699448333,
+      "rows": {
+        "users": [],
+        "rooms": [
+          {
+            "id": 699448333,
+            "created_at": "2026-09-23 12:00:00",
+            "creator_id": 127326141,
+            "deleted_at": null,
+            "destroy_enqueued_at": null,
+            "direct_member_key": null,
+            "icon_name": null,
+            "inbound_email_token": null,
+            "name": "Launch",
+            "pins_changed_at": null,
+            "type": "Rooms::Board",
+            "updated_at": "2026-09-23 12:00:00"
+          }
+        ],
+        "memberships": [
+          {
+            "id": 1021579704,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 699448333,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 127326141
+          }
+        ],
+        "channel_threads": [
+          {
+            "id": 9,
+            "auto_archive_after_minutes": 4320,
+            "closed_at": null,
+            "created_at": "2026-09-23 12:00:00",
+            "creator_id": 127326141,
+            "last_activity_at": "2026-09-23 12:00:00",
+            "locked_at": null,
+            "messages_count": 0,
+            "name": "Stuck migration",
+            "parent_message_id": null,
+            "result_markdown": null,
+            "result_updated_at": null,
+            "result_updated_by_id": null,
+            "room_id": 699448333,
+            "run_url": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "work_owner_id": null,
+            "work_status": "in_progress",
+            "work_status_changed_at": "2026-09-23 12:00:00"
+          }
+        ],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/shrug ship it",
+          "thread_id": 9,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "ship it ¯\\_(ツ)_/¯",
+            "action": false,
+            "streaming": false,
+            "thread_id": 9,
+            "plain": "ship it ¯_(ツ)_/¯",
+            "sound": null
+          },
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "slash posts in threads skip the legacy webhook fanout",
+      "room_id": 654632876,
+      "rows": {
+        "users": [
+          {
+            "id": 773523960,
+            "bio": null,
+            "bot_token": null,
+            "bot_token_digest": "d54316ce92fc360286ba732f7b0296cffa08efa143cc88a1ef2ea9d165a5cf32",
+            "created_at": "2026-09-23 12:00:00",
+            "custom_status_emoji": null,
+            "custom_status_expires_at": null,
+            "custom_status_text": null,
+            "dnd_enabled": 0,
+            "dnd_until": null,
+            "email_address": null,
+            "email_self_changed_at": null,
+            "github_login": null,
+            "google_email_link_allowed": 0,
+            "icon_name": null,
+            "inbox_preferences": "{}",
+            "meeting_dnd_enabled": 0,
+            "meeting_status_enabled": 0,
+            "name": "Legacy Note",
+            "ooo_broadcast": null,
+            "ooo_calendar_enabled": 0,
+            "ooo_note": null,
+            "ooo_notify_enabled": 0,
+            "ooo_until": null,
+            "presence_setting": "auto",
+            "push_to_talk_key": null,
+            "quiet_hours_enabled": 0,
+            "quiet_hours_end_minute": null,
+            "quiet_hours_start_minute": null,
+            "role": 2,
+            "status": 0,
+            "text_size": "default",
+            "theme": "system",
+            "time_zone": null,
+            "time_zone_explicit": 0,
+            "tour_completed_at": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "voice_mode": null
+          }
+        ],
+        "rooms": [],
+        "memberships": [
+          {
+            "id": 1021579704,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 104393281,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          },
+          {
+            "id": 1021579705,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 201306877,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          },
+          {
+            "id": 1021579706,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 699448327,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          },
+          {
+            "id": 1021579707,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 654632876,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          }
+        ],
+        "channel_threads": [
+          {
+            "id": 9,
+            "auto_archive_after_minutes": 4320,
+            "closed_at": null,
+            "created_at": "2026-09-23 12:00:00",
+            "creator_id": 127326141,
+            "last_activity_at": "2026-09-23 12:00:00",
+            "locked_at": null,
+            "messages_count": 0,
+            "name": "Side chat",
+            "parent_message_id": null,
+            "result_markdown": null,
+            "result_updated_at": null,
+            "result_updated_by_id": null,
+            "room_id": 654632876,
+            "run_url": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "work_owner_id": null,
+            "work_status": null,
+            "work_status_changed_at": null
+          }
+        ],
+        "webhooks": [
+          {
+            "id": 394959861,
+            "created_at": "2026-09-23 12:00:00",
+            "signing_secret": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "url": "https://example.test/legacy-note",
+            "user_id": 773523960
+          }
+        ],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/shrug Hey @[Legacy Note]",
+          "thread_id": 9,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "Hey @[Legacy Note] ¯\\_(ツ)_/¯",
+            "action": false,
+            "streaming": false,
+            "thread_id": 9,
+            "plain": "Hey @Legacy Note ¯_(ツ)_/¯",
+            "sound": null
+          },
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "slash posts in channels fan out to legacy webhooks",
+      "room_id": 654632876,
+      "rows": {
+        "users": [
+          {
+            "id": 773523960,
+            "bio": null,
+            "bot_token": null,
+            "bot_token_digest": "d54316ce92fc360286ba732f7b0296cffa08efa143cc88a1ef2ea9d165a5cf32",
+            "created_at": "2026-09-23 12:00:00",
+            "custom_status_emoji": null,
+            "custom_status_expires_at": null,
+            "custom_status_text": null,
+            "dnd_enabled": 0,
+            "dnd_until": null,
+            "email_address": null,
+            "email_self_changed_at": null,
+            "github_login": null,
+            "google_email_link_allowed": 0,
+            "icon_name": null,
+            "inbox_preferences": "{}",
+            "meeting_dnd_enabled": 0,
+            "meeting_status_enabled": 0,
+            "name": "Legacy Note",
+            "ooo_broadcast": null,
+            "ooo_calendar_enabled": 0,
+            "ooo_note": null,
+            "ooo_notify_enabled": 0,
+            "ooo_until": null,
+            "presence_setting": "auto",
+            "push_to_talk_key": null,
+            "quiet_hours_enabled": 0,
+            "quiet_hours_end_minute": null,
+            "quiet_hours_start_minute": null,
+            "role": 2,
+            "status": 0,
+            "text_size": "default",
+            "theme": "system",
+            "time_zone": null,
+            "time_zone_explicit": 0,
+            "tour_completed_at": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "voice_mode": null
+          }
+        ],
+        "rooms": [],
+        "memberships": [
+          {
+            "id": 1021579704,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 104393281,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          },
+          {
+            "id": 1021579705,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 201306877,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          },
+          {
+            "id": 1021579706,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 699448327,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          },
+          {
+            "id": 1021579707,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00.000",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 654632876,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00.000",
+            "user_id": 773523960
+          }
+        ],
+        "channel_threads": [],
+        "webhooks": [
+          {
+            "id": 394959861,
+            "created_at": "2026-09-23 12:00:00",
+            "signing_secret": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "url": "https://example.test/legacy-note",
+            "user_id": 773523960
+          }
+        ],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/shrug Hey @[Legacy Note]",
+          "thread_id": null,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "Hey @[Legacy Note] ¯\\_(ツ)_/¯",
+            "action": false,
+            "streaming": false,
+            "thread_id": null,
+            "plain": "Hey @Legacy Note ¯_(ツ)_/¯",
+            "sound": null
+          },
+          "saved": null,
+          "legacy_jobs": 1,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "slash posts in threads process attachments once",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [
+          {
+            "id": 9,
+            "auto_archive_after_minutes": 4320,
+            "closed_at": null,
+            "created_at": "2026-09-23 12:00:00",
+            "creator_id": 127326141,
+            "last_activity_at": "2026-09-23 12:00:00",
+            "locked_at": null,
+            "messages_count": 0,
+            "name": "Side chat",
+            "parent_message_id": null,
+            "result_markdown": null,
+            "result_updated_at": null,
+            "result_updated_by_id": null,
+            "room_id": 654632876,
+            "run_url": null,
+            "updated_at": "2026-09-23 12:00:00",
+            "work_owner_id": null,
+            "work_status": null,
+            "work_status_changed_at": null
+          }
+        ],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/shrug hi",
+          "thread_id": 9,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "hi ¯\\_(ツ)_/¯",
+            "action": false,
+            "streaming": false,
+            "thread_id": 9,
+            "plain": "hi ¯_(ツ)_/¯",
+            "sound": null
+          },
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "me posts an action line",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/me is reviewing the deploy",
+          "thread_id": null,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "is reviewing the deploy",
+            "action": true,
+            "streaming": false,
+            "thread_id": null,
+            "plain": "is reviewing the deploy",
+            "sound": null
+          },
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "me requires an action",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/me",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Usage: /me <action> — for example “/me is reviewing the deploy”.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "play posts through the normal message path",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/play tada",
+          "thread_id": null,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "/play tada",
+            "action": false,
+            "streaming": false,
+            "thread_id": null,
+            "plain": "/play tada",
+            "sound": "tada"
+          },
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "slash posts never start a stream",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/shrug ship it",
+          "thread_id": null,
+          "result": {
+            "kind": "posted",
+            "message": null,
+            "url": null,
+            "notice": null,
+            "payload": {
+              "message_id": 935962058
+            }
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": {
+            "id": 935962058,
+            "markdown_source": "ship it ¯\\_(ツ)_/¯",
+            "action": false,
+            "streaming": false,
+            "thread_id": null,
+            "plain": "ship it ¯_(ツ)_/¯",
+            "sound": null
+          },
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 1,
+          "frames": null
+        }
+      ]
+    },
+    {
+      "name": "unknown commands error with the available list",
+      "room_id": 654632876,
+      "rows": {
+        "users": [],
+        "rooms": [],
+        "memberships": [],
+        "channel_threads": [],
+        "webhooks": [],
+        "calendar_meeting_caches": [],
+        "messages": [],
+        "action_text_rich_texts": []
+      },
+      "initial": {
+        "time_zone": "America/New_York",
+        "status": 0,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_until": null,
+        "ooo_note": null,
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      },
+      "huddle": false,
+      "observations": [
+        {
+          "text": "/frobnicate",
+          "thread_id": null,
+          "result": {
+            "kind": "error",
+            "message": "Unknown command “/frobnicate”. Available: /huddle, /event, /poll, /remind, /status, /dnd, /ooo, /shrug, /me, /play.",
+            "url": null,
+            "notice": null,
+            "payload": {}
+          },
+          "state": {
+            "custom_status_emoji": "🚀",
+            "custom_status_text": "Shipping Rust",
+            "custom_status_expires_at": null,
+            "dnd_enabled": false,
+            "dnd_until": null,
+            "ooo_until": null,
+            "ooo_note": null
+          },
+          "message": null,
+          "saved": null,
+          "legacy_jobs": 0,
+          "attachment_calls": 0,
+          "frames": null
+        }
+      ]
+    }
+  ]
+}
