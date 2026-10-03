@@ -124,7 +124,8 @@ variant(['delayed-boost-write'],'toolbar','reaction-chip__count');
 variant(['transparent-edit-field'],'actions',"actOnVisible(editor,'fill'");
 variant(['transparent-cancelled-draft','transparent-saved-draft'],'actions',"field(page,'A draft that must survive editing')");
 variant(['transparent-redelivery-field'],'actions',`field(page,"Third time's a charm.")`);
-variant(['transparent-redelivery-flag'],'actions',"actOnVisible(page.getByRole('menuitem',{name:'Edit message'");
+// Ruby :166 explicitly asserts this checkpoint with default visibility.
+variant(['transparent-redelivery-flag'],'actions',"page.locator('html[data-duplicate-delivery-rendered]')");
 variant(['transparent-newer-draft'],'actions',"field(page,'A newer draft typed while saving'");
 variant(['transparent-cleared-code-field'],'code','actOnVisible(page.getByRole(\'combobox\'');
 variant(['transparent-notify-field'],'actions',"page.getByLabel('Notify author'");

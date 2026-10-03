@@ -53,3 +53,12 @@ test('release-menu failure requires the broken guard and a click into the mounte
   const geometry=failure('behavior-actions.mjs',"assert.equal(hit,'menu')");
   assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{releaseClick:true,brokenGuard:true,menuVisible:true}]},geometry).valid,false);
 });
+
+
+test('the redelivery flag names its original visible checkpoint, not a later action',()=>{
+  const name='a duplicate delivery does not replace the message while its actions are open';
+  const checkpoint=failure('behavior-actions.mjs',"waitForVisibility(page.locator('html[data-duplicate-delivery-rendered]')");
+  const later=failure('behavior-actions.mjs',"actOnVisible(page.getByRole('menuitem',{name:'Edit message'");
+  assert.equal(rejectionEvidence(name,'transparent-redelivery-flag',valid,checkpoint).valid,true);
+  assert.equal(rejectionEvidence(name,'transparent-redelivery-flag',valid,later).valid,false);
+});
