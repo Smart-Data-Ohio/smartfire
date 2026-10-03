@@ -51,7 +51,7 @@ The frozen review inventory remains its historical **102 passed / 27 deferred / 
 
 Commands below ran sequentially from the fresh clone `.scratch/ws8bm-review-tabs/fresh`, with `CARGO_BUILD_JOBS=2`, `RUST_TEST_THREADS=8`, and `CARGO_TARGET_DIR` / `CAMPFIRE_REFERENCE` pointing into that clone. The existing machine-wide rustc throttle was unchanged. The clone started without a target, and its first normal build completed in 3m 01s. Logs are under `.scratch/ws8bm-review-tabs/`; they are evidence, never prerequisites for tracked tests.
 
-The broad positive run retains two failures: Rails missed the original 10 s attachment reply-preview assertion in the already-deferred Markdown attachment flow, and Rails timed out at the unchanged 15 s permalink navigation condition in the reply-preview fallback flow. Rust was attempted independently. The thirty reviewed declarations pass separately. No broad-run failure is erased by an isolated rerun.
+The broad positive run retains two failures: Rails missed the original 10 s attachment reply-preview assertion in the already-deferred Markdown attachment flow, and Rails timed out at the unchanged 15 s Stimulus startup gate in `viewer`, before the reply-preview fallback assertions ran. Rust was attempted independently. The thirty reviewed declarations pass separately. No broad-run failure is erased by an isolated rerun.
 
 The full discrimination set ran all 159 registered pairs. Six invalid pair attempts were retained: three attachment-filename attempts failed the earlier attachment preview instead, and three other attempts failed at Stimulus startup/network gates. Fresh-fixture retries recovered the latter three. The filename variant therefore has no paired rejection credit and remains the sole final invalid variant. There were zero escaped application attempts in this run. All six added literal-ARIA variants and the actual post-click category default were rejected at their registered assertions on both apps.
 
@@ -193,4 +193,4 @@ python3 rust/reference-tools/messaging/behavior-check.py composer --case 'clicki
 WS8bm behaviour check: 1 named cases passed on Rails and Rust; 0 failed; no pixel checks
 ```
 
-This exact isolated fresh-fixture control passes on both apps; the broad-run Rails 15 s navigation timeout remains recorded, with no deadline change and no additional declaration credit.
+This exact isolated fresh-fixture control passes on both apps; the broad-run Rails 15 s Stimulus startup timeout remains recorded, with no deadline change and no additional declaration credit.
