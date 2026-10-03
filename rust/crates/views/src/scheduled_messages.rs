@@ -5,14 +5,14 @@ use crate::{
     layouts::Page,
 };
 use askama::Template;
-use jiff::Timestamp;
 pub struct Item {
     pub id: i64,
     pub room_name: String,
     pub thread_name: Option<String>,
     pub body: String,
-    pub send_at: Timestamp,
-    pub sent_at: Option<Timestamp>,
+    pub send_at: String,
+    pub send_value: String,
+    pub sent_at: Option<String>,
     pub message_path: Option<String>,
 }
 impl Item {
@@ -22,26 +22,25 @@ impl Item {
             .method("patch")
             .class("scheduled-message__form")
     }
-    pub fn time(&self, ctx: &ViewContext, past: bool) -> h::Html {
-        crate::time::local_datetime_tag(
-            &ctx.time_zone,
+    pub fn time(&self, _ctx: &ViewContext, past: bool) -> h::Html {
+        crate::time::local_datetime_tag_iso(
             if past {
-                self.sent_at.expect("sent row")
+                self.sent_at.as_deref().expect("sent row")
             } else {
-                self.send_at
+                &self.send_at
             },
             "datetime",
             h::attrs(),
             "",
         )
     }
-    pub fn send_field(&self, ctx: &ViewContext) -> h::Html {
+    pub fn send_field(&self, _ctx: &ViewContext) -> h::Html {
         self.form().text_field(
             "send_at",
             None,
             h::attrs()
                 .class("input")
-                .value(ctx.time_zone.format(self.send_at, "%Y-%m-%dT%H:%M"))
+                .value(&self.send_value)
                 .type_("datetime-local"),
         )
     }

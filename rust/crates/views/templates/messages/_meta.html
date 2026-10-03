@@ -2,7 +2,7 @@
   <h3 class="message__heading">
     <span class="message__author" title="{{ message.creator.title }}">
       {{ message.author_button() }}    </span>
-    {{ h::link_to(&message.link_url(ctx), h::attrs().target("_top").class("message__permalink"), &message.timestamp("time", true).0) }}
+    {{ h::link_to(&message.link_url(ctx), h::attrs().target("_top").class("message__permalink"), &message.timestamp(ctx, "time", true).0) }}
 {% if message.details.edited_at.is_some() %}      <time class="message__edited" datetime="{{ message.edited_iso() }}" data-local-time-target="title" title="Edited {{ message.edited_label() }}">(edited)</time>
 {% endif %}    <span class="message__room{% if message.details.room_icon.is_some() %} message__room--custom{% endif %}">
       {{ h::icon_avatar_tag(ctx, message.details.room_icon.as_ref(), 16, h::attrs()) }}{{ h::link_to(&message.link_url(ctx), h::attrs().target("_top").data("reply_target", "link"), &h::escape(&message.room_name)) }}

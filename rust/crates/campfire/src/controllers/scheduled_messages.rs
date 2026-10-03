@@ -80,13 +80,15 @@ pub async fn index(c: &mut Ctx) -> Result {
     prepare(c).await?;
     c.respond_to(&[&format::HTML])?;
     let user_id = require_current_user(c)?.id;
+    let zone = super::presenters::view_context::time_zone(c).await?;
     let app = c.app().clone();
     let (upcoming, stranded, past) = c
         .app()
         .db
         .read(move |conn| {
             let viewer = User::find(conn, user_id)?;
-            let presenter = Presenter::new(conn, &app, None);
+            let mut presenter = Presenter::new(conn, &app, None);
+            presenter.render_zone = zone;
             let mut upcoming = Vec::new();
             let mut stranded = Vec::new();
             for row in ScheduledMessage::owned_by(conn, user_id, false)? {
@@ -122,6 +124,7 @@ pub(crate) fn view(
     viewer: &User,
     row: &ScheduledMessage,
 ) -> campfire_db::Result<campfire_views::scheduled_messages::Item> {
+    let zone = &presenter.render_zone;
     Ok(campfire_views::scheduled_messages::Item {
         id: row.id,
         room_name: presenter.room_display_name(&Room::find(conn, row.room_id)?, Some(viewer))?,
@@ -130,8 +133,9 @@ pub(crate) fn view(
             .map(|id| ChannelThread::find(conn, id).map(|thread| thread.name))
             .transpose()?,
         body: row.markdown_source.clone(),
-        send_at: row.send_at.jiff(),
-        sent_at: row.sent_at.map(|at| at.jiff()),
+        send_at: features::html_datetime(row.send_at, zone),
+        send_value: rails_compat::datetime::format(row.send_at, zone.tz(), "%Y-%m-%dT%H:%M"),
+        sent_at: row.sent_at.map(|at| features::html_datetime(at, zone)),
         message_path: row
             .sent_message_id
             .map(|id| Message::find_by_id(conn, id))
@@ -241,7 +245,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 &campfire_routes::scheduled_messages(),
                 Some(format!(
                     "Message scheduled for {}.",
-                    zone.to_fs(row.send_at.jiff(), "long")
+                    features::html_long(row.send_at, &zone)
                 )),
                 None,
                 false,

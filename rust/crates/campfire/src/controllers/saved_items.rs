@@ -46,12 +46,14 @@ pub async fn index(c: &mut Ctx) -> Result {
     let user_id = require_current_user(c)?.id;
     let status = filter(c);
     let status_filter = status.clone();
+    let zone = super::presenters::view_context::time_zone(c).await?;
     let app = c.app().clone();
     let items = c
         .app()
         .db
         .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
+            let mut presenter = Presenter::new(conn, &app, None);
+            presenter.render_zone = zone;
             let viewer = User::find(conn, user_id)?;
             SavedItem::accessible_to(conn, user_id)?
                 .into_iter()
@@ -77,12 +79,13 @@ pub(crate) fn view(
     item: &SavedItem,
 ) -> campfire_db::Result<campfire_views::saved_items::Item> {
     let message = Message::find(conn, item.message_id)?;
+    let zone = &presenter.render_zone;
     Ok(campfire_views::saved_items::Item {
         id: item.id,
         status: item.status.clone(),
-        created_at: item.created_at.jiff(),
-        remind_at: item.remind_at.map(|at| at.jiff()),
-        reminded_at: item.reminded_at.map(|at| at.jiff()),
+        created_at: features::html_datetime(item.created_at, zone),
+        remind_at: item.remind_at.map(|at| features::html_datetime(at, zone)),
+        reminded_at: item.reminded_at.map(|at| features::html_datetime(at, zone)),
         room_name: presenter
             .room_display_name(&Room::find(conn, message.room_id)?, Some(viewer))?,
         author_name: presenter.user(message.creator_id)?.name,

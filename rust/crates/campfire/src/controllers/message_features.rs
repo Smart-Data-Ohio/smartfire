@@ -275,3 +275,18 @@ mod calendar_retry_consumer_tests;
 mod relative_split_input_tests;
 #[cfg(test)]
 mod container_input_tests;
+
+#[cfg(test)]
+mod wide_html_tests;
+
+#[cfg(test)]
+mod periodic_delivery_tests;
+
+/// Presentation strings use WS11's shared wide-time renderer; view models never
+/// narrow an accepted database timestamp through Jiff.
+pub(crate) fn html_datetime(at: campfire_db::Timestamp, zone: &campfire_views::time::Zone) -> String {
+    rails_compat::datetime::render(at, zone.tz(), true)
+}
+pub(crate) fn html_long(at: campfire_db::Timestamp, zone: &campfire_views::time::Zone) -> String {
+    rails_compat::datetime::format(at, zone.tz(), "%B %d, %Y %H:%M")
+}

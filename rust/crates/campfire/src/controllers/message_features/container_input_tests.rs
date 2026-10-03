@@ -65,8 +65,7 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
             if actual != expected {
                 failures.push(json!({"size":group["size"],"case":case["name"],"actual":actual,"expected":expected}));
             }
-            let mut tables = group["baseline"].as_object().unwrap().clone();
-            tables.extend(case["state"].as_object().unwrap().clone());
+            let tables = comparison_support::expected_tables(group, case);
             app.db()
                 .read(move |conn| {
                     for (table, expected) in &tables {
@@ -132,20 +131,8 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
 /// reconstructed parser result. See check_input_mutants.py and the report.
 #[tokio::test]
 async fn exceptional_relative_consumers_match_rails_complete_state_with_flat_reads() {
-    let mut vector: Value = serde_json::from_str(include_str!(
+    let vector: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/relative_consumers.json"
-    ))
-    .unwrap();
-    // WS8b-m owns messages/_message and Presenter::user_view. Both currently
-    // hardcode UTC for the timestamp/avatar bytes. Keep those 24 named cases
-    // in the full Rails oracle and diagnostic probe rather than masking them.
-    for group in vector["groups"].as_array_mut().unwrap() {
-        group["cases"].as_array_mut().unwrap().retain(|case| {
-            case["zone"] == "UTC"
-                || !["slash_0", "slash_1", "slash_2", "slash_4"]
-                    .iter()
-                    .any(|suffix| case["name"].as_str().unwrap().ends_with(suffix))
-        });
-    }
-    assert_eq!(compare_feature_input_requests(vector).await, 56);
+    )).unwrap();
+    assert_eq!(compare_feature_input_requests(vector).await, 80);
 }

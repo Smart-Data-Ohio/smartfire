@@ -80,7 +80,7 @@ async fn adapter_owner_contract_probe() {
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.with_suffix('.log').write_text(r.stdout)
     for line in r.stdout.splitlines():
-        if line.startswith(('WS8bm2 adapter owner', 'test result:')):
+        if line.startswith(('WS8bm2 adapter approved-difference', 'test result:')):
             print(line, flush=True)
     if a.control:
         assert r.returncode != 0 and '\nadapter actual durable refusal\n' in r.stdout, r.stdout[-2000:]

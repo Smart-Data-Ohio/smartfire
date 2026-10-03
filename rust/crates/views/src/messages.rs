@@ -438,9 +438,9 @@ impl MessageView {
         format!("{}{}", ctx.base_url, self.path())
     }
 
-    pub fn timestamp(&self, style: &str, class: bool) -> h::Html {
+    pub fn timestamp(&self, ctx: &ViewContext, style: &str, class: bool) -> h::Html {
         crate::time::local_datetime_tag(
-            &crate::time::Zone::utc(),
+            &ctx.time_zone,
             self.created_at,
             style,
             if class {
@@ -578,7 +578,7 @@ pub struct MessagePartial<'a> {
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
         || {
-            let key = message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp);
+            let key = format!("{}/zone/{}", message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp), ctx.time_zone.name());
             if message.components.event_views.is_empty() { key } else {
                 use sha2::{Digest, Sha256};
                 let facts = serde_json::to_vec(&message.components.event_views).expect("event facts serialize");

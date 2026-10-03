@@ -277,6 +277,13 @@ impl ScheduledMessage {
             return Ok(false);
         }
         let mut scheduled = Self::find(tx.conn(), id)?;
+        // Rails rechecks after the SQL claim. SQLite's textual <= can select
+        // wide future years, as well as a time moved after candidate selection.
+        if !immediate && scheduled.send_at > now {
+            tx.conn().execute_cached("UPDATE scheduled_messages SET claimed_at = NULL WHERE id = ?", [id])?;
+            return Ok(false);
+        }
+
         if !scheduled.sendable(tx.conn())? {
             let reason = Room::find_by_id(tx.conn(), scheduled.room_id)?
                 .filter(Room::deleted)
