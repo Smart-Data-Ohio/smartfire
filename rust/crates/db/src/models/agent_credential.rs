@@ -14,11 +14,20 @@ pub struct AgentCredential {
     pub token_digest: String,
     pub token_last_four: String,
     pub expires_at: Option<Timestamp>,
+    /// Non-time SQLite values retained by Rails' DateTime deserialize.
+    pub raw_expires_at: Option<rusqlite::types::Value>,
     pub revoked_at: Option<Timestamp>,
     pub last_used_at: Option<Timestamp>,
     pub last_used_ip: Option<String>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
+}
+/// Public reveal-once creation facts; the plaintext secret is returned separately.
+#[derive(Debug, Clone)]
+pub struct IssuedCredential {
+    pub id: i64,
+    pub name: String,
+    pub token_last_four: String,
 }
 #[derive(Default, Debug, Clone)]
 pub struct NewCredential {
@@ -51,7 +60,16 @@ impl AgentCredential {
             name: r.get("name")?,
             token_digest: r.get("token_digest")?,
             token_last_four: r.get("token_last_four")?,
-            expires_at: r.get("expires_at")?,
+            expires_at: match r.get_ref("expires_at")? {
+                rusqlite::types::ValueRef::Integer(_) | rusqlite::types::ValueRef::Real(_) => None,
+                _ => r.get("expires_at")?,
+            },
+            raw_expires_at: match r.get_ref("expires_at")? {
+                rusqlite::types::ValueRef::Integer(_) | rusqlite::types::ValueRef::Real(_) => {
+                    Some(r.get("expires_at")?)
+                }
+                _ => None,
+            },
             revoked_at: r.get("revoked_at")?,
             last_used_at: r.get("last_used_at")?,
             last_used_ip: r.get("last_used_ip")?,
@@ -92,10 +110,57 @@ impl AgentCredential {
         }
         Ok(errors)
     }
+    fn insert_with_expiry(
+        tx: &Tx<'_>,
+        a: &NewCredential,
+        expiry: &dyn rusqlite::ToSql,
+    ) -> Result<i64> {
+        Self::validate(tx.conn(), a, None)?.into_result()?;
+        Ok(tx.conn().query_row("INSERT INTO agent_credentials(agent_id,created_by_id,name,token_digest,token_last_four,expires_at,revoked_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.created_by_id,a.name,a.token_digest,a.token_last_four,expiry,a.revoked_at,tx.now(),tx.now()],|r|r.get(0))?)
+    }
     pub fn create(tx: &Tx<'_>, a: NewCredential) -> Result<Self> {
-        Self::validate(tx.conn(), &a, None)?.into_result()?;
-        let id=tx.conn().query_row("INSERT INTO agent_credentials(agent_id,created_by_id,name,token_digest,token_last_four,expires_at,revoked_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.created_by_id,a.name,a.token_digest,a.token_last_four,a.expires_at,a.revoked_at,tx.now(),tx.now()],|r|r.get(0))?;
+        let id = Self::insert_with_expiry(tx, &a, &a.expires_at)?;
         Ok(Self::find(tx.conn(), id)?.expect("inserted credential"))
+    }
+
+    /// Rails' datetime type retains numeric/true input when serializing a save.
+    /// Return issuance facts without coercing that raw SQLite value to Timestamp.
+    /// All credentials use the same validation, secret generation and INSERT.
+    pub fn create_with_raw_expiry_secret(
+        tx: &Tx<'_>,
+        agent_id: i64,
+        name: &str,
+        created_by_id: i64,
+        expires_at: rusqlite::types::Value,
+    ) -> Result<(IssuedCredential, String)> {
+        let (attributes, secret) = Self::secret_attributes(agent_id, name, created_by_id);
+        let id = Self::insert_with_expiry(tx, &attributes, &expires_at)?;
+        Ok((
+            IssuedCredential {
+                id,
+                name: attributes.name,
+                token_last_four: attributes.token_last_four,
+            },
+            secret,
+        ))
+    }
+
+    fn secret_attributes(agent_id: i64, name: &str, created_by_id: i64) -> (NewCredential, String) {
+        let mut bytes = [0; 32];
+        rand::rng().fill_bytes(&mut bytes);
+        let secret = hex::encode(bytes);
+        let digest = digest_bot_token(&secret);
+        (
+            NewCredential {
+                agent_id,
+                created_by_id,
+                name: name.into(),
+                token_last_four: digest[..4].into(),
+                token_digest: digest,
+                ..Default::default()
+            },
+            secret,
+        )
     }
     pub fn create_with_secret(
         tx: &Tx<'_>,
@@ -104,23 +169,9 @@ impl AgentCredential {
         created_by_id: i64,
         expires_at: Option<Timestamp>,
     ) -> Result<(Self, String)> {
-        let mut bytes = [0; 32];
-        rand::rng().fill_bytes(&mut bytes);
-        let secret = hex::encode(bytes);
-        let digest = digest_bot_token(&secret);
-        let record = Self::create(
-            tx,
-            NewCredential {
-                agent_id,
-                created_by_id,
-                name: name.into(),
-                token_last_four: digest[..4].into(),
-                token_digest: digest,
-                expires_at,
-                ..Default::default()
-            },
-        )?;
-        Ok((record, secret))
+        let (mut attributes, secret) = Self::secret_attributes(agent_id, name, created_by_id);
+        attributes.expires_at = expires_at;
+        Ok((Self::create(tx, attributes)?, secret))
     }
     pub fn authenticate(conn: &Connection, secret: &str, now: Timestamp) -> Result<Option<Self>> {
         if campfire_richtext::ruby::is_blank(secret) {

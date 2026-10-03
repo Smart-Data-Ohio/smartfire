@@ -6,7 +6,7 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 #[derive(Debug, Default)]
-pub(super) struct Parts {
+pub struct Parts {
     pub year: Option<I512>,
     pub mon: Option<I512>,
     pub mday: Option<I512>,
@@ -18,6 +18,7 @@ pub(super) struct Parts {
     pub present: bool,
     zone: Option<String>,
     bc: bool,
+    complete_year: bool,
     pub range_error: bool,
 }
 
@@ -123,6 +124,12 @@ fn s3e(
     {
         std::mem::swap(&mut y, &mut d);
     }
+    if let Some(year) = &y {
+        let text = year.trim_start_matches(|c: char| !c.is_ascii_digit() && c != '-' && c != '+');
+        if text.starts_with(['-', '+']) || text.bytes().take_while(u8::is_ascii_digit).count() > 2 {
+            p.complete_year = false;
+        }
+    }
     p.year = y.as_deref().and_then(number);
     p.mon = m.as_deref().and_then(unsigned);
     p.mday = d.as_deref().and_then(unsigned);
@@ -130,14 +137,23 @@ fn s3e(
     p.present = true;
 }
 
-pub(super) fn parse(input: &str) -> Option<Parts> {
+pub fn parse(input: &str) -> Option<Parts> {
+    parse_with_completion(input, false)
+}
+
+/// Date._parse's default comp=true, used by ActiveModel's database fallback.
+/// Time.zone.parse explicitly uses comp=false through `parse`.
+pub fn parse_with_completion(input: &str, comp: bool) -> Option<Parts> {
     // date_core.c rb_date_s__parse's default limit is RSTRING_LEN, not chars.
     if input.len() > 128 {
         return None;
     }
     re!(CLEAN, r"[^\-+',./:@\p{L}\p{N}\[\]]+");
     let mut text = CLEAN.replace_all(input, " ").into_owned();
-    let mut p = Parts::default();
+    let mut p = Parts {
+        complete_year: true,
+        ..Parts::default()
+    };
     re!(DAY, r"(?i)\b(sun|mon|tue|wed|thu|fri|sat)[^-/\d\s]*");
     if take(&mut text, &DAY, None).is_some() {
         p.present = true;
@@ -166,6 +182,15 @@ pub(super) fn parse(input: &str) -> Option<Parts> {
     }
     if p.bc {
         p.year = p.year.and_then(|y| I512::ONE.checked_sub(y));
+    }
+    if comp && p.complete_year {
+        p.year = p.year.map(|year| {
+            if (I512::ZERO..=I512::from(99)).contains(&year) {
+                year + I512::from(if year >= I512::from(69) { 1900 } else { 2000 })
+            } else {
+                year
+            }
+        });
     }
     if p.offset_nanoseconds.is_none() {
         p.offset_nanoseconds = p.zone.as_deref().and_then(zone_offset);
@@ -395,6 +420,7 @@ fn ddd(s: &mut String, p: &mut Parts) {
             p.year = n(0, 2).map(|n| n * I512::from(sign));
         }
         if len == 14 {
+            p.complete_year = false;
             p.year = n(0, 4).map(|n| n * I512::from(sign));
         }
     } else {
@@ -410,6 +436,7 @@ fn ddd(s: &mut String, p: &mut Parts) {
                 p.mday = n(4, 2);
             }
             8 | 10 | 12 | 14 => {
+                p.complete_year = false;
                 p.year = n(0, 4).map(|n| n * I512::from(sign));
                 p.mon = n(4, 2);
                 p.mday = n(6, 2);

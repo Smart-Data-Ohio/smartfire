@@ -20,6 +20,7 @@ bcrypt.workspace = true
 flate2.workspace = true
 ring.workspace = true
 regex.workspace = true
+bnum.workspace = true
 uuid.workspace = true
 subtle.workspace = true
 

@@ -7,6 +7,9 @@ use campfire_db::{
 use serde_json::{Value, json};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
+#[path = "board_digest_review_test.rs"]
+mod board_digest_review;
+
 async fn listen(app: &TestApp) -> (String, String) {
     let mut listener = None;
     for port in 53200..=53299 {

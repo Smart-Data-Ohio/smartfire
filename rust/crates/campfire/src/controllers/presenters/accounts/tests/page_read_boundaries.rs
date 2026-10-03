@@ -78,7 +78,38 @@ async fn ws11ui_review199_valid_tour_timestamps_match_rails_bytes() {
 }
 
 #[tokio::test]
-async fn ws11ui_review199_tour_differential_reports_known_main_differences() {
+async fn ws11ui_review209_blob_tour_timestamps_do_not_restart_tour() {
+    let t = TestApp::boot_frozen()
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
+    let mut browser = t.david();
+    for value in ["2026-01-01 00:00:00", "Jan. 1, 2026"] {
+        t.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE users SET tour_completed_at=CAST(? AS BLOB) WHERE id=127326141",
+                    [value],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        for path in ["/agents", "/users/me/profile"] {
+            let response = browser.get(path).await;
+            assert_eq!(response.status, StatusCode::OK);
+            assert!(
+                tour_fragment(&response.text()).contains("data-tour-auto-start-value=\"false\""),
+                "valid SQLite BLOB timestamp {value:?} must keep the tour completed on {path}"
+            );
+        }
+    }
+    println!("Tour BLOB regression: 2 values; 4 responses; 0 mismatches");
+}
+
+#[tokio::test]
+async fn ws11ui_next_tour_differential_matches_all_rails_values() {
     let t = TestApp::boot_frozen()
         .await
         .unwrap()
@@ -87,14 +118,7 @@ async fn ws11ui_review199_tour_differential_reports_known_main_differences() {
     let mut browser = t.david();
     let data = tours();
     let cases = data["cases"].as_array().unwrap();
-    // This unchanged Rails fragment is an independent control for main's SQL
-    // non-null projection. Each case's own Rails fragment is still compared raw.
-    let completed = cases
-        .iter()
-        .find(|c| c["name"] == "original_valid_datetime")
-        .unwrap();
     let mut failures = Vec::new();
-    let mut known = Vec::new();
     let mut checked = 0;
     for case in cases {
         store_tour(&t, case).await;
@@ -108,40 +132,16 @@ async fn ws11ui_review199_tour_differential_reports_known_main_differences() {
                 expected["status"].as_u64().unwrap()
             );
             let equal = actual == expected["body"].as_str().unwrap();
-            if case["known_difference"].is_string() {
-                let control = completed["responses"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .find(|r| r["path"] == path)
-                    .unwrap();
-                assert_eq!(
-                    actual,
-                    control["body"].as_str().unwrap(),
-                    "keep main's complete non-null tour fragment: {} {path}",
-                    case["name"]
-                );
-                if equal {
-                    failures.push(format!("known difference changed: {} {path}", case["name"]));
-                }
-                println!(
-                    "Known main tour difference {} {path}; fix after #196 merges\nRust: {actual}\nRails: {}",
-                    case["name"],
-                    expected["body"].as_str().unwrap()
-                );
-                known.push(format!("{} {path}", case["name"]));
-            } else if !equal {
+            if !equal {
                 failures.push(format!("{} {path}", case["name"]));
             }
             checked += 1;
         }
     }
-    assert_eq!(cases.len(), 53);
-    assert_eq!(checked, 106);
-    assert_eq!(known.len(), 28);
+    assert_eq!(cases.len(), 199);
+    assert_eq!(checked, 398);
     println!(
-        "Tour Rails differential: 53 values; {checked} responses; {} known main differences; {} unexpected differences; 0 skipped; raw fragments unchanged",
-        known.len(),
+        "Tour Rails differential: 199 values; {checked} responses; {} mismatches; 0 skipped; raw fragments unchanged",
         failures.len()
     );
     assert!(failures.is_empty(), "{failures:?}");
@@ -249,4 +249,59 @@ async fn ws11ui_review199_expiry_crosses_writer_wait() {
         expected["body"].as_str().unwrap(),
         "complete approval menu bytes after the writer wait"
     );
+}
+
+#[tokio::test]
+async fn ws11ui_next_stored_datetime_cast_values_match_rails() {
+    let data: Value = serde_json::from_str(include_str!(
+        "../../../../../../../vectors/agent-tour-casts.json"
+    ))
+    .unwrap();
+    let t = TestApp::boot_frozen()
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
+    let mut failures = Vec::new();
+    for case in data["cases"].as_array().unwrap() {
+        store_tour(&t, case).await;
+        let actual = t
+            .db()
+            .read(|conn| {
+                Ok(conn.query_row(
+                    "SELECT tour_completed_at FROM users WHERE id=127326141",
+                    [],
+                    |r| {
+                        use rusqlite::types::ValueRef;
+                        Ok(match r.get_ref(0)? {
+                            ValueRef::Null => Value::Null,
+                            ValueRef::Integer(v) => json!(v),
+                            ValueRef::Real(v) => json!(v),
+                            ValueRef::Text(text) => json!(std::str::from_utf8(text).ok()
+                    .and_then(rails_compat::datetime::deserialize::<campfire_db::Timestamp>)
+                    .map(|value| value.to_db())),
+                            ValueRef::Blob(bytes) => json!(
+                                rails_compat::datetime::deserialize_sqlite_blob::<
+                                    campfire_db::Timestamp,
+                                >(bytes)
+                                .map(|value| value.to_db())
+                            ),
+                        })
+                    },
+                )?)
+            })
+            .await
+            .unwrap();
+        if actual != case["stored"] {
+            failures.push(format!(
+                "{}: {actual}; Rails {}",
+                case["name"], case["stored"]
+            ));
+        }
+    }
+    println!(
+        "Shared stored datetime cast differential: 199 values; {} mismatches",
+        failures.len()
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

@@ -19,15 +19,10 @@ pub fn sync_message(tx: &mut Tx<'_>, message: &Message, enqueue: bool) -> Result
         );
         posts.push(Post::for_reference(tx, &reference.post_id, Some(&url))?);
     }
-    let old = Post::for_message(tx.conn(), message.id)?;
-    for post in old {
-        if !posts.iter().any(|p| p.id == post.id) {
-            tx.conn().execute(
-                "DELETE FROM twitter_post_references WHERE message_id=? AND twitter_post_id=?",
-                params![message.id, post.id],
-            )?;
-        }
-    }
+    tx.conn().execute(
+        "DELETE FROM twitter_post_references WHERE message_id=? AND twitter_post_id NOT IN (SELECT value FROM json_each(?))",
+        params![message.id, serde_json::json!(posts.iter().map(|post| post.id).collect::<Vec<_>>()).to_string()],
+    )?;
     for post in posts {
         let inserted=tx.conn().execute("INSERT INTO twitter_post_references (message_id,twitter_post_id,created_at,updated_at) VALUES (?1,?2,?3,?3) ON CONFLICT(message_id,twitter_post_id) DO NOTHING",params![message.id,post.id,tx.now()])?==1;
         if enqueue && inserted && post.needs_fetch(tx.now()) {

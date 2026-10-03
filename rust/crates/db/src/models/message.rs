@@ -473,7 +473,7 @@ impl Message {
     /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
     /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
-        Self::create_with_options(tx, attributes, None, false)
+        Self::create_with_options(tx, attributes, None, false, false)
     }
 
     /// Board creation records its assignment before invoking the real WS11 opener fanout.
@@ -483,7 +483,7 @@ impl Message {
         attributes: NewMessage,
         defer_agent_delivery: bool,
     ) -> Result<Self> {
-        Self::create_with_options(tx, attributes, None, defer_agent_delivery)
+        Self::create_with_options(tx, attributes, None, defer_agent_delivery, false)
     }
 
     /// Slack's `importing: true` plus `ActiveRecord::Base.no_touching`: keep validation,
@@ -494,7 +494,16 @@ impl Message {
         created_at: Timestamp,
         edited_at: Option<Timestamp>,
     ) -> Result<Self> {
-        Self::create_with_options(tx, attributes, Some((created_at, edited_at)), false)
+        Self::create_with_options(tx, attributes, Some((created_at, edited_at)), false, false)
+    }
+
+    /// A quiet root note with already-loaded Rails belongs_to associations. Only their
+    /// existence reads are skipped; rendering, validation, touches and callbacks stay shared.
+    pub(crate) fn create_quiet_note(tx: &mut Tx<'_>, room: &Room, creator: &User, body: String) -> Result<Self> {
+        Self::create_with_options(tx, NewMessage {
+            room_id: room.id, creator_id: creator.id, system_note: true, body: Some(body),
+            ..Default::default()
+        }, None, false, true)
     }
 
     fn create_with_options(
@@ -502,10 +511,11 @@ impl Message {
         attributes: NewMessage,
         imported_time: Option<(Timestamp, Option<Timestamp>)>,
         defer_agent_delivery: bool,
+        loaded_associations: bool,
     ) -> Result<Self> {
         let importing = imported_time.is_some();
         let body = Self::rendered_body(tx, &attributes)?;
-        Self::validate(tx.conn(), &attributes)?.into_result()?;
+        Self::validate_with_associations(tx.conn(), &attributes, true, loaded_associations)?.into_result()?;
         let now = tx.now();
         let client_message_id = attributes
             .client_message_id
@@ -592,6 +602,9 @@ impl Message {
             if importing {
                 crate::models::message_reference::sync(tx, &message)?;
                 message.sync_external_references(tx, false)?;
+            } else if loaded_associations {
+                // A new quiet note still owns the exact body just persisted above.
+                message.sync_all_references_with_body(tx, Some(body.as_deref().unwrap_or("")))?;
             } else {
                 message.sync_all_references(tx)?;
             }
@@ -699,12 +712,16 @@ impl Message {
         attributes: &NewMessage,
         new_record: bool,
     ) -> Result<Errors> {
+        Self::validate_with_associations(conn, attributes, new_record, false)
+    }
+
+    fn validate_with_associations(conn: &Connection, attributes: &NewMessage, new_record: bool, loaded_associations: bool) -> Result<Errors> {
         let mut errors = Errors::default();
         // `belongs_to :room` and `:creator` (required)
-        if Room::find_by_id(conn, attributes.room_id)?.is_none() {
+        if !loaded_associations && Room::find_by_id(conn, attributes.room_id)?.is_none() {
             errors.add("room", "must exist");
         }
-        if User::find_by_id(conn, attributes.creator_id)?.is_none() {
+        if !loaded_associations && User::find_by_id(conn, attributes.creator_id)?.is_none() {
             errors.add("creator", "must exist");
         }
         // `DriveAttachment`'s own validations, through the autosaved association (declared, so
@@ -1328,16 +1345,20 @@ impl Message {
     /// `plain_text_body`: the body's plain text (`Markdown.plain_text` for a Markdown message),
     /// else the attachment's filename, else ""; a forward note goes first, a blank line between.
     pub fn plain_text_body(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<String> {
+        self.plain_text_body_from_html(conn, rich_text, self.body_html(conn)?.as_deref())
+    }
+
+    fn plain_text_body_from_html(&self, conn: &Connection, rich_text: &dyn RichText, html: Option<&str>) -> Result<String> {
         let mut text = String::new();
-        if let Some(html) = self.body_html(conn)? {
+        if let Some(html) = html {
             let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
             text = if self.markdown() {
                 rich_text
-                    .try_markdown_plain_text(conn, &html, &names)
+                    .try_markdown_plain_text(conn, html, &names)
                     .map_err(crate::Error::Other)?
             } else {
                 rich_text
-                    .try_to_plain_text(conn, &html, &names)
+                    .try_to_plain_text(conn, html, &names)
                     .map_err(crate::Error::Other)?
             };
         }
@@ -1488,22 +1509,35 @@ impl Message {
     /// `sync_all_references`, in the Rails declaration order. Peer adapters
     /// implement their import/fetch policy; no network I/O runs here.
     pub fn sync_all_references(&self, tx: &mut Tx<'_>) -> Result<()> {
+        self.sync_all_references_with_body(tx, None)
+    }
+
+    fn sync_all_references_with_body(&self, tx: &mut Tx<'_>, body: Option<&str>) -> Result<()> {
         use crate::callbacks::Phase;
         for phase in [Phase::MessageGithubReferences, Phase::MessageFizzyReferences,
             Phase::MessageTwitterReferences, Phase::MessageEventReferences] {
-            self.sync_reference_phase(tx, phase, true)?;
+            self.sync_reference_phase_with_body(tx, phase, true, body)?;
         }
-        crate::models::message_reference::sync(tx,self)?;
-        self.sync_reference_phase(tx, Phase::MessageLinkReferences, true)
+        match body {
+            Some(body) => crate::models::message_reference::sync_from_body(tx, self, body)?,
+            None => crate::models::message_reference::sync(tx,self)?,
+        }
+        self.sync_reference_phase_with_body(tx, Phase::MessageLinkReferences, true, body)
     }
 
-    fn sync_reference_phase(&self, tx: &mut Tx<'_>, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+    fn sync_reference_phase_with_body(&self, tx: &mut Tx<'_>, phase: crate::callbacks::Phase, enqueue: bool, body: Option<&str>) -> Result<()> {
         tx.model_callback(phase, self.id)?;
         if phase == crate::callbacks::Phase::MessageGithubReferences {
             for sync in tx.env().message_reference_syncs.clone() { sync(tx, self, enqueue)?; }
         }
         if phase == crate::callbacks::Phase::MessageEventReferences {
-            crate::models::calendar_event::references::sync(tx, self)?;
+            match body {
+                Some(body) => {
+                    let plain = self.plain_text_body_from_html(tx.conn(), tx.rich_text(), Some(body))?;
+                    crate::models::calendar_event::references::sync_from_plain_text(tx, self, &plain)?;
+                }
+                None => crate::models::calendar_event::references::sync(tx, self)?,
+            }
         }
         let sink = tx.env().sink.clone();
         sink.sync_message_reference_phase(tx, self, phase, enqueue)

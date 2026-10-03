@@ -2244,6 +2244,7 @@ dependencies = [
  "aes-gcm",
  "base64 0.22.1",
  "bcrypt",
+ "bnum",
  "cc",
  "flate2",
  "hex",

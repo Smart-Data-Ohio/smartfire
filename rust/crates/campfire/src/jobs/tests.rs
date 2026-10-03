@@ -959,6 +959,8 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     expected.push(ws17["presence_task"].clone());
     let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
     expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
+    let board:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/board_automations.json")).unwrap();
+    expected.extend(board["cadence"].as_array().unwrap().iter().cloned());
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
     let events = periodic.tasks().find(|task| task.name() == "event reminders").unwrap();
     assert_eq!(events.interval(), Duration::from_secs(17));

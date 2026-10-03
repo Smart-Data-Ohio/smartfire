@@ -96,6 +96,15 @@ impl BoardSlaNudge {
         if User::find_by_id(conn, input.recipient_id)?.is_none() {
             errors.add("recipient", "must exist");
         }
+        Self::validate_attributes(conn, input, existing_id, &mut errors)?;
+        Ok(errors)
+    }
+    fn validate_attributes(
+        conn: &Connection,
+        input: &NewBoardSlaNudge,
+        existing_id: Option<i64>,
+        errors: &mut Errors,
+    ) -> Result<()> {
         let status = input.work_status.as_deref();
         if status.is_none_or(campfire_richtext::ruby::is_blank) {
             errors.add("work_status", "can't be blank");
@@ -114,19 +123,22 @@ impl BoardSlaNudge {
             errors.add("status_entered_at", "can't be blank");
         }
         let duplicate: bool = conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM board_sla_nudges WHERE channel_thread_id=? AND work_status IS ? AND stage IS ? AND status_entered_at IS ? AND id != ?)",
-            params![input.channel_thread_id, status, stage, input.status_entered_at, existing_id.unwrap_or(0)], |row| row.get(0))?;
+            "SELECT EXISTS(SELECT 1 FROM board_sla_nudges WHERE channel_thread_id=? AND work_status IS ? AND stage IS ? AND status_entered_at IS ? AND (? IS NULL OR id != ?))",
+            params![input.channel_thread_id, status, stage, input.status_entered_at, existing_id, existing_id], |row| row.get(0))?;
         if duplicate {
             errors.add(
                 "status_entered_at",
                 "already fired for this status crossing",
             );
         }
-        Ok(errors)
+        Ok(())
     }
     /// Saving the claim alone has no inbox or push callback, as in Rails.
     pub fn create(tx: &mut Tx<'_>, input: NewBoardSlaNudge) -> Result<Self> {
         Self::validate(tx.conn(), &input, None)?.into_result()?;
+        Self::insert(tx, input)
+    }
+    fn insert(tx: &mut Tx<'_>, input: NewBoardSlaNudge) -> Result<Self> {
         let now = tx.now();
         Ok(tx.conn().query_row(
             "INSERT INTO board_sla_nudges(room_id,channel_thread_id,recipient_id,work_status,stage,status_entered_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) RETURNING *",
@@ -137,13 +149,29 @@ impl BoardSlaNudge {
     pub fn claim_and_notify(tx: &mut Tx<'_>, input: NewBoardSlaNudge, push: bool) -> Result<Self> {
         tx.savepoint(move |tx| {
             let nudge = Self::create(tx, input)?;
-            ActivityItem::record(
-                tx,
-                nudge.recipient_id,
-                super::activity_item::ActivitySource::BoardSlaNudge(nudge.id),
-                "work_sla",
-                false,
-            )?;
+            ActivityItem::record_board_sla_nudge(tx, &nudge)?;
+            if push {
+                tx.emit_after_commit(Event::job(&super::notification_push::BoardNudgeJob {
+                    nudge_id: nudge.id,
+                }));
+            }
+            Ok(nudge)
+        })
+    }
+    /// The dispatcher's transaction rechecks board, thread and recipient eligibility together.
+    /// Reuse its batched recipient instead of reloading each belongs_to for every stage.
+    pub(crate) fn claim_and_notify_for_dispatch(
+        tx: &mut Tx<'_>,
+        input: NewBoardSlaNudge,
+        recipient: &User,
+        push: bool,
+    ) -> Result<Self> {
+        tx.savepoint(move |tx| {
+            let mut errors = Errors::default();
+            Self::validate_attributes(tx.conn(), &input, None, &mut errors)?;
+            errors.into_result()?;
+            let nudge = Self::insert(tx, input)?;
+            ActivityItem::record_board_sla_nudge_for_recipient(tx, &nudge, recipient)?;
             if push {
                 tx.emit_after_commit(Event::job(&super::notification_push::BoardNudgeJob {
                     nudge_id: nudge.id,
