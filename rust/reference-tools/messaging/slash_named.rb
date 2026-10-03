@@ -41,7 +41,9 @@ names.each_with_index do |name,i|
     frames.clear;ActiveJob::Base.queue_adapter.enqueued_jobs.clear;calls=0
     tracing=TracePoint.new(:call) { |t| calls+=1 if t.method_id==:process_attachment && t.self.is_a?(Message) }
     selected_thread=i==8 && n==0 ? nil : thread
+    count_before=Message.count
     result=tracing.enable { SlashCommands::Dispatcher.dispatch(user:user,room:room,thread:selected_thread,text:) }
+    count_after=Message.count
     posted=result.payload[:message_id] && Message.find(result.payload[:message_id])
     user.reload
     state=user.attributes.slice('custom_status_emoji','custom_status_text','custom_status_expires_at','dnd_enabled','dnd_until','ooo_until','ooo_note')
@@ -50,7 +52,7 @@ names.each_with_index do |name,i|
     saved=posted && user.saved_items.find_by(message:posted)
     jobs=ActiveJob::Base.queue_adapter.enqueued_jobs.count { |j| j[:job]==Bot::WebhookJob }
     streams=["#{user.to_gid_param}:status","#{user.to_gid_param}:ooo_notice"]
-    observations << {text:,thread_id:selected_thread&.id,result:result.to_h,state:,message:posted && {id:posted.id,markdown_source:posted.markdown_source,action:posted.action?,streaming:posted.streaming?,thread_id:posted.thread_id,plain:posted.plain_text_body,sound:posted.sound&.name},saved:saved && {status:saved.status,remind_at:saved.remind_at&.utc&.strftime('%Y-%m-%d %H:%M:%S.%6N')},legacy_jobs:jobs,attachment_calls:calls,frames:i==21 ? frames.select { |f| streams.include?(f[:stream]) }.dup : nil}
+    observations << {message_counts:[count_before,count_after],text:,thread_id:selected_thread&.id,result:result.to_h,state:,message:posted && {id:posted.id,markdown_source:posted.markdown_source,action:posted.action?,streaming:posted.streaming?,thread_id:posted.thread_id,plain:posted.plain_text_body,sound:posted.sound&.name},saved:saved && {status:saved.status,remind_at:saved.remind_at&.utc&.strftime('%Y-%m-%d %H:%M:%S.%6N')},legacy_jobs:jobs,attachment_calls:calls,frames:i==21 ? frames.select { |f| streams.include?(f[:stream]) }.dup : nil}
    end
   end
   cases << {name:,room_id:room.id,rows:,initial:initial.transform_values { |v| v.is_a?(Time) || v.is_a?(ActiveSupport::TimeWithZone) ? v.utc.strftime('%Y-%m-%d %H:%M:%S.%6N') : v },huddle:config,observations:}
