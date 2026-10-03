@@ -76,6 +76,7 @@ pub fn all_emoji(text: &str) -> bool {
 }
 
 /// `Time#to_fs(:number)`: `%Y%m%d%H%M%S` in UTC (the app's time zone).
+#[cfg(test)]
 pub fn to_fs_number(time: jiff::Timestamp) -> String {
     time.strftime("%Y%m%d%H%M%S").to_string()
 }
