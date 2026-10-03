@@ -43,3 +43,13 @@ test('method-name stack columns preserve only their own receiver',()=>{
   const error=failure('behavior-message-list.mjs','equal(active,first)');
   assert.equal(rejectionEvidence("a focus move during a stream render survives Turbo's focus restore",'default',valid,error).valid,true);
 });
+
+test('release-menu failure requires the broken guard and a click into the mounted menu',()=>{
+  const name='a release click landing on the just-opened menu does not activate it';
+  const error=failure('behavior-actions.mjs','await assertMenuOpen(page)');
+  const probe={...valid,requiresReleaseClick:true};
+  assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{releaseClick:true,brokenGuard:true,menuVisible:true}]},error).valid,true);
+  const geometry=failure('behavior-actions.mjs',"assert.equal(hit,'menu')");
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{releaseClick:true,brokenGuard:true,menuVisible:true}]},geometry).valid,false);
+});

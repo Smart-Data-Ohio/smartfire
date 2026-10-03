@@ -76,7 +76,7 @@ add(['picker arrows move through options, Enter selects, and Escape returns focu
 add(['picker tabs move with arrow keys and switch the grid'],'toolbar','document.activeElement?.id');
 add(['message action menu is a bottom sheet with touch-sized targets on phones','shows the message action menu as a bottom sheet on phones'],'actions','viewport.height-menu.bottom');
 add(['message action menu stays a floating popover on desktop'],'actions','g.menu.width<g.viewport.width');
-add(['a release click landing on the just-opened menu does not activate it'],'actions','[data-composer-target="context"][hidden]');
+D.set('a release click landing on the just-opened menu does not activate it',[target('actions','await assertMenuOpen(page)'),target('actions','[data-composer-target="context"][hidden]')]);
 add(['edits through the normal composer and restores the saved draft on cancel and success'],'actions','field(page,\'A draft that must survive editing\')');
 add(['a duplicate delivery does not replace the message while its actions are open'],'actions','window.originalDeliveredMessage.isConnected');
 add(['keeps newer typing through an asynchronous edit and leaves failures in edit mode'],'actions',"field(page,'A newer draft typed while saving'");
@@ -180,6 +180,7 @@ export function rejectionEvidence(caseName,variant,probe,error) {
   else if(error.code!=='ERR_ASSERTION'&&error.name!=='TimeoutError') reasons.push('infrastructure failed');
   if(!matched) reasons.push('intended assertion did not fail');
   if(probe.observers?.length&&!probe.observed?.length) reasons.push('mutated DOM state not encountered');
+  if(probe.requiresReleaseClick&&!probe.observed?.some(state=>state.releaseClick&&state.brokenGuard&&state.menuVisible)) reasons.push('mutated release click not encountered');
   if(probe.requiresHiddenState&&!probe.observed?.some(state=>state.opacity==='0'||state.visibility==='hidden'||state.display==='none')) reasons.push('hidden mutation state not encountered');
   return {valid:reasons.length===0,reasons,expected,actual:frames,observed:probe.observed||[]};
 }

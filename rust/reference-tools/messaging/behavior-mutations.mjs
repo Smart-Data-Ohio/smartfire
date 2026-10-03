@@ -286,6 +286,17 @@ export async function installMutation(page,caseName,probe,variant='default') {
   assert.ok(mutation,`no discrimination mutant for ${caseName}`);
   if(process.env.WS8BM_NEGATIVE==='1') probe.target=mutationTarget(caseName,variant);
   const [asset,,replacement]=mutation;
+  if(caseName==='a release click landing on the just-opened menu does not activate it'&&variant==='default') {
+    probe.requiresReleaseClick=true;
+    await page.addInitScript(()=>{
+      window.__ws8bmReleaseClicks=[];
+      document.addEventListener('click',event=>{
+        const menu=event.target.closest?.('#message-actions-menu');
+        if(menu) window.__ws8bmReleaseClicks.push({releaseClick:true,brokenGuard:window.__ws8bmBrokenReleaseGuard===true,menuVisible:!menu.hidden});
+      },true);
+    });
+    (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmReleaseClicks||[]).catch(()=>[]));
+  }
   const cssSelector=asset==='messages-'&&replacement?.includes('{')?replacement.split('{')[0].trim():null;
   const scriptedSelector=['transparent-cancelled-draft','transparent-saved-draft','transparent-newer-draft'].includes(variant)?editor:
     ['transparent-device-text','transparent-drive-text','transparent-phone-drive-text'].includes(variant)?'.attach-menu span[style]':
@@ -340,6 +351,7 @@ export async function installMutation(page,caseName,probe,variant='default') {
     else if(profile) {assert.ok(body.includes('aria-label="Message Kevin"'));body=body.replace('aria-label="Message Kevin"','aria-label="Wrong recipient"');}
     else if(githubThread) {assert.ok(body.includes('github-pr-thread-header'));body=body.replaceAll('github-pr-thread-header','missing-pr-header');}
     else {assert.ok(body.includes(needle),`mutant source needle missing: ${asset}`);body=body.replace(needle,replacement);}
+    if(probe.requiresReleaseClick) body=body.replace('this.#suppressClickUntil = 0','this.#suppressClickUntil = 0; window.__ws8bmBrokenReleaseGuard = true');
     // Diagnostic composition: the intended delayed marker still exists, but
     // hide loading text to reproduce an earlier, unrelated timeout. This must
     // be INVALID under strict attribution, never another registered negative.
