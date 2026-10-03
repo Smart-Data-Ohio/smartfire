@@ -1,8 +1,10 @@
 //! `Accounts::BotsController` (reference/app/controllers/accounts/bots_controller.rb).
 
 pub mod credentials;
-pub mod grants;
+mod date_parse;
 pub mod github_connections;
+pub mod grants;
+pub(crate) mod input_casts;
 pub mod keys;
 pub mod webhook_secrets;
 
@@ -63,34 +65,62 @@ pub async fn create(c: &mut Ctx) -> Result {
         .await?;
     let owner_id = concerns::require_current_user(c)?.id;
     let context = audit_context(c)?;
-    let result = c
-        .app()
-        .db
-        .write(move |tx| {
-            let bot = User::create_bot_with_attributes(tx, NewUser { name, icon_name, ..Default::default() }, webhook_url.as_deref())?;
-            let agent = Agent::create(
-                tx,
-                NewAgent {
-                    user_id: bot.id,
-                    owner_id: Some(owner_id),
-                    kind: AgentKind::Workspace,
-                    ..Default::default()
-                },
-            )?;
-            AuditLog::record(
-                tx,
-                NewAuditLog {
-                    action: "agent.create".into(),
-                    target: Some(audit_target(&bot, Some(&agent))),
-                    changes: Some(json!({"name":bot.name,"kind":"workspace"})),
-                    ..Default::default()
-                },
-                &context,
-            )?;
-            attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
-            Ok(bot)
-        })
-        .await;
+    // User.create_bot!, create_agent! and AuditLog.record! are independent Rails
+    // saves. A later failure must leave the earlier committed rows observable.
+    let result = async {
+        let bot = c
+            .app()
+            .db
+            .write(move |tx| {
+                let bot = User::create_bot_with_attributes(
+                    tx,
+                    NewUser {
+                        name,
+                        icon_name,
+                        ..Default::default()
+                    },
+                    None,
+                )?;
+                attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
+                Ok(bot)
+            })
+            .await?;
+        if let Some(url) = webhook_url {
+            let id = bot.id;
+            c.app()
+                .db
+                .write(move |tx| campfire_db::Webhook::create(tx, id, Some(&url)))
+                .await?;
+        }
+        let id = bot.id;
+        let agent = c
+            .app()
+            .db
+            .write(move |tx| {
+                Agent::create(
+                    tx,
+                    NewAgent {
+                        user_id: id,
+                        owner_id: Some(owner_id),
+                        kind: AgentKind::Workspace,
+                        ..Default::default()
+                    },
+                )
+            })
+            .await?;
+        let audit = NewAuditLog {
+            action: "agent.create".into(),
+            target: Some(audit_target(&bot, Some(&agent))),
+            changes: Some(json!({"name":bot.name,"kind":"workspace"})),
+            ..Default::default()
+        };
+        c.app()
+            .db
+            .write(move |tx| AuditLog::record(tx, audit, &context))
+            .await?;
+        Ok::<_, campfire_db::Error>(bot)
+    }
+    .await;
     match result {
         Ok(bot) => {
             c.set_header("cache-control", "no-store");
@@ -182,59 +212,118 @@ pub async fn update(c: &mut Ctx) -> Result {
         ..Default::default()
     };
     let agent_changes = agent_params(c);
+    // Rails set_agent/assign_attributes retain a request's original values;
+    // save! only persists attributes dirtied against that snapshot.
+    let before_agent = c
+        .app()
+        .db
+        .read({
+            let id = bot.id;
+            move |conn| Agent::for_user(conn, id)
+        })
+        .await
+        .map_err(Error::internal)?;
+    let dirty_agent = before_agent
+        .as_ref()
+        .map(|agent| dirty_agent_changes(agent, agent_changes.clone()))
+        .unwrap_or_default();
+    let audit_changes = dirty_agent.clone();
     let avatar = Assignment::from_params(&params, "avatar")?
         .stage(c.app())
         .await?;
     let context = audit_context(c)?;
     // Preserve Rails' distinction between an omitted URL and a submitted blank URL.
-    let webhook_submitted = concerns::require_current_user(c)?.is_administrator()
-        && params.contains_key("webhook_url");
+    let webhook_submitted =
+        concerns::require_current_user(c)?.is_administrator() && params.contains_key("webhook_url");
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let before_bot = bot.clone();
     let requested_agent = agent_changes.clone();
-    let result = c.app().db.write(move |tx| {
-        let mut agent = Agent::for_user(tx.conn(), bot.id)?;
-        let before_agent = agent.clone();
-        if let Some(agent) = &agent { agent.validate_changes(tx.conn(), agent_changes.clone())?.into_result()?; }
+    let validation_changes = agent_changes.clone();
+    let mut agent = before_agent.clone();
+    let validation_agent = before_agent.clone();
+    let result = async {
+        let (bot, after_url) = c.app().db.write(move |tx| {
+        let agent = validation_agent;
+        if let Some(agent) = &agent { agent.validate_changes(tx.conn(), validation_changes)?.into_result()?; }
         if webhook_submitted {
             bot.update_bot(tx, changes, webhook_url.as_deref())?;
         } else {
             bot.update(tx, changes)?;
         }
-        if let Some(agent) = &mut agent { agent.update(tx, agent_changes)?; }
-        let target = audit_target(&bot, agent.as_ref());
         let after_url = bot.webhook_url(tx.conn())?;
+        attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
+        Ok((bot, after_url))
+        }).await?;
+        if let Some(mut updated) = agent.take() {
+            agent = Some(c.app().db.write(move |tx| {
+                // Rails save! follows the already committed update_bot. A late
+                // save failure is not the earlier invalid? form response.
+                updated.update(tx, dirty_agent).map_err(|error| match error {
+                    campfire_db::Error::RecordInvalid(_) => campfire_db::Error::Other(error.to_string()),
+                    error => error,
+                })?;
+                Ok(updated)
+            }).await?);
+        }
+        let target = audit_target(&bot, agent.as_ref());
         if previous_url != after_url {
-            AuditLog::record(tx, NewAuditLog { action: "agent.webhook_url.change".into(), target: Some(target.clone()),
-                changes: Some(json!({"webhook_url":audit_log::pair(json!(audit_log::webhook_origin_summary(previous_url.as_deref())?),json!(audit_log::webhook_origin_summary(after_url.as_deref())?))})), ..Default::default() }, &context)?;
+            let audit = NewAuditLog { action: "agent.webhook_url.change".into(), target: Some(target.clone()),
+                changes: Some(json!({"webhook_url":audit_log::pair(json!(audit_log::webhook_origin_summary(previous_url.as_deref())?),json!(audit_log::webhook_origin_summary(after_url.as_deref())?))})), ..Default::default() };
+            let context = context.clone();
+            c.app().db.write(move |tx| AuditLog::record(tx, audit, &context)).await?;
         }
         let mut pairs = serde_json::Map::new();
         if before_bot.name != bot.name { pairs.insert("name".into(), audit_log::pair(json!(before_bot.name), json!(bot.name))); }
         if before_bot.icon_name != bot.icon_name { pairs.insert("icon_name".into(), audit_log::pair(json!(before_bot.icon_name), json!(bot.icon_name))); }
         if let (Some(before), Some(after)) = (&before_agent, &agent) {
-            macro_rules! changed { ($($field:ident),*) => {$(if before.$field != after.$field { pairs.insert(stringify!($field).into(), audit_log::pair(json!(before.$field), json!(after.$field))); })*}; }
+            macro_rules! changed { ($($field:ident),*) => {$(if agent_field_submitted(&audit_changes, stringify!($field)) && before.$field != after.$field { pairs.insert(stringify!($field).into(), audit_log::pair(json!(before.$field), json!(after.$field))); })*}; }
             changed!(provider, runtime, description, daily_message_cap, daily_board_post_cap, daily_external_action_cap);
         }
         if !pairs.is_empty() {
-            AuditLog::record(tx, NewAuditLog { action: "agent.update".into(), target: Some(target), changes: Some(Value::Object(pairs)), ..Default::default() }, &context)?;
+            let audit = NewAuditLog { action: "agent.update".into(), target: Some(target), changes: Some(Value::Object(pairs)), ..Default::default() };
+            c.app().db.write(move |tx| AuditLog::record(tx, audit, &context)).await?;
         }
-        attachments::assign(tx, Record::user(bot.id), "avatar", avatar)
-    }).await;
+        Ok::<_, campfire_db::Error>(())
+    }.await;
     match result {
         Ok(()) => redirect_to_bots(c),
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             let bot = set_bot(c).await?;
             let mut form = edit_form(c, &bot).await?;
-            if errors.0.iter().any(|(field,_)| matches!(*field,"name"|"icon_name"|"webhook_url")) {
+            if errors
+                .0
+                .iter()
+                .any(|(field, _)| matches!(*field, "name" | "icon_name" | "webhook_url"))
+            {
                 form.name = params.get("name").and_then(Param::to_s).or(form.name);
                 if let Some(icon) = icon_attribute(&params) {
-                    form.icon = c.app().db.read({ let icon = icon.clone(); move |conn| Ok(icon.as_deref().and_then(|name| presenters::resolve_avatar_icon(conn, name))) }).await.map_err(Error::internal)?;
+                    form.icon = c
+                        .app()
+                        .db
+                        .read({
+                            let icon = icon.clone();
+                            move |conn| {
+                                Ok(icon
+                                    .as_deref()
+                                    .and_then(|name| presenters::resolve_avatar_icon(conn, name)))
+                            }
+                        })
+                        .await
+                        .map_err(Error::internal)?;
                     form.icon_name = icon;
                 }
-                if let Some(url) = params.get("webhook_url") { form.webhook_url = url.to_s(); }
+                if let Some(url) = params.get("webhook_url") {
+                    form.webhook_url = url.to_s();
+                }
                 form.errors = Some(errors.to_string());
-                form.error_fields = errors.0.iter().map(|(field,_)| field.to_string()).collect();
-                if let Some(agent) = &mut form.agent { apply_agent_form(agent, &requested_agent); }
+                form.error_fields = errors
+                    .0
+                    .iter()
+                    .map(|(field, _)| field.to_string())
+                    .collect();
+                if let Some(agent) = &mut form.agent {
+                    apply_agent_form(agent, &requested_agent);
+                }
             } else if let Some(agent) = &mut form.agent {
                 apply_agent_form(agent, &requested_agent);
                 agent.errors = Some(errors.to_string());
@@ -258,27 +347,63 @@ pub async fn update(c: &mut Ctx) -> Result {
     }
 }
 
+/// Casting stays with WS11; the controller only tracks Rails' dirty attributes.
+fn dirty_agent_changes(before: &Agent, mut changes: AgentChanges) -> AgentChanges {
+    macro_rules! string { ($($field:ident),*) => {$(
+        if changes.$field.as_ref() == Some(&before.$field) { changes.$field = None; }
+    )*}; }
+    string!(provider, runtime, description);
+    macro_rules! cap {
+        ($field:ident, $raw:ident) => {
+            if changes
+                .budget_cap_input(stringify!($field))
+                .is_some_and(|input| input.value == json!(before.$field))
+            {
+                changes.$field = None;
+                changes.$raw = None;
+            }
+        };
+    }
+    cap!(daily_message_cap, daily_message_cap_before_type_cast);
+    cap!(daily_board_post_cap, daily_board_post_cap_before_type_cast);
+    cap!(
+        daily_external_action_cap,
+        daily_external_action_cap_before_type_cast
+    );
+    changes
+}
+fn agent_field_submitted(changes: &AgentChanges, field: &str) -> bool {
+    match field {
+        "provider" => changes.provider.is_some(),
+        "runtime" => changes.runtime.is_some(),
+        "description" => changes.description.is_some(),
+        field => changes.budget_cap_input(field).is_some(),
+    }
+}
+
 pub async fn destroy(c: &mut Ctx) -> Result {
     before(c).await?;
     let mut bot = set_bot(c).await?;
     let context = audit_context(c)?;
-    c.app()
+    let deactivation_context = context.clone();
+    let audit = c
+        .app()
         .db
         .write(move |tx| {
             let agent = Agent::for_user(tx.conn(), bot.id)?;
-            bot.deactivate_with_audit(tx, &context)?;
-            AuditLog::record(
-                tx,
-                NewAuditLog {
-                    action: "agent.suspend".into(),
-                    target: Some(audit_target(&bot, agent.as_ref())),
-                    changes: Some(json!({"by":"bot removed"})),
-                    ..Default::default()
-                },
-                &context,
-            )?;
-            Ok(())
+            bot.deactivate_with_audit(tx, &deactivation_context)?;
+            Ok(NewAuditLog {
+                action: "agent.suspend".into(),
+                target: Some(audit_target(&bot, agent.as_ref())),
+                changes: Some(json!({"by":"bot removed"})),
+                ..Default::default()
+            })
         })
+        .await
+        .map_err(Error::internal)?;
+    c.app()
+        .db
+        .write(move |tx| AuditLog::record(tx, audit, &context))
         .await
         .map_err(Error::internal)?;
     redirect_to_bots(c)
@@ -371,12 +496,27 @@ async fn edit_form(c: &Ctx, bot: &User) -> Result<accounts::BotForm> {
     // `usable?` may mark an unreadable linked token disconnected. The owner
     // service performs that write outside the view reader and never returns a token.
     let id = bot.id;
-    let account = c.app().db.read(move |conn| crate::integrations::github::accounts::Account::for_user(conn, id)).await.map_err(Error::internal)?;
-    let github_usable = if let Some(account) = account { c.app().github_accounts.usable(account.id).await.map_err(Error::internal)? } else { false };
+    let account = c
+        .app()
+        .db
+        .read(move |conn| crate::integrations::github::accounts::Account::for_user(conn, id))
+        .await
+        .map_err(Error::internal)?;
+    let github_usable = if let Some(account) = account {
+        c.app()
+            .github_accounts
+            .usable(account.id)
+            .await
+            .map_err(Error::internal)?
+    } else {
+        false
+    };
     let (app, base_url, bot) = (c.app().clone(), c.url_for(""), bot.clone());
     c.app()
         .db
-        .read(move |conn| presenters::accounts::bot_form(conn, &app, &base_url, &bot, &zone, github_usable))
+        .read(move |conn| {
+            presenters::accounts::bot_form(conn, &app, &base_url, &bot, &zone, github_usable)
+        })
         .await
         .map_err(Error::internal)
 }
@@ -417,9 +557,17 @@ fn agent_params(c: &Ctx) -> AgentChanges {
 fn apply_agent_form(form: &mut accounts::BotAgentForm, changes: &AgentChanges) {
     macro_rules! assign { ($($field:ident),*) => {$(if let Some(value) = &changes.$field { form.$field = value.clone(); })*}; }
     assign!(provider, runtime, description);
-    for (field, noun) in [("daily_message_cap", "messages"), ("daily_board_post_cap", "board_posts"), ("daily_external_action_cap", "external_actions")] {
+    for (field, noun) in [
+        ("daily_message_cap", "messages"),
+        ("daily_board_post_cap", "board_posts"),
+        ("daily_external_action_cap", "external_actions"),
+    ] {
         if let Some(input) = changes.budget_cap_input(field) {
-            let raw = match input.before_type_cast { Value::Null => None, Value::String(value) => Some(value), value => Some(value.to_string()) };
+            let raw = match input.before_type_cast {
+                Value::Null => None,
+                Value::String(value) => Some(value),
+                value => Some(value.to_string()),
+            };
             form.raw_caps.insert(noun.into(), raw);
         }
     }
@@ -465,7 +613,9 @@ fn bot_params(c: &Ctx) -> Result<ParamMap> {
 
 /// String casting and normalization belong to the User owner; absent differs from nil.
 fn icon_attribute(params: &ParamMap) -> Option<Option<String>> {
-    params.get("icon_name").map(|input| campfire_db::models::user::icon::normalize_input(&input.to_json()))
+    params
+        .get("icon_name")
+        .map(|input| campfire_db::models::user::icon::normalize_input(&input.to_json()))
 }
 
 fn redirect_to_bots(c: &mut Ctx) -> Result {
@@ -480,11 +630,12 @@ pub(super) async fn ensure_agent(c: &Ctx, bot: &User) -> Result<Agent> {
         concerns::require_current_user(c)?.id,
         audit_context(c)?,
     );
-    c.app()
+    let (agent, audit) = c
+        .app()
         .db
         .write(move |tx| {
             if let Some(agent) = Agent::for_user(tx.conn(), bot.id)? {
-                return Ok(agent);
+                return Ok((agent, None));
             }
             let agent = Agent::create(
                 tx,
@@ -495,39 +646,24 @@ pub(super) async fn ensure_agent(c: &Ctx, bot: &User) -> Result<Agent> {
                     ..Default::default()
                 },
             )?;
-            AuditLog::record(
-                tx,
-                NewAuditLog {
-                    action: "agent.create".into(),
-                    target: Some(audit_target(&bot, Some(&agent))),
-                    changes: Some(json!({"name":bot.name,"kind":"workspace"})),
-                    ..Default::default()
-                },
-                &context,
-            )?;
-            Ok(agent)
+            let audit = NewAuditLog {
+                action: "agent.create".into(),
+                target: Some(audit_target(&bot, Some(&agent))),
+                changes: Some(json!({"name":bot.name,"kind":"workspace"})),
+                ..Default::default()
+            };
+            Ok((agent, Some(audit)))
         })
         .await
-        .map_err(Error::internal)
-}
-pub(super) fn parse_datetime(
-    param: Option<&Param>,
-    zone: &campfire_views::time::Zone,
-) -> Option<campfire_db::Timestamp> {
-    let value = param?.to_s()?;
-    if let Ok(at) = value.parse::<jiff::Timestamp>() {
-        return Some(campfire_db::Timestamp::from_jiff(at));
+        .map_err(Error::internal)?;
+    if let Some(audit) = audit {
+        c.app()
+            .db
+            .write(move |tx| AuditLog::record(tx, audit, &context))
+            .await
+            .map_err(Error::internal)?;
     }
-    value
-        .parse::<jiff::civil::DateTime>()
-        // ActiveModel::Type::DateTime falls back to Date._parse. This named-
-        // month form is in the pinned HTTP corpus; the wider grammar and raw
-        // non-time/multiparameter values still need WS11's input seam.
-        .or_else(|_| jiff::civil::DateTime::strptime("%d %b %Y %H:%M:%S", &value))
-        .ok()?
-        .to_zoned(zone.tz().clone())
-        .ok()
-        .map(|t| campfire_db::Timestamp::from_jiff(t.timestamp()))
+    Ok(agent)
 }
 pub(super) fn error_sentence(errors: &campfire_db::Errors) -> String {
     campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
@@ -552,3 +688,18 @@ pub(super) async fn viewer_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
 
 #[cfg(test)]
 mod access_boundary_tests;
+
+#[cfg(test)]
+mod coercion_tests;
+
+#[cfg(test)]
+mod mutation_boundary_tests;
+
+#[cfg(test)]
+mod interleaving_tests;
+
+#[cfg(test)]
+mod normalized_tests;
+
+#[cfg(test)]
+mod render_replay_tests;

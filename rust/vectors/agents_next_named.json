@@ -1,0 +1,48 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "reply_room": {
+      "token": "eyJfcmFpbHMiOnsiZGF0YSI6eyJib3RfaWQiOjE5MDE1MDAwMDEsInJvb21faWQiOjQ4Njc3NzY5Nn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MTU6MDAuMDAwWiJ9fQ==--eee9ff4229f9b14bb75acd59b9dbc9aa0d72842f",
+      "bot_id": 1901500001,
+      "room_id": 486777696,
+      "valid": 1901500001,
+      "wrong_room": null,
+      "tampered": null,
+      "malformed": null,
+      "blank": null,
+      "key_auth": null
+    },
+    "reply_expiry": {
+      "token": "eyJfcmFpbHMiOnsiZGF0YSI6eyJib3RfaWQiOjE5MDE1MDAwMDEsInJvb21faWQiOjQ4Njc3NzY5Nn0sImV4cCI6IjIwMjYtMDMtMDJUMTY6MDE6MDAuMDAwWiJ9fQ==--fa9b15f590dd16276a1fcc460e93446553ace89b",
+      "before": 1901500001,
+      "after": null
+    },
+    "reply_membership": {
+      "absent": null,
+      "restored": 1901500001,
+      "deactivated": null
+    },
+    "self_hop": {
+      "initial_hop": 0,
+      "self_assignments": 2,
+      "receiver_hop": 1,
+      "receiver_outcome": "pending",
+      "suppressed": 0
+    },
+    "kill_owned": {
+      "owner": 394959859,
+      "status": "in_progress",
+      "active": false,
+      "history_before": 1,
+      "history_after": 1,
+      "suspended": true
+    },
+    "rate_lock": {
+      "checks": 2,
+      "locked": true,
+      "eligible": 20,
+      "suppressed": 1,
+      "jobs": 1
+    }
+  }
+}

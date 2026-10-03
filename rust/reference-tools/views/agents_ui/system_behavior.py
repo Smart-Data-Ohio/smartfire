@@ -7,10 +7,10 @@ import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, tempfil
 root = pathlib.Path(__file__).resolve().parents[4]
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
-p.add_argument('--scenario', choices=['all','pages','budget'], default='all')
+p.add_argument('--scenario', choices=['all','pages','budget','work'], default='all')
 args = p.parse_args()
 if args.scenario == 'all':
-    codes = [subprocess.run(['python3', str(pathlib.Path(__file__).resolve()), '--binary', str(args.binary.resolve()), '--scenario', scenario], cwd=root).returncode for scenario in ['pages', 'budget']]
+    codes = [subprocess.run(['python3', str(pathlib.Path(__file__).resolve()), '--binary', str(args.binary.resolve()), '--scenario', scenario], cwd=root).returncode for scenario in ['pages', 'budget', 'work']]
     print(f'Agent behavior scenarios: {len(codes) - sum(bool(c) for c in codes)} completed; {sum(bool(c) for c in codes)} failed; 2 deferred', flush=True)
     raise SystemExit(1 if any(codes) else 0)
 frozen_time = '2026-03-03T16:00:00Z' if args.scenario == 'budget' else '2026-03-02T16:00:00Z'
@@ -40,7 +40,7 @@ try:
     # Shared rules approve exactly this post-pin status-popup layout delta.
     layout = work/'application.html.erb';layout.write_bytes(subprocess.check_output(['git','show','2e20b24c3f2be9db8a646a1352c159b4afacad0e:app/views/layouts/application.html.erb'],cwd=root))
     subprocess.run(['docker','cp',str(layout),'ws11ui-system-reference-52798:/rails/app/views/layouts/application.html.erb'],check=True)
-    fixture = subprocess.check_output([str(reference),'runner','--port','52798','--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/('budget_fixture.rb' if args.scenario == 'budget' else 'system_fixture.rb'))],cwd=root,env=env,text=True)
+    fixture = subprocess.check_output([str(reference),'runner','--port','52798','--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/({'budget':'budget_fixture.rb','work':'work_fixture.rb'}.get(args.scenario,'system_fixture.rb')))],cwd=root,env=env,text=True)
     labels.update(json.loads(fixture)); labels_file.write_text(json.dumps(labels))
     source_db = work/'seeds/.instances/52798/db/production.sqlite3'
     with sqlite3.connect(source_db) as source, sqlite3.connect(candidate/'db/production.sqlite3') as target: source.backup(target)
