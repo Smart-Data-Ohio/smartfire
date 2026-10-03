@@ -1,7 +1,8 @@
 # WS11 API remaining scope before cutover
 
 Updated on `rust/ws11api-next-2`, stacked on #205 (45bffea35), merged
-with main 500c3f6987e9aa48382e2be15396597dc37a66af. The #205 branch is not rewritten.
+with main 21be05f47f3c0967f97eefcc35b057df4e2268c4, including the lead's
+#205 merge. The #205 branch is not rewritten.
 The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
@@ -26,9 +27,9 @@ accepted; ws11api-approved-differences.md records the exact scope.
 Both approved JPEG/video crash differences and unconditional committed-file retention
 remain explicitly documented; they are deliberate differences, not unported API paths.
 
-This round trims repeated capability and serialization-identity queries in WS11's
-write adapters and ledger webhook callback. WS12 services and their authorization,
-history, audit and queue behavior remain authoritative and unchanged.
+The preceding round trimmed repeated capability and serialization-identity reads in
+WS11's write adapters and ledger webhook callback. This round batches array
+candidates. WS12 services and their authorization, history, audit and queue behavior remain authoritative and unchanged.
 
 ## Completed API behavior checked by the audit
 
