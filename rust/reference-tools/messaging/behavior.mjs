@@ -19,6 +19,7 @@ import {codeHighlighting} from './behavior-code.mjs';
 import {threadContinuation,continuationCases} from './behavior-thread-continuation.mjs';
 import {workControllers} from './behavior-work-controllers.mjs';
 import {mobileContinuation} from './behavior-mobile-continuation.mjs';
+import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
@@ -34,6 +35,11 @@ const selectedMutant=process.env.WS8BM_MUTANT;
 async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
+    // The positive phone control is the pinned Selenium sequence itself.
+    // Served negatives retain their translated initial creation checkpoint.
+    if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
+      await nativePhone(base);return;
+    }
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
       // Mutation routes must remain observable across navigations; a service

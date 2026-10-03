@@ -366,12 +366,17 @@ export async function installMutation(page,caseName,probe,variant='default') {
     'missing-reply-aria-label':'Reply to message','missing-thread-aria-label':'Open thread','missing-more-aria-label':'More message actions'};
   const attributeSelector=missingLabels[variant]?`.message__toolbar button[title="${missingLabels[variant]}"]:not([aria-label])`:
     variant==='missing-option-aria-label'?'.emoji-picker__option[aria-labelledby="ws8bm-option-label"]:not([aria-label])':null;
-  const stateSelector=cssSelector||scriptedSelector||injectedStyleSelector||attributeSelector;
+  const initialConversationSelector=variant==='hidden-initial-composer-conversation'?'#thread-panel [data-thread-panel-target="conversation"]':null;
+  const stateSelector=cssSelector||scriptedSelector||injectedStyleSelector||attributeSelector||initialConversationSelector;
+  if(variant==='hidden-submitted-body-visible-strong') probe.requiredMessageText='First message stays exact.';
+  if(initialConversationSelector) probe.requiresHiddenState=true;
   probe.requiresHiddenState ||= !!injectedStyleSelector&&/opacity:\s*0/.test(replacement)|| !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);
   if(stateSelector) (probe.observers??=[]).push(async()=>{
     if(page.isClosed()) return [];
     return page.locator(stateSelector).evaluateAll((elements,selector)=>elements.map(element=>({
-      selector,opacity:getComputedStyle(element).opacity,
+      selector,messageId:element.closest('.message[data-message-id]')?.dataset.messageId,
+      messageText:element.closest('.message[data-message-id]')?.querySelector('[data-reply-target="body"]')?.textContent.replace(/\s+/g,' ').trim(),
+      opacity:getComputedStyle(element).opacity,
       visibility:getComputedStyle(element).visibility,display:getComputedStyle(element).display,
       fontSize:getComputedStyle(element).fontSize,background:getComputedStyle(element).backgroundColor,position:getComputedStyle(element).position,
       width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height,
