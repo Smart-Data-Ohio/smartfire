@@ -20,15 +20,20 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     await waitForVisibleProperty(page.locator('#global-search-input'),'value','system paging');
   } else if(caseName==='forwarded Markdown keeps tables and code blocks') {
     const source=page.locator('.message[data-message-id]').filter({has:filterVisibleText(page.locator('pre code'),'puts :forwarded')});
-    await waitForVisibility(filterVisibleText(source.locator('pre code'),'puts :forwarded'),{timeout:10000});const id=await source.getAttribute('data-message-id');
+    await waitForVisibility(filterVisibleText(source.locator('pre code'),'puts :forwarded'),{timeout:10000});
     await actOnVisible(source.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
     await actOnVisible(page.getByRole('menuitem',{name:'Forward',exact:true}),'click',{});
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:10000});
     await actOnVisible(filterVisibleText(dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)'),'Designers'),'click',{timeout:10000});
+    const forwardedResponse=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/forwards'),{timeout:10000});
     await actOnVisible(dialog.getByRole('button',{name:'Forward',exact:true}),'click',{});
+    const response=await forwardedResponse;assert.equal(response.status(),201);
+    const payload=await response.json(),forwardedId=payload.forwards[0].message.id;
     await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),/Forwarded to 1 destination/),{timeout:10000});
     for(const viewer of [page,recipient]) {
-      const forwarded=viewer.locator(`.message[data-message-id]:not([data-message-id="${id}"])`).filter({has:filterVisibleText(viewer.locator('pre code.language-ruby'),'puts :forwarded')});
+      // Rails :57-60 scopes to the persisted copy's identity. Its code's
+      // visibility must not decide whether the preceding table lookup succeeds.
+      const forwarded=viewer.locator(`.message[data-message-id="${forwardedId}"]`);
       await waitForVisibility(forwarded.locator('.markdown-body table'),{timeout:10000});
       await waitForVisibleText(forwarded.locator('pre code.language-ruby'),'puts :forwarded');
       await waitForVisibleCount(forwarded,1);
@@ -42,6 +47,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     await submit(page,'now with https://x.com/jack/status/424242');
     await waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post'),{timeout:15000});
     assert.equal((await page.goto(base+'/rooms/654632876')).status(),200);
-    await waitForVisibility(message.locator('.x-post-card'),{timeout:10000});await waitForVisibility(filterVisibleText(message.locator('.message__edited'),'(edited)'));
+    await waitForVisibility(message.locator('.x-post-card'),{timeout:10000});
+    await waitForVisibility(filterVisibleText(message.locator('.message__edited'),'(edited)'));
   } else throw new Error(`unimplemented search/forward case ${caseName}`);
 }

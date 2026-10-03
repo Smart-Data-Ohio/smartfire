@@ -75,7 +75,7 @@ export async function messageDestinations({author:page,recipient,base,caseName,f
       assert.equal((await browser.goto(base+'/users/712064548')).status(),200);
       await waitForVisibility(browser.locator('button[aria-label="Message Kevin"]'));
       await waitForVisibleCount(browser.locator('img[aria-label]'),0);
-      if(browser!==page) await waitForVisibility(browser.getByRole('button',{name:'Ban Kevin',exact:true}));
+      if(browser!==page) await waitForVisibility(filterVisibleText(browser.locator('button'),'Ban Kevin'));
     }
   } else if(caseName===destinationCases[6]||caseName===destinationCases[7]) {
     await page.emulateMedia({reducedMotion:'reduce'});

@@ -20,6 +20,7 @@ import textwrap
 import urllib.request
 from behavior_action_rows import assert_action_rows
 from behavior_mutation_jobs import probe_jobs
+from browser_host import build_host
 
 ROOT = Path(__file__).resolve().parents[3]
 RUST = ROOT / "rust"
@@ -158,13 +159,15 @@ parser.add_argument("--case", help="run one exact pinned declaration from the se
 parser.add_argument("--exclude-case", action="append", default=[], help="explicitly omit an unresolved mapped declaration; default still runs it")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 parser.add_argument("--mutant", help="select one served mutant variant; without --negative, diagnose its acceptance on both apps (not parity credit)")
-parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes", "hidden-scopes", "categories"], help="diagnose all new visibility assertion mutants without parity credit")
+parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes", "hidden-scopes", "categories", "labels"], help="diagnose all new visibility assertion mutants without parity credit")
+parser.add_argument("--repeat",type=int,default=1,help="repeat one positive case with independent fixtures and unchanged deadlines")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
+assert args.repeat>=1 and (args.repeat==1 or (args.case and not args.negative and not args.mutant and not args.mutant_set)), "repetition is for one positive case only"
 files = args.files or list(CASES)
 if args.mutant_set:
-    assert not args.mutant and not args.case and (not args.negative or args.mutant_set in {"element-scopes", "categories"}), "only element-scopes/categories support a negative mutant-set run"
-    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations", "hidden-scopes": "hiddenScopeProbes", "categories": "categoryMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
+    assert not args.mutant and not args.case and (not args.negative or args.mutant_set in {"element-scopes", "categories", "labels"}), "only element-scopes/categories/labels support a negative mutant-set run"
+    diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations", "hidden-scopes": "hiddenScopeProbes", "categories": "categoryMutations", "labels": "labelMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
     diagnostic_variants = json.loads(subprocess.check_output([
         "node", "--input-type=module", "-e",
         f"import {{{diagnostic_export}}} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
@@ -178,7 +181,7 @@ for case in args.exclude_case:
     assert any(case in CASES[file] for file in files), "unknown excluded named case"
 SCRATCH.mkdir(exist_ok=True)
 env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="8", PARITY_CPUS="2",
-           PARITY_NAMESPACE="ws8bm-behavior", PARITY_OWNER="ws8bm", TMPDIR=str(SCRATCH))
+           PARITY_NAMESPACE="ws8bm-behavior", PARITY_OWNER="ws8bm", TMPDIR=str(SCRATCH), CAMPFIRE_REFERENCE=str(ROOT))
 image = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
 revision = subprocess.check_output(["docker", "image", "inspect", "--format", "{{range .Config.Env}}{{println .}}{{end}}", image], text=True)
 assert any(f"GIT_REVISION={value}" in revision.splitlines() for value in [PIN, PIN[:8]]), "browser reference must be the pinned Rails image"
@@ -193,8 +196,11 @@ subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"]
 subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
+paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card"}
+needs_paused_jobs=any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
+test_host=build_host(ROOT,env) if needs_paused_jobs else None
 browser_image = "ws8bm-browser-reference-d7c7de92"
-subprocess.run(["docker", "build", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/rooms/browser.Dockerfile"), "-t", browser_image, str(RUST / "parity/docker")], cwd=ROOT, check=True)
+subprocess.run(["docker", "build", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/messaging/browser.Dockerfile"), "-t", browser_image, str(RUST)], cwd=ROOT, check=True)
 env["PARITY_IMAGE"] = browser_image
 visibility_atom = subprocess.check_output([
     "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
@@ -231,6 +237,8 @@ with sqlite3.connect(RUST / "parity/.seed/default/db/production.sqlite3") as con
 passed = 0
 passed_named = set()
 failed_cases = []
+invalid_attempts=0
+retry_attempts={}
 mutation_names = set(json.loads(subprocess.check_output([
     "node", "--input-type=module", "-e",
     "import {mutationNames} from './rust/reference-tools/messaging/behavior-mutations.mjs'; console.log(JSON.stringify(mutationNames))"
@@ -271,7 +279,10 @@ for file in files:
     jobs = probe_jobs(batches, selected, negative=args.negative, mutant=args.mutant,
                       mutation_variants=mutation_variants,
                       diagnostic_variants=diagnostic_variants if args.mutant_set else None)
+    jobs *= args.repeat
     for batch, variant in jobs:
+        retry_key=(tuple(batch),variant)
+        retry_attempts[retry_key]=retry_attempts.get(retry_key,0)+1
         case = batch[0]
         for name in batch:
             assert f'test "{name}"'.encode() in source, "case must be named in the pin"
@@ -327,11 +338,20 @@ for file in files:
                 run_env["WS8BM_MUTANT"] = variant
             if file == "composer_attach_menu":
                 run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
+            paused_jobs=any(name in paused_job_cases for name in batch)
+            if paused_jobs:
+                run_env["WS8BM_BROWSER_HOST"]="1"
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log:
                 try:
-                    subprocess.run([reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
-                    process = subprocess.Popen([str(target / "debug/campfire"), "server"], cwd=ROOT, env=run_env, stdout=log, stderr=log)
+                    reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
+                    if paused_jobs:
+                        reference_up += ["-e", "WS8BM_TEST_JOB_ADAPTER=1"]
+                    subprocess.run(reference_up, cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
+                    host_command=[test_host,"controllers::presenters::test_support::ws8bm_browser_host_without_jobs","--exact","--ignored","--nocapture","--test-threads=1"] if paused_jobs else [str(target / "debug/campfire"), "server"]
+                    process = subprocess.Popen(host_command, cwd=ROOT, env=run_env, stdout=log, stderr=log)
+                    if paused_jobs:
+                        print("WS8bm job boundary: Rails ActiveJob::TestAdapter; Rust TestApp::without_job_runner; no selector deadline changes",flush=True)
                     deadline = time.monotonic() + 120
                     while True:
                         if process.poll() is not None:
@@ -350,6 +370,12 @@ for file in files:
                     command = ["node", str(RUST / "reference-tools/messaging/behavior.mjs"), f"http://127.0.0.1:{ports[0]}", f"http://127.0.0.1:{ports[1]}", file, json.dumps(batch), json.dumps(metadata)]
                     result = subprocess.run(command, cwd=ROOT, env=run_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
                     print(result.stdout, end="", flush=True)
+                    if args.negative and result.returncode and "WS8bm invalid discrimination run:" in result.stdout:
+                        invalid_attempts+=1
+                        if retry_attempts[retry_key]<int(env.get("WS8BM_DISCRIMINATION_RETRIES","3")):
+                            print(f"WS8bm invalid attempt retry: {file}: {batch}: {variant}: fresh fixtures, attempt {retry_attempts[retry_key]+1}/3",flush=True)
+                            jobs.append((batch,variant))
+                            continue
                     if result.returncode and not args.keep_going:
                         raise subprocess.CalledProcessError(result.returncode, command)
                     if args.negative:
@@ -494,6 +520,10 @@ for file in files:
                                 elif case.startswith("editing to add"):
                                     assert conn.execute("SELECT markdown_source,edited_at IS NOT NULL FROM messages WHERE id=?", (metadata["edit_card_id"],)).fetchone() == ("now with https://x.com/jack/status/424242", 1)
                                     assert conn.execute("SELECT posts.post_id FROM twitter_post_references refs JOIN twitter_posts posts ON posts.id=refs.twitter_post_id WHERE refs.message_id=?", (metadata["edit_card_id"],)).fetchall() == [("424242",)]
+                                    if database == databases[1]:
+                                        held=conn.execute("SELECT status,attempts FROM background_jobs WHERE job_class='Twitter::FetchPostJob'").fetchall()
+                                        assert held and all(row==('ready',0) for row in held), "URL jobs enqueue durably but never execute under the pinned test boundary"
+                                        print(f"WS8bm held URL jobs: Rust {len(held)} ready; 0 attempts",flush=True)
                                 else:
                                     source_row = conn.execute("SELECT id,markdown_source FROM messages WHERE client_message_id='system-forward-source'").fetchone()
                                     assert source_row is not None
@@ -569,11 +599,15 @@ for file in files:
                     subprocess.run([reference, "down", "--port", str(ports[0])], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
     print(f"WS8bm behaviour source: test/system/{file}_test.rb SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
 if args.negative:
+    print(f"WS8bm invalid discrimination attempts: {invalid_attempts}; bounded fresh-fixture retries only",flush=True)
     print(f"WS8bm discrimination check: {passed} served mutants rejected on Rails and Rust across {len(passed_named)} named checks; {len(failed_cases)} invalid or escaped", flush=True)
 elif args.mutant or args.mutant_set:
     print(f"WS8bm review escape check: {passed} served mutants accepted on Rails and Rust; {len(failed_cases)} failed probes; no parity credit", flush=True)
 else:
-    print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; {len(failed_cases)} failed; no pixel checks", flush=True)
+    if args.repeat>1:
+        print(f"WS8bm behaviour repetition: {passed} paired attempts; 1 named declaration; {len(failed_cases)} failed",flush=True)
+    else:
+        print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; {len(failed_cases)} failed; no pixel checks", flush=True)
 if failed_cases:
     print("WS8bm failed named checks:\n" + "\n".join(failed_cases), flush=True)
     raise SystemExit(1)
