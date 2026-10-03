@@ -32,6 +32,8 @@ for script, filename in [
     ('review192_contract.rb', 'agent_review192_http.json'),
     ('array_read_contract.rb', 'agent_array_reads_http.json'),
     ('id_casting_contract.rb', 'agent_id_casting.json'),
+    ('pr214_id_corpus.rb', 'pr214_id_corpus.json'),
+    ('pr214_event_clock.rb', 'pr214_event_clock.json'),
     ('budget_notice_reader.rb', 'agent_budget_notice_reader.json'),
     ('review192r2_attachment_diagnosis.rb', 'agent_review192r2_attachment.json'),
     ('review192r3_attachment_diagnosis.rb', 'agent_review192r3_attachment.json'),
