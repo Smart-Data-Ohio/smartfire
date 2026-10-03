@@ -5,7 +5,7 @@ use crate::{
     controllers::{messages, presenters::page::db_error},
 };
 use campfire_db::models::{agent_access, agent_payloads, agent_reading, agent_service::ServiceResult};
-use campfire_db::{Agent, AgentGrant, ChannelThread, Message, Room};
+use campfire_db::{Agent, AgentGrant, Room};
 use campfire_kit::{Ctx, Result};
 use serde_json::{Value, json};
 
@@ -66,10 +66,7 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
             let Some(room)=room else {return Ok(ServiceResult::fail("Room not found",404));};
             (room,None)
         }else{
-            let mut thread=None;
-            for id in lookup_ids(&args["thread_id"]) {
-                if let Some(found)=ChannelThread::find_by_id(p.conn,id)? {thread=Some(found);break;}
-            }
+            let thread=agent_reading::thread_by_ids(p.conn,&lookup_ids(&args["thread_id"]))?;
             let Some(thread)=thread else {return Ok(ServiceResult::fail("Thread not found",404));};
             let Some(room)=Room::find_for_user(p.conn,agent.user_id,thread.room_id)? else {return Ok(ServiceResult::fail("Thread not found",404));};
             (room,Some(thread.id))
@@ -86,9 +83,7 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
         let mut anchors=[None,None];
         for (i,key) in ["before","after"].into_iter().enumerate() {
             if let Some(value)=args.get(key).filter(|value|!blank(value)) {
-                for id in lookup_ids(value) {
-                    if Message::find_by_id(p.conn,id)?.is_some_and(|m|m.room_id==room.id && m.thread_id==thread) {anchors[i]=Some(id);break;}
-                }
+                anchors[i]=agent_reading::conversation_anchor(p.conn,room.id,thread,&lookup_ids(value))?;
                 if anchors[i].is_none() {return Ok(ServiceResult::fail("Message not found",404));}
             }
         }

@@ -63,3 +63,6 @@ pub fn sync_message_reference_phase(tx: &mut campfire_db::Tx<'_>, message: &camp
 }
 
 pub(crate) mod message_batches;
+
+#[cfg(test)]
+pub(crate) use agent_streaming::run_trailing_fixture;

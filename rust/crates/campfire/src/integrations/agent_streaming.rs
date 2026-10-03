@@ -189,3 +189,9 @@ mod tests {
 
 #[cfg(test)]
 mod case_tests;
+
+#[cfg(test)]
+pub(crate) async fn run_trailing_fixture(app: App, job: StreamTrailingBroadcastJob) {
+    let now=app.db.env().now();
+    trailing(app,Trailing(job),Execution{id:0,executions:1,enqueued_at:now,scheduled_at:now}).await.unwrap();
+}
