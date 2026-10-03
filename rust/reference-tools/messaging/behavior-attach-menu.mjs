@@ -2,7 +2,7 @@
 // clipboard and drop events. These checks never replace an app response.
 import assert from 'node:assert/strict';
 import {waitForVisibility,waitForVisibleCount,actOnVisible,filterVisibleText} from './behavior-visibility.mjs';
-export async function attachMenu({author,recipient,caseName}) {
+export async function attachMenu({author,recipient,caseName,fixture}) {
   const uploads=[];
   for(const browser of [author,recipient]) browser.on('request',request=>{
     if(request.method()==='POST'&&(/\/messages(?:\.json)?$/.test(new URL(request.url()).pathname)||new URL(request.url()).pathname.endsWith('/direct_uploads'))) uploads.push(request.url());
@@ -17,7 +17,14 @@ export async function attachMenu({author,recipient,caseName}) {
       document.querySelector('#composer [data-attach-menu-target="fileInput"]').addEventListener('click',()=>window.filePickerClicks++);
     });
   }
-  if(caseName==='+ shows both attach options when Drive is available') {
+  if(caseName==='From Google Drive starts the enhanced share flow when sharing is configured') {
+    // The pinned DriveShareMocks implementation and scenario come from git
+    // through the Rails fixture runner. Same-origin app writes are untouched.
+    await page.evaluate(({script,scenario})=>new Function(script)(JSON.stringify(scenario)),{script:fixture.drive_mock_js,scenario:fixture.drive_scenario});
+    await actOnVisible(button,'click');
+    await actOnVisible(filterVisibleText(menu.locator('[role="menuitem"]'),'From Google Drive'),'click');
+    await waitForVisibility(filterVisibleText(page.locator('.drive-share-dialog .drive-share-dialog__file'),'Q3 Planning'));
+  } else if(caseName==='+ shows both attach options when Drive is available') {
     await actOnVisible(button,'click',{});await expanded(true);
     await waitForVisibility(filterVisibleText(menu.locator('[role="menuitem"]'),'From this device'));
     await waitForVisibility(filterVisibleText(menu.locator('[role="menuitem"]'),'From Google Drive'));

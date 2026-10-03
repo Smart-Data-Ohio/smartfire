@@ -3,6 +3,8 @@
 import assert from 'node:assert/strict';
 import {workControllerCases} from './behavior-work-controllers.mjs';
 import {mutationTarget} from './behavior-discrimination.mjs';
+import {WORKSPACE_CASE} from './behavior-workspace.mjs';
+import {motionCases} from './behavior-motion.mjs';
 import {actionMutations} from './behavior-action-mutations.mjs';
 const list='controllers/message_list_controller-';
 const actions='controllers/message_actions_controller-';
@@ -10,6 +12,16 @@ const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
   ...actionMutations,
+  ['From Google Drive starts the enhanced share flow when sharing is configured',['messages-','.message__quick-reaction {','.drive-share-dialog__file { opacity: 0 !important; }\n.message__quick-reaction {']],
+  [WORKSPACE_CASE,['messages-','.message__quick-reaction {','#sidebar .sidebar__tools { margin-left: 20px !important; }\n.message__quick-reaction {']],
+  [motionCases[0],['messages-','.message__quick-reaction {','#sidebar .sidebar__container { transition-duration: 0s !important; }\n.message__quick-reaction {']],
+  [motionCases[1],['messages-','.message__quick-reaction {','#channel-members .is-selecting .member-panel__avatar { transform: translateX(10px) !important; }\n.message__quick-reaction {']],
+  [motionCases[2],['messages-','.message__quick-reaction {','#main-content:has(.multi-select-bar:not([hidden])) .people-directory__row { transform: translateY(10px) !important; }\n.message__quick-reaction {']],
+  [motionCases[3],['messages-','.message__quick-reaction {','#main-content .multi-select-bar { position: static !important; }\n.message__quick-reaction {']],
+  [motionCases[4],['controllers/room_menu_controller-','const menuWidth = menu.offsetWidth','const menuWidth = menu.getBoundingClientRect().width']],
+  [motionCases[5],['messages-','.message__quick-reaction {','@media (max-width: 63.999rem) { #sidebar:not(.open) .sidebar__scroll { display: none !important; } }\n.message__quick-reaction {']],
+  [motionCases[6],['controllers/workspace_navigation_controller-','currentRoom.focus()','focusableFault(this.sidebarTarget); function focusableFault(sidebar) { sidebar.querySelector("a[href],button:not([disabled])")?.focus() }']],
+  [motionCases[7],['controllers/workspace_navigation_controller-','target?.focus({ preventScroll: true })','(allowReveal ? target : focusable[0])?.focus({ preventScroll: true })']],
   ['thread code stays readable in both themes and scrolls within a narrow screen',['models/code_highlighter-','span.className = "code-token"','span.className = "missing-code-token"']],
   ...workControllerCases.map(name=>[name,['work-controller-json-response']]),
   ['the profile page fits phone widths without scrolling sideways',['messages-','.message__quick-reaction {','#main-content fieldset { min-width: 1000px !important; }\n.message__quick-reaction {']],
@@ -325,6 +337,9 @@ for(const [name,variants] of literalAttributeMutations) {
   if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
   for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
 }
+reviewMutations.set(WORKSPACE_CASE,new Map([
+  ['slow-workspace-animation',['messages-','.message__quick-reaction {','@keyframes ws8bm-slow-settle { from { opacity: .99; } to { opacity: 1; } }\n.message:last-child { animation: ws8bm-slow-settle 4s linear !important; }\n.message__quick-reaction {']],
+]));
 export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
   const variants=[...(mutations.has(caseName)?['default']:[]),...(reviewMutations.get(caseName)?.keys()||[])];
@@ -355,7 +370,9 @@ export async function installMutation(page,caseName,probe,variant='default') {
     });
     (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmReleaseClicks||[]).catch(()=>[]));
   }
-  const cssSelector=asset==='messages-'&&replacement?.includes('{')?(replacement.startsWith('@media')?replacement.match(/@media[^\{]+\{\s*([^\{]+)\{/)[1].trim():replacement.split('{')[0].trim()):null;
+  const slowAnimation=variant==='slow-workspace-animation';
+  if(slowAnimation) probe.requiredAnimation={name:'ws8bm-slow-settle',duration:4000};
+  const cssSelector=slowAnimation?'.message:last-child':asset==='messages-'&&replacement?.includes('{')?(replacement.startsWith('@media')?replacement.match(/@media[^\{]+\{\s*([^\{]+)\{/)[1].trim():replacement.split('{')[0].trim()):null;
   const scriptedSelector=['transparent-cancelled-draft','transparent-saved-draft','transparent-newer-draft'].includes(variant)?editor:
     ['transparent-device-text','transparent-drive-text','transparent-phone-drive-text'].includes(variant)?'.attach-menu span[style]':
     ['missing-const','missing-def'].includes(variant)?'.missing-keyword-token':
@@ -373,7 +390,7 @@ export async function installMutation(page,caseName,probe,variant='default') {
   probe.requiresHiddenState ||= !!injectedStyleSelector&&/opacity:\s*0/.test(replacement)|| !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);
   if(stateSelector) (probe.observers??=[]).push(async()=>{
     if(page.isClosed()) return [];
-    return page.locator(stateSelector).evaluateAll((elements,selector)=>elements.map(element=>({
+    return page.locator(stateSelector).evaluateAll((elements,{selector,slowAnimation})=>elements.map(element=>({
       selector,messageId:element.closest('.message[data-message-id]')?.dataset.messageId,
       messageText:element.closest('.message[data-message-id]')?.querySelector('[data-reply-target="body"]')?.textContent.replace(/\s+/g,' ').trim(),
       opacity:getComputedStyle(element).opacity,
@@ -381,7 +398,8 @@ export async function installMutation(page,caseName,probe,variant='default') {
       fontSize:getComputedStyle(element).fontSize,background:getComputedStyle(element).backgroundColor,position:getComputedStyle(element).position,
       width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height,
       seleniumVisible:window.__ws8bmSeleniumVisible(element),
-    })),stateSelector).catch(()=>[]);
+      ...(slowAnimation?{animations:element.getAnimations().map(animation=>({name:animation.animationName,duration:animation.effect.getComputedTiming().duration,playState:animation.playState}))}:{}),
+    })),{selector:stateSelector,slowAnimation}).catch(()=>[]);
   });
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());

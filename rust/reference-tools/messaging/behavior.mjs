@@ -1,6 +1,6 @@
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
-import {waitForVisibility,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,waitForVisibleProperty,waitForVisibleAttribute,waitForVisibleContentCount,actOnVisible,filterVisibleText,visibleText,waitForDomCount} from './behavior-visibility.mjs';
+import {waitForVisibility,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,waitForVisibleProperty,waitForVisibleAttribute,waitForVisibleContentCount,actOnVisible,filterVisibleText,visibleText,waitForDomCount,waitForCondition} from './behavior-visibility.mjs';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
@@ -19,7 +19,10 @@ import {codeHighlighting} from './behavior-code.mjs';
 import {threadContinuation,continuationCases} from './behavior-thread-continuation.mjs';
 import {workControllers} from './behavior-work-controllers.mjs';
 import {mobileContinuation} from './behavior-mobile-continuation.mjs';
+import {workspace,WORKSPACE_CASE} from './behavior-workspace.mjs';
+import {motion,motionCases} from './behavior-motion.mjs';
 import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
+import {nativeMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
@@ -27,7 +30,7 @@ const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
+assert.ok(['motion','mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
@@ -39,6 +42,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
     // Served negatives retain their translated initial creation checkpoint.
     if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
       await nativePhone(base);return;
+    }
+    if(caseName===NATIVE_MOTION_CASE&&!negative&&!selectedMutant) {
+      await nativeMotion(base);return;
     }
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
@@ -52,7 +58,11 @@ async function acceptance(base,caseName,probe={},variant='default') {
       // data-test-motion="off" input (application.html.erb:2). Our servers use
       // the production reference image. Supply that test-only input before
       // parsing either app; this does not claim the server emits the attribute.
-      const pinnedTestMotion = caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      const pinnedTestMotion = caseName===WORKSPACE_CASE || caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      if(file==='motion') await context.addInitScript(()=>{
+        const apply=()=>{if(!document.documentElement)return false;document.documentElement.dataset.testMotion='off';return true;};
+        if(!apply()){const observer=new MutationObserver(()=>{if(apply())observer.disconnect();});observer.observe(document,{childList:true,subtree:true});}
+      });
       if(pinnedTestMotion) await context.addInitScript(()=>{
         const apply=()=>document.documentElement?.setAttribute('data-test-motion','off');
         apply();new MutationObserver(apply).observe(document,{childList:true,subtree:true});
@@ -89,7 +99,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
       assert.equal(await page.locator('#composer').count(),1,'real room composer is present');
       try {await page.waitForFunction(()=>window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('composer'),'composer'),null,{timeout:CABLE_WAIT});}
       catch(error) {console.error('WS8bm browser startup:',await page.evaluate(()=>({url:location.href,title:document.title,stimulus:!!window.Stimulus,controllers:document.getElementById('composer')?.dataset.controller,scripts:[...document.scripts].map(s=>s.src||s.type)})));throw error;}
-      await waitForVisibility(page.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]'),{state:'attached',timeout:CABLE_WAIT});
+      // Pinned SystemTestHelper#join_room (:71-84): every mounted stream,
+      // at least three, must connect. This does not wait for the lazy sidebar.
+      await waitForCondition(()=>page.locator('turbo-cable-stream-source').evaluateAll(nodes=>nodes.length>=3&&nodes.every(node=>node.hasAttribute('connected'))),{timeout:CABLE_WAIT});
       return page;
     }
     const profileActors=file==='message_list_a11y'&&caseName==='profile message and ban buttons have accessible names';
@@ -119,6 +131,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     async function field(page,value,options={}) {
       await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value',value,options);
     }
+    if(file==='motion') {await motion({author,base,caseName,fixture});return;}
     if(file==='mobile_layout'||caseName.startsWith('text fields')) {await mobileContinuation({author,base,caseName,fixture});return;}
     if(file==='channel_threads_controller') {await workControllers({author,recipient,base,caseName,fixture});return;}
     if(file==='message_list_a11y') {
@@ -139,7 +152,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       return;
     }
     if(file==='composer_attach_menu') {
-      await attachMenu({author,recipient,caseName});
+      await attachMenu({author,recipient,caseName,fixture});
       return;
     }
     if(file==='boosting_messages') {
@@ -352,6 +365,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     if (file==='workspace_markdown') {
       const source=execFileSync('git',['show','d7c7de92:test/system/workspace_markdown_test.rb'],{encoding:'utf8'});
       const heredoc=(start,indent)=>source.split(start)[1].split(`${' '.repeat(indent)}MARKDOWN`)[0].split('\n').map(line=>line.slice(indent+2)).join('\n');
+      if(caseName===WORKSPACE_CASE) {await workspace({author,source,submit});return;}
       if (caseName==='Markdown messages reach other users and editing preserves the original source') {
         const markdown=heredoc("MARKDOWN = <<~'MARKDOWN'.freeze\n",2);
         await submit(author,markdown);
@@ -418,8 +432,17 @@ async function acceptance(base,caseName,probe={},variant='default') {
         });
         const source='**A useful point** with `inline code`.';
         await submit(author,source);
-        const parent=messages(author).filter({has:filterVisibleText(author.locator('strong'),'A useful point')});
+        let parent=messages(author).filter({has:filterVisibleText(author.locator('strong'),'A useful point')});
         await waitForVisibility(filterVisibleText(parent.locator('.message__body'),'A useful point'),{timeout:CAPYBARA_DEFAULT});
+        // workspace_markdown:146-149 looks up the persisted parent immediately,
+        // then within_message scopes the action to its actual DOM identity.
+        // A text-matched optimistic row is not that Rails scope. No SQL retry.
+        const database=JSON.parse(process.env.WS8BM_WORK_DATABASES)[base];
+        const parentIdentity=JSON.parse(execFileSync('python3',['-c',
+          'import json,sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); row=c.execute("SELECT id,client_message_id FROM messages WHERE markdown_source=? LIMIT 1",(sys.argv[2],)).fetchone(); print(json.dumps(row)); c.close()',database,source],{encoding:'utf8'}));
+        assert.ok(parentIdentity&&Number.isInteger(parentIdentity[0]),'persisted attachment parent exists at the original Message.find_by!');
+        // Message#to_key uses client_message_id, not the database primary key.
+        parent=author.locator(`[id=${JSON.stringify('message_'+parentIdentity[1])}]`);
         await actOnVisible(parent.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
         await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
         await waitForVisibility(filterVisibleText(author.locator('#composer [data-composer-target="contextLabel"]'),'Replying to JZ'));

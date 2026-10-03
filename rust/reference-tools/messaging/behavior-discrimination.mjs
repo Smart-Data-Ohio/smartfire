@@ -1,6 +1,8 @@
 // Credit only the assertion named by the served mutation. Source anchors keep
 // this contract reviewable without line-number drift. Unknown failures fail closed.
 import {readFileSync} from 'node:fs';
+import {WORKSPACE_CASE} from './behavior-workspace.mjs';
+import {motionCases} from './behavior-motion.mjs';
 import {workControllerCases} from './behavior-work-controllers.mjs';
 const helpers=new Set(['behavior-visibility.mjs','behavior-text.mjs']);
 export function assertionFrames(error) {
@@ -24,6 +26,18 @@ export function assertionFrames(error) {
 const target=(module,anchor,message)=>({module:`behavior-${module}.mjs`,anchor,message});
 const D=new Map();
 const add=(names,module,anchor,message)=>{for(const name of names) D.set(name,[target(module,anchor,message)]);};
+add(['From Google Drive starts the enhanced share flow when sharing is configured'],'attach-menu',"page.locator('.drive-share-dialog .drive-share-dialog__file')");
+add([WORKSPACE_CASE],'workspace',"'workspace: profile inside navigation'");
+for(const [index,anchor] of [
+  [0,"'motion: drawer starts off-canvas'"],
+  [1,"'motion: member-select positions'"],
+  [2,"'motion: directory-select positions'"],
+  [3,"'motion: sticky bar inside scrollport'"],
+  [4,"'motion: menu clamped inside viewport'"],
+  [5,"'motion: closed drawer keeps offset'"],
+  [6,'await firstOpenCurrentFocus(page,current)'],
+  [7,'await reopenedCurrentFocus(page,current)'],
+]) add([motionCases[index]],'motion',anchor);
 add(['the message list is a single tab stop with a roving tabindex'],'message-list','page.waitForFunction(id=>');
 add(['arrow keys move between messages','deleting the focused message moves focus to the surviving tab stop','deleting an older focused message hands focus to its neighbour, not the newest','a late composer autofocus does not steal focus from a message'],'message-list','document.activeElement?.id===id');
 add(['a stream replacing the focused message keeps focus and the tab stop on its replacement','a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement','a direct DOM swap of the focused message keeps focus and the tab stop on its replacement'],'message-list','rows.filter(row=>row.tabIndex===0)');
@@ -201,6 +215,7 @@ variant(['transparent-device-text'],'attach-menu',"menu.locator('[role=\"menuite
 variant(['transparent-drive-text','transparent-phone-drive-text'],'attach-menu',"menu.locator('[role=\"menuitem\"]'),'From Google Drive'");
 variant(['transparent-boost-delete-text'],'boosts',"boost.locator('button'),'Delete this boost'");
 variant(['wrong-permission-status','wrong-validation-status'],'work-controllers','assert.equal(response.status,expected');
+variant(['slow-workspace-animation'],'workspace','await settled()');
 for(const specs of V.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 for(const [name,label] of [
   ['missing-thumb-aria-label','React with thumbs up'],['missing-picker-aria-label','Add reaction'],
@@ -234,5 +249,6 @@ export function rejectionEvidence(caseName,variant,probe,error) {
   if(probe.requiresReleaseClick&&!probe.observed?.some(state=>state.releaseClick&&state.brokenGuard&&state.menuVisible)) reasons.push('mutated release click not encountered');
   if(probe.requiredMessageText&&!probe.observed?.some(state=>state.messageText===probe.requiredMessageText&&(state.opacity==='0'||state.visibility==='hidden'||state.display==='none'))) reasons.push('intended message mutation state not encountered');
   if(probe.requiresHiddenState&&!probe.observed?.some(state=>state.opacity==='0'||state.visibility==='hidden'||state.display==='none')) reasons.push('hidden mutation state not encountered');
+  if(probe.requiredAnimation&&!probe.observed?.some(state=>state.animations?.some(animation=>animation.name===probe.requiredAnimation.name&&animation.duration===probe.requiredAnimation.duration&&animation.playState==='running'))) reasons.push('intended running animation not encountered');
   return {valid:reasons.length===0,reasons,expected,actual:frames,observed:probe.observed||[]};
 }
