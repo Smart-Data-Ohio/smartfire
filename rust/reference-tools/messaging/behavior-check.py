@@ -406,7 +406,7 @@ for file in files:
                     else:
                         succeeded = [name for name in batch if f"WS8bm browser flow: {file}: {name}: Rails PASS; Rust PASS" in result.stdout.splitlines()]
                     failed_cases.extend(f"{file}: {name}" for name in batch if name not in succeeded
-                                        and f"{file}: {name}" not in failed_cases)
+                                        and (not args.negative or f"{file}: {name}" not in failed_cases))
                     if args.negative:
                         passed += sum(len(names) for name, names in zip(batch, variants) if name in succeeded)
                         passed_named.update((file, name) for name in succeeded)
