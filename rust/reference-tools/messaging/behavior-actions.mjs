@@ -97,12 +97,14 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
       await page.keyboard.press('Escape');await closedMenu(page);
     }
   } else if(caseName.startsWith('edits through')) {
+    async function restoredDraftAfterCancel() {await field(page,'A draft that must survive editing');}
+    async function restoredDraftAfterSuccess() {await field(page,'A draft that must survive editing');}
     await actOnVisible(editor,'fill',{},['A draft that must survive editing']);await openEdit(page,row,{contextTimeout:DELIVERY_WAIT});
     await field(page,"Third time's a charm.");await actOnVisible(page.getByRole('button',{name:'Cancel message context',exact:true}),'click',{});
-    await field(page,'A draft that must survive editing');await openEdit(page,row);
+    await restoredDraftAfterCancel();await openEdit(page,row);
     await send(page,'Saved through the main composer',{timeout:DELIVERY_WAIT});await text(recipient,'Saved through the main composer',1,{timeout:DELIVERY_WAIT});
     await waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});
-    await field(page,'A draft that must survive editing');
+    await restoredDraftAfterSuccess();
   } else if(caseName.startsWith('a duplicate delivery')) {
     await openMenu(page);
     await waitForVisibility(page.getByRole('menuitem',{name:'Edit message',exact:true}),{timeout:DELIVERY_WAIT});
