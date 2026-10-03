@@ -109,7 +109,7 @@
       "content-length": "42644",
       "content-type": "application/json"
     },
-    "body_sha256": "c517b720d8fef04cd4c59fb4ae850c08f0931ce53497ca0624dfe782ff958c6a"
+    "body_sha256": "b2581bc4478cab241cc8a4b2d3c22cefa65024a6c9b35807a24c5f9b33b9d5f4"
   },
   {
     "method": "GET",
@@ -1649,15 +1649,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/rooms_list_controller-e35b9658.js",
+    "path": "/assets/controllers/rooms_list_controller-7f625f1f.js",
     "env": {},
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "2281",
+      "content-length": "2437",
       "content-type": "text/javascript"
     },
-    "body_sha256": "f9736838b295008536c638f0b114d23a1c90c0200c09f608905d60b6ddbaa129"
+    "body_sha256": "3d12f88e6c28d1a75cce9cca48dba744b63570a82fdfe5bd167e293efa6cd7ab"
   },
   {
     "method": "GET",
