@@ -51,8 +51,8 @@ async function reopenedCurrentFocus(page,selector) {
 export async function motion({author:page,base,caseName,fixture}) {
   await page.setViewportSize({width:1400,height:1400});
   const response=await page.goto(`${base}/rooms/${fixture.motion_room_id}`);assert.equal(response.status(),200);
-  // SystemTestHelper#join_room waits for all three or more streams, not just
-  // the room stream: the sidebar frame must load and subscribe too (:71-84).
+  // SystemTestHelper#join_room waits for every currently mounted stream
+  // (at least three, :71-84). This is not a lazy-sidebar readiness wait.
   await waitForCondition(()=>page.locator('turbo-cable-stream-source').evaluateAll(nodes=>nodes.length>=3&&nodes.every(node=>node.hasAttribute('connected'))),{timeout:CABLE_WAIT});
   // Supply only Rails.env.test?'s layout input. The server-emission declaration
   // remains deferred; it cannot be credited by this browser setup.
