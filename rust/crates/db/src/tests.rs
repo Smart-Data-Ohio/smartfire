@@ -3,6 +3,7 @@
 mod agent_work_test;
 mod ws12_agent_named_test;
 mod ws12_generic_recorder_test;
+mod ws12_recorder_race_test;
 mod ws12_handoff_named_test;
 mod work_thread_link_test;
 mod board_tag_assignment_test;

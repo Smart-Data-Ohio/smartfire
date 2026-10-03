@@ -171,7 +171,8 @@ impl ActivityItem {
         )
     }
 
-    /// WorkThreadEvent's fanout has already authorized and preloaded this recipient.
+    /// WorkThreadEvent fanout keeps its authorized recipient snapshot for recording.
+    /// Its recipients commit separately: broadcast eligibility must read current status.
     pub(crate) fn record_authorized_work_event(
         tx: &mut Tx<'_>,
         user: &User,
@@ -193,7 +194,7 @@ impl ActivityItem {
             event.id,
             Some(event.channel_thread_id),
             event_type,
-            Some(user),
+            None,
         )
     }
 
