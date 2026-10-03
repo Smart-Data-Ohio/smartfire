@@ -145,8 +145,8 @@ impl Layout {
         })
     }
 
-    /// Renders with a `ViewContext` for this request. The flash is read (and so swept at the end
-    /// of the request) the way the layout's `flash[:notice]` / `flash[:alert]` read it. The
+    /// Renders with a `ViewContext` for this request. Only actual template access to
+    /// `flash[:notice]` / `flash[:alert]` initializes flash and sweeps it at request end. The
     /// templates get this request's authenticity tokens and CSP nonce (`csrf_meta_tags`, forms,
     /// `csp_meta_tag` and the importmap tags), which puts the CSRF token in the session.
     pub fn render(
@@ -178,8 +178,9 @@ impl Layout {
         secrets: Option<RequestSecrets>,
         render: impl FnOnce(&ViewContext) -> askama::Result<String>,
     ) -> Result<String> {
-        let flash_notice = c.flash().notice().map(str::to_string);
-        let flash_alert = c.flash().alert().map(str::to_string);
+        let flash = c.peek_flash();
+        let flash_notice = flash.notice().map(str::to_string);
+        let flash_alert = flash.alert().map(str::to_string);
         let base_url = c.url_for("");
         let request_url = c.request.url();
         let referrer = c.request.referer().map(str::to_string);
@@ -211,11 +212,16 @@ impl Layout {
             time_zone: self.time_zone.clone(),
             chrome: self.chrome.clone(),
         };
-        match secrets {
+        let (result, read_flash) = campfire_views::flash::track_reads(|| match secrets {
             Some(secrets) => request_forgery::rendering_with(secrets, || render(&ctx)),
             None => render(&ctx),
+        });
+        if read_flash {
+            // Initializing Flash marks the old values for sweeping, exactly when
+            // the ERB layout or content first accesses the lazy Rails flash hash.
+            c.flash();
         }
-        .map_err(Error::internal)
+        result.map_err(Error::internal)
     }
 
     /// A page rendered in the application layout: `text/html`, plus the `Link` preload header

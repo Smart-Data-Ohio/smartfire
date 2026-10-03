@@ -9,6 +9,7 @@ for defect, assertion in [
     ('reminder', 'real reminder producer must execute successfully: Sqlite(QueryReturnedNoRows)'),
     ('recurrence', 'Inbox lifecycle response bytes must match Rails: recurrent reminder inbox'),
     ('deleted-source', 'deleted source must actually be removed by the real writer'),
+    ('error-body', 'Inbox lifecycle response bytes must match Rails: deleted source open JSON'),
 ]:
     result = run_tests(test, {'WS11UI_INBOX_LIFECYCLE_DEFECT': defect})
     require_rejected(result, {test: (source, assertion)})

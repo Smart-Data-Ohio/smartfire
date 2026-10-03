@@ -244,6 +244,14 @@ impl Ctx {
         self.csrf_token = None;
     }
 
+    /// Snapshot for rendering without accessing Rails' lazy flash hash. Merely
+    /// preparing a frame context must not initialize and sweep saved flash.
+    pub fn peek_flash(&mut self) -> Flash {
+        self.flash.clone().unwrap_or_else(|| {
+            Flash::from_session_value(self.session().get("flash"))
+        })
+    }
+
     /// `flash`, loaded from the session on first use.
     pub fn flash(&mut self) -> &mut Flash {
         if self.flash.is_none() {

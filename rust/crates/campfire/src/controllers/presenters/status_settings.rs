@@ -27,7 +27,18 @@ pub fn ooo_notice_members(
             |r| r.get::<_, i64>(0),
         )?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    let mut users = UserStatusSettings::for_ids(conn, &ids)?;
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    // The viewer provides Time.zone when a peer has no stored zone. Include it in
+    // the same association preload, rather than adding one query per notice.
+    let mut preload_ids = ids.clone();
+    preload_ids.push(viewer_id);
+    let mut users = UserStatusSettings::for_ids(conn, &preload_ids)?;
+    let request_zone = users
+        .get(&viewer_id)
+        .map(UserStatusSettings::zone)
+        .unwrap_or(jiff::tz::TimeZone::UTC);
     Ok(ids
         .into_iter()
         .map(|id| {
@@ -37,7 +48,7 @@ pub fn ooo_notice_members(
                 id,
                 name: user.user.name.clone(),
                 visible: user.ooo_status_visible(now),
-                until_date: user.ooo_until_date(now),
+                until_date: user.ooo_until_date_in_zone(now, &request_zone),
                 note: user
                     .ooo_note
                     .clone()
@@ -58,6 +69,20 @@ pub fn profile_status(
     viewer_id: i64,
     now: Timestamp,
 ) -> campfire_db::Result<campfire_views::users::statuses::ProfileStatus> {
+    profile_status_in_zone(
+        conn, secrets, user_id, viewer_id, now,
+        super::page::renderer_time_zone().tz(),
+    )
+}
+
+pub fn profile_status_in_zone(
+    conn: &Connection,
+    secrets: &rails_compat::Secrets,
+    user_id: i64,
+    viewer_id: i64,
+    now: Timestamp,
+    request_zone: &jiff::tz::TimeZone,
+) -> campfire_db::Result<campfire_views::users::statuses::ProfileStatus> {
     let user = UserStatusSettings::find(conn, user_id)?;
     let leases = campfire_db::WorkspacePresenceLease::presence_by_user_id(conn, &[user_id], now)?;
     let presence = user.effective_presence(
@@ -77,7 +102,7 @@ pub fn profile_status(
         user_id,
         stream_name: rails_compat::turbo::signed_stream_name(secrets, &[&gid, "status"]),
         presence: presence.into(),
-        status_text: user.status_text_display(now),
+        status_text: user.status_text_display_in_zone(now, request_zone),
         dnd_allowed: campfire_db::DndAllowedUser::find(conn, viewer_id, user_id)?.is_some(),
     })
 }
