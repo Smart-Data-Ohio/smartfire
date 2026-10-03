@@ -1230,6 +1230,8 @@ mod ws12_agent_work_query_tests;
 #[cfg(test)]
 mod ws12_activity_helper_named_tests;
 #[cfg(test)]
+mod ws12_huddle_copy_tests;
+#[cfg(test)]
 mod ws12_unread_broadcast_tests;
 
 #[cfg(test)]
