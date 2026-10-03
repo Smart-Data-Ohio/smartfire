@@ -133,3 +133,30 @@ approved names. The previous nine-name projection and HTTP/1.0 default hid
 this difference; the inventory's old claim of exact proxy header parity is
 superseded by this explicit approval. Bodies, statuses, media bytes and stored
 state remain exact under the existing narrowly documented media approvals.
+
+## Current authorization and owner-transfer races (#205 review)
+
+The maintainer approved retaining Rust's stricter current-state checks. Astra's
+`/home/riels/.cache/rust-port/ws11apir/review-205-r1/behavior-race-results.md`
+classifies 13 of 34 committed prewriter races and four of ten private response
+races as inherited differences, not batching or #205 regressions. Its baseline
+89 cases / 100 requests has zero differences; the remaining 21 prewriter and six
+private cases match exactly. This approval does not change production checks.
+
+Both create surfaces recheck membership, manage_threads grants and suspension
+inside the writer. Membership deletion gives Rust 404 versus Rails' invalid-owner
+422; revoked manage grants give Rust 403 versus Rails 201 with two jobs; suspension
+gives Rust 403 versus Rails' invalid-owner 422. Seven noncreate write surfaces
+reject a newly suspended sender with Rust 404 while Rails' earlier Agent snapshot
+continues with 200/201. Rust preserves the injected changes, writes no source jobs
+and does not proceed on the stale authorization. MCP retains HTTP 200 with the
+corresponding error/success envelope differences.
+
+Four REST/MCP owner transfers before identity selection or during the private
+repository reply redact private title/head/base in Rust, while Rails retains its
+earlier owner association. Rust also skips the earlier identity's external read
+when the transfer precedes identity selection. Public fields remain visible;
+all 21 persisted table snapshots and jobs agree. Ordinary allowance, disconnect
+and account relink behavior remain unchanged. Current owner/account checks,
+IdentityGuard and final sealing stay authoritative; this narrow approval does not
+allow unrelated response, authorization or state differences.
