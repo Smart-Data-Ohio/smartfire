@@ -62,3 +62,11 @@ test('the redelivery flag names its original visible checkpoint, not a later act
   assert.equal(rejectionEvidence(name,'transparent-redelivery-flag',valid,checkpoint).valid,true);
   assert.equal(rejectionEvidence(name,'transparent-redelivery-flag',valid,later).valid,false);
 });
+
+test('the profile width probe targets main content overflow, not the earlier document check',()=>{
+  const name='the profile page fits phone widths without scrolling sideways';
+  const content=failure('behavior-mobile-continuation.mjs','assert.ok(result.mainOverflow<=0');
+  const document=failure('behavior-mobile-continuation.mjs','assert.ok(result.documentOverflow<=0');
+  assert.equal(rejectionEvidence(name,'default',valid,content).valid,true);
+  assert.equal(rejectionEvidence(name,'default',valid,document).valid,false);
+});

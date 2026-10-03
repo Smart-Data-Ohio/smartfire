@@ -118,7 +118,10 @@ D.set('picker tabs move with arrow keys and switch the grid',[target('toolbar',"
 // Continuation -2 retains its additional paired/controller scopes.
 add(workControllerCases,'work-controllers',"assert.equal(body.thread.name,'Design discussion')");
 add(['thread code stays readable in both themes and scrolls within a narrow screen'],'code',"code.locator('.code-token')");
-add(['the profile page fits phone widths without scrolling sideways'],'mobile-continuation','assert.ok(result.documentOverflow<=0');
+// The fieldset min-width probe overflows the scrollable main element, not
+// the clipped document. This is the original content-overflow assertion
+// (mobile_layout_test.rb:56); an earlier document assertion is not its target.
+add(['the profile page fits phone widths without scrolling sideways'],'mobile-continuation','assert.ok(result.mainOverflow<=0');
 add(['headers outside the workspace shell stay opaque over scrolled content'],'mobile-continuation',"includes(header.background)");
 add(['headers outside the workspace shell never cover the page or its scrollbar'],'mobile-continuation','assert.ok(layout.panelTop>=layout.navBottom');
 add(['pages outside the workspace shell show no drawer toggle that opens nothing'],'mobile-continuation',"waitForVisibleCount(page.getByRole('button',{name:'Open workspace navigation'");
