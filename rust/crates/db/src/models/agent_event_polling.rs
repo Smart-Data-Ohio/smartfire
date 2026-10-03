@@ -212,6 +212,7 @@ impl<'a> PollContext<'a> {
             if !self.readable(&payload["room"]) {
                 return Ok(None);
             };
+            let mut thread_deleted = false;
             let work = if let Some(work) = self.work.get(&e.id) {
                 work.clone()
             } else {
@@ -222,10 +223,13 @@ impl<'a> PollContext<'a> {
                 else {
                     return Ok(None);
                 };
-                payload["thread_deleted"] = json!(true);
+                thread_deleted = true;
                 snapshot.clone()
             };
             payload["work"] = work;
+            if thread_deleted {
+                payload["thread_deleted"] = json!(true);
+            }
             if e.event_type == "work_handed_off"
                 && let Some(handoff) = e.metadata.get("handoff").and_then(Value::as_object)
             {

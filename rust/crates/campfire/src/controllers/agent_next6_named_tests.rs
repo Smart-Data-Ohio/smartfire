@@ -13,10 +13,17 @@ const ROOM: i64 = 486777696;
 const DAVID: i64 = 127326141;
 const BOT: i64 = 394959859;
 
-async fn action(app: &TestApp, step: &Value) -> Option<Value> {
+async fn action(
+    app: &TestApp,
+    step: &Value,
+    delivery: Option<&crate::integrations::Next6Delivery>,
+) -> Option<Value> {
     if step["action"] == "deliver" {
         return Some(
-            crate::integrations::next6_deliver(app, step["agent"].as_i64().unwrap()).await,
+            delivery
+                .expect("recording starts before every delivery producer")
+                .deliver(app, step["agent"].as_i64().unwrap())
+                .await,
         );
     }
     if step["action"] == "inbox" {
@@ -175,10 +182,20 @@ async fn run_case(case: &Value) -> Vec<usize> {
         AgentCredential::create(tx,NewCredential{agent_id:1901100002,created_by_id:DAVID,name:"Receiver contract".into(),token_digest:{ use sha2::{Digest,Sha256}; format!("{:x}",Sha256::digest("ws11api-receiver-credential")) },token_last_four:"test".into(),..Default::default()})?;
         Ok(())
     }).await.unwrap();
+    let delivery = if case["steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|s| s["action"] == "deliver")
+    {
+        Some(crate::integrations::Next6Delivery::start(&app).await)
+    } else {
+        None
+    };
     let mut observed = 0;
     for step in case["steps"].as_array().unwrap() {
         if step.get("action").is_some() {
-            if let Some(output) = action(&app, step).await {
+            if let Some(output) = action(&app, step, delivery.as_ref()).await {
                 let gold = &case["observations"][observed];
                 assert_eq!(
                     output, gold["output"],

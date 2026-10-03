@@ -68,4 +68,4 @@ pub(crate) mod message_batches;
 pub(crate) use agent_streaming::run_trailing_fixture;
 
 #[cfg(test)]
-pub(crate) use agent_jobs::next6_deliver;
+pub(crate) use agent_jobs::Next6Delivery;

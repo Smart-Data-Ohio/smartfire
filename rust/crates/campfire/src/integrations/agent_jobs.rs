@@ -786,6 +786,4 @@ mod remaining_cases;
 #[cfg(test)]
 mod next6_named;
 #[cfg(test)]
-pub(crate) async fn next6_deliver(app: &crate::controllers::presenters::test_support::TestApp, agent: i64) -> serde_json::Value {
-    next6_named::deliver(app, agent).await
-}
+pub(crate) use next6_named::Next6Delivery;
