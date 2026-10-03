@@ -114,6 +114,11 @@ pub(super) fn compare_full_proxy_headers(actual: &Value, expected: &Value, strea
         }
     }
     for name in ["date", "x-request-id", "x-runtime"] {
+        assert_eq!(
+            actual.contains_key(name),
+            expected.contains_key(name),
+            "per-request header presence: {name}"
+        );
         actual.remove(name);
         expected.remove(name);
     }
@@ -150,8 +155,24 @@ fn ws11_proxy_header_oracle_rejects_unapproved_changes() {
             actual[name.as_str()] = serde_json::json!([value.to_str().unwrap()]);
         }
         compare_full_proxy_headers(&actual, expected, true);
+        for name in ["date", "x-request-id", "x-runtime"] {
+            if expected.get(name).is_some() {
+                let mut changed = actual.clone();
+                changed.as_object_mut().unwrap().remove(name);
+                assert!(
+                    std::panic::catch_unwind(|| compare_full_proxy_headers(
+                        &changed, expected, true
+                    ))
+                    .is_err(),
+                    "must reject missing {name}"
+                );
+            }
+        }
         for (name, value) in [
-            ("content-transfer-encoding", serde_json::json!(["unexpected"])),
+            (
+                "content-transfer-encoding",
+                serde_json::json!(["unexpected"]),
+            ),
             ("x-unexpected", serde_json::json!(["new"])),
             ("content-type", serde_json::json!(["wrong"])),
             ("x-request-id", serde_json::json!(["same", "same"])),

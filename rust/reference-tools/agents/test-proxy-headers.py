@@ -12,7 +12,16 @@ class FullHeaders(unittest.TestCase):
     def test_only_named_approved_differences_pass(self):
         rust,rails=self.fixtures()
         rust.update({'x-request-id':['3574925f-479d-44f8-82b7-fc039af5367c'],'x-runtime':['0.000001'],'date':['Mon, 02 Mar 2026 16:00:00 GMT']})
+        rails.update({'x-request-id':['4574925f-479d-44f8-82b7-fc039af5367c'],'x-runtime':['0.000002'],'date':['Mon, 02 Mar 2026 16:00:01 GMT']})
         compare_headers(rust,rails,True)
+    def test_per_request_name_presence_still_matches(self):
+        for name,value in [('x-request-id','3574925f-479d-44f8-82b7-fc039af5367c'),('x-runtime','0.000001'),('date','Mon, 02 Mar 2026 16:00:00 GMT')]:
+            rust,rails=self.fixtures()
+            rust[name]=[value]
+            with self.assertRaises(AssertionError):compare_headers(rust,rails,True)
+            rails[name]=[value]
+            del rust[name]
+            with self.assertRaises(AssertionError):compare_headers(rust,rails,True)
     def test_every_other_header_value_is_compared(self):
         rust,rails=self.fixtures()
         for key in rails:

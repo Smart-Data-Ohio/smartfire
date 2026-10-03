@@ -33,6 +33,7 @@ def checked(headers):
 def compare_headers(actual, expected, streamed=False):
     actual, expected = checked(actual), checked(expected)
     for name in PER_REQUEST:
+        assert (name in actual) == (name in expected), ('per-request header presence', name)
         actual.pop(name, None)
         expected.pop(name, None)
     if streamed:
