@@ -315,10 +315,10 @@ pub fn item(
                 .ok_or(campfire_db::Error::RecordNotFound("User"))?;
             let cap = notice.cap.clone();
             let created = notice.created_at;
-            let (label, _) = budget_details(&agent, &cap);
+            let (label, _) = budget_details(agent, &cap);
             result.created_at = Some(created.jiff());
             result.title = format!("{} · daily {label} budget", user.name);
-            result.body = budget_body(&agent, &user.name, &cap);
+            result.body = budget_body(agent, &user.name, &cap);
             result.author = Some(user.name.clone());
         }
         "Event" => {
@@ -611,7 +611,7 @@ pub fn payload_with_sources(
                 .get(&agent.user_id)
                 .ok_or(campfire_db::Error::RecordNotFound("User"))?;
             let cap = notice.cap.clone();
-            source.body = budget_body(&agent, &user.name, &cap);
+            source.body = budget_body(agent, &user.name, &cap);
             source.creator_id = Some(agent.user_id);
             source.path = format!("/account/bots/{}/edit", agent.user_id);
             source.status = Some(cap);

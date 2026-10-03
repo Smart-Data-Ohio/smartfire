@@ -325,15 +325,14 @@ async fn agent_work_writes_reader_queries_are_flat_for_every_surface() {
             "WORK_WRITE_QUERIES {surface} owned_rows=5/50 Rust_all_SELECTs={}/{} Rails_all_SELECTs={}/{}",
             counts[0], counts[1], rails[0], rails[1]
         );
-        // PR202's fixed costs include two redundant owner/account reads on
-        // every path, plus six repeated capability facts on board creation.
-        // WS11 webhook eligibility also collapses three permission reads per ledger row.
+        // Bounds cover current authorization, response facts and the remaining
+        // WS12 service/callback cost. Repeated adapter/ledger facts stay removed.
         let limit = match surface {
-            "rest_create" => 197,
-            "mcp_create" => 185,
+            "rest_create" => 169,
+            "mcp_create" => 167,
             "rest_update" | "mcp_update" | "mcp_board_update" => 83,
             "rest_result" | "mcp_result" => 33,
-            "rest_handoff" | "mcp_handoff" => 105,
+            "rest_handoff" | "mcp_handoff" => 94,
             _ => unreachable!(),
         };
         if counts[0] > limit {

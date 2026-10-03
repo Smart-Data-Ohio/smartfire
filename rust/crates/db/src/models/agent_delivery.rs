@@ -15,9 +15,16 @@ pub const ALWAYS_READABLE: [&str; 3] = [
     "fizzy_action_completed",
 ];
 pub const DELIVERABLE_TYPES: [&str; 10] = [
-    "mention", "direct_message", "reply", "approval_decided",
-    "github_action_completed", "fizzy_action_completed", "work_assigned",
-    "work_unassigned", "work_handed_off", "slash_command",
+    "mention",
+    "direct_message",
+    "reply",
+    "approval_decided",
+    "github_action_completed",
+    "fizzy_action_completed",
+    "work_assigned",
+    "work_unassigned",
+    "work_handed_off",
+    "slash_command",
 ];
 pub const MAX_ATTEMPTS: i64 = 5;
 pub const RATE_LIMIT: i64 = 20;
@@ -123,19 +130,26 @@ impl AgentEvent {
         )
     }
     pub fn create(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
-        Self::create_record(tx,a,false)
+        Self::create_record(tx, a, false)
     }
     /// Thread's after_destroy_commit keeps its already-loaded belongs_to Agent,
     /// even if the outer transaction deleted that row. Rails has no ledger FK.
     /// This is only for an identity captured by the deletion callback; ordinary
     /// event creation still validates an agent_id against the database.
     pub(crate) fn create_captured(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
-        Self::create_record(tx,a,true)
+        Self::create_record(tx, a, true)
     }
     fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
         let mut errors = Errors::default();
         if !DELIVERABLE_TYPES.contains(&a.event_type.as_str())
-            && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&a.event_type.as_str())        {
+            && ![
+                "posted",
+                "delivery_suppressed_rate_limit",
+                "delivery_suppressed_hop_limit",
+                "delivery_suppressed_revoked",
+            ]
+            .contains(&a.event_type.as_str())
+        {
             if campfire_richtext::ruby::is_blank(&a.event_type) {
                 errors.add("event_type", "can't be blank");
             }
@@ -165,14 +179,19 @@ impl AgentEvent {
         {
             a.hop = ruby_i64(hop);
         }
-        let id=tx.conn().query_row_cached("INSERT INTO agent_events (agent_id,room_id,message_id,actor_id,agent_approval_id,agent_credential_id,event_type,outcome,chain_id,metadata,hop,detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",
-            params![a.agent_id,a.room_id,a.message_id,a.actor_id,a.agent_approval_id,a.agent_credential_id,a.event_type,a.outcome,a.chain_id,(!a.metadata.is_null()).then_some(&a.metadata),a.hop,a.detail,tx.now()],|r|r.get(0))?;
-        Ok(Self::find(tx.conn(), id)?.expect("inserted event"))
+        let event=tx.conn().query_row_cached("INSERT INTO agent_events (agent_id,room_id,message_id,actor_id,agent_approval_id,agent_credential_id,event_type,outcome,chain_id,metadata,hop,detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *",
+            params![a.agent_id,a.room_id,a.message_id,a.actor_id,a.agent_approval_id,a.agent_credential_id,a.event_type,a.outcome,a.chain_id,(!a.metadata.is_null()).then_some(&a.metadata),a.hop,a.detail,tx.now()],Self::from_row)?;
+        Ok(event)
     }
     /// The unfiltered ledger association. Polling must use agent_event_access,
     /// which checks live access before applying its page limit.
     pub fn for_agent(conn: &Connection, agent_id: i64) -> Result<Vec<Self>> {
-        query_all(conn, "SELECT * FROM agent_events WHERE agent_id=? ORDER BY id", [agent_id], Self::from_row)
+        query_all(
+            conn,
+            "SELECT * FROM agent_events WHERE agent_id=? ORDER BY id",
+            [agent_id],
+            Self::from_row,
+        )
     }
     pub fn deliverable_for_agent(conn: &Connection, agent_id: i64) -> Result<Vec<Self>> {
         Self::of_types(conn, agent_id, &DELIVERABLE_TYPES)
@@ -181,21 +200,45 @@ impl AgentEvent {
         Self::of_types(conn, agent_id, &MESSAGE_TYPES)
     }
     fn of_types(conn: &Connection, agent_id: i64, types: &[&str]) -> Result<Vec<Self>> {
-        query_all(conn, "SELECT * FROM agent_events WHERE agent_id=? AND event_type IN (SELECT value FROM json_each(?)) ORDER BY id", params![agent_id, json!(types)], Self::from_row)
+        query_all(
+            conn,
+            "SELECT * FROM agent_events WHERE agent_id=? AND event_type IN (SELECT value FROM json_each(?)) ORDER BY id",
+            params![agent_id, json!(types)],
+            Self::from_row,
+        )
     }
     /// Low-level acknowledged! model transition. HTTP/polling callers keep the
     /// authorization gate in agent_event_access::acknowledge.
     pub fn acknowledge(&mut self, tx: &Tx<'_>) -> Result<()> {
         if self.outcome.as_deref() != Some("acknowledged") {
-            let mut errors=Errors::default();
-            if !DELIVERABLE_TYPES.contains(&self.event_type.as_str()) && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&self.event_type.as_str()) {
-                if campfire_richtext::ruby::is_blank(&self.event_type) { errors.add("event_type", "can't be blank"); }
+            let mut errors = Errors::default();
+            if !DELIVERABLE_TYPES.contains(&self.event_type.as_str())
+                && ![
+                    "posted",
+                    "delivery_suppressed_rate_limit",
+                    "delivery_suppressed_hop_limit",
+                    "delivery_suppressed_revoked",
+                ]
+                .contains(&self.event_type.as_str())
+            {
+                if campfire_richtext::ruby::is_blank(&self.event_type) {
+                    errors.add("event_type", "can't be blank");
+                }
                 errors.add("event_type", "is not included in the list");
             }
-            if !exists(tx.conn(), "SELECT 1 FROM agents WHERE id=?", [self.agent_id])? { errors.add("agent", "must exist"); }
+            if !exists(
+                tx.conn(),
+                "SELECT 1 FROM agents WHERE id=?",
+                [self.agent_id],
+            )? {
+                errors.add("agent", "must exist");
+            }
             errors.into_result()?;
-            tx.conn().execute("UPDATE agent_events SET outcome='acknowledged' WHERE id=?",[self.id])?;
-            self.outcome=Some("acknowledged".into());
+            tx.conn().execute(
+                "UPDATE agent_events SET outcome='acknowledged' WHERE id=?",
+                [self.id],
+            )?;
+            self.outcome = Some("acknowledged".into());
         }
         Ok(())
     }
@@ -236,23 +279,33 @@ fn has_webhook(tx: &Tx<'_>, agent_id: i64) -> Result<bool> {
 /// Non-message callbacks commit their delivered ledger row and optional webhook
 /// job with the originating write. Webhook completion never changes polling state.
 pub fn record_delivered(tx: &mut Tx<'_>, mut attributes: NewEvent) -> Result<AgentEvent> {
-    attributes.outcome=Some("delivered".into());
-    let event=create_delivered(tx,attributes)?;
-    enqueue_delivered_webhook(tx,&event);
+    attributes.outcome = Some("delivered".into());
+    let event = create_delivered(tx, attributes)?;
+    enqueue_delivered_webhook(tx, &event);
     Ok(event)
 }
 
 pub fn create_delivered(tx: &Tx<'_>, mut attributes: NewEvent) -> Result<AgentEvent> {
-    attributes.outcome=Some("delivered".into());
-    let event=AgentEvent::create(tx,attributes)?;
-    if has_webhook(tx,event.agent_id)? {
-        tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",params![tx.now(),event.id])?;
+    attributes.outcome = Some("delivered".into());
+    let mut event = AgentEvent::create(tx, attributes)?;
+    if has_webhook(tx, event.agent_id)? {
+        tx.conn().execute(
+            "UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",
+            params![tx.now(), event.id],
+        )?;
+        event.webhook_status = "pending".into();
+        event.webhook_next_attempt_at = Some(tx.now());
     }
-    Ok(AgentEvent::find(tx.conn(),event.id)?.expect("inserted event"))
+    Ok(event)
 }
 
-pub fn enqueue_delivered_webhook(tx: &mut Tx<'_>,event:&AgentEvent) {
-    if event.webhook_status=="pending" {tx.emit_after_commit(Event::job(&EventWebhookJob {event_id:event.id,attempt:Some(event.webhook_attempts)}));}
+pub fn enqueue_delivered_webhook(tx: &mut Tx<'_>, event: &AgentEvent) {
+    if event.webhook_status == "pending" {
+        tx.emit_after_commit(Event::job(&EventWebhookJob {
+            event_id: event.id,
+            attempt: Some(event.webhook_attempts),
+        }));
+    }
 }
 fn rate_limited(tx: &Tx<'_>, agent_id: i64, room_id: i64, exclude: Option<i64>) -> Result<bool> {
     let n:i64=tx.conn().query_row_cached("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND room_id=? AND event_type IN ('mention','direct_message','reply') AND outcome IN ('pending','delivered','acknowledged') AND created_at>=? AND (? IS NULL OR id!=?)",
@@ -271,7 +324,8 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
         [message.creator_id],
         |r| r.get(0),
     )?;
-    let (hop, trigger) = super::bot_webhook_fanout::hop_and_chain_for_message(tx, message)?;
+    let (hop, trigger) =
+        super::bot_webhook_fanout::hop_and_chain_for_message_sender(tx, message, sender)?;
     let chain = trigger.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let metadata = json!({"hop":hop,"thread_id":message.thread_id});
     if let Some(agent_id) = sender {

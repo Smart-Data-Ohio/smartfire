@@ -22,3 +22,6 @@ WS12 owns adding this typed source to `ActivityItems::Recorder`; WS8b-m2 can use
 this public owner API in its activity producer/presentation work. This branch
 exports the reader and replaces its own presenter seams rather than duplicating
 those producers.
+
+The reader is a read-side contract. It does not introduce a new budget-recording
+API or override WS12's source eligibility/recorder service.
