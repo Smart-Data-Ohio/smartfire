@@ -1,0 +1,173 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "owner": [
+      {
+        "id": 2106900000,
+        "agent_id": 773018776,
+        "cap": "messages",
+        "day": "2026-03-02",
+        "cap_label": "messages",
+        "budget_limit": 2,
+        "recipients": [
+          127326141
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900001,
+        "agent_id": 773018776,
+        "cap": "board_posts",
+        "day": "2026-03-02",
+        "cap_label": "board posts",
+        "budget_limit": null,
+        "recipients": [
+          127326141
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900002,
+        "agent_id": 773018776,
+        "cap": "external_actions",
+        "day": "2026-03-02",
+        "cap_label": "external actions",
+        "budget_limit": 7,
+        "recipients": [
+          127326141
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    ],
+    "inactive_owner": [
+      {
+        "id": 2106900000,
+        "agent_id": 773018776,
+        "cap": "messages",
+        "day": "2026-03-02",
+        "cap_label": "messages",
+        "budget_limit": 2,
+        "recipients": [
+          127326141
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900001,
+        "agent_id": 773018776,
+        "cap": "board_posts",
+        "day": "2026-03-02",
+        "cap_label": "board posts",
+        "budget_limit": null,
+        "recipients": [
+          127326141
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900002,
+        "agent_id": 773018776,
+        "cap": "external_actions",
+        "day": "2026-03-02",
+        "cap_label": "external actions",
+        "budget_limit": 7,
+        "recipients": [
+          127326141
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    ],
+    "bot_owner": [
+      {
+        "id": 2106900000,
+        "agent_id": 773018776,
+        "cap": "messages",
+        "day": "2026-03-02",
+        "cap_label": "messages",
+        "budget_limit": 2,
+        "recipients": [
+          394959859
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900001,
+        "agent_id": 773018776,
+        "cap": "board_posts",
+        "day": "2026-03-02",
+        "cap_label": "board posts",
+        "budget_limit": null,
+        "recipients": [
+          394959859
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900002,
+        "agent_id": 773018776,
+        "cap": "external_actions",
+        "day": "2026-03-02",
+        "cap_label": "external actions",
+        "budget_limit": 7,
+        "recipients": [
+          394959859
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    ],
+    "ownerless": [
+      {
+        "id": 2106900000,
+        "agent_id": 773018776,
+        "cap": "messages",
+        "day": "2026-03-02",
+        "cap_label": "messages",
+        "budget_limit": 2,
+        "recipients": [
+          127326141,
+          149087659
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900001,
+        "agent_id": 773018776,
+        "cap": "board_posts",
+        "day": "2026-03-02",
+        "cap_label": "board posts",
+        "budget_limit": null,
+        "recipients": [
+          127326141,
+          149087659
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      {
+        "id": 2106900002,
+        "agent_id": 773018776,
+        "cap": "external_actions",
+        "day": "2026-03-02",
+        "cap_label": "external actions",
+        "budget_limit": 7,
+        "recipients": [
+          127326141,
+          149087659
+        ],
+        "created_at": "2026-03-02T16:00:00.000000Z",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    ]
+  },
+  "missing_id": null
+}
