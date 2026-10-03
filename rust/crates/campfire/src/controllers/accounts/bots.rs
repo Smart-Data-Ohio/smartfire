@@ -702,3 +702,6 @@ mod normalized_tests;
 
 #[cfg(test)]
 mod render_replay_tests;
+
+#[cfg(test)]
+mod casting_followups_tests;

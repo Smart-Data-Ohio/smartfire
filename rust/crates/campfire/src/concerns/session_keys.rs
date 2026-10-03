@@ -136,7 +136,7 @@ pub fn sudo_storable_params(method: &str, request_parameters: &ParamMap) -> Opti
         return None;
     }
     let json = filtered.to_json();
-    (active_support_json_bytesize(&json) <= MAX_STORED_PARAMS_BYTES).then_some(json)
+    (rails_param_json_bytesize(&filtered) <= MAX_STORED_PARAMS_BYTES).then_some(json)
 }
 
 /// `sudo_scalar_params?`: hashes with no secret keys, arrays, and scalars, at most four deep.
@@ -156,6 +156,18 @@ fn scalar_params(value: &Param, depth: usize) -> bool {
 fn active_support_json_bytesize(value: &Value) -> usize {
     let json = serde_json::to_string(value).expect("a Value serializes");
     json.len() + json.bytes().filter(|byte| matches!(byte, b'<' | b'>' | b'&')).count() * 5
+}
+
+/// Scoped exact Integers are stored as digit strings because serde's ordinary
+/// Value cannot hold Bignum. Rails counts their raw JSON digits at this boundary.
+fn rails_param_json_bytesize(value: &Param) -> usize {
+    match value {
+        Param::BigInteger(digits) => digits.len(),
+        Param::Number(number) => rails_compat::numbers::number_to_s(number).len(),
+        Param::Array(values) => 2 + values.len().saturating_sub(1) + values.iter().map(rails_param_json_bytesize).sum::<usize>(),
+        Param::Hash(values) => 2 + values.len().saturating_sub(1) + values.iter().map(|(key,value)| active_support_json_bytesize(&Value::String(key.clone())) + 1 + rails_param_json_bytesize(value)).sum::<usize>(),
+        _ => active_support_json_bytesize(&value.to_json()),
+    }
 }
 
 /// `sudo_origin_path`: the referrer's path when it's on this host, else the root.

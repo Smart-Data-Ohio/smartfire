@@ -32,7 +32,7 @@ impl Default for SessionConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Session {
     config: SessionConfig,
     loaded: bool,

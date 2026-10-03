@@ -116,9 +116,10 @@ pub async fn show(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     let profile_viewer = concerns::require_current_user(c)?.clone();
     let profile_secrets = secrets.clone();
-    let zone = presenters::view_context::Layout::load(c).await?.time_zone;
+    let zone = presenters::view_context::time_zone(c).await?;
+    let profile_zone = zone.clone();
     let agent_profile = c.app().db.read(move |conn| presenters::agents::profile(conn, &profile_secrets, id, &profile_viewer, now, &zone)).await.map_err(Error::internal)?;
-    let user = presenters::user_summary(&secrets, &user);
+    let user = presenters::user_summary_in_zone(&secrets, &user, &profile_zone);
     view_context::page_or_frame(
         c,
         StatusCode::OK,

@@ -87,6 +87,7 @@ fn scalar_field(name: &str, value: &Value) -> Option<h::Html> {
         Value::Object(_) | Value::Array(_) => return None,
         Value::Null => None,
         Value::String(value) => Some(value.clone()),
+        Value::Number(number) => Some(rails_compat::numbers::number_to_s(number)),
         other => Some(other.to_string()),
     };
     Some(h::hidden_field_tag(name, value.as_deref(), h::attrs()))

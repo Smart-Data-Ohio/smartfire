@@ -321,7 +321,8 @@ pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
         c.request.method,
         campfire_kit::Method::GET | campfire_kit::Method::HEAD
     ) && (c.request.path().starts_with("/agents")
-        || c.request.path().starts_with("/account/bots"));
+        || c.request.path().starts_with("/account/bots")
+        || c.request.path().starts_with("/users/"));
     let found = c
         .app()
         .db

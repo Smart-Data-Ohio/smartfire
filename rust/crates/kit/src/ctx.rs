@@ -224,6 +224,18 @@ impl Ctx {
         self.session.load(&self.cookies)
     }
 
+    /// Check the real cookie serializer's bound without committing a preview.
+    /// A controller may discard optional replay data before the final response.
+    pub fn session_cookie_fits(&mut self) -> bool {
+        let now = self.now();
+        self.session.load(&self.cookies);
+        let mut session = self.session.clone();
+        if let Some(token) = self.csrf_token.clone() {
+            session.insert(csrf::SESSION_KEY, token);
+        }
+        session.commit(&mut self.cookies.clone(), now).is_ok()
+    }
+
     /// `reset_session`: new session id, no data, no flash, and a new CSRF token when one is next
     /// needed (`reset_csrf_token`).
     pub fn reset_session(&mut self) {
