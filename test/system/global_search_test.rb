@@ -202,6 +202,8 @@ class GlobalSearchTest < ApplicationSystemTestCase
 
     page.go_back
     assert_current_path room_path(@room), wait: 10
+    # History changes the URL before Turbo replaces the results-page body.
+    assert_selector "#nav .room-header__name", text: @room.name, exact_text: true
     find("#global-search-input").click
     within "#global-search-panel" do
       assert_text "No recent searches yet."
