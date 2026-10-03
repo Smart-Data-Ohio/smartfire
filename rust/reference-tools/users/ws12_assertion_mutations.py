@@ -114,7 +114,8 @@ def run(catalog, args):
     listed = {}
     for kind, stem in [("db", "campfire_db"), ("app", "campfire")]:
         choices = [path for path in (args.target / "debug/deps").glob(stem + "-*")
-                   if path.is_file() and os.access(path, os.X_OK) and "." not in path.name]
+                   if path.is_file() and os.access(path, os.X_OK) and "." not in path.name
+                   and any((args.target / "debug/.fingerprint" / path.name).glob("test-*.json"))]
         assert len(choices) == 1, (kind, choices)
         binaries[kind] = choices[0]
         listed[kind] = [line[:-6] for line in subprocess.check_output(
@@ -125,7 +126,8 @@ def run(catalog, args):
 
     def probe(row):
         groups = defaultdict(list)
-        for test in row["tests"]:
+        tests = row["previous_tests"] if args.previous_tests else row["tests"]
+        for test in tests:
             kind = "db" if "/crates/db/" in test["rust_file"] else "app"
             names = [name for name in listed[kind] if name.rsplit("::", 1)[-1] == test["rust_test"]]
             assert len(names) == 1, test
@@ -193,6 +195,8 @@ if __name__ == "__main__":
     parser.add_argument("--scratch", type=Path, required=True)
     parser.add_argument("--target", type=Path)
     parser.add_argument("--declaration", action="append")
+    parser.add_argument("--previous-tests", action="store_true",
+                        help="reproduce the two reviewer controls against the old credited test sets")
     parser.add_argument("--workers", type=int, default=4, choices=range(1, 5))
     args = parser.parse_args()
     args.scratch = args.scratch.resolve()
@@ -205,4 +209,7 @@ if __name__ == "__main__":
         restore(args.scratch)
     else:
         assert args.target, "test binary directory required"
+        if args.previous_tests:
+            assert args.declaration and all("previous_tests" in row for row in catalog["declarations"]
+                                           if row["id"] in args.declaration)
         run(catalog, args)

@@ -4540,5 +4540,7 @@
         ]
       }
     ]
-  }
+  },
+  "superseded_by": "rust/plans/ws12-assertion-reconciliation.json systematic_audit and per-case mutation_control",
+  "historical_only": true
 }
