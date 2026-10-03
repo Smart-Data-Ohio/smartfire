@@ -54,6 +54,14 @@ pub fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
         ),
     };
     session_keys::store_sudo_pending_request(c.session(), pending);
+    // Approved divergence: don't reproduce Rails' oversized-cookie crash.
+    // The storable-params check still counts Ruby Integer digits without quotes.
+    if !c.session_cookie_fits()
+        && let Some(mut request) = c.session().get(session_keys::SUDO_PENDING_KEY).cloned()
+    {
+        request["params"] = serde_json::Value::Null;
+        c.session().insert(session_keys::SUDO_PENDING_KEY, request);
+    }
     let location = c.url_for(&campfire_routes::new_sudo());
     halt(c.redirect_to(&location)?)
 }

@@ -1,0 +1,38 @@
+{
+  "reference": "d7c7de92",
+  "at": "2026-09-23T16:00:00Z",
+  "status": [
+    {
+      "stream": "agents:all",
+      "html": "<turbo-stream action=\"replace\" target=\"status_badge_agent_773018776\"><template><span id=\"status_badge_agent_773018776\" class=\"agent-status\">\n    <span class=\"agent-status-badge agent-status-badge--working\">Working</span>\n      <span class=\"agent-status-note\">on it</span>\n    <span class=\"agent-status-since\">since less than a minute ago</span>\n</span>\n</template></turbo-stream>"
+    },
+    {
+      "stream": "agents:all",
+      "html": "<turbo-stream action=\"replace\" target=\"directory_row_agent_773018776\"><template><li id=\"directory_row_agent_773018776\" class=\"agent-directory-row flex align-center gap\">\n  <span class=\"avatar flex-item--no-shrink\" style=\"--avatar-size: 2.65em;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </span>\n\n  <div class=\"min-width flex-item-grow\">\n    <div class=\"overflow-ellipsis txt-large\">\n      <a href=\"/users/394959859\">Bender Bot</a>\n    </div>\n    <div class=\"overflow-ellipsis txt-small\">Workspace agent, managed by David</div>\n    <div class=\"txt-small\">\n      <span id=\"status_badge_agent_773018776\" class=\"agent-status\">\n    <span class=\"agent-status-badge agent-status-badge--working\">Working</span>\n      <span class=\"agent-status-note\">on it</span>\n    <span class=\"agent-status-since\">since less than a minute ago</span>\n</span>\n\n    </div>\n    <div class=\"txt-small\">\n      never\n    </div>\n  </div>\n</li>\n</template></turbo-stream>"
+    }
+  ],
+  "secrets": [
+    {
+      "stream": "agents:all",
+      "html": "<turbo-stream action=\"replace\" target=\"status_badge_agent_773018776\"><template><span id=\"status_badge_agent_773018776\" class=\"agent-status\">\n    <span class=\"agent-status-badge agent-status-badge--failed\">Failed</span>\n      <span class=\"agent-status-note\">on it</span>\n    <span class=\"agent-status-since\">since less than a minute ago</span>\n</span>\n</template></turbo-stream>"
+    },
+    {
+      "stream": "agents:all",
+      "html": "<turbo-stream action=\"replace\" target=\"directory_row_agent_773018776\"><template><li id=\"directory_row_agent_773018776\" class=\"agent-directory-row flex align-center gap\">\n  <span class=\"avatar flex-item--no-shrink\" style=\"--avatar-size: 2.65em;\">\n    <a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" width=\"48\" height=\"48\" /></a>\n  </span>\n\n  <div class=\"min-width flex-item-grow\">\n    <div class=\"overflow-ellipsis txt-large\">\n      <a href=\"/users/394959859\">Bender Bot</a>\n    </div>\n    <div class=\"overflow-ellipsis txt-small\">Workspace agent, managed by David</div>\n    <div class=\"txt-small\">\n      <span id=\"status_badge_agent_773018776\" class=\"agent-status\">\n    <span class=\"agent-status-badge agent-status-badge--failed\">Failed</span>\n      <span class=\"agent-status-note\">on it</span>\n    <span class=\"agent-status-since\">since less than a minute ago</span>\n</span>\n\n    </div>\n    <div class=\"txt-small\">\n      never\n    </div>\n  </div>\n</li>\n</template></turbo-stream>"
+    }
+  ],
+  "private_values": [
+    "f4f033c73c994a39bd9e1e451046cbbea2df617b5a6722c257bb6e5f00fa8b2b",
+    "post_messages"
+  ],
+  "ooo": [
+    {
+      "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:status",
+      "html": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">🌴 Out of office until September 24, 2026 — Back soon</span>\n</span>\n</template></turbo-stream>"
+    },
+    {
+      "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:ooo_notice",
+      "html": "<turbo-stream action=\"update\" target=\"ooo_notice_user_127326141\"><template>  <p class=\"ooo-notice txt-small\" role=\"status\">David is out of office until September 24, 2026. Back soon</p>\n</template></turbo-stream>"
+    }
+  ]
+}

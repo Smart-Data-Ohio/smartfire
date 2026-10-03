@@ -230,7 +230,7 @@ fn unused_json_param(
             {
                 Param::Number(number)
             } else {
-                Param::Str(text)
+                Param::BigInteger(text)
             }
         }
         _ => Param::from_json(serde_json::from_str(raw.get()).map_err(|_| ParamError::Parse)?),

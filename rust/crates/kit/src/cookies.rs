@@ -122,6 +122,7 @@ impl Default for DeleteOptions {
     }
 }
 
+#[derive(Clone)]
 pub struct CookieJar {
     /// The current value of every cookie: the request's, updated by sets and deletes.
     cookies: Vec<(String, String)>,

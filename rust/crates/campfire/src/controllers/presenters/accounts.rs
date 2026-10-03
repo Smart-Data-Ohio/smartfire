@@ -152,16 +152,26 @@ pub struct Sidebar {
 
 /// Users::SidebarsController#show: partition the loaded memberships before rendering.
 pub fn sidebar(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db::Result<Sidebar> {
+    sidebar_in_zone(conn, secrets, user, &campfire_views::time::Zone::utc())
+}
+
+pub fn sidebar_in_zone(conn: &Connection, secrets: &Secrets, user: &User, zone: &campfire_views::time::Zone) -> campfire_db::Result<Sidebar> {
     let all = Membership::visible_with_ordered_room(conn, user.id)?;
     // Rails preloads the members association once for every direct room, in membership order.
     let mut stmt=conn.prepare_cached("SELECT memberships.room_id AS sidebar_room_id, users.* FROM memberships INNER JOIN users ON users.id=memberships.user_id WHERE memberships.room_id IN (SELECT rooms.id FROM rooms INNER JOIN memberships ON rooms.id=memberships.room_id WHERE memberships.user_id=? AND rooms.type='Rooms::Direct' AND rooms.deleted_at IS NULL) ORDER BY memberships.id")?;
     let mut members=std::collections::HashMap::<i64,Vec<User>>::new();
     for row in stmt.query_map([user.id],|r|Ok((r.get::<_,i64>("sidebar_room_id")?,User::from_row(r)?)))? { let (id,u)=row?;members.entry(id).or_default().push(u); }
+    // Icons.custom is a single Rails catalog read, reused by every shared row.
+    // Keep brand precedence and custom overrides identical to resolve_room_icon.
+    let mut icons = conn.prepare_cached("SELECT name,title FROM workspace_icons")?;
+    let icon_titles: std::collections::HashMap<String,String> = icons
+        .query_map([], |row| Ok((row.get(0)?,row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
     let shared=|m:&Membership,r:&Room| SidebarRoom {
         id:r.id,param_key:room_param_key(r.room_type).into(),name:r.name.clone().unwrap_or_default(),unread:m.unread(),
-        menu:room_menu(r,Some(m),Some(user),0,None),icon:resolve_room_icon(conn,r.icon_name.as_deref()),huddle_participants:None,
+        menu:room_menu(r,Some(m),Some(user),0,None),icon:room_icon_with_title(r.icon_name.as_deref(),r.icon_name.as_ref().and_then(|name|icon_titles.get(name)).cloned()),huddle_participants:None,
     };
-    let direct=|m:&Membership,r:&Room| sidebar_direct_users(secrets,m,r,members.get(&r.id).map(Vec::as_slice).unwrap_or_default(),user);
+    let direct=|m:&Membership,r:&Room| sidebar_direct_users(secrets,m,r,members.get(&r.id).map(Vec::as_slice).unwrap_or_default(),user,zone);
     let mut favorites: Vec<_>=all.iter().filter(|(m,_)|m.favorited()).collect();
     favorites.sort_by_key(|(m,_)|(m.favorite_position,m.id));
     let favorite_memberships=favorites.into_iter().map(|(m,r)|if r.direct(){campfire_views::users::SidebarItem::Direct(Box::new(direct(m,r)))}else{campfire_views::users::SidebarItem::Room(Box::new(shared(m,r)))}).collect();
@@ -179,7 +189,7 @@ pub fn sidebar(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db
         rooms:rest.iter().filter(|(m,r)|!r.direct() && r.room_type!=RoomType::Voice && m.room_category_id==Some(c.id)).map(|(m,r)|shared(m,r)).collect(),
     }).collect();
     let other_memberships=rest.iter().filter(|(m,r)|!r.direct() && r.room_type!=RoomType::Voice && m.room_category_id.is_none()).map(|(m,r)|shared(m,r)).collect();
-    Ok(Sidebar {favorite_memberships,categories,direct_memberships,other_memberships,voice_memberships,direct_placeholder_users:direct_placeholder_users(conn,secrets,user)?})
+    Ok(Sidebar {favorite_memberships,categories,direct_memberships,other_memberships,voice_memberships,direct_placeholder_users:direct_placeholder_users(conn,secrets,user,zone)?})
 }
 
 /// `users/sidebars/rooms/_direct` locals: `room.users.without(membership.user).presence || [ membership.user ]`.
@@ -189,26 +199,26 @@ pub fn sidebar_direct(conn: &Connection, secrets: &Secrets, membership: &Members
     let mut statement = conn.prepare_cached("SELECT users.* FROM memberships INNER JOIN users ON users.id=memberships.user_id WHERE memberships.room_id=? ORDER BY memberships.id")?;
     let users = statement.query_map([room.id], User::from_row)?.collect::<rusqlite::Result<Vec<_>>>()?;
     let viewer=User::find(conn,membership.user_id)?;
-    Ok(sidebar_direct_users(secrets,membership,room,&users,&viewer))
+    Ok(sidebar_direct_users(secrets,membership,room,&users,&viewer,&campfire_views::time::Zone::utc()))
 }
 
-fn sidebar_direct_users(secrets:&Secrets,membership:&Membership,room:&Room,users:&[User],viewer:&User)->SidebarDirect {
+fn sidebar_direct_users(secrets:&Secrets,membership:&Membership,room:&Room,users:&[User],viewer:&User,zone:&campfire_views::time::Zone)->SidebarDirect {
     let mut members:Vec<&User>=users.iter().filter(|u|u.id!=membership.user_id).collect();
     if members.is_empty(){members.push(viewer);}
-    let members:Vec<UserSummary>=members.into_iter().map(|u|user_summary(secrets,u)).collect();
+    let members:Vec<UserSummary>=members.into_iter().map(|u|super::user_summary_in_zone(secrets,u,zone)).collect();
     let label=sidebar_direct_label(room.name.as_deref(),&members);
     SidebarDirect {
         room_id:room.id,unread:membership.unread(),updated_at_epoch:epoch_string(room.updated_at.jiff()),
         menu:room_menu(room,Some(membership),Some(viewer),users.len(),Some(label.clone())),label,members,
         viewer_administrator:viewer.is_administrator(),huddle_participants:None,participant_ids:None,
-        membership_id:membership.id,membership_updated_at:membership.updated_at.jiff(),
+        membership_id:membership.id,membership_updated_at:membership.updated_at.jiff(),avatar_zone:zone.clone(),
     }
 }
 
 /// `find_direct_placeholder_users`. `exclude_user_ids` is `Membership.where(room_id: directs).pluck(:user_id).uniq`
 /// `.including(Current.user.id)`: `including` appends even when the id is already there, and the
 /// limit counts that duplicate.
-fn direct_placeholder_users(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db::Result<Vec<UserSummary>> {
+fn direct_placeholder_users(conn: &Connection, secrets: &Secrets, user: &User, zone: &campfire_views::time::Zone) -> campfire_db::Result<Vec<UserSummary>> {
     let direct_room_ids: Vec<i64> = Room::for_user_of_type(conn, user.id, RoomType::Direct)?.iter().map(|room| room.id).collect();
     let mut exclude_user_ids: Vec<i64> = Vec::new();
     if !direct_room_ids.is_empty() {
@@ -235,7 +245,7 @@ fn direct_placeholder_users(conn: &Connection, secrets: &Secrets, user: &User) -
         placeholders(exclude_user_ids.len())
     );
     let users = query_users(conn, &sql, rusqlite::params_from_iter(&exclude_user_ids))?;
-    Ok(users.iter().map(|user| user_summary(secrets, user)).collect())
+    Ok(users.iter().map(|user| super::user_summary_in_zone(secrets, user, zone)).collect())
 }
 
 // --- Account ---------------------------------------------------------------------------------------
@@ -433,5 +443,13 @@ pub fn resolve_room_icon(conn: &Connection, name: Option<&str>) -> Option<campfi
     let icon=static_icon(name);
     if matches!(icon,Some(AvatarIcon::Image{brand:true,..})){return icon;}
     let title: Option<String>=conn.query_row("SELECT title FROM workspace_icons WHERE name=?",[name],|row|row.get(0)).optional().ok().flatten();
-    title.map(|title|AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
+    room_icon_with_title(Some(name),title)
+}
+
+fn room_icon_with_title(name: Option<&str>, title: Option<String>) -> Option<campfire_views::helpers::AvatarIcon> {
+    use campfire_views::{helpers::AvatarIcon,messages::reactions::static_icon};
+    let name = name?;
+    let icon = static_icon(name);
+    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})) { return icon; }
+    title.map(|title| AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
 }
