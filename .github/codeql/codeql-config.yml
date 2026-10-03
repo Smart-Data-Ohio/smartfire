@@ -1,0 +1,20 @@
+name: Smartfire CodeQL
+
+# Test code, generated comparison fixtures and vendored third-party sources
+# produce alerts that do not describe shipped behavior (fixture keys, golden
+# vectors, upstream rails-ujs). Product sources, including inline
+# #[cfg(test)] modules, are still analyzed.
+paths-ignore:
+  - test/**
+  - vendor/**
+  - rust/crates/assets/vendor/**
+  - rust/reference-tools/**
+  - rust/vectors/**
+  - rust/plans/**
+  - rust/**/tests/**
+  - rust/**/*_tests/**
+  - rust/**/tests.rs
+  - rust/**/*_test.rs
+  - rust/**/*_tests.rs
+  - rust/**/test_support.rs
+  - rust/**/test_support/**
