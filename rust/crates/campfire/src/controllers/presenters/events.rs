@@ -64,14 +64,10 @@ pub(crate) fn for_messages(
                         cancelled: e.cancelled(),
                         venue_name: e
                             .venue_room_id
-                            .map(|id| {
-                                venues
-                                    .get(&id)
-                                    .map(|room| room.name.clone())
-                                    .ok_or(campfire_db::Error::RecordNotFound("Room"))
-                            })
-                            .transpose()?
-                            .flatten(),
+                            // Rails' optional venue association becomes nil when destroyed
+                            // after the Event is loaded; the card omits the venue line.
+                            .and_then(|id| venues.get(&id))
+                            .and_then(|room| room.name.clone()),
                         meet_link: e.meet_link.as_deref().and_then(rails_compat::safe_https),
                     })
                 })

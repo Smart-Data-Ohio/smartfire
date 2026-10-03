@@ -101,6 +101,22 @@
       }
     },
     {
+      "name": "duplicate_id_zero",
+      "tag": "BUG",
+      "assignee_id": 773523953,
+      "flags": [
+        "duplicate",
+        "duplicate_zero"
+      ],
+      "expected": {
+        "valid": false,
+        "tag": "bug",
+        "errors": [
+          "Tag has already been taken"
+        ]
+      }
+    },
+    {
       "name": "other_board",
       "tag": "bug",
       "assignee_id": 773523953,

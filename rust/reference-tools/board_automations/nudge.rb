@@ -23,7 +23,7 @@ cases = [
   ['missing-room', { room_id: 0 }], ['missing-thread', { channel_thread_id: 0 }], ['missing-recipient', { recipient_id: 0 }],
   ['missing-status', { work_status: nil }], ['blank-status', { work_status: '' }], ['whitespace-status', { work_status: ' ' }], ['unknown-status', { work_status: 'shipped' }],
   ['missing-stage', { stage: nil }], ['blank-stage', { stage: '' }], ['unknown-stage', { stage: 'later' }], ['missing-entry', { status_entered_at: nil }],
-  ['duplicate', {}, true], ['new-stage', { stage: 'escalation' }, true], ['new-status', { work_status: 'blocked' }, true], ['new-crossing', { status_entered_at: '2026-03-02 13:59:59.999999' }, true],
+  ['duplicate', {}, true], ['duplicate-id-zero', {}, true], ['new-stage', { stage: 'escalation' }, true], ['new-status', { work_status: 'blocked' }, true], ['new-crossing', { status_entered_at: '2026-03-02 13:59:59.999999' }, true],
   ['future-entry', { status_entered_at: '2026-03-02 16:01:00' }], ['fraction-before-minute', { status_entered_at: '2026-03-02 15:59:00.000001' }], ['at-minute', { status_entered_at: '2026-03-02 15:59:00' }],
   ['before-hour', { status_entered_at: '2026-03-02 15:00:00.000001' }], ['at-hour', { status_entered_at: '2026-03-02 15:00:00' }],
   ['bot-recipient-model-valid', { recipient_id: 394959859 }]
@@ -32,7 +32,7 @@ models = cases.map do |name, overrides, duplicate|
   row = nil
   ActiveRecord::Base.transaction do
     setup.each { |sql| conn.execute(sql) }
-    BoardSlaNudge.create!(base) if duplicate
+    BoardSlaNudge.create!(name == 'duplicate-id-zero' ? base.merge(id: 0) : base) if duplicate
     input = base.merge(overrides)
     nudge = BoardSlaNudge.new(input)
     valid = nudge.valid?
