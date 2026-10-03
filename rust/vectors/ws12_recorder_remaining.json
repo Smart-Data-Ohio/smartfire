@@ -10,6 +10,8 @@
     {
       "id": "c191",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -37,6 +39,8 @@
     {
       "id": "c192",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -64,6 +68,8 @@
     {
       "id": "c196",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -100,6 +106,8 @@
     {
       "id": "c201",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -117,7 +125,7 @@
             [
               127326141,
               "Message",
-              935962058,
+              9018650001,
               "mention",
               null,
               null
@@ -129,6 +137,8 @@
     {
       "id": "c203",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -155,7 +165,7 @@
             [
               127326141,
               "Message",
-              935962059,
+              9018650002,
               "mention",
               null,
               null
@@ -167,6 +177,8 @@
     {
       "id": "c204",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -209,7 +221,7 @@
             [
               127326141,
               "Message",
-              935962059,
+              9018650002,
               "thread_activity",
               null,
               null
@@ -221,6 +233,8 @@
     {
       "id": "c205",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -250,6 +264,8 @@
     {
       "id": "c208",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -292,7 +308,7 @@
             [
               127326141,
               "Message",
-              935962059,
+              9018650002,
               "thread_activity",
               null,
               null
@@ -304,6 +320,8 @@
     {
       "id": "c210",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -321,7 +339,7 @@
             [
               127326141,
               "Message",
-              935962058,
+              9018650001,
               "mention",
               null,
               null
@@ -338,7 +356,7 @@
             [
               127326141,
               "Message",
-              935962058,
+              9018650001,
               "mention",
               null,
               null
@@ -355,7 +373,7 @@
             [
               127326141,
               "Message",
-              935962058,
+              9018650001,
               "mention",
               null,
               null
@@ -367,6 +385,8 @@
     {
       "id": "c213",
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -386,7 +406,7 @@
             [
               773523953,
               "Message",
-              935962058,
+              9018650001,
               "thread_activity",
               null,
               null
@@ -404,7 +424,7 @@
             [
               127326141,
               "Message",
-              935962059,
+              9018650002,
               "mention",
               null,
               null
@@ -412,7 +432,7 @@
             [
               773523953,
               "Message",
-              935962058,
+              9018650001,
               "thread_activity",
               null,
               null
@@ -439,6 +459,8 @@
     ],
     "c177": {
       "setup": [
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
         "DELETE FROM keyword_alerts",
         "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
@@ -491,7 +513,7 @@
           [
             127326141,
             "Message",
-            935962058,
+            9018650001,
             "keyword_alert",
             null,
             null
@@ -499,7 +521,7 @@
           [
             712064548,
             "Message",
-            935962058,
+            9018650001,
             "keyword_alert",
             null,
             null
@@ -513,7 +535,7 @@
           [
             127326141,
             "Message",
-            935962058,
+            9018650001,
             "keyword_alert",
             null,
             null
@@ -521,7 +543,7 @@
           [
             712064548,
             "Message",
-            935962058,
+            9018650001,
             "keyword_alert",
             null,
             null

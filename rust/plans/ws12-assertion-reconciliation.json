@@ -4337,11 +4337,11 @@
       "line": 12,
       "test": "list shows only owned threads newest first with the work fields",
       "owner": "WS11-API",
-      "evidence": "PR #215 assertion audit: The wire list has one owned thread; the cap fixture orders same-timestamp rows by ID. Different timestamp newest-first ordering and the original multi-row payload are not asserted. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:154; existing production implementation is retained and is not itself credited as this original assertion set.",
+      "evidence": "PR #215 assertion audit: The wire list has one owned thread; the cap fixture orders same-timestamp rows by ID. Different timestamp newest-first ordering and the original multi-row payload are not asserted. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [],
       "reconciliation": "flagged",
-      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:154"
+      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:215"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -4579,11 +4579,11 @@
       "line": 63,
       "test": "list is Bearer-only and empty without owned threads",
       "owner": "WS11-API",
-      "evidence": "PR #215 assertion audit: The wire corpus does not issue the successful no-owned-threads list and the non-Bearer list request in this declaration. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:154; existing production implementation is retained and is not itself credited as this original assertion set.",
+      "evidence": "PR #215 assertion audit: The wire corpus does not issue the successful no-owned-threads list and the non-Bearer list request in this declaration. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [],
       "reconciliation": "flagged",
-      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:154"
+      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:215"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -4760,29 +4760,29 @@
       "line": 114,
       "test": "show includes links with pull request, event, and drive entries",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:154; existing production implementation is retained and is not itself credited as this original assertion set.",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [],
       "reconciliation": "flagged",
-      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:154"
+      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:215"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 158,
       "test": "list includes links on owned threads",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:154; existing production implementation is retained and is not itself credited as this original assertion set.",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [],
       "reconciliation": "flagged",
-      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:154"
+      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:215"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 173,
       "test": "show is 404 for threads the agent does not own",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:154; existing production implementation is retained and is not itself credited as this original assertion set.",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [],
       "reconciliation": "flagged",
@@ -4883,7 +4883,7 @@
           "rust_test": "agent_permissions_rest_after_success"
         }
       ],
-      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:154"
+      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:215"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -5015,7 +5015,7 @@
       "line": 228,
       "test": "list excludes rooms the agent no longer belongs to",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:154; existing production implementation is retained and is not itself credited as this original assertion set.",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [],
       "reconciliation": "flagged",
@@ -5116,7 +5116,7 @@
           "rust_test": "agent_permissions_rest_after_success"
         }
       ],
-      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:154"
+      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:215"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -7512,7 +7512,7 @@
       "line": 637,
       "test": "a read grant for another room does not unlock an owned thread",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The first rejection is absent/revoked read access, before an other-room read grant. The show-specific other-room scope assertion lacks a rejecting control. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:154; existing production implementation is retained and is not itself credited as this original assertion set.",
+      "evidence": "PR #215 systematic producer audit: The first rejection is absent/revoked read access, before an other-room read grant. The show-specific other-room scope assertion lacks a rejecting control. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [],
       "reconciliation": "flagged",
@@ -7636,7 +7636,7 @@
           "rust_test": "agent_permissions_rest_after_success"
         }
       ],
-      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:154"
+      "blocking_file_line": "rust/crates/campfire/src/controllers/agents/reads.rs:215"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
