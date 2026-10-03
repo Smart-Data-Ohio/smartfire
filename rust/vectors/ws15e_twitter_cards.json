@@ -234,6 +234,37 @@
       "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n                        <strong>NASA</strong>\n            <span class=\"x-post-card__quote-handle\">@NASA</span>\n\n        </div>\n        <div class=\"x-post-card__quote-text\">We go up</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
     },
     {
+      "name": "non-http quote url",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": null,
+        "quote": {
+          "url": "javascript:void(0)//https://x.com/i/status/123",
+          "author_name": "NASA",
+          "author_handle": "NASA",
+          "text": "We go up"
+        },
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n                        <strong>NASA</strong>\n            <span class=\"x-post-card__quote-handle\">@NASA</span>\n\n        </div>\n        <div class=\"x-post-card__quote-text\">We go up</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
       "name": "no text/counts",
       "attributes": {
         "post_id": "131",

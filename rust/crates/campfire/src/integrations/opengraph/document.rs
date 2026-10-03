@@ -94,10 +94,13 @@ mod tests {
             fill("<meta property=\"og:title\" content=\"", &|_| "&amp;é".to_string(), "\">"),
         ];
         for page in pages {
-            let started = std::time::Instant::now();
+            // Keep the one-second parser budget independent of descheduling
+            // by other tests: parsing here runs entirely on this thread.
+            let started = crate::test_support::cpu_time();
             let found = opengraph_attributes(Some(page.as_bytes()));
             assert_eq!(found[0].0, "title");
-            assert!(started.elapsed() < std::time::Duration::from_secs(1), "{:?} for {}…", started.elapsed(), &page[..60]);
+            let elapsed = crate::test_support::cpu_time() - started;
+            assert!(elapsed < std::time::Duration::from_secs(1), "{elapsed:?} CPU for {}…", &page[..60]);
         }
     }
 }
