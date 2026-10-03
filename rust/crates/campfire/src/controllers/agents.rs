@@ -6,18 +6,19 @@ use serde_json::{Value, json};
 
 use super::presenters::page::db_error;
 // Reviewed human agent pages alongside the REST/MCP service adapters.
+pub mod approvals;
+pub mod conversations;
 pub mod directory;
 pub mod history;
+mod id_args;
+pub mod integrations;
 pub mod mcp;
-pub mod approvals;
 pub mod pending;
-pub mod conversations;
-mod reads;
 mod pins;
 mod polls;
 mod reactions;
+mod reads;
 mod work_writes;
-pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {
     concerns::before_actions(c, concerns::Before::default().allow_agent_access()).await?;
@@ -145,10 +146,25 @@ pub async fn poll(
     let now = campfire_db::Timestamp::from_jiff(c.now());
     let since_id = since.as_ref().map_or(0, ruby_i64);
     let page_limit = limit.as_ref().filter(|v| !mcp::blank(v)).map(ruby_i64);
-    let events = c.app().db.read(move |conn| {
-        Ok(campfire_db::models::agent_event_access::readable_page(conn, agent_id, since_id, page_limit)?.into_iter().map(|event| event.id).collect())
-    }).await.map_err(db_error)?;
-    let access = c.app().agent_repositories.resolve_events(&c.app().db, agent_id, events).await.map_err(db_error)?;
+    let events = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok(campfire_db::models::agent_event_access::readable_page(
+                conn, agent_id, since_id, page_limit,
+            )?
+            .into_iter()
+            .map(|event| event.id)
+            .collect())
+        })
+        .await
+        .map_err(db_error)?;
+    let access = c
+        .app()
+        .agent_repositories
+        .resolve_events(&c.app().db, agent_id, events)
+        .await
+        .map_err(db_error)?;
     super::messages::present(c, move |presenter| {
         agent_event_polling::poll(
             presenter.conn,
@@ -246,13 +262,15 @@ pub fn create_step_service(
     fields: &Value,
 ) -> campfire_db::Result<ServiceResult> {
     use campfire_db::models::agent_step::{self, NewAgentStep};
+    let mut fields = fields.clone();
+    id_args::normalize(tx.conn(), agent_id, "add_step", &mut fields)?;
     let (duration_ms, input_errors) = duration_input(fields.get("duration_ms"));
     agent_step::create_with_input_errors(
         tx,
         agent_id,
         NewAgentStep {
-            message_id: integer(fields.get("message_id")),
-            channel_thread_id: integer(fields.get("thread_id")),
+            message_id: integer(fields.get("message_id").filter(|value| !mcp::blank(value))),
+            channel_thread_id: integer(fields.get("thread_id").filter(|value| !mcp::blank(value))),
             name: attribute_string(fields.get("name")).unwrap_or_default(),
             status: attribute_string(fields.get("status")).unwrap_or_else(|| "running".into()),
             input_summary: attribute_string(fields.get("input_summary")),
@@ -468,4 +486,9 @@ pub fn ruby_inspect(value: &Value) -> String {
         ),
         _ => value.to_string(),
     }
+}
+
+/// Active Record's find_by integer candidate coercion for sibling API transports.
+pub(super) fn lookup_id_candidates(value: &Value) -> Vec<i64> {
+    reads::lookup_ids(value)
 }

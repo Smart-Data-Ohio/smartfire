@@ -13,7 +13,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 29
+      "selects": 29,
+      "cache_hits": 0
     },
     {
       "name": "thread_50",
@@ -27,7 +28,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 29
+      "selects": 29,
+      "cache_hits": 0
     },
     {
       "name": "before_5",
@@ -41,7 +43,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "before_50",
@@ -55,7 +58,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "after_5",
@@ -69,7 +73,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "after_50",
@@ -83,7 +88,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "react_5",
@@ -97,7 +103,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 9
+      "selects": 9,
+      "cache_hits": 0
     },
     {
       "name": "react_50",
@@ -111,7 +118,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 9
+      "selects": 9,
+      "cache_hits": 0
     },
     {
       "name": "context_message_5",
@@ -125,7 +133,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 34
+      "selects": 34,
+      "cache_hits": 0
     },
     {
       "name": "context_message_50",
@@ -139,7 +148,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 34
+      "selects": 34,
+      "cache_hits": 0
     },
     {
       "name": "context_thread_5",
@@ -153,7 +163,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 27
+      "selects": 27,
+      "cache_hits": 0
     },
     {
       "name": "context_thread_50",
@@ -167,7 +178,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 27
+      "selects": 27,
+      "cache_hits": 0
     },
     {
       "name": "rest_context_message_5",
@@ -181,7 +193,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 33
+      "selects": 33,
+      "cache_hits": 0
     },
     {
       "name": "rest_context_message_50",
@@ -195,7 +208,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 33
+      "selects": 33,
+      "cache_hits": 0
     },
     {
       "name": "rest_context_thread_5",
@@ -209,7 +223,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 26
+      "selects": 26,
+      "cache_hits": 0
     },
     {
       "name": "rest_context_thread_50",
@@ -223,7 +238,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 26
+      "selects": 26,
+      "cache_hits": 0
     },
     {
       "name": "scoped_order_0",
@@ -237,7 +253,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "scoped_order_1",
@@ -251,7 +268,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "scoped_order_2",
@@ -265,7 +283,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "scoped_order_3",
@@ -279,7 +298,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 30
+      "selects": 30,
+      "cache_hits": 0
     },
     {
       "name": "global_thread_before_membership",
@@ -293,7 +313,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 7
+      "selects": 7,
+      "cache_hits": 0
     },
     {
       "name": "room_membership_scoped_in",
@@ -307,7 +328,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 18
+      "selects": 18,
+      "cache_hits": 0
     },
     {
       "name": "thread_revoked_before_invalid_limit",
@@ -323,7 +345,8 @@
         "cache-control": "no-store",
         "content-type": "application/json; charset=utf-8"
       },
-      "selects": 9
+      "selects": 9,
+      "cache_hits": 0
     },
     {
       "name": "inactive_agent_before_missing_thread",
@@ -339,7 +362,8 @@
         "cache-control": "no-cache",
         "content-type": "text/html"
       },
-      "selects": 3
+      "selects": 3,
+      "cache_hits": 0
     }
   ]
 }

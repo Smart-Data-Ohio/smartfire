@@ -53,8 +53,9 @@ async fn dispatch(
     args: Value,
     rest: bool,
 ) -> Result<ServiceResult> {
+    let args = super::id_args::normalize_request(c, agent_id, operation, args).await?;
     match operation {
-        "react" => return super::reactions::operation(c,agent_id,args).await,
+        "react" => return super::reactions::operation(c, agent_id, args).await,
         "start_stream" | "append_stream" | "finalize_stream" => {
             return super::conversations::stream(c, agent_id, operation, args, rest).await;
         }
@@ -62,7 +63,10 @@ async fn dispatch(
         "get_context" => return super::conversations::context(c, agent_id, args).await,
         "post_message" => return super::conversations::post(c, agent_id, args, rest).await,
         "open_dm" => return super::conversations::dm(c, agent_id, args, rest).await,
-        "create_board_post" | "update_work" | "update_board_post" | "set_result" | "handoff_work" => return super::work_writes::operation(c,agent_id,operation,args,rest).await,
+        "create_board_post" | "update_work" | "update_board_post" | "set_result"
+        | "handoff_work" => {
+            return super::work_writes::operation(c, agent_id, operation, args, rest).await;
+        }
         _ => {}
     }
     let reader = matches!(
@@ -75,13 +79,21 @@ async fn dispatch(
         .app()
         .db
         .write(move |tx| {
-            let mut fields=fields;
-            if op=="list_board_posts" {
-                let agent=Agent::find(tx.conn(),agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-                let ids=super::reads::lookup_ids(&fields["room_id"]);
-                fields["room_id"]=json!(Room::for_user(tx.conn(),agent.user_id)?.into_iter().filter(|room|ids.contains(&room.id)).map(|room|room.id).min().unwrap_or(0));
+            let mut fields = fields;
+            if op == "list_board_posts" {
+                let agent = Agent::find(tx.conn(), agent_id)?
+                    .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+                let ids = super::reads::lookup_ids(&fields["room_id"]);
+                fields["room_id"] = json!(
+                    Room::for_user(tx.conn(), agent.user_id)?
+                        .into_iter()
+                        .filter(|room| ids.contains(&room.id))
+                        .map(|room| room.id)
+                        .min()
+                        .unwrap_or(0)
+                );
             }
-            Ok((preflight(tx,agent_id,&op,fields.clone())?,fields))
+            Ok((preflight(tx, agent_id, &op, fields.clone())?, fields))
         })
         .await
         .map_err(db_error)?;
@@ -188,10 +200,7 @@ fn preflight(
                     return Ok(fail("This thread is locked", 422));
                 }
             }
-            if matches!(
-                op,
-                "post_message" | "start_stream" | "create_poll"
-            ) {
+            if matches!(op, "post_message" | "start_stream" | "create_poll") {
                 let cap = campfire_db::models::agent_posting::Cap::Messages;
                 if let Some(denial) =
                     campfire_db::models::agent_posting::check_budget(tx, agent_id, cap)?
@@ -277,6 +286,7 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
         no_store,
         limit,
     } = settings;
+    let mut member_room = None;
     // Room-first controllers do membership before their Bearer-only check.
     if room_first {
         match concerns::before_actions(c, Before::default().allow_agent_access()).await {
@@ -293,10 +303,10 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
             .read(move |conn| Room::find_for_user(conn, user, room))
             .await
             .map_err(db_error)?;
-        if found.is_none() {
-            // Rails head :not_found uses HTML before any explicit JSON render.
+        let Some(found) = found else {
             return Ok(c.head(StatusCode::NOT_FOUND).content_type("text/html"));
-        }
+        };
+        member_room = Some(found);
     }
     let identity = if room_first {
         agent_api::token(c)?
@@ -319,22 +329,38 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
         } else {
             "post_messages"
         };
-        concerns::ensure_agent_capability(c, cap, room).await?;
         if op == "create_board_post" {
-            concerns::ensure_agent_capability(c, "manage_threads", room).await?;
+            let user = concerns::require_current_user(c)?.id;
+            let facts = c
+                .app()
+                .db
+                .read(move |conn| {
+                    access::capabilities_for_user_in_room(
+                        conn,
+                        user,
+                        room,
+                        &["post_messages", "manage_threads"],
+                    )
+                })
+                .await
+                .map_err(db_error)?;
+            for capability in ["post_messages", "manage_threads"] {
+                if facts[capability] == Some(false) {
+                    return render_result(c, forbidden(capability));
+                }
+            }
+        } else {
+            concerns::ensure_agent_capability(c, cap, room).await?;
         }
     }
     if limit > 0 {
         agent_api::throttle(c, limit, controller, action)?;
     }
     if matches!(op, "list_board_posts" | "create_board_post") {
-        let room = id(c, "room_id");
-        let board = c
-            .app()
-            .db
-            .read(move |conn| Room::find(conn, room).map(|r| r.board()))
-            .await
-            .map_err(db_error)?;
+        let board = member_room
+            .as_ref()
+            .expect("board controllers load member room first")
+            .board();
         if !board {
             return render_result(c, fail("Room is not a board", 422));
         }
@@ -347,15 +373,26 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
     }
 
     let mut args = args;
-    if op=="update_work" {
-        for key in ["work_status","tags","run_url"] {
-            if args.get(key).is_none() && let Some(value)=args.get("work").and_then(|work|work.get(key)).cloned() {args[key]=value;}
+    if op == "update_work" {
+        for key in ["work_status", "tags", "run_url"] {
+            if args.get(key).is_none()
+                && let Some(value) = args.get("work").and_then(|work| work.get(key)).cloned()
+            {
+                args[key] = value;
+            }
         }
         if args.get("note").is_none_or(blank) {
-            if let Some(work)=args.get("work") && !work.is_null() && !work.is_object() {
-                return Err(Error::internal(anyhow::anyhow!("work does not support dig")));
+            if let Some(work) = args.get("work")
+                && !work.is_null()
+                && !work.is_object()
+            {
+                return Err(Error::internal(anyhow::anyhow!(
+                    "work does not support dig"
+                )));
             }
-            if let Some(note)=args.get("work").and_then(|work|work.get("note")).cloned() {args["note"]=note;}
+            if let Some(note) = args.get("work").and_then(|work| work.get("note")).cloned() {
+                args["note"] = note;
+            }
         }
     }
     for key in ["message_id", "poll_id", "work_id"] {

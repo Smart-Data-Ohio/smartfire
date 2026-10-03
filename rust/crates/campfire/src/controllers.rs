@@ -1243,3 +1243,9 @@ mod agent_review_r5_tests;
 
 #[cfg(test)]
 mod agent_array_read_tests;
+
+#[cfg(test)]
+mod agent_array_shape_tests;
+
+#[cfg(test)]
+mod agent_budget_notice_tests;
