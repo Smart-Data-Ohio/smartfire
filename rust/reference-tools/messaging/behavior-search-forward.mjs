@@ -26,7 +26,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:10000});
     await actOnVisible(filterVisibleText(dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)'),'Designers'),'click',{timeout:10000});
     const forwardedResponses=[];
-    page.on('response',response=>{if(response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/forwards')) forwardedResponses.push(response);});
+    page.on('response',response=>{if(response.request().method()==='POST'&&/\/forwards(?:\.json)?$/.test(new URL(response.url()).pathname)) forwardedResponses.push(response);});
     await actOnVisible(dialog.getByRole('button',{name:'Forward',exact:true}),'click',{});
     await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),/Forwarded to 1 destination/),{timeout:10000});
     // The original status assertion already observes the completed request.
