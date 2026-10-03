@@ -7,7 +7,20 @@ if [[ "${WS11UI_BROKEN_HOST_NETWORK:-}" == 1 ]]; then
   exit "$?"
 fi
 source "$(dirname "$0")/../../../parity/capture/sandbox/run.sh"
-trap parity_cleanup EXIT INT TERM
+# Docker cannot create a missing tmpfs mountpoint below the forwarder's read-only bind.
+# This is an empty mountpoint, not a source of browser dependencies.
+modules_mount_created=0
+if [[ ! -d "$PARITY/node_modules" ]]; then
+  mkdir -p "$PARITY/node_modules"
+  modules_mount_created=1
+fi
+ws11ui_cleanup() {
+  parity_cleanup
+  if [[ "$modules_mount_created" == 1 ]]; then
+    rmdir -- "$PARITY/node_modules" 2>/dev/null || true
+  fi
+}
+trap ws11ui_cleanup EXIT INT TERM
 export PARITY_NAMESPACE=${PARITY_NAMESPACE:-ws11ui-system}
 image=$(docker_image)
 net_root=/home/riels/.cache/rust-port/ws11ui/browser
