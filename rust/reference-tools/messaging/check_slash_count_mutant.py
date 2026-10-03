@@ -19,13 +19,13 @@ marker='    let result = slash_commands::dispatch_in_user_time_zone(tx, context,
 assert raw.decode().count(marker)==1
 try:
  if escape:
-  marker='        assert_eq!(actual["message_counts"], row["message_counts"], "slash actual total-message counts differ from Rails: {name}");'
-  assert test_raw.decode().count(marker)==1
-  test.write_text(test_raw.decode().replace(marker,'        println!("Old returned-message comparator observed actual counts: {}", actual["message_counts"]);'))
+  count_marker='        assert_eq!(actual["message_counts"], row["message_counts"], "slash actual total-message counts differ from Rails: {name}");'
+  assert test_raw.decode().count(count_marker)==1
+  test.write_text(test_raw.decode().replace(count_marker,'        println!("Old returned-message comparator observed actual counts: {}", actual["message_counts"]);'))
  p.write_text(raw.decode().replace(marker,marker+'\n    if text.starts_with("/remind ") && result.kind == "error" {\n        campfire_db::Message::create(tx, campfire_db::models::message::NewMessage {\n            room_id: context.room_id, creator_id: context.user_id,\n            markdown_source: Some("producer control: rejected remind posted".into()),\n            ..Default::default()\n        })?;\n    }\n'))
  r=subprocess.run(runner+['test','--locked','-p','campfire','--bin','campfire','builtin_remind_rejects_unusable_input_without_posting','-j2','--','--test-threads=4','--nocapture'],cwd=root,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
  print(r.stdout,flush=True)
- if escape: assert r.returncode==0
+ if escape: assert r.returncode==0 and "[185,186]" in r.stdout and "[186,187]" in r.stdout
  else: assert r.returncode!=0 and 'slash actual total-message counts differ from Rails' in r.stdout
  print('WS8bm2 slash count producer: '+('escaped old comparator' if escape else 'rejected at actual total-message counts'),flush=True)
 finally:
