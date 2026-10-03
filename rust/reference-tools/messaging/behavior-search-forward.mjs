@@ -1,5 +1,7 @@
 // Source: test/system/search_forward_edit_test.rb at d7c7de92.
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {join} from 'node:path';
 import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty,waitForVisibleText,actOnVisible,filterVisibleText,byVisibleText} from './behavior-visibility.mjs';
 export async function searchForward({author:page,recipient,base,caseName,fixture,openEdit,submit}) {
   if(caseName.startsWith('search tolerates')) {
@@ -20,15 +22,26 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     await waitForVisibleProperty(page.locator('#global-search-input'),'value','system paging');
   } else if(caseName==='forwarded Markdown keeps tables and code blocks') {
     const source=page.locator('.message[data-message-id]').filter({has:filterVisibleText(page.locator('pre code'),'puts :forwarded')});
-    await waitForVisibility(filterVisibleText(source.locator('pre code'),'puts :forwarded'),{timeout:10000});const id=await source.getAttribute('data-message-id');
+    await waitForVisibility(filterVisibleText(source.locator('pre code'),'puts :forwarded'),{timeout:10000});
+    const sourceId=await source.getAttribute('data-message-id');
     await actOnVisible(source.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
     await actOnVisible(page.getByRole('menuitem',{name:'Forward',exact:true}),'click',{});
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:10000});
     await actOnVisible(filterVisibleText(dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)'),'Designers'),'click',{timeout:10000});
     await actOnVisible(dialog.getByRole('button',{name:'Forward',exact:true}),'click',{});
     await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),/Forwarded to 1 destination/),{timeout:10000});
+    // Rails :57 queries the persisted copy after the original status gate.
+    // Read the same fixture DB here; a browser response body is not part of
+    // that assertion and can hang independently of the completed app request.
+    const port=new URL(base).port,storage=process.env.CAMPFIRE_STORAGE_PATH;
+    const database=join(storage,port===process.env.HTTP_PORT?'db/production.sqlite3':`.instances/${port}/db/production.sqlite3`);
+    const forwardedId=Number(execFileSync('python3',['-c',
+      'import sqlite3,sys; db=sqlite3.connect(sys.argv[1],timeout=5); row=db.execute("SELECT id FROM messages WHERE forwarded_from_message_id=? ORDER BY id DESC LIMIT 1",(int(sys.argv[2]),)).fetchone(); assert row is not None; print(row[0])',
+      database,sourceId],{encoding:'utf8',timeout:5000}).trim());
     for(const viewer of [page,recipient]) {
-      const forwarded=viewer.locator(`.message[data-message-id]:not([data-message-id="${id}"])`).filter({has:filterVisibleText(viewer.locator('pre code.language-ruby'),'puts :forwarded')});
+      // Rails :57-60 scopes to the persisted copy's identity. Its code's
+      // visibility must not decide whether the preceding table lookup succeeds.
+      const forwarded=viewer.locator(`.message[data-message-id="${forwardedId}"]`);
       await waitForVisibility(forwarded.locator('.markdown-body table'),{timeout:10000});
       await waitForVisibleText(forwarded.locator('pre code.language-ruby'),'puts :forwarded');
       await waitForVisibleCount(forwarded,1);
@@ -42,6 +55,7 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     await submit(page,'now with https://x.com/jack/status/424242');
     await waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post'),{timeout:15000});
     assert.equal((await page.goto(base+'/rooms/654632876')).status(),200);
-    await waitForVisibility(message.locator('.x-post-card'),{timeout:10000});await waitForVisibility(filterVisibleText(message.locator('.message__edited'),'(edited)'));
+    await waitForVisibility(message.locator('.x-post-card'),{timeout:10000});
+    await waitForVisibility(filterVisibleText(message.locator('.message__edited'),'(edited)'));
   } else throw new Error(`unimplemented search/forward case ${caseName}`);
 }

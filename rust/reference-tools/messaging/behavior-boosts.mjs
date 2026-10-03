@@ -13,7 +13,7 @@ export async function boosts({author,recipient,caseName,viewer,openEdit,send,tex
     await input(page,'Good morning');await submit(page);await delivered(page,'Good morning');await delivered(author,'Good morning');
   } else if(caseName==='deleting a boost') {
     const david=await viewer('David'),boost=david.locator('.boost[id]').filter({has:filterVisibleText(david.locator('[data-boost-delete-target="content"]'),/^Hello$/)});
-    await actOnVisible(boost.locator('[data-boost-delete-target="content"]'),'click',{});await waitForVisibility(boost.getByRole('button',{name:'Delete this boost',exact:true}),{timeout:5000});
+    await actOnVisible(boost.locator('[data-boost-delete-target="content"]'),'click',{});await waitForVisibility(filterVisibleText(boost.locator('button'),'Delete this boost'),{timeout:5000});
     await actOnVisible(boost.getByRole('button',{name:'Delete this boost',exact:true}),'click',{});
     await waitForVisibility(boost,{state:'hidden'});
     for(const browser of [page,author]) await waitForVisibility(browser.locator('.boost[id]').filter({has:filterVisibleText(browser.locator('[data-boost-delete-target="content"]'),/^Hello$/)}),{state:'hidden'});

@@ -19,8 +19,8 @@ export async function attachMenu({author,recipient,caseName}) {
   }
   if(caseName==='+ shows both attach options when Drive is available') {
     await actOnVisible(button,'click',{});await expanded(true);
-    await waitForVisibility(menu.getByRole('menuitem',{name:'From this device',exact:true}));
-    await waitForVisibility(menu.getByRole('menuitem',{name:'From Google Drive',exact:true}));
+    await waitForVisibility(filterVisibleText(menu.locator('[role="menuitem"]'),'From this device'));
+    await waitForVisibility(filterVisibleText(menu.locator('[role="menuitem"]'),'From Google Drive'));
   } else if(caseName==='From this device triggers the file input') {
     await recorder();await actOnVisible(button,'click',{});await actOnVisible(menu.getByRole('menuitem',{name:'From this device',exact:true}),'click',{});
     assert.equal(await page.evaluate(()=>window.filePickerClicks),1);await expanded(false);
@@ -37,7 +37,7 @@ export async function attachMenu({author,recipient,caseName}) {
   } else if(caseName==='a tap outside closes the menu') {
     await actOnVisible(button,'click',{});await expanded(true);await actOnVisible(page.locator('.room-header__name'),'click',{});await expanded(false);
   } else if(caseName==='phone layout keeps the menu above the composer with no horizontal overflow') {
-    await page.setViewportSize({width:390,height:844});await actOnVisible(button,'click',{});await waitForVisibility(menu.getByRole('menuitem',{name:'From Google Drive',exact:true}));
+    await page.setViewportSize({width:390,height:844});await actOnVisible(button,'click',{});await waitForVisibility(filterVisibleText(menu.locator('[role="menuitem"]'),'From Google Drive'));
     // Measure an actionable, settled menu, after its enter transform. This
     // is an interaction-state wait, with no fixed sleep or changed bounds.
     await actOnVisible(menu.getByRole('menuitem',{name:'From Google Drive',exact:true}),'click',{trial:true});

@@ -2,6 +2,7 @@
 // Each named check must reach its case assertions and reject its specific mutant.
 import assert from 'node:assert/strict';
 import {workControllerCases} from './behavior-work-controllers.mjs';
+import {mutationTarget} from './behavior-discrimination.mjs';
 import {actionMutations} from './behavior-action-mutations.mjs';
 const list='controllers/message_list_controller-';
 const actions='controllers/message_actions_controller-';
@@ -261,7 +262,28 @@ export const hiddenScopeProbes=new Map([
     ['hidden-open-message-toolbar',opacity('.message[data-message-actions-open] .message__toolbar { display: none !important; }')],
   ])],
 ]);
+const hiddenAttachText=action=>['controllers/attach_menu_controller-','connect() {',`connect() { for (const button of this.element.querySelectorAll('[data-action*="${action}"]')) { const span = document.createElement("span"); span.style.opacity = "0"; span.textContent = button.textContent; button.replaceChildren(span); }`];
+export const labelMutations=new Map([
+  ['Markdown replies and file attachments remain usable',new Map([
+    ['transparent-attachment-filename',opacity('.message__body [data-reply-target="body"] > .flex-inline span { opacity: 0 !important; }')],
+  ])],
+  ['+ shows both attach options when Drive is available',new Map([
+    ['transparent-device-text',hiddenAttachText('chooseDevice')],
+    ['transparent-drive-text',hiddenAttachText('chooseDrive')],
+  ])],
+  ['phone layout keeps the menu above the composer with no horizontal overflow',new Map([
+    ['transparent-phone-drive-text',hiddenAttachText('chooseDrive')],
+  ])],
+  ['deleting a boost',new Map([
+    ['transparent-boost-delete-text',opacity('.boost__delete span { opacity: 0 !important; }')],
+  ])],
+]);
+for(const [name,variants] of labelMutations) {
+  if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
+  for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
+}
 export const categoryMutations=new Map([
+  ['profile message and ban buttons have accessible names',new Map([['transparent-ban-text',opacity('form[action="/users/712064548/ban"] button span { opacity: 0 !important; }')]])],
   ['deleting the focused message moves focus to the surviving tab stop',new Map([
     ['delayed-negative-removal',[list,'connect() {','connect() { document.addEventListener("turbo:before-stream-render", event => { if (event.target.getAttribute("action") === "remove") { const render = event.detail.render; event.detail.render = async stream => { await new Promise(resolve => setTimeout(resolve, 4000)); await render(stream); }; } });']],
   ])],
@@ -286,6 +308,36 @@ export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
 export async function installMutation(page,caseName,probe,variant='default') {
   const mutation=variant==='default'?mutations.get(caseName):reviewMutations.get(caseName)?.get(variant)||hiddenScopeProbes.get(caseName)?.get(variant);
   assert.ok(mutation,`no discrimination mutant for ${caseName}`);
+  if(process.env.WS8BM_NEGATIVE==='1') probe.target=mutationTarget(caseName,variant);
+  const [asset,,replacement]=mutation;
+  if(caseName==='a release click landing on the just-opened menu does not activate it'&&variant==='default') {
+    probe.requiresReleaseClick=true;
+    await page.addInitScript(()=>{
+      window.__ws8bmReleaseClicks=[];
+      document.addEventListener('click',event=>{
+        const menu=event.target.closest?.('#message-actions-menu');
+        if(menu) window.__ws8bmReleaseClicks.push({releaseClick:true,brokenGuard:window.__ws8bmBrokenReleaseGuard===true,menuVisible:!menu.hidden});
+      },true);
+    });
+    (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmReleaseClicks||[]).catch(()=>[]));
+  }
+  const cssSelector=asset==='messages-'&&replacement?.includes('{')?(replacement.startsWith('@media')?replacement.match(/@media[^\{]+\{\s*([^\{]+)\{/)[1].trim():replacement.split('{')[0].trim()):null;
+  const scriptedSelector=['transparent-cancelled-draft','transparent-saved-draft','transparent-newer-draft'].includes(variant)?editor:
+    ['transparent-device-text','transparent-drive-text','transparent-phone-drive-text'].includes(variant)?'.attach-menu span[style]':
+    ['missing-const','missing-def'].includes(variant)?'.missing-keyword-token':
+    asset==='models/code_highlighter-'&&replacement?.includes('code.dataset.highlighted = "no"')?'code[data-highlighted="no"]':
+    asset==='models/code_highlighter-'&&replacement?.includes('missing-code-token')?'.missing-code-token':null;
+  const injectedStyleSelector=asset==='controllers/thread_panel_controller-'?replacement?.match(/style\.textContent = '([^'{]+)\{/ )?.[1].trim():null;
+  const stateSelector=cssSelector||scriptedSelector||injectedStyleSelector;
+  probe.requiresHiddenState ||= !!injectedStyleSelector&&/opacity:\s*0/.test(replacement)|| !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);
+  if(stateSelector) (probe.observers??=[]).push(async()=>{
+    if(page.isClosed()) return [];
+    return page.locator(stateSelector).evaluateAll((elements,selector)=>elements.map(element=>({
+      selector,opacity:getComputedStyle(element).opacity,
+      visibility:getComputedStyle(element).visibility,display:getComputedStyle(element).display,
+      seleniumVisible:window.__ws8bmSeleniumVisible(element),
+    })),stateSelector).catch(()=>[]);
+  });
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());
     const [asset,needle,replacement]=mutation;
@@ -333,6 +385,13 @@ export async function installMutation(page,caseName,probe,variant='default') {
     else if(profile) {assert.ok(body.includes('aria-label="Message Kevin"'));body=body.replace('aria-label="Message Kevin"','aria-label="Wrong recipient"');}
     else if(githubThread) {assert.ok(body.includes('github-pr-thread-header'));body=body.replaceAll('github-pr-thread-header','missing-pr-header');}
     else {assert.ok(body.includes(needle),`mutant source needle missing: ${asset}`);body=body.replace(needle,replacement);}
+    if(probe.requiresReleaseClick) body=body.replace('this.#suppressClickUntil = 0','this.#suppressClickUntil = 0; window.__ws8bmBrokenReleaseGuard = true');
+    // Diagnostic composition: the intended delayed marker still exists, but
+    // hide loading text to reproduce an earlier, unrelated timeout. This must
+    // be INVALID under strict attribution, never another registered negative.
+    if(process.env.WS8BM_UNRELATED_FAILURE_PROBE==='1'&&variant==='delayed-url-edited-marker'&&asset==='messages-') {
+      body=body.replace('.message__quick-reaction {','.x-post-card__loading { visibility: hidden !important; }\n.message__quick-reaction {');
+    }
     probe.applied++;
     await route.fulfill({response,status:refresh?200:response.status(),headers,body});
   });

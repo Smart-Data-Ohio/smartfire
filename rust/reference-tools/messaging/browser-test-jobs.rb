@@ -3,6 +3,7 @@
 Rails.application.config.after_initialize do
   if ENV["WS8BM_TEST_JOB_ADAPTER"] == "1"
     ActiveJob::Base.queue_adapter = ActiveJob::QueueAdapters::TestAdapter.new
-    warn "WS8bm reference jobs: ActiveJob::TestAdapter; perform_enqueued_jobs=false"
+    raise "unexpected job execution" unless ActiveJob::Base.queue_adapter.perform_enqueued_jobs.nil?
+    warn "WS8bm reference jobs: ActiveJob::TestAdapter; perform_enqueued_jobs=nil"
   end
 end

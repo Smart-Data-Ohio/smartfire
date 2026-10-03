@@ -6,6 +6,7 @@ import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {messageList} from './behavior-message-list.mjs';
 import {searchForward} from './behavior-search-forward.mjs';
+import {rejectionEvidence} from './behavior-discrimination.mjs';
 import {installMutation,mutationVariants} from './behavior-mutations.mjs';
 import {unreadDivider} from './behavior-unread.mjs';
 import {destinationCases,messageDestinations} from './behavior-message-destinations.mjs';
@@ -430,6 +431,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
               await author.locator('#composer').evaluate(node=>({busy:node.getAttribute('aria-busy'),reply:node.querySelector('[data-composer-target="replyTo"]')?.value,feedback:node.querySelector('[data-composer-target="feedback"]')?.textContent})));
             throw error;
           }
+          // Rails workspace_markdown:166 uses assert_message_text (:115),
+          // not an accessible download name. Check the actual visible body.
+          await waitForVisibility(filterVisibleText(attachment.locator('.message__body'),'markdown-workspace-attachment.txt'));
           try {await waitForVisibility(attachment.getByRole('link',{name:'Download markdown-workspace-attachment.txt',exact:true}));}
           catch(error) {console.error('WS8bm attachment delivery:',base,await attachment.textContent());throw error;}
         }
@@ -507,6 +511,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
   } catch(error) {
     console.error('WS8bm failed application:',base,caseName);
+    probe.observed=(await Promise.all((probe.observers||[]).map(observe=>observe()))).flat();
     if(caseName==='discusses a pull request from its card') {
       for(const context of contexts) for(const page of context.pages()) {
         console.error('WS8bm discussion diagnostic:',JSON.stringify({url:page.url(),threadResponses,
@@ -522,29 +527,38 @@ try {
     try {
     if(negative) {
       for(const variant of mutationVariants(caseName)) {
+      const invalidApps=[];
       for(const [app,base] of [['Rails',rails],['Rust',rust]]) {
       const probe={ready:false,applied:0};let failure;
       try {await acceptance(base,caseName,probe,variant);} catch(error) {failure=error;}
-      if(!probe.ready || !probe.applied || !failure) console.error('WS8bm invalid discrimination run:',caseName,probe,failure);
-      assert.ok(probe.ready,'mutant must reach the actual named case, not fail startup');
-      assert.equal(probe.networkFailures?.length||0,0,'network failures cannot count as mutant rejection');
-      assert.ok(probe.applied>0,'a deliberate served mutation must actually apply');
-      assert.ok(failure,'named behaviour check must reject the served mutant');
-      assert.ok(failure.code==='ERR_ASSERTION'||failure.name==='TimeoutError',`unexpected infrastructure/adapter failure: ${failure}`);
+      const evidence=rejectionEvidence(caseName,variant,probe,failure);
+      if(!evidence.valid) {
+        const escaped=!failure&&probe.ready&&probe.applied;
+        console.error(`WS8bm ${escaped?'escaped':'invalid'} discrimination run:`,JSON.stringify({caseName,variant,app,...evidence}),failure?.stack);
+        const error=new Error(`No rejection credit: ${evidence.reasons.join('; ')}`);
+        error.code=escaped?'WS8BM_MUTANT_ESCAPED':'WS8BM_INVALID_DISCRIMINATION';
+        invalidApps.push(error);
+        continue;
+      }
+      console.log(`WS8bm intended assertion: ${app}: ${caseName}: ${variant}: ${JSON.stringify(evidence)}`);
       if(probe.delayedWriteStarted) console.log(`WS8bm delayed-write probe: ${app}: ${Date.now()-probe.delayedWriteStarted} ms observed; actual write completed: ${!!probe.delayedWriteCompleted}`);
       console.log(`WS8bm discrimination: ${file}: ${caseName}: ${variant}: ${app} served mutant REJECTED (${failure.code||failure.name})`);
       }
+      if(invalidApps.length) throw new AggregateError(invalidApps,'Uncredited discrimination attempts');
       }
     } else {
+      const failedApps=[];
       for(const [app,base] of [['Rails',rails],['Rust',rust]]) {
         const probe={ready:false,applied:0};
-        await acceptance(base,caseName,probe,selectedMutant||'default');
+        try {await acceptance(base,caseName,probe,selectedMutant||'default');}
+        catch(error) {console.error(`WS8bm positive application FAILED: ${app}: ${caseName}:`,error.stack);failedApps.push(error);continue;}
         if(selectedMutant) {
           assert.ok(probe.ready&&probe.applied>0,'probe must actually apply after valid startup');
           assert.equal(probe.networkFailures?.length||0,0);
           console.log(`WS8bm review escape: ${file}: ${caseName}: ${selectedMutant}: ${app} ACCEPTED`);
         }
       }
+      if(failedApps.length) throw new AggregateError(failedApps,'Unpaired positive attempts');
       if(!selectedMutant) console.log(`WS8bm browser flow: ${file}: ${caseName}: Rails PASS; Rust PASS`);
     }
     } catch(error) {
