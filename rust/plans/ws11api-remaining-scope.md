@@ -1,7 +1,7 @@
 # WS11 API remaining scope before cutover
 
 Updated on `rust/ws11api-next-3`, starting at 914bd16ff; #210's branch is
-untouched. Current main 12b812796 is already merged in that starting head.
+untouched. Current main c6c37fb8f is merged with merge commit e26c8f9ac.
 The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
@@ -72,9 +72,9 @@ exact byte comparisons; sizes/checksums are never masked.
 
 ## Broader named-case evidence still partial
 
-The pinned domain inventory has 378 cases in 26 files. This round closes all
+The pinned domain inventory has 378 cases in 26 files. The preceding round closed all
 13 remaining WS11-owned names: four streaming projections, three bot cases,
-four assignment callbacks and two budget comparisons. The ledger is now
+four assignment callbacks and two budget comparisons. The ledger remains
 **325 comparisons, 53 deferred** (previously 312/66). Executed pass counts are
 reported separately from mapping counts. Each new named comparison has a fresh
 pinned Rails vector and an independently wrong observable negative control.
@@ -182,7 +182,7 @@ Complete current authorization and fresh private-account sealing remain. Query
 growth stays flat at 5/50 owned rows; exact before/after totals are recorded in
 ws11api-next-3-report.md. Required WS11 auth, response and event reads remain;
 those costs are not assigned to peers. The largest remaining fixed gap is inside
-inside WS12's `agent_work::{find_owned,writable,update_work,set_result,handoff_work}`,
+WS12's `agent_work::{find_owned,writable,update_work,set_result,handoff_work}`,
 `ChannelThread::{create_board_post,update_work,update_result}` and their after-commit
 board rendering. They repeat thread/room/owner membership/capability reads and complete
 board render preloads per callback. WS12 owns those service/read-boundary optimizations;
