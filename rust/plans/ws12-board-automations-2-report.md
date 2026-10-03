@@ -35,7 +35,7 @@ The original six fixes were also temporarily removed and restored on this checko
 Independent named settings regressions fail for malformed arrays, missing/underscored
 assignees and Unicode blankness; the 48-case cast test reports its four differences;
 the normal room-destruction race panics; the full-app performance regression fails.
-Without batching, measured SLA reads are 323/3203 and digest reads are 283/2803 at
+With per-claim reloads and per-note rendering restored, SLA reads are 323/3203 and digest reads are 283/2803 at
 10/100 boards (the previously fixed reference callbacks remain installed). The receipts
 are `without-original-settings.log`, `without-original-db.log`,
 `without-original-performance.log` and `without-original-summary.log`. All mutations
@@ -58,7 +58,19 @@ instructions are in `reference-tools/board_automations/review/README.md`.
 The probe includes the production rich-text callbacks, installed app broadcast adapter,
 all readers and the writer. Successful batched broadcasts retain the individual renderer's
 bytes. The 100-board and 64-quoted-source regressions retain SQLite's 64-variable limit.
-Final gate receipts and cleanup are recorded in the companion verification file.
+Latest `origin/main` (`3ea778569`) conflicted in the database test registry. Per the
+existing conflict exception it was merged, retaining both the review and upstream test
+modules. Upstream agent changes came through the merge, with no manual edits to owned
+agent controllers or agent_work files. All gates ran on the merged source.
+
+Full workspace: 4,679 passed, zero failed, 16 existing ignores (61 raw summary lines).
+App: 2,628 passed, seven ignored; database: 1,313 passed, four ignored. Strict workspace
+clippy completed in 8m52s; release inputs completed in 5m51s, both exit zero. The final
+merged-tree dispatch and settings read replays each pass, retaining the table above.
+Settings uses 10/100 candidate members and rules; SLA/digest probes use 10/100 boards.
+The owned `rust/.scratch/pr206-round2/target` and generated `rust/target` were deleted
+after verifying no process used them; four test exports and all review logs were retained.
+Raw gate receipts and cleanup are recorded in the companion verification file.
 
 ## PR #206 review corrections
 

@@ -359,3 +359,151 @@ Deleted: rust/.scratch/pr206-fixes/target
 40K	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/ws12-fix206/rust/target
 Deleted: rust/target
 After: zero owned target directories remain
+
+RE-REVIEW AT 262fdfce: FINAL MERGED-TREE VERIFICATION
+Source fix commit: 9d173b69c
+Verified merge: ec837e446; origin/main: 3ea778569 (test-registry conflict; both module sets retained)
+No manual edits to agent controllers or agent_work; no stacked-branch edits.
+Full workspace, clippy, release inputs: exit 0; --test-threads=8; configured rustc throttle retained.
+Rails generators ran sequentially. Pinned image: ws12-reference:boards-b908ebc2.
+Rails SLA corpus: 128 unique shapes; 66 x 302, 35 x 422, 27 x 500; all rejected facts unchanged.
+Rust: every accepted complete response/fact matches; 27 explicit approved empty-body 400 differences.
+Scalar tag corpus: 16 complete responses/facts; boolean t/f, null, integers, floats, negative zero, exponents.
+Rails/Rust digest frames: missing venue=34; genuine failure=33; failed claim unattached; repeat frames=0.
+Digest oracle recapture JSON identical, with deterministic creation inputs and no output masks.
+
+FAILURES WITH ORIGINAL SIX FIXES REMOVED
+without-original-settings.log
+test controllers::rooms::board_automation_tests::review_pr206_original_unicode_blank ... FAILED
+test controllers::rooms::board_automation_tests::review_pr206_original_missing_and_underscored_assignees ... FAILED
+test controllers::rooms::board_automation_tests::review_pr206_original_malformed_arrays ... FAILED
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 2621 filtered out; finished in 2.78s
+without-original-performance.log
+APP_DISPATCH sla-mixed-10 run=0: fields_differ=[]; Rust_reads=323; Rails_reads=268; bound=32766
+APP_DISPATCH sla-mixed-10 run=1: fields_differ=[]; Rust_reads=2; Rails_reads=62; bound=32766
+APP_DISPATCH sla-mixed-100 run=0: fields_differ=[]; Rust_reads=3203; Rails_reads=2668; bound=64
+APP_DISPATCH sla-mixed-100 run=1: fields_differ=[]; Rust_reads=2; Rails_reads=602; bound=64
+APP_DISPATCH digest-mixed-10 run=0: fields_differ=[]; Rust_reads=283; Rails_reads=61; bound=32766
+APP_DISPATCH digest-mixed-10 run=1: fields_differ=[]; Rust_reads=1; Rails_reads=41; bound=32766
+APP_DISPATCH digest-mixed-100 run=0: fields_differ=[]; Rust_reads=2803; Rails_reads=601; bound=64
+APP_DISPATCH digest-mixed-100 run=1: fields_differ=[]; Rust_reads=1; Rails_reads=401; bound=64
+test controllers::rooms::board_automation_tests::review_pr206_dispatch_with_production_richtext_jobs_and_bind_limit ... FAILED
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2623 filtered out; finished in 9.47s
+without-original-db.log
+REVIEW decimal casts: 48 inputs; 4 differences
+test tests::board_automation_review_casts_test::review_pr206_decimal_casts_and_errors ... FAILED
+selected board exists
+test tests::board_automation_review_races_test::review_pr206_deleted_board_races_keep_healthy_boards_running ... FAILED
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 1307 filtered out; finished in 0.21s
+All temporary original-fix mutations restored before passing runs.
+
+NEW FINDING FAILING-FIRST RECEIPTS
+before-settings.log
+test controllers::rooms::board_automation_tests::review_pr206_round2_scalar_tags ... FAILED
+test controllers::rooms::board_automation_tests::review_pr206_round2_sla_shapes ... FAILED
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 2617 filtered out; finished in 112.59s
+before-digests-valid.log
+assertion `left == right` failed: "failed-broadcast" claim state
+test channels::tests::events_test::board_digest_review::review_pr206_round2_digest_failed_broadcast ... FAILED
+assertion `left == right` failed: "missing-venue" published frames; healthy boards must broadcast
+test channels::tests::events_test::board_digest_review::review_pr206_round2_digest_missing_venue ... FAILED
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 2622 filtered out; finished in 1.66s
+
+FULL WORKSPACE RAW SUMMARY LINES
+test result: ok. 2628 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 702.35s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.90s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
+test result: ok. 1313 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 147.11s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.27s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.01s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.68s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.57s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.57s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.12s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.66s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.42s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.40s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.97s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+WORKSPACE_SUMMARY: 61 raw summaries; 4679 passed; 0 failed; 16 ignored
+
+CLIPPY EXIT 0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8m 52s
+
+RELEASE EXIT 0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 51s
+
+FINAL MERGED-TREE FULL-APP READ RECEIPTS
+final-dispatch.log (exit 0)
+APP_DISPATCH mixed-sla-crossings run=0: fields_differ=[]; Rust_reads=103; Rails_reads=169; bound=32766
+APP_DISPATCH mixed-sla-crossings run=1: fields_differ=[]; Rust_reads=2; Rails_reads=42; bound=32766
+APP_DISPATCH mixed-sla-crossings run=2: fields_differ=[]; Rust_reads=35; Rails_reads=85; bound=32766
+APP_DISPATCH mixed-digest-25-utc-rollover run=0: fields_differ=[]; Rust_reads=28; Rails_reads=7; bound=32766
+APP_DISPATCH mixed-digest-25-utc-rollover run=1: fields_differ=[]; Rust_reads=1; Rails_reads=5; bound=32766
+APP_DISPATCH mixed-digest-25-utc-rollover run=2: fields_differ=[]; Rust_reads=28; Rails_reads=7; bound=32766
+APP_DISPATCH committed-post-failure-healthy-board run=0: fields_differ=[]; Rust_reads=28; Rails_reads=11; bound=32766
+APP_DISPATCH committed-post-failure-healthy-board run=1: fields_differ=[]; Rust_reads=1; Rails_reads=9; bound=32766
+APP_DISPATCH committed-attach-failure-healthy-board run=0: fields_differ=[]; Rust_reads=32; Rails_reads=13; bound=32766
+APP_DISPATCH committed-attach-failure-healthy-board run=1: fields_differ=[]; Rust_reads=1; Rails_reads=9; bound=32766
+APP_DISPATCH sla-mixed-10 run=0: fields_differ=[]; Rust_reads=163; Rails_reads=268; bound=32766
+APP_DISPATCH sla-mixed-10 run=1: fields_differ=[]; Rust_reads=2; Rails_reads=62; bound=32766
+APP_DISPATCH sla-mixed-100 run=0: fields_differ=[]; Rust_reads=1603; Rails_reads=2668; bound=64
+APP_DISPATCH sla-mixed-100 run=1: fields_differ=[]; Rust_reads=2; Rails_reads=602; bound=64
+APP_DISPATCH digest-mixed-10 run=0: fields_differ=[]; Rust_reads=64; Rails_reads=61; bound=32766
+APP_DISPATCH digest-mixed-10 run=1: fields_differ=[]; Rust_reads=1; Rails_reads=41; bound=32766
+APP_DISPATCH digest-mixed-100 run=0: fields_differ=[]; Rust_reads=487; Rails_reads=601; bound=64
+APP_DISPATCH digest-mixed-100 run=1: fields_differ=[]; Rust_reads=1; Rails_reads=401; bound=64
+APP_DISPATCH digest-quoted-titles-bind-limit run=0: fields_differ=[]; Rust_reads=473; Rails_reads=321; bound=64
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2634 filtered out; finished in 9.42s
+final-settings.log (exit 0)
+WS12 settings choices-10: Rust 14 SELECTs; Rails 14
+WS12 settings choices-100: Rust 14 SELECTs; Rails 14
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2634 filtered out; finished in 32.52s
+
+TARGET_CLEANUP: deleted=2; active_users=0; file_bytes=6321445331; owned_targets_remaining=0; test_exports_preserved=4
