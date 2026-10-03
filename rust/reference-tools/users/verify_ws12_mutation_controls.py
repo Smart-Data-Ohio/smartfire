@@ -10,6 +10,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[3]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--test-log", type=Path, required=True)
+parser.add_argument("--browser-test-log", type=Path)
 parser.add_argument("--scratch", type=Path, required=True)
 args = parser.parse_args()
 args.scratch.mkdir(parents=True, exist_ok=True)
@@ -17,6 +18,8 @@ ledger = json.loads((ROOT / "rust/plans/ws12-assertion-reconciliation.json").rea
 index = next(i for i, row in enumerate(ledger["cases"]) if row["reconciliation"] == "mapped")
 command = ["python3", str(ROOT / "rust/reference-tools/users/verify_ws12_reconciliation.py"),
            "--test-log", str(args.test_log.resolve())]
+if args.browser_test_log:
+    command.extend(["--browser-test-log", str(args.browser_test_log.resolve())])
 baseline = subprocess.run(command, text=True, capture_output=True, check=True)
 print(baseline.stdout, end="")
 for name, expected in [("missing receipt", "no producer-mutation receipt"),

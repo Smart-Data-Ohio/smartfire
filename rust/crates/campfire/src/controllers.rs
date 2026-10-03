@@ -1270,3 +1270,12 @@ mod ws12_handled_sequence_tests;
 
 #[cfg(test)]
 mod ws12_private_pr_owner_tests;
+
+#[cfg(test)]
+mod ws12_inbox_remaining_tests;
+
+#[cfg(test)]
+mod ws12_work_remaining_tests;
+
+#[cfg(test)]
+mod ws12_browser_remaining_tests;
