@@ -70,11 +70,11 @@ fn record(
     thread: &ChannelThread,
     agent_id: i64,
     kind: &str,
-    actor_id: Option<i64>,
+    actor: (Option<i64>, Option<&str>),
     hop_chain: (i64, &str),
     extra: Value,
-    actor_name: Option<&str>,
 ) -> Result<AgentEvent> {
+    let (actor_id, actor_name) = actor;
     let (hop, chain) = hop_chain;
     let mut metadata = json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":actor_name,"hop":hop});
     if let Some(extra) = extra.as_object() {
@@ -130,15 +130,30 @@ pub fn record_owner_change(
     }
     let (hop, chain) = bot_webhook_fanout::hop_and_chain_for_actor(tx, actor_id)?;
     let chain = chain.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let mut assignments=Vec::new();
-    for (owner,kind) in [(from_owner_id,"work_unassigned"),(to_owner_id,"work_assigned")] {
-        if let Some(agent)=owner_agent(tx,owner)? {assignments.push((agent,kind));}
+    let mut assignments = Vec::new();
+    for (owner, kind) in [
+        (from_owner_id, "work_unassigned"),
+        (to_owner_id, "work_assigned"),
+    ] {
+        if let Some(agent) = owner_agent(tx, owner)? {
+            assignments.push((agent, kind));
+        }
     }
-    if assignments.is_empty() {return Ok(Vec::new());}
-    let actor_name=actor_name(tx,actor_id)?;
-    let mut events=Vec::new();
-    for (agent,kind) in assignments {
-        events.push(record(tx,thread,agent,kind,actor_id,(hop,&chain),Value::Null,actor_name.as_deref())?);
+    if assignments.is_empty() {
+        return Ok(Vec::new());
+    }
+    let actor_name = actor_name(tx, actor_id)?;
+    let mut events = Vec::new();
+    for (agent, kind) in assignments {
+        events.push(record(
+            tx,
+            thread,
+            agent,
+            kind,
+            (actor_id, actor_name.as_deref()),
+            (hop, &chain),
+            Value::Null,
+        )?);
     }
     Ok(events)
 }
@@ -163,10 +178,9 @@ pub fn record_handoff(
             thread,
             previous,
             "work_unassigned",
-            sender_id,
+            (sender_id, actor_name.as_deref()),
             (hop, &chain),
             Value::Null,
-            actor_name.as_deref(),
         )?);
     }
     events.push(record(
@@ -174,10 +188,9 @@ pub fn record_handoff(
         thread,
         receiver_agent_id,
         "work_handed_off",
-        sender_id,
+        (sender_id, actor_name.as_deref()),
         (hop, &chain),
         json!({"handoff":handoff_payload}),
-        actor_name.as_deref(),
     )?);
     Ok(events)
 }
