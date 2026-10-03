@@ -14,6 +14,10 @@ pub(crate) struct LoadedPreferences {
     calendar_ooo: bool,
 }
 impl LoadedPreferences {
+    pub(crate) fn time_zone(&self) -> campfire_views::time::Zone {
+        campfire_views::time::Zone::for_user(self.preferences.time_zone.as_deref())
+    }
+
     pub(crate) fn from_row(
         row: &rusqlite::Row<'_>,
         now: jiff::Timestamp,
@@ -33,11 +37,21 @@ impl LoadedPreferences {
                 text_size: row.get("text_size")?,
                 time_zone: row.get("time_zone")?,
                 time_zone_explicit: row.get("time_zone_explicit")?,
-                // Preserve the former `tour_completed_at IS NOT NULL` projection.
-                tour_completed: !matches!(
-                    row.get_ref("tour_completed_at")?,
-                    rusqlite::types::ValueRef::Null
-                ),
+                tour_completed: match row.get_ref("tour_completed_at")? {
+                    rusqlite::types::ValueRef::Null => false,
+                    rusqlite::types::ValueRef::Text(value) => std::str::from_utf8(value)
+                        .ok()
+                        .and_then(rails_compat::datetime::deserialize::<Timestamp>)
+                        .is_some(),
+                    // Rails' datetime type passes non-string scalars through.
+                    rusqlite::types::ValueRef::Integer(_) | rusqlite::types::ValueRef::Real(_) => {
+                        true
+                    }
+                    rusqlite::types::ValueRef::Blob(value) => {
+                        rails_compat::datetime::deserialize_sqlite_blob::<Timestamp>(value)
+                            .is_some()
+                    }
+                },
                 voice_mode: row.get("voice_mode")?,
                 push_to_talk_key: row.get("push_to_talk_key")?,
                 notification_sounds: NotificationSounds {

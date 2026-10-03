@@ -1,35 +1,37 @@
 //! Bounded, authorized agent reader windows. REST and MCP use the same reads.
 use crate::sql::{placeholders, query_all, query_one};
-use crate::{ChannelThread, Connection, Message, Result};
+use crate::{ChannelThread, Connection, Message, Result, Room};
 use rusqlite::{params, params_from_iter};
 
 pub fn message_by_ids(conn: &Connection, ids: &[i64]) -> Result<Option<Message>> {
     if ids.is_empty() {
         return Ok(None);
     }
-    query_one(
-        conn,
-        &format!(
-            "SELECT * FROM messages WHERE id IN ({}) LIMIT 1",
-            placeholders(ids.len())
-        ),
-        params_from_iter(ids),
-        Message::from_row,
-    )
+    query_one(conn,"SELECT * FROM messages WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 1",
+        [serde_json::json!(ids).to_string()],Message::from_row)
+
 }
 pub fn thread_by_ids(conn: &Connection, ids: &[i64]) -> Result<Option<ChannelThread>> {
     if ids.is_empty() {
         return Ok(None);
     }
-    query_one(
-        conn,
-        &format!(
-            "SELECT * FROM channel_threads WHERE id IN ({}) LIMIT 1",
-            placeholders(ids.len())
-        ),
-        params_from_iter(ids),
-        ChannelThread::from_row,
-    )
+    query_one(conn,"SELECT * FROM channel_threads WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 1",
+        [serde_json::json!(ids).to_string()],ChannelThread::from_row)
+
+}
+/// Work-create transport's current alive membership lookup, matching user.rooms.
+/// Its caller rechecks live capabilities in the same writer transaction.
+pub fn member_room_by_ids(conn:&Connection,user:i64,ids:&[i64])->Result<Option<Room>> {
+    query_one(conn,"SELECT r.* FROM rooms r JOIN memberships m ON m.room_id=r.id
+        WHERE m.user_id=? AND r.deleted_at IS NULL AND r.id IN (SELECT value FROM json_each(?)) ORDER BY r.id LIMIT 1",
+        params![user,serde_json::json!(ids).to_string()],Room::from_row)
+}
+
+/// Rails resolves cursor arrays inside the original conversation, before applying
+/// either window. One JSON bind keeps arbitrary IN lists below SQLite's bind limit.
+pub fn conversation_anchor(conn:&Connection,room:i64,thread:Option<i64>,ids:&[i64])->Result<Option<i64>> {
+    query_one(conn,"SELECT id FROM messages WHERE id IN (SELECT value FROM json_each(?)) AND ((? IS NOT NULL AND thread_id=?) OR (? IS NULL AND room_id=? AND thread_id IS NULL)) ORDER BY id LIMIT 1",
+        params![serde_json::json!(ids).to_string(),thread,thread,thread,room],|row|row.get(0))
 }
 pub fn message_window(
     conn: &Connection,

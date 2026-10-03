@@ -100,3 +100,63 @@ subsequent posting to reuse its committed variant record even without its file.
 Message attachment preparation preserves that behavior; missing-file serving
 uses the handled responses above. The video oracle retains every attachment's record_id and
 record_type, with exact foreign keys and generated row-count checks.
+
+## HTTP/1.1 proxy security headers (PR #203 follow-up)
+
+The maintainer explicitly approved retaining Rust's six security defaults on
+Active Storage representation and blob proxy responses. Pinned Rails uses
+ActionController::Live's response and omits them with HTTP/1.1, including
+successful streams, ranges and handled empty 404/416 responses:
+
+| Approved extra Rust header | Required value |
+| --- | --- |
+| Permissions-Policy | camera=(self), display-capture=(self), microphone=(self), notifications=(self) |
+| Referrer-Policy | strict-origin-when-cross-origin |
+| X-Content-Type-Options | nosniff |
+| X-Frame-Options | SAMEORIGIN |
+| X-Permitted-Cross-Domain-Policies | none |
+| X-XSS-Protection | 0 |
+
+No other extra/missing name or changed value is approved. Date, X-Request-Id
+and X-Runtime are per-request values allowed only by those names; their format
+and single-value cardinality remain checked. Content-Transfer-Encoding is
+compared, including its absence on proxies. CSP is compared byte for byte:
+fixed test-only nonce-generator entropy is an input on both sides, not an
+output/header mask. Production nonce generation stays random.
+
+`review192r5_missing_representations.rb` and `blob_proxy_headers.rb` now use
+`Rack::Builder.parse_file(config.ru)` with Rack::Deflater, explicitly assert the
+request's SERVER_PROTOCOL is HTTP/1.1 and retain it in each raw receipt. Every
+response header and all values are captured. The all-header comparator rejects
+unexpected names, changed unapproved values and duplicate values, including on
+approved names. The previous nine-name projection and HTTP/1.0 default hid
+this difference; the inventory's old claim of exact proxy header parity is
+superseded by this explicit approval. Bodies, statuses, media bytes and stored
+state remain exact under the existing narrowly documented media approvals.
+
+## Current authorization and owner-transfer races (#205 review)
+
+The maintainer approved retaining Rust's stricter current-state checks. Astra's
+`/home/riels/.cache/rust-port/ws11apir/review-205-r1/behavior-race-results.md`
+classifies 13 of 34 committed prewriter races and four of ten private response
+races as inherited differences, not batching or #205 regressions. Its baseline
+89 cases / 100 requests has zero differences; the remaining 21 prewriter and six
+private cases match exactly. This approval does not change production checks.
+
+Both create surfaces recheck membership, manage_threads grants and suspension
+inside the writer. Membership deletion gives Rust 404 versus Rails' invalid-owner
+422; revoked manage grants give Rust 403 versus Rails 201 with two jobs; suspension
+gives Rust 403 versus Rails' invalid-owner 422. Seven noncreate write surfaces
+reject a newly suspended sender with Rust 404 while Rails' earlier Agent snapshot
+continues with 200/201. Rust preserves the injected changes, writes no source jobs
+and does not proceed on the stale authorization. MCP retains HTTP 200 with the
+corresponding error/success envelope differences.
+
+Four REST/MCP owner transfers before identity selection or during the private
+repository reply redact private title/head/base in Rust, while Rails retains its
+earlier owner association. Rust also skips the earlier identity's external read
+when the transfer precedes identity selection. Public fields remain visible;
+all 21 persisted table snapshots and jobs agree. Ordinary allowance, disconnect
+and account relink behavior remain unchanged. Current owner/account checks,
+IdentityGuard and final sealing stay authoritative; this narrow approval does not
+allow unrelated response, authorization or state differences.

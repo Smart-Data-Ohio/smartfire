@@ -150,6 +150,13 @@ impl Event {
 }
 
 pub trait EventSink: Send + Sync {
+    /// Rails attaches a daily digest claim only after its explicit broadcast succeeds.
+    /// The app returns the successfully published note IDs; recorder-only sinks retain
+    /// their ordinary event behavior. Run outside the writer so rendering can read.
+    fn broadcast_digest_notes(&self, notes: &crate::models::board_automations::DigestNotes) -> Result<Vec<i64>> {
+        self.emit(Event::broadcast(notes));
+        Ok(notes.message_ids.clone())
+    }
     /// Peer model adapter. The default is a flagged uninstalled stub, as with
     /// `callbacks::Registry`; production Jobs dispatches its installed handlers.
     fn model_callback(&self, _tx: &mut Tx<'_>, _callback: crate::callbacks::Callback) -> Result<()> { Ok(()) }

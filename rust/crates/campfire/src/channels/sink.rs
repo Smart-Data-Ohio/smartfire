@@ -38,6 +38,9 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// it still run.
 fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
+        campfire_db::models::board_automations::DigestNotes::KIND => decode(request).and_then(|notes| {
+            app.map_or(Ok(()), |app| super::board_digests::deliver(cable, app, &notes).map(|_| ()))
+        }),
         campfire_db::models::huddle_effects::StageEndedNote::KIND => decode::<campfire_db::models::huddle_effects::StageEndedNote>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_ended_note(app,e.message_id))),
         campfire_db::models::huddle_effects::StagePanel::KIND => decode::<campfire_db::models::huddle_effects::StagePanel>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_panel(app,e.room_id,e.membership_id))),
         campfire_db::models::huddle_effects::StreamChanged::KIND => decode::<campfire_db::models::huddle_effects::StreamChanged>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stream_changed(app,e.room_id))),
@@ -61,6 +64,10 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
         campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND =>
             decode(request).and_then(|broadcast| ooo_notice(cable, broadcast)),
+        campfire_db::models::calendar_event::CardUpdate::KIND => decode::<campfire_db::models::calendar_event::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            super::event_cards::publish(app, event.event_id)
+        }),
         crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
             .and_then(|event| {
                 let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
@@ -411,3 +418,6 @@ mod tests {
 
 #[cfg(test)]
 mod stream_tests;
+
+#[cfg(test)]
+mod stream_remaining_cases;

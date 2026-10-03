@@ -2,8 +2,10 @@
 //! Only adapter coercion, board authorization and payload rendering live here.
 use super::{attribute_string, mcp::blank, reads::lookup_ids, ruby_i64};
 use crate::{app::AppCtx, concerns, controllers::presenters::page::db_error};
-use campfire_db::models::{agent_payloads, agent_service::ServiceResult, agent_work, audit_log};
-use campfire_db::{Agent, AgentWorkChanges, ChannelThread, HandoffPackage, Room, WorkHandoff};
+use campfire_db::models::{
+    agent_access, agent_reading, agent_payloads, agent_service::ServiceResult, agent_work, audit_log,
+};
+use campfire_db::{Agent, AgentWorkChanges, ChannelThread, HandoffPackage, WorkHandoff};
 use campfire_kit::{Ctx, Result};
 use campfire_richtext::ruby::json_value_to_s;
 use rusqlite::{OptionalExtension, params};
@@ -47,11 +49,11 @@ pub(super) async fn operation(
             // Active Record's association find_by accepts IN arrays. Resolve one
             // current member room; the model service retains its budget/validation order.
             let ids=lookup_ids(&args["room_id"]);
-            let room_id=tx.conn().query_row("SELECT r.id FROM rooms r JOIN memberships m ON m.room_id=r.id WHERE m.user_id=? AND r.id IN (SELECT value FROM json_each(?)) ORDER BY r.id LIMIT 1",params![agent.user_id,json!(ids).to_string()],|row|row.get::<_,i64>(0)).optional()?;
-            let Some(room_id)=room_id else {return Ok(Written::Denied(ServiceResult::fail("Room not found",404)));};
-            let room=Room::find(tx.conn(),room_id)?;
+            let Some(room)=agent_reading::member_room_by_ids(tx.conn(),agent.user_id,&ids)? else {return Ok(Written::Denied(ServiceResult::fail("Room not found",404)));};
+            let room_id=room.id;
+            let facts=agent_access::capabilities_for_user_in_room(tx.conn(),agent.user_id,room_id,&["post_messages","manage_threads"])?;
             for capability in ["post_messages","manage_threads"] {
-                if !agent.can(tx.conn(),capability,Some(room_id))? {
+                if facts[capability]!=Some(true) {
                     return Ok(Written::Denied(ServiceResult::fail(format!("Forbidden: agent lacks {capability} capability"),403)));
                 }
             }
@@ -120,7 +122,10 @@ pub(super) async fn operation(
         .read(move |conn| {
             // Tag assignment has its own after_commit write. Render the committed row.
             let thread = ChannelThread::find(conn, id)?;
-            let owner = Agent::find(conn, agent_id)?.and_then(|agent| agent.owner_id);
+            // The live batch already names the owner of each allowance and
+            // work_payloads revalidates its account snapshot during rendering.
+            // With no allowance there is no owner-specific data to expose.
+            let owner = access.iter().next().map(|(owner, _, _)| *owner);
             let mut payload =
                 agent_payloads::work_payloads(conn, &[thread], owner, &access)?.remove(0);
             if let Some(handoff) = handoff {

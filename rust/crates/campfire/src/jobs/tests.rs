@@ -959,6 +959,8 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     expected.push(ws17["presence_task"].clone());
     let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
     expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
+    let board:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/board_automations.json")).unwrap();
+    expected.extend(board["cadence"].as_array().unwrap().iter().cloned());
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
     let events = periodic.tasks().find(|task| task.name() == "event reminders").unwrap();
     assert_eq!(events.interval(), Duration::from_secs(17));
@@ -1281,3 +1283,36 @@ async fn ws8_periodic_row_failures_continue_like_rails() {
 }
 
 mod event_tests;
+
+#[test]
+fn event_sink_does_not_keep_a_stopped_cable_server_alive() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    struct Auth(Arc<AtomicBool>);
+    impl Drop for Auth {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+    #[async_trait::async_trait]
+    impl campfire_cable::Authenticate<crate::channels::CableUser> for Auth {
+        async fn connect(
+            &self,
+            _: &campfire_cable::ConnectRequest,
+        ) -> Option<crate::channels::CableUser> {
+            None
+        }
+    }
+    let dropped = Arc::new(AtomicBool::new(false));
+    let config = RunnerConfig::new(vec![campfire_jobs::QueueConfig::new("default", 1)]);
+    let (sink, _pending) = Jobs::new(&Registry::new(), &config).unwrap();
+    let cable = Cable::builder(campfire_cable::Config::default(), Auth(dropped.clone())).build();
+    sink.set_cable(cable.clone());
+    assert!(!dropped.load(Ordering::SeqCst));
+    drop(cable);
+    assert!(
+        dropped.load(Ordering::SeqCst),
+        "the event sink retained Cable and its database-owning authenticator"
+    );
+    // A database may finish teardown after the server; publishing then is a no-op.
+    sink.emit(Event::DisconnectUser { user_id: -1, reconnect: false });
+}

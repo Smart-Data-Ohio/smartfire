@@ -1,0 +1,55 @@
+{
+  "reference": "d7c7de92",
+  "expiry": [
+    {
+      "zone": "UTC",
+      "input": "15 ſep 2030",
+      "stored": null
+    },
+    {
+      "zone": "UTC",
+      "input": "ſep 15 2030",
+      "stored": null
+    },
+    {
+      "zone": "UTC",
+      "input": "15-ſep-2030",
+      "stored": null
+    },
+    {
+      "zone": "UTC",
+      "input": "ſep-15-2030",
+      "stored": null
+    },
+    {
+      "zone": "UTC",
+      "input": "ſ42.6.15",
+      "stored": "0042-06-15 00:00:00"
+    },
+    {
+      "zone": "UTC",
+      "input": "ſ1.1.1",
+      "stored": "0001-01-01 00:00:00"
+    },
+    {
+      "zone": "UTC",
+      "input": "ſun",
+      "stored": "2026-03-02 00:00:00"
+    },
+    {
+      "zone": "UTC",
+      "input": "ſat 4pm",
+      "stored": "2026-03-02 16:00:00"
+    },
+    {
+      "zone": "UTC",
+      "input": "2030-06-15 10:20:30 eſt",
+      "stored": "2030-06-15 10:20:30"
+    },
+    {
+      "zone": "UTC",
+      "input": "15 Sep 2030",
+      "stored": "2030-09-15 00:00:00"
+    }
+  ]
+}

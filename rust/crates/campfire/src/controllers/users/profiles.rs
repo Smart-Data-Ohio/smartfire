@@ -164,7 +164,8 @@ async fn render_show(
     }
     sections.fizzy = presenters::fizzy_profile::connection(c.app(), user.id).await.map_err(Error::internal)?;
     let github = presenters::github::connection(c.app(), user.id).await.map_err(Error::internal)?;
-    let user = presenters::user_summary(&secrets, &user);
+    let zone = presenters::view_context::time_zone(c).await?;
+    let user = presenters::user_summary_in_zone(&secrets, &user, &zone);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
         github: github.clone(),

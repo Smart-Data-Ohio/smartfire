@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Compile real regressions; require HTTP/socket tests to reject each one."""
 import argparse
-import os
 from pathlib import Path
-import subprocess
+from discrimination import require_baseline, require_rejected, run_tests
 
 root = Path(__file__).resolve().parents[3]
 sink = root / "crates/campfire/src/channels/sink.rs"
@@ -28,8 +27,8 @@ cases = [
      "if change.message_id.is_some() { return Ok(()); }\n    if let Some(id) = change.message_id {",
      "message_step_callbacks_replace_current_message_in_room_and_thread_without_cached_tokens"),
     ("message-cache", rendered,
-     "views::uncached_message(ctx, &view)",
-     "views::message(ctx, &view)",
+     "Ok(Some(views::uncached_message(ctx, &view)))",
+     "Ok(Some(views::message(ctx, &view)))",
      "message_step_callbacks_replace_current_message_in_room_and_thread_without_cached_tokens"),
     ("presence-broadcast", agent,
      "if self.status != before.status || self.status_note != before.status_note {",
@@ -47,25 +46,51 @@ cases = [
      "&& false && !actor.is_administrator()",
      "owner_cannot_approve_github_or_fizzy_but_can_deny_each"),
 ]
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--only", choices=[case[0] for case in cases])
-args = parser.parse_args()
-selected = [case for case in cases if args.only is None or case[0] == args.only]
-originals = {path: path.read_text() for _, path, *_ in selected}
-try:
-    for name, path, needle, replacement, test in selected:
-        original = originals[path]
-        assert original.count(needle) == 1, f"{name}: source changed; review mutation"
-        path.write_text(original.replace(needle, replacement))
-        result = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
-             "-p", "campfire", test, "--", "--nocapture", "--test-threads=8"],
-            cwd=root, env={**os.environ, "CI": "1", "CARGO_BUILD_JOBS": "2"}, capture_output=True, text=True)
-        output = result.stdout + result.stderr
-        assert result.returncode != 0 and "test result: FAILED." in output and "panicked at" in output, f"{name}: mutation escaped test\n{output}"
-        print(name + ": " + next(line for line in output.splitlines() if line.startswith("test result:")), flush=True)
-        path.write_text(original)
-    print(f"Agent runtime discrimination: {len(selected)} regressions detected; sources restored")
-finally:
-    for path, original in originals.items():
-        path.write_text(original)
+assertions = {
+    "activity": ("agent_broadcasts.rs", "committed approval must broadcast its activity item"),
+    "status": ("agent_broadcasts.rs", "committed agent status must broadcast both status fragments"),
+    "steps": ("agent_broadcasts.rs", "committed thread step must broadcast ordered steps"),
+    "message-steps": ("agent_broadcasts.rs", "committed message step must broadcast the current message"),
+    "message-cache": ("agent_broadcasts.rs", "message step callback must render current uncached steps"),
+    "presence-broadcast": ("agent_broadcasts.rs", "working presence incorrectly broadcast a status callback: AgentsChannel status replacement"),
+    "presence-status-note": ("agent_broadcasts.rs", "committed status note must broadcast both status fragments"),
+    "ledger": ("agent_histories.rs", "ledger content requires the agent's read_messages grant"),
+    # Without the administrator guard, the real GitHub identity validation returns 422.
+    "external-owner": ("approval_decisions.rs", "external write approvals require an administrator", ("422", "403")),
+}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--only", action="append", choices=[case[0] for case in cases])
+    args = parser.parse_args()
+    selected = [case for case in cases if args.only is None or case[0] in args.only]
+    originals = {path: path.read_text() for _, path, *_ in selected}
+    for name, path, needle, *_ in selected:
+        assert originals[path].count(needle) == 1, f"{name}: source changed; review mutation"
+    if any(name.startswith("presence-") for name, *_ in selected):
+        # A healthy delayed connection includes a real ActionCable ping; a closed
+        # transport must be invalid rather than evidence of a status mutation.
+        require_baseline("working_presence_silence_ignores_buffered_heartbeat")
+        require_baseline("working_presence_silence_transport_failure_is_invalid")
+    for test in dict.fromkeys(case[-1] for case in selected):
+        require_baseline(test)
+    try:
+        for name, path, needle, replacement, test in selected:
+            original = originals[path]
+            path.write_text(original.replace(needle, replacement))
+            result = run_tests(test)
+            filename, message, *values = assertions[name]
+            require_rejected(result, {
+                test: ("crates/campfire/src/controllers/presenters/accounts/tests/" + filename, message, *values)
+            })
+            print(f"{name}: rejected at {message}", flush=True)
+            path.write_text(original)
+        print(f"Agent runtime discrimination: {len(selected)} regressions detected; sources restored")
+    finally:
+        for path, original in originals.items():
+            path.write_text(original)
+
+
+if __name__ == "__main__":
+    main()

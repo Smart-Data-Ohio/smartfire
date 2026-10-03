@@ -24,13 +24,15 @@ pub async fn show(c: &mut Ctx) -> Result {
         }).await;
     }
     let secrets = c.app().secrets.clone();
+    let zone = view_context::time_zone(c).await?;
+    let sidebar_zone = zone.clone();
     let (sidebar, restricted) = {
         let (user, secrets, fragments) = (user.clone(), secrets.clone(), c.app().fragment_cache.clone());
         c.app()
             .db
             .read(move |conn| {
                 // The direct rooms' fragments come from the store the render then uses.
-                let sidebar = campfire_views::fragment_cache::with(&fragments, || presenters::accounts::sidebar(conn, &secrets, &user))?;
+                let sidebar = campfire_views::fragment_cache::with(&fragments, || presenters::accounts::sidebar_in_zone(conn, &secrets, &user, &sidebar_zone))?;
                 let restricted = Account::first(conn)?.is_some_and(|account| account.settings().restrict_room_creation_to_administrators());
                 Ok((sidebar, restricted))
             })
@@ -39,7 +41,7 @@ pub async fn show(c: &mut Ctx) -> Result {
     };
 
     let data = SidebarData {
-        current_user: presenters::user_summary(&secrets, &user),
+        current_user: presenters::user_summary_in_zone(&secrets, &user, &zone),
         // turbo_stream_from :rooms / turbo_stream_from Current.user, :rooms
         rooms_stream: rails_compat::turbo::signed_stream_name(&secrets, &["rooms"]),
         user_rooms_stream: rails_compat::turbo::signed_stream_name(&secrets, &[&user_gid(user.id).to_param(), "rooms"]),

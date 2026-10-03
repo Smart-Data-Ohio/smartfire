@@ -1,14 +1,35 @@
 // Behavior only: the original Rails system assertions, no screenshots or pixels.
 import fs from 'node:fs';
+import net from 'node:net';
+import { connectUpstream } from '../../../parity/capture/forward.ts';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+// Reject the broken host path before looking for any browser dependencies.
+if (process.env.WS11UI_HOST_NETWORK === fs.readlinkSync('/proc/self/ns/net')) throw new Error('browser must have an isolated network namespace');
 const require = createRequire(path.resolve('rust/parity/package.json'));
 const { chromium } = require('playwright');
 // Playwright's assertion library lives in @playwright/test, which this harness
 // deliberately does not add. Poll the same selector/text predicates directly.
 const [base, labelsFile, database, scenario] = process.argv.slice(2);
 const labels = JSON.parse(fs.readFileSync(labelsFile, 'utf8'));
-const browser = await chromium.launch({executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox']});
+// The browser's network namespace is stable while other workers start Docker containers.
+// Forward unmodified HTTP and WebSocket bytes to the existing loopback servers.
+let upstreamProxy;
+if (process.env.PARITY_UPSTREAM_SOCKET) {
+  const origin = new URL(base);
+  upstreamProxy = net.createServer(client => {
+    const upstream = connectUpstream(origin.hostname, Number(origin.port), () => {
+      client.pipe(upstream); upstream.pipe(client); client.resume();
+    });
+    client.pause();
+    const close = () => { client.destroy(); upstream.destroy(); };
+    client.on('error', close); upstream.on('error', close);
+    client.on('close', close); upstream.on('close', close);
+  });
+  await new Promise(resolve => upstreamProxy.listen(Number(origin.port), origin.hostname, resolve));
+  console.log('Agent browser network: isolated namespace, unchanged upstream bytes');
+}
+const browser = await chromium.launch({...(process.env.CHROMIUM_PATH ? {executablePath: process.env.CHROMIUM_PATH} : {}), headless: true, args: ['--no-sandbox']});
 let passed = 0, failed = 0;
 const groups = new Map();
 const frozen = Date.parse(scenario === 'budget' ? '2026-03-03T16:00:00Z' : '2026-03-02T16:00:00Z');
@@ -28,15 +49,71 @@ async function joinRoom(page, room) {
 async function run(file, name, user, check) {
   const counts = groups.get(file) || [0,0]; groups.set(file, counts);
   const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
-  await context.addCookies([{name: 'session_token', value: labels[`session_cookies.${user}`], url: base, httpOnly: true}]);
+  if (scenario !== 'network-probe') await context.addCookies([{name: 'session_token', value: labels[`session_cookies.${user}`], url: base, httpOnly: true}]);
   await context.addInitScript(ms => {const Real = Date; globalThis.Date = class extends Real {constructor(...args) {super(...(args.length ? args : [ms]));} static now() {return ms;}};}, frozen);
   const page = await context.newPage(); page.setDefaultTimeout(2000);
+  page.on('console', msg => {if (msg.type()==='error') console.log('BROWSER ERROR '+msg.text());});
+  page.on('pageerror', error => console.log('PAGE ERROR '+error.message));
+  page.on('requestfailed', request => console.log('REQUEST FAILED '+request.method()+' '+new URL(request.url()).pathname+' '+request.failure()?.errorText));
   try { await check(page); passed++; counts[0]++; console.log(`PASS ${file}: ${name}`); }
   catch (error) { failed++; counts[1]++; console.log(`FAIL ${file}: ${name}: ${`${new URL(page.url()).pathname}: ${String(error.message).split('\n').slice(0,6).join(' | ')}`}`); }
-  finally { await context.close(); }
+  finally {
+    if (failed) console.log('STREAM DIAGNOSTICS '+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('turbo-cable-stream-source')].map(node=>({channel:node.getAttribute('channel'),signed:!!node.getAttribute('signed-stream-name'),connected:node.hasAttribute('connected')})))));
+    await context.close();
+  }
 }
 try {
-  if (scenario === 'budget') {
+  if (scenario === 'network-probe') {
+    await run('harness_network', 'held response survives Docker bridge churn', 'david', async page => {
+      await visit(page, `${base}/network-probe`);
+      const body = await page.evaluate(async () => (await fetch('/network-probe', {method:'POST',body:'held request'})).text());
+      if (body !== '<h1>stable network</h1>') throw new Error('forwarder changed response bytes');
+    });
+  } else if (scenario === 'work') {
+    await run('agent_work_assignment_test.rb', 'assigns an agent and renders its API status change after refresh', 'jz', async page => {
+      await joinRoom(page, labels['rooms.designers']);
+      if (!await page.locator("#thread-panel[aria-hidden='false']").isVisible()) await page.getByRole('button',{name:'Show threads',exact:true}).click();
+      await page.locator("#thread-panel[aria-hidden='false']").waitFor({state:'visible',timeout:10000});
+      await page.getByRole('button',{name:'New thread',exact:true}).click();
+      await page.locator("#thread-panel [data-thread-panel-target='create']").waitFor({state:'visible',timeout:10000});
+      await page.locator("#thread-panel [data-thread-panel-target='createName']").fill('Agent owned thread');
+      await page.locator("#thread-panel [data-thread-panel-target='createMessage']").fill('Work the agent will pick up.');
+      await page.locator("#thread-panel [data-thread-panel-target='createSubmit']").click();
+      await contains(page.locator("#thread-panel [data-thread-panel-target='conversationTitle']"),'Agent owned thread',10000);
+      await page.locator("#thread-panel [data-thread-panel-target='manage'] summary").click();
+      await page.getByRole('menuitem',{name:'Track as work',exact:true}).click();
+      await page.locator("#thread-panel [data-thread-panel-target='work']").waitFor({state:'visible',timeout:10000});
+      await page.locator("#thread-panel [data-thread-panel-target='workManage'] summary").click();
+      const owner=page.locator("#thread-panel [data-thread-panel-target='workOwner']");
+      await owner.locator("optgroup[label='Agents'] option").filter({hasText:'Work Agent'}).waitFor({state:'attached',timeout:10000});
+      await owner.selectOption({label:'Work Agent'});
+      await contains(page.locator("#thread-panel [data-thread-panel-target='workOwnerLabel'] .agent-badge"),'agent',10000);
+      const {spawnSync}=await import('node:child_process');
+      const result=spawnSync('python3',['-c',`import sqlite3,json,sys
+c=sqlite3.connect(sys.argv[1]);bot=int(sys.argv[2]);thread=c.execute("SELECT id,work_status,work_owner_id FROM channel_threads WHERE name='Agent owned thread'").fetchone();assert thread and thread[1]=='planned' and thread[2]==bot
+rows=c.execute("SELECT metadata FROM agent_events WHERE event_type='work_assigned'").fetchall();assert any(json.loads(r[0]).get('thread_id')==thread[0] for r in rows)
+print(thread[0])`,database,String(labels['system.work_bot'])]);
+      if(result.status!==0) throw new Error('work owner or assignment ledger did not persist');
+      const threadId=Number(result.stdout.toString().trim());
+      const reply=await page.evaluate(async ({threadId,token}) => {
+        const response=await fetch(`/agents/work/${threadId}`,{method:'PATCH',credentials:'omit',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({work_status:'in_progress',note:'Agent started the work'})});
+        return {status:response.status,body:await response.json()};
+      },{threadId,token:labels['system.work_secret']});
+      if(reply.status!==200) throw new Error(`agent work PATCH HTTP ${reply.status}`);
+      const status=spawnSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); print(c.execute('SELECT work_status FROM channel_threads WHERE id=?',(sys.argv[2],)).fetchone()[0])",database,String(threadId)],{encoding:'utf8'});
+      if(status.status!==0) throw new Error('committed work status read failed');
+      if(status.stdout.trim()==='planned') throw new Error('committed work status remained planned');
+      if(status.stdout.trim()!=='in_progress') throw new Error('unexpected committed work status');
+      await visit(page,`${base}/rooms/${labels['rooms.designers']}?thread=${threadId}`);
+      await page.locator("#thread-panel [data-thread-panel-target='conversation']").waitFor({state:'visible',timeout:10000});
+      await contains(page.locator("#thread-panel [data-thread-panel-target='conversationTitle']"),'Agent owned thread',10000);
+      await contains(page.locator("#thread-panel [data-thread-panel-target='workStatusLabel']"),'In progress',10000);
+      await contains(page.locator("#thread-panel [data-thread-panel-target='workOwnerLabel'] .agent-badge"),'agent',10000);
+      await page.locator("#thread-panel [data-thread-panel-target='workHistory'] summary").click();
+      for (const text of ['Agent started the work','Planned → In progress']) await contains(page.locator("#thread-panel [data-thread-panel-target='workHistoryList']"),text,10000);
+
+    });
+  } else if (scenario === 'budget') {
     await run('agent_streaming_test.rb','owner sees budgets, one budget item, and hits the kill switch','kevin',async page => {
       const editUrl=`${base}/account/bots/${labels['users.bender']}/edit`;
       const editReply=await page.request.get(editUrl);
@@ -97,6 +174,23 @@ try {
     await joinRoom(page, labels['rooms.watercooler']);
     await contains(page.locator(`#channel-members [data-member-id='${labels['users.bender']}']`),'Running tests…',20000);
   });
+  await run('agent_streaming_test.rb','streaming message renders, updates live, and finalizes','david',async page => {
+    const headers={Authorization:`Bearer ${labels['system.streaming_secret']}`,'Content-Type':'application/json'};
+    const start=await fetch(`${base}/rooms/${labels['system.room']}/agents/streaming_messages`,{method:'POST',headers,body:JSON.stringify({message:{markdown_source:'Drafting',client_message_id:'sys-stream-live'}})});
+    if (start.status!==201) throw new Error(`stream create HTTP ${start.status}`);
+    const record=await start.json(); if (!record.streaming) throw new Error('new stream is final');
+    await joinRoom(page, labels['system.room']);
+    const message=page.locator('.message').filter({hasText:'Drafting'});
+    await contains(message,'Drafting'); await contains(message.locator('.message__streaming'),'Working…');
+    const update=await fetch(`${base}/agents/streaming_messages/${record.id}`,{method:'PATCH',headers,body:JSON.stringify({markdown_source:'Drafting more'})});
+    if(update.status!==200) throw new Error(`stream update HTTP ${update.status}`);
+    await contains(message,'Drafting more'); await contains(message.locator('.message__streaming'),'Working…');
+    const finish=await fetch(`${base}/agents/streaming_messages/${record.id}/finalize`,{method:'POST',headers});
+    if(finish.status!==200) throw new Error(`stream finalize HTTP ${finish.status}`);
+    if((await finish.json()).streaming) throw new Error('stream did not finalize');
+    await message.locator('.message__streaming').waitFor({state:'detached'});
+    await contains(message,'Drafting more');
+  });
   await run('sudo_mode_test.rb','one prompt, then the action continues automatically','david',async page => {
     await visit(page,`${base}/account/edit`);
     const before = await page.locator('#invite_url').inputValue(); if (!before) throw new Error('empty invite URL');
@@ -115,8 +209,7 @@ try {
   });
   }
   for (const [file,[ok,bad]] of groups) console.log(`${file}: ${ok} passed; ${bad} failed`);
-  console.log('agent_streaming_test.rb: 1 deferred (live message mutation API)');
-  console.log('agent_work_assignment_test.rb: 1 deferred (work mutation API)');
-  console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 2 deferred`);
-} finally {await browser.close();}
+  console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 0 deferred`);
+} finally {await browser.close();
+  if (upstreamProxy) upstreamProxy.close();}
 process.exitCode = failed ? 1 : 0;

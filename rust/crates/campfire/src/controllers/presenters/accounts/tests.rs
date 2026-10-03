@@ -1270,7 +1270,7 @@ async fn agent_directory_rejects_credentials_bots_and_unsigned_visitors() {
     }).await.unwrap();
     let authorization = format!("{} {}", "Bearer", secret);
     let response = browser.request(Method::GET, "/agents", &[("authorization", &authorization)], None).await;
-    assert_eq!(response.status, StatusCode::FORBIDDEN);
+    assert_eq!(response.status, StatusCode::FORBIDDEN, "directory credentials must be forbidden");
     let path = format!("/agents?bot_key={}", encode(&test.label("bot_keys.bender")));
     assert_eq!(browser.get(&path).await.status, StatusCode::FORBIDDEN);
 }
@@ -1312,7 +1312,7 @@ async fn agent_directory_lists_active_then_inactive_without_private_facts() {
 async fn agent_directory_bot_session_is_forbidden() {
     let Some(app) = crate::controllers::presenters::test_support::TestApp::boot().await else { return };
     let mut bot = app.sign_in(crate::controllers::presenters::test_support::BENDER).await;
-    assert_eq!(bot.get("/agents").await.status, StatusCode::FORBIDDEN);
+    assert_eq!(bot.get("/agents").await.status, StatusCode::FORBIDDEN, "directory bot sessions must be forbidden");
 }
 
 // Set-Cookie values are opaque; only attributes determine deletion.
@@ -1342,3 +1342,11 @@ fn browser_cookie_deletion_requires_real_attribute() {
     assert!(cookie_tombstone("session_token=signed; Max-Age=0"));
     assert!(cookie_tombstone("session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT"));
 }
+
+#[path = "tests/navigation_matrix.rs"]
+mod navigation_matrix;
+#[path = "tests/named_ui_broadcasts.rs"]
+mod named_ui_broadcasts;
+
+#[path = "tests/sidebar_review.rs"]
+mod sidebar_review;

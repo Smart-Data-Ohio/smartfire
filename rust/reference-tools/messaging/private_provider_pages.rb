@@ -27,7 +27,18 @@ pages = []
   browser.get(path, headers:headers.dup)
   queries=[]
   subscriber=->(*args){p=args.last; queries << p[:sql] if !p[:cached] && p[:name]!='SCHEMA' && p[:sql].match?(/\A\s*(SELECT|WITH)\b/i)}
-  ActiveSupport::Notifications.subscribed(subscriber,'sql.active_record'){browser.get(path,headers:headers.dup)}
+  # This corpus never writes workspace icons. Measure the same warm cache on
+  # every run, even if its monotonic one-second TTL expired after the warm-up.
+  # Do not freeze Process's clock: request timing and other Rails caches still
+  # use their real clocks. Restore the Icons timestamp after this one request.
+  Icons.custom_icons
+  icons_cache_at = Icons.instance_variable_get(:@custom_cache_at)
+  begin
+   Icons.instance_variable_set(:@custom_cache_at, Float::INFINITY)
+   ActiveSupport::Notifications.subscribed(subscriber,'sql.active_record'){browser.get(path,headers:headers.dup)}
+  ensure
+   Icons.instance_variable_set(:@custom_cache_at, icons_cache_at)
+  end
   raise 'search failed' unless browser.response.successful?
   cards=Rails.application.executor.wrap do
    Current.reset

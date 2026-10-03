@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 
 #[tokio::test]
 async fn ws11ui_human_github_decision_executes_real_transport_and_rechecks_later_changes() {
-    for (case, expected_status, expected_message, calls) in [
+    for ((case, expected_status, expected_message, calls), html) in [
         ("success", "completed", None, 1),
         (
             "identity_changed",
@@ -45,7 +45,10 @@ async fn ws11ui_human_github_decision_executes_real_transport_and_rechecks_later
             Some("Agent is suspended or deactivated"),
             0,
         ),
-    ] {
+    ]
+    .into_iter()
+    .flat_map(|case| [(case, false), (case, true)])
+    {
         let (server, network) = fake(vec![
             Route::new(
                 "POST",
@@ -81,18 +84,41 @@ async fn ws11ui_human_github_decision_executes_real_transport_and_rechecks_later
             .write(
                 Req::new(
                     Method::PATCH,
-                    &format!("/agent_approvals/{approval_id}.json"),
+                    &format!(
+                        "/agent_approvals/{approval_id}{}",
+                        if html { "" } else { ".json" }
+                    ),
+                )
+                .header(
+                    "accept",
+                    if html {
+                        "text/html"
+                    } else {
+                        "application/json"
+                    },
                 )
                 .form(&[("decision", "approved")]),
             )
             .await;
         assert_eq!(
             response.status,
-            StatusCode::OK,
-            "{case}: {}",
+            if html {
+                StatusCode::SEE_OTHER
+            } else {
+                StatusCode::OK
+            },
+            "execution decision must use the negotiated HTML/JSON format: {case}: {}",
             response.text()
         );
-        assert_eq!(response.json()["status"], "approved");
+        if html {
+            assert_eq!(response.text(), "", "complete Rails HTML redirect body");
+            assert_eq!(
+                response.header("location"),
+                Some("http://campfire.test/activity")
+            );
+        } else {
+            assert_eq!(response.json()["status"], "approved");
+        }
         // Queue assertions always run after without_job_runner() has joined workers.
         let queued_id = t.db().read(move |conn| {
             let mut statement = conn.prepare("SELECT arguments FROM background_jobs WHERE job_class='Github::PerformAgentActionJob' AND json_extract(arguments,'$.approval_id')=?")?;
@@ -183,7 +209,7 @@ async fn ws11ui_human_fizzy_decision_executes_real_transport_and_rechecks_later_
     };
     use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, network};
     use std::sync::Arc;
-    for (case, expected_status, expected_message, calls) in [
+    for ((case, expected_status, expected_message, calls), html) in [
         ("success", "completed", None, 1),
         (
             "identity_changed",
@@ -210,7 +236,10 @@ async fn ws11ui_human_fizzy_decision_executes_real_transport_and_rechecks_later_
             Some("Agent is suspended or deactivated"),
             0,
         ),
-    ] {
+    ]
+    .into_iter()
+    .flat_map(|case| [(case, false), (case, true)])
+    {
         // Held listener from #173: no unreserved free-port probe or global env mutation.
         let server = FakeServer::start_ws15e(vec![
             Route::new(
@@ -306,18 +335,41 @@ async fn ws11ui_human_fizzy_decision_executes_real_transport_and_rechecks_later_
             .write(
                 Req::new(
                     Method::PATCH,
-                    &format!("/agent_approvals/{approval_id}.json"),
+                    &format!(
+                        "/agent_approvals/{approval_id}{}",
+                        if html { "" } else { ".json" }
+                    ),
+                )
+                .header(
+                    "accept",
+                    if html {
+                        "text/html"
+                    } else {
+                        "application/json"
+                    },
                 )
                 .form(&[("decision", "approved")]),
             )
             .await;
         assert_eq!(
             response.status,
-            StatusCode::OK,
-            "{case}: {}",
+            if html {
+                StatusCode::SEE_OTHER
+            } else {
+                StatusCode::OK
+            },
+            "execution decision must use the negotiated HTML/JSON format: {case}: {}",
             response.text()
         );
-        assert_eq!(response.json()["status"], "approved");
+        if html {
+            assert_eq!(response.text(), "", "complete Rails HTML redirect body");
+            assert_eq!(
+                response.header("location"),
+                Some("http://campfire.test/activity")
+            );
+        } else {
+            assert_eq!(response.json()["status"], "approved");
+        }
         let queued_id=t.db().read(move |conn| {
             let mut query=conn.prepare("SELECT arguments FROM background_jobs WHERE job_class='Fizzy::PerformAgentActionJob' AND json_extract(arguments,'$.approval_id')=?")?;
             let rows: Vec<String>=query.query_map([approval_id],|r|r.get(0))?.collect::<rusqlite::Result<_>>()?;

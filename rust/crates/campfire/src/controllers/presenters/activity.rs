@@ -1,7 +1,6 @@
 //! Rails activity presentation over the owner's permission-filtered ActivityItem APIs.
 use campfire_db::{ActivityItem, Connection, Result, User};
 use campfire_views::activity::Item;
-use rusqlite::OptionalExtension;
 use std::{cell::RefCell, collections::HashMap};
 
 /// Request-local association preload, after the owner's accessibility query.
@@ -12,6 +11,8 @@ pub struct Sources {
     rooms: HashMap<i64, campfire_db::Room>,
     work_events: HashMap<i64, campfire_db::WorkThreadEvent>,
     nudges: HashMap<i64, campfire_db::BoardSlaNudge>,
+    budget_notices: HashMap<i64, campfire_db::AgentBudgetNotice>,
+    budget_agents: HashMap<i64, campfire_db::Agent>,
     threads: HashMap<i64, campfire_db::ChannelThread>,
     actors: HashMap<i64, User>,
     room_names: RefCell<HashMap<i64, String>>,
@@ -71,6 +72,26 @@ impl Sources {
             .into_iter()
             .map(|nudge| (nudge.id, nudge))
             .collect::<HashMap<_, _>>();
+        let notice_ids = rows
+            .iter()
+            .filter(|row| row.source_type == "AgentBudgetNotice")
+            .map(|row| row.source_id)
+            .collect::<Vec<_>>();
+        let budget_notices: HashMap<_, _> =
+            campfire_db::AgentBudgetNotice::for_ids(conn, &notice_ids)?
+                .into_iter()
+                .map(|notice| (notice.id, notice))
+                .collect();
+        let budget_agents = campfire_db::Agent::for_ids(
+            conn,
+            &budget_notices
+                .values()
+                .map(|notice| notice.agent_id)
+                .collect::<Vec<_>>(),
+        )?
+        .into_iter()
+        .map(|agent| (agent.id, agent))
+        .collect::<HashMap<_, _>>();
         let thread_ids = work_events
             .values()
             .map(|event| event.channel_thread_id)
@@ -86,6 +107,7 @@ impl Sources {
             .values()
             .filter(|_| html)
             .filter_map(|event| event.actor_id)
+            .chain(budget_agents.values().map(|agent| agent.user_id))
             .collect::<std::collections::BTreeSet<_>>()
             .into_iter()
             .collect::<Vec<_>>();
@@ -120,10 +142,17 @@ impl Sources {
             rooms,
             work_events,
             nudges,
+            budget_notices,
+            budget_agents,
             threads,
             actors,
             room_names: RefCell::default(),
         })
+    }
+    fn budget_notice(&self, id: i64) -> Result<&campfire_db::AgentBudgetNotice> {
+        self.budget_notices
+            .get(&id)
+            .ok_or(campfire_db::Error::RecordNotFound("AgentBudgetNotice"))
     }
     fn session(&self, id: i64) -> Result<&campfire_db::Session> {
         self.sessions
@@ -213,22 +242,12 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &Sources) -> Res
         "AgentApproval" => campfire_db::AgentApproval::find(conn, row.source_id)?
             .map(|approval| format!("/agents/{}/approvals", approval.agent_id))
             .unwrap_or_else(fallback),
-        "AgentBudgetNotice" => {
-            // FLAGGED WS11 AgentBudgetNotice reader; no mutation is implemented here.
-            let agent_id: Option<i64> = conn
-                .query_row(
-                    "SELECT agent_id FROM agent_budget_notices WHERE id=?",
-                    [row.source_id],
-                    |r| r.get(0),
-                )
-                .optional()?;
-            agent_id
-                .map(|id| campfire_db::Agent::find(conn, id))
-                .transpose()?
-                .flatten()
-                .map(|agent| format!("/account/bots/{}/edit", agent.user_id))
-                .unwrap_or_else(fallback)
-        }
+        "AgentBudgetNotice" => messages
+            .budget_notices
+            .get(&row.source_id)
+            .and_then(|notice| messages.budget_agents.get(&notice.agent_id))
+            .map(|agent| format!("/account/bots/{}/edit", agent.user_id))
+            .unwrap_or_else(fallback),
         "ScheduledMessage" => "/scheduled_messages".into(),
         "TwoFactorCredential" => "/users/me/profile".into(),
         "Session" => "/users/me/sessions".into(),
@@ -285,22 +304,22 @@ pub fn item(
             }
         }
         "AgentBudgetNotice" => {
-            // FLAGGED WS11 read seam: AgentBudgetNotice has no exported reader.
-            // Writes and fan-out stay in owner agent_posting::check_budget.
-            let (agent_id, cap, created): (i64, String, campfire_db::Timestamp) = conn.query_row(
-                "SELECT agent_id,cap,created_at FROM agent_budget_notices WHERE id=?",
-                [item.source_id],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-            )?;
-            let agent = campfire_db::Agent::find(conn, agent_id)?.ok_or_else(|| {
-                campfire_db::Error::Other("Budget notice agent is missing".into())
-            })?;
-            let user = campfire_db::User::find(conn, agent.user_id)?;
-            let (label, _) = budget_details(&agent, &cap);
+            let notice = messages.budget_notice(item.source_id)?;
+            let agent = messages
+                .budget_agents
+                .get(&notice.agent_id)
+                .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            let user = messages
+                .actors
+                .get(&agent.user_id)
+                .ok_or(campfire_db::Error::RecordNotFound("User"))?;
+            let cap = notice.cap.clone();
+            let created = notice.created_at;
+            let (label, _) = budget_details(agent, &cap);
             result.created_at = Some(created.jiff());
             result.title = format!("{} · daily {label} budget", user.name);
-            result.body = budget_body(&agent, &user.name, &cap);
-            result.author = Some(user.name);
+            result.body = budget_body(agent, &user.name, &cap);
+            result.author = Some(user.name.clone());
         }
         "Event" => {
             let event =
@@ -582,16 +601,17 @@ pub fn payload_with_sources(
             Some(source)
         }
         "AgentBudgetNotice" => {
-            // FLAGGED WS11 AgentBudgetNotice facts reader (owner has not exported a model).
-            let (id, cap): (i64, String) = conn.query_row(
-                "SELECT agent_id,cap FROM agent_budget_notices WHERE id=?",
-                [row.source_id],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )?;
-            let agent = campfire_db::Agent::find(conn, id)?
+            let notice = messages.budget_notice(row.source_id)?;
+            let agent = messages
+                .budget_agents
+                .get(&notice.agent_id)
                 .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-            let user = campfire_db::User::find(conn, agent.user_id)?;
-            source.body = budget_body(&agent, &user.name, &cap);
+            let user = messages
+                .actors
+                .get(&agent.user_id)
+                .ok_or(campfire_db::Error::RecordNotFound("User"))?;
+            let cap = notice.cap.clone();
+            source.body = budget_body(agent, &user.name, &cap);
             source.creator_id = Some(agent.user_id);
             source.path = format!("/account/bots/{}/edit", agent.user_id);
             source.status = Some(cap);

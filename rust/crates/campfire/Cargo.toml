@@ -4,6 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
+bnum.workspace = true
 caseless.workspace = true
 httpdate.workspace = true
 rails_compat.workspace = true
@@ -29,7 +30,7 @@ jiff.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
 regex.workspace = true
-indexmap.workspace = true
+indexmap = { workspace = true, features = ["serde"] }
 askama.workspace = true
 futures-util.workspace = true
 rusqlite = { workspace = true, features = ["backup"] }

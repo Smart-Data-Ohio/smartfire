@@ -321,7 +321,8 @@ pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
         c.request.method,
         campfire_kit::Method::GET | campfire_kit::Method::HEAD
     ) && (c.request.path().starts_with("/agents")
-        || c.request.path().starts_with("/account/bots"));
+        || c.request.path().starts_with("/account/bots")
+        || c.request.path().starts_with("/users/"));
     let found = c
         .app()
         .db
@@ -1035,6 +1036,10 @@ pub fn ruby_to_i(value: &str) -> i64 {
 fn ruby_strip(s: &str) -> &str {
     s.trim_matches(|c: char| c == '\0' || c.is_ascii_whitespace() || c == '\u{b}')
 }
+
+#[cfg(test)]
+#[path = "concerns/bot_model_cases.rs"]
+mod bot_model_cases;
 
 #[cfg(test)]
 mod tests {

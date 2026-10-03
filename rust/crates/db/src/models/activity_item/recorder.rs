@@ -11,6 +11,27 @@ pub enum ActivitySource {
 }
 
 impl ActivityItem {
+    /// Board creation has already authorized its roster and persisted this opener in
+    /// the same transaction. Reuse those snapshots instead of reloading them per user.
+    pub(crate) fn record_authorized_board_opener(
+        tx: &mut Tx<'_>,
+        user: &User,
+        message: &crate::Message,
+    ) -> Result<Option<Self>> {
+        if !user.is_active() || user.is_bot() || message.creator_id == user.id {
+            return Ok(None);
+        }
+        Self::record_authorized_with_recipient(
+            tx,
+            user.id,
+            "Message",
+            message.id,
+            message.thread_id,
+            "thread_activity",
+            Some(user),
+        )
+    }
+
     pub fn record(
         tx: &mut Tx<'_>,
         user_id: i64,
@@ -101,6 +122,36 @@ impl ActivityItem {
         )
     }
 
+    /// The newly claimed nudge authorizes its sole recipient; reuse the reviewed recorder.
+    pub(crate) fn record_board_sla_nudge(
+        tx: &mut Tx<'_>,
+        nudge: &crate::BoardSlaNudge,
+    ) -> Result<Option<Self>> {
+        let Some(user) = User::find_by_id(tx.conn(), nudge.recipient_id)? else {
+            return Ok(None);
+        };
+        Self::record_board_sla_nudge_for_recipient(tx, nudge, &user)
+    }
+
+    pub(crate) fn record_board_sla_nudge_for_recipient(
+        tx: &mut Tx<'_>,
+        nudge: &crate::BoardSlaNudge,
+        user: &User,
+    ) -> Result<Option<Self>> {
+        if !user.is_active() || user.is_bot() {
+            return Ok(None);
+        }
+        Self::record_authorized_with_recipient(
+            tx,
+            user.id,
+            "BoardSlaNudge",
+            nudge.id,
+            None,
+            "work_sla",
+            Some(user),
+        )
+    }
+
     fn record_authorized(
         tx: &mut Tx<'_>,
         user_id: i64,
@@ -108,6 +159,26 @@ impl ActivityItem {
         source_id: i64,
         thread_id: Option<i64>,
         event_type: &str,
+    ) -> Result<Option<Self>> {
+        Self::record_authorized_with_recipient(
+            tx,
+            user_id,
+            source_type,
+            source_id,
+            thread_id,
+            event_type,
+            None,
+        )
+    }
+
+    fn record_authorized_with_recipient(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source_type: &str,
+        source_id: i64,
+        thread_id: Option<i64>,
+        event_type: &str,
+        recipient: Option<&User>,
     ) -> Result<Option<Self>> {
         if let Some(thread_id) =
             thread_id.filter(|_| matches!(event_type, "thread_activity" | "work_update"))
@@ -125,20 +196,33 @@ impl ActivityItem {
                     || before.updated_at != tx.now()
                 {
                     tx.conn().execute("UPDATE activity_items SET source_type=?,source_id=?,read_at=NULL,updated_at=? WHERE id=?",params![source_type,source_id,tx.now(),before.id])?;
-                    // app/models/activity_item.rb: source/updated_at changes alone do not broadcast.
-                    if before.read_at.is_some() {
-                        Self::broadcast_change(tx, user_id, before.id)?;
-                    }
                 }
-                return Self::find(tx.conn(), before.id).map(Some);
+                let item = Self::find(tx.conn(), before.id)?;
+                // app/models/activity_item.rb: source/updated_at changes alone do not broadcast.
+                if before.read_at.is_some() {
+                    Self::broadcast_recorded(tx, user_id, &item, recipient)?;
+                }
+                return Ok(Some(item));
             }
         }
         let inserted = tx.conn().execute("INSERT INTO activity_items(user_id,source_type,source_id,event_type,created_at,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id,source_type,source_id) DO NOTHING",params![user_id,source_type,source_id,event_type,tx.now(),tx.now()])?;
         let item = Self::find_by_user_and_source(tx.conn(), user_id, source_type, source_id)?
             .ok_or(Error::RecordNotFound("ActivityItem"))?;
         if inserted == 1 {
-            Self::broadcast_change(tx, user_id, item.id)?;
+            Self::broadcast_recorded(tx, user_id, &item, recipient)?;
         }
         Ok(Some(item))
+    }
+
+    fn broadcast_recorded(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        item: &Self,
+        recipient: Option<&User>,
+    ) -> Result<()> {
+        match recipient {
+            Some(user) => Self::broadcast_item_for_user(tx, user, item),
+            None => Self::broadcast_item(tx, user_id, item),
+        }
     }
 }

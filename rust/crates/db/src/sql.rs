@@ -8,7 +8,12 @@ use crate::error::Result;
 pub trait CachedStatements {
     fn execute_cached(&self, sql: &str, params: impl Params) -> rusqlite::Result<usize>;
 
-    fn query_row_cached<T>(&self, sql: &str, params: impl Params, map: impl FnOnce(&Row<'_>) -> rusqlite::Result<T>) -> rusqlite::Result<T>;
+    fn query_row_cached<T>(
+        &self,
+        sql: &str,
+        params: impl Params,
+        map: impl FnOnce(&Row<'_>) -> rusqlite::Result<T>,
+    ) -> rusqlite::Result<T>;
 }
 
 impl CachedStatements for Connection {
@@ -16,7 +21,12 @@ impl CachedStatements for Connection {
         self.prepare_cached(sql)?.execute(params)
     }
 
-    fn query_row_cached<T>(&self, sql: &str, params: impl Params, map: impl FnOnce(&Row<'_>) -> rusqlite::Result<T>) -> rusqlite::Result<T> {
+    fn query_row_cached<T>(
+        &self,
+        sql: &str,
+        params: impl Params,
+        map: impl FnOnce(&Row<'_>) -> rusqlite::Result<T>,
+    ) -> rusqlite::Result<T> {
         self.prepare_cached(sql)?.query_row(params, map)
     }
 }
@@ -58,6 +68,16 @@ pub fn exists(conn: &Connection, sql: &str, params: impl Params) -> Result<bool>
 
 /// `SecureRandom.alphanumeric(n)`
 pub fn alphanumeric(n: usize) -> String {
+    #[cfg(test)]
+    if let Some(value) = FIXTURE_ALPHANUMERIC.with(|fixture| {
+        fixture.borrow_mut().as_mut().map(|(values, calls)| {
+            calls.push(n);
+            values.pop_front().expect("fixture entropy exhausted")
+        })
+    }) {
+        return value;
+    }
+
     use rand::Rng;
     const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::rng();
@@ -79,4 +99,31 @@ pub fn base58(n: usize) -> String {
 /// `SecureRandom.uuid` / `Random.uuid`
 pub fn uuid() -> String {
     uuid::Uuid::new_v4().to_string()
+}
+
+#[cfg(test)]
+type FixtureAlphanumeric = (std::collections::VecDeque<String>, Vec<usize>);
+#[cfg(test)]
+thread_local! { static FIXTURE_ALPHANUMERIC: std::cell::RefCell<Option<FixtureAlphanumeric>> = const {std::cell::RefCell::new(None)}; }
+#[cfg(test)]
+pub(crate) fn with_fixture_alphanumeric<T>(
+    tokens: &[&str],
+    run: impl FnOnce() -> T,
+) -> (T, Vec<usize>) {
+    struct Clear;
+    impl Drop for Clear {
+        fn drop(&mut self) {
+            FIXTURE_ALPHANUMERIC.with(|v| {
+                v.borrow_mut().take();
+            });
+        }
+    }
+    FIXTURE_ALPHANUMERIC.with(|v| {
+        assert!(v.borrow().is_none());
+        *v.borrow_mut() = Some((tokens.iter().map(|v| (*v).into()).collect(), vec![]));
+    });
+    let _clear = Clear;
+    let value = run();
+    let calls = FIXTURE_ALPHANUMERIC.with(|v| v.borrow().as_ref().unwrap().1.clone());
+    (value, calls)
 }

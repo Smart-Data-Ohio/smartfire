@@ -7,13 +7,21 @@ use crate::{
 use askama::Template;
 
 #[derive(Clone, Debug)]
+pub enum CredentialExpiry {
+    Time(jiff::Timestamp),
+    Extended {
+        datetime: String,
+        microseconds: bnum::types::I512,
+    },
+}
+#[derive(Clone, Debug)]
 pub struct Credential {
     pub id: i64,
     pub name: String,
     pub last_four: String,
     pub created_by: String,
     pub created_at: jiff::Timestamp,
-    pub expires_at: Option<jiff::Timestamp>,
+    pub expires_at: Option<CredentialExpiry>,
     pub last_used_at: Option<jiff::Timestamp>,
     pub revoked: bool,
 }
@@ -43,8 +51,28 @@ impl CredentialRow<'_> {
         h::local_datetime_tag(&self.ctx.time_zone, *at, "datetime", h::attrs(), "")
     }
 
+    fn expiry_datetime(&self, at: &CredentialExpiry) -> h::Html {
+        match at {
+            CredentialExpiry::Time(at) => self.datetime(at),
+            CredentialExpiry::Extended { datetime, .. } => h::content_tag(
+                "time",
+                h::attrs()
+                    .attr("datetime", datetime)
+                    .data("local_time_target", "datetime"),
+                "",
+            ),
+        }
+    }
     fn expired(&self) -> bool {
-        self.credential.expires_at.is_some_and(|at| at <= self.now)
+        self.credential
+            .expires_at
+            .as_ref()
+            .is_some_and(|at| match at {
+                CredentialExpiry::Time(at) => *at <= self.now,
+                CredentialExpiry::Extended { microseconds, .. } => {
+                    *microseconds <= bnum::types::I512::from(self.now.as_microsecond())
+                }
+            })
     }
     fn ago(&self, at: &jiff::Timestamp) -> String {
         h::time_ago_in_words(&self.ctx.time_zone, *at, self.now)

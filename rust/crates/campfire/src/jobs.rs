@@ -216,7 +216,9 @@ pub struct Jobs {
     #[cfg(test)]
 
     ad_hoc: mpsc::Sender<AdHocWork>,
-    cable: Arc<OnceLock<Cable>>,
+    // The server's authenticator owns the database, whose Env owns this sink.
+    // Holding Cable strongly here would retain every database after shutdown.
+    cable: Arc<OnceLock<campfire_cable::WeakServer<crate::channels::CableUser>>>,
     /// Weak because the app holds the database, which holds this sink.
     app: Arc<OnceLock<Weak<AppState>>>,
 }
@@ -261,11 +263,19 @@ impl Jobs {
     }
 
     fn set_cable(&self, cable: Cable) {
-        let _ = self.cable.set(cable);
+        let _ = self.cable.set(cable.downgrade());
     }
 }
 
 impl EventSink for Jobs {
+    fn broadcast_digest_notes(&self, notes: &campfire_db::models::board_automations::DigestNotes) -> campfire_db::Result<Vec<i64>> {
+        let cable = self.cable.get().and_then(campfire_cable::WeakServer::upgrade)
+            .ok_or_else(|| campfire_db::Error::Other("digest cable server not booted".into()))?;
+        let app = self.app.get().and_then(Weak::upgrade)
+            .ok_or_else(|| campfire_db::Error::Other("digest app not booted".into()))?;
+        crate::channels::board_digests::deliver(&cable, &app, notes)
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))
+    }
     fn model_callback(&self, tx: &mut Tx<'_>, callback: campfire_db::callbacks::Callback) -> campfire_db::Result<()> {
         self.model_callbacks.call(tx, callback)
     }
@@ -313,9 +323,9 @@ impl EventSink for Jobs {
             // pub/sub broadcast in Rails, done right away. Before boot finishes there are no
             // connections to disconnect.
             (None, event @ (Event::DisconnectUser { .. } | Event::Broadcast(_))) => {
-                if let Some(cable) = self.cable.get() {
+                if let Some(cable) = self.cable.get().and_then(campfire_cable::WeakServer::upgrade) {
                     let app = self.app.get().and_then(Weak::upgrade);
-                    crate::channels::sink::deliver(cable, app.as_ref(), &event);
+                    crate::channels::sink::deliver(&cable, app.as_ref(), &event);
                 }
             }
             (None, event) => tracing::warn!(?event, "not a job, dropping event"),

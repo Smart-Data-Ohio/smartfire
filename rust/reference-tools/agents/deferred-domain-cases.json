@@ -1,15 +1,16 @@
 {
   "reference_pin": "d7c7de92",
-  "status": "partial",
+  "status": "peer-owned evidence deferred; all WS11-owned names compared",
   "meaning": "Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.",
   "boundary_deferred": {
-    "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
+    "test/models/agent_credential_test.rb": "No named comparisons are deferred. Absent/blank HTTP credentials are covered by real REST/MCP invalid-auth vectors; the former HTTP boundary note is closed.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "19 named comparisons plus a production WebSocket comparison of three byte-identical append/update/final phases. Four complete start/trailing and every-side-effect names still await full named-case comparisons; remaining reference/dependency peers remain flagged.",
+    "test/models/message_streaming_test.rb": "All 23 names compared. Four complete start/finalize/append/trailing projections now retain actual socket HTML, both users' unread broadcasts, activity, ledger, index and logical queued arguments. External-reference adapters retain their owners.",
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
-    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
-    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
+    "test/models/user/bot_test.rb": "All 15 names compared, including fixed generator entropy at the real create/reset boundary and actual durable queued delivery with a controlled dialer only.",
+    "test/models/agent_budgets_test.rb": "All 11 names compared. The two remaining names now exercise merged WS12 ActivityItem.accessible_to and agent_work::handoff_work, with real usage and handoff rows.",
+    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 owner eligibility/work mutation names retain their owner."
   },
   "files": [
     {
@@ -62,14 +63,6 @@
       ]
     },
     {
-      "rails_file": "test/jobs/agent/delivery_job_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "rate check and insert run inside the agent lock",
-        "self-assigned work does not raise the agent's own hop count"
-      ]
-    },
-    {
       "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
       "owner": "WS11 agent callbacks; WS12 mutation producers",
       "remaining_named_case_ports": [
@@ -81,15 +74,6 @@
         "a human outside the parent room keeps the human eligibility error",
         "a bot without an agent row is rejected with a validation error",
         "suspending the agent or revoking its membership reads as an unavailable owner",
-        "assignment writes one work_assigned row in the same transaction as the work event",
-        "unassignment writes one work_unassigned row",
-        "unassignment after the agent left the room writes the ledger row but enqueues no webhook",
-        "assignment webhooks are enqueued after the outermost transaction commits",
-        "reassignment to a human writes work_unassigned and no work_assigned",
-        "reassignment between agents notifies both",
-        "status-only changes and human-to-human assignment write no agent rows",
-        "assignment rows roll back when the work event fails",
-        "the work event rolls back when the assignment row fails",
         "an agent status update records a work event with the note",
         "an agent status update reaches the inbox through the human path",
         "an agent tags update replaces the set without touching the status",
@@ -97,48 +81,7 @@
         "an agent result update records the event with the agent as actor",
         "an agent cannot write the result of work it does not own",
         "an agent cannot move work it does not own",
-        "an agent status update rejects unknown statuses and long notes",
-        "two agents assigning posts to each other stop at the hop limit",
-        "deleting an agent-owned thread emits work_unassigned",
-        "deleting a thread without an agent owner emits nothing",
-        "a human assignment starts a new root at hop 0"
-      ]
-    },
-    {
-      "rails_file": "test/models/message_streaming_test.rb",
-      "owner": "WS11 finalization; WS12 activity; WS14/15 external reference sync",
-      "remaining_named_case_ports": [
-        "stream start broadcasts the append without the unread broadcast",
-        "finalize fires every side effect exactly once",
-        "appends re-render without firing side effects",
-        "a coalesced update sends a trailing broadcast with the final text"
-      ]
-    },
-    {
-      "rails_file": "test/models/user/bot_test.rb",
-      "owner": "WS11 bot domain/removal; WS11-api by-bot HTTP surface",
-      "remaining_named_case_ports": [
-        "create bot",
-        "reset bot key",
-        "reply token authenticates its bot for its room only",
-        "reply token expires",
-        "reply token is refused once the bot leaves or deactivates",
-        "deliver message by webhook"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_budgets_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "a stranger cannot read another agent's budget item",
-        "an agent-created handoff counts toward no budget, even with caps exhausted"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_kill_switch_test.rb",
-      "owner": "WS11 callbacks; WS12 owned-board mutation producer",
-      "remaining_named_case_ports": [
-        "kill switch leaves owned work assigned without reassigning it"
+        "an agent status update rejects unknown statuses and long notes"
       ]
     }
   ]

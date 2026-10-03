@@ -1374,15 +1374,187 @@
           "rust": "ws11_work_payload_case_board_tags_run_and_links"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/campfire/src/concerns/bot_model_cases.rs",
+      "cases": [
+        {
+          "rails": "reply token authenticates its bot for its room only",
+          "rust": "ws11_next_bot_reply_room_binding_and_malformed_tokens"
+        },
+        {
+          "rails": "reply token expires",
+          "rust": "ws11_next_bot_reply_expiry"
+        },
+        {
+          "rails": "reply token is refused once the bot leaves or deactivates",
+          "rust": "ws11_next_bot_reply_membership_and_deactivation"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/delivery_job_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next_cases_test.rs",
+      "cases": [
+        {
+          "rails": "rate check and insert run inside the agent lock",
+          "rust": "ws11_next_delivery_rate_check_and_insert_share_writer_lock"
+        },
+        {
+          "rails": "self-assigned work does not raise the agent's own hop count",
+          "rust": "ws11_next_delivery_self_assigned_work_does_not_raise_hop"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_kill_switch_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next_cases_test.rs",
+      "cases": [
+        {
+          "rails": "kill switch leaves owned work assigned without reassigning it",
+          "rust": "ws11_next_kill_switch_preserves_owned_work_and_history"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_assignment_cases_test.rs",
+      "cases": [
+        {
+          "rails": "assignment writes one work_assigned row in the same transaction as the work event",
+          "rust": "ws11_next_assignment_records_ledger_and_history"
+        },
+        {
+          "rails": "unassignment writes one work_unassigned row",
+          "rust": "ws11_next_assignment_unassignment_records_one_row"
+        },
+        {
+          "rails": "unassignment after the agent left the room writes the ledger row but enqueues no webhook",
+          "rust": "ws11_next_assignment_departed_owner_has_no_webhook"
+        },
+        {
+          "rails": "assignment webhooks are enqueued after the outermost transaction commits",
+          "rust": "ws11_next_assignment_webhook_waits_for_outer_commit"
+        },
+        {
+          "rails": "reassignment to a human writes work_unassigned and no work_assigned",
+          "rust": "ws11_next_assignment_to_human_unassigns_agent"
+        },
+        {
+          "rails": "reassignment between agents notifies both",
+          "rust": "ws11_next_assignment_between_agents_notifies_both"
+        },
+        {
+          "rails": "status-only changes and human-to-human assignment write no agent rows",
+          "rust": "ws11_next_assignment_status_and_human_changes_emit_no_agent_rows"
+        },
+        {
+          "rails": "assignment rows roll back when the work event fails",
+          "rust": "ws11_next_assignment_history_failure_rolls_back_ledger"
+        },
+        {
+          "rails": "the work event rolls back when the assignment row fails",
+          "rust": "ws11_next_assignment_ledger_failure_rolls_back_history"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "rust_file": "rust/crates/campfire/src/channels/sink/stream_remaining_cases.rs",
+      "cases": [
+        {
+          "rails": "stream start broadcasts the append without the unread broadcast",
+          "rust": "ws11_next2_stream_start_without_unreads"
+        },
+        {
+          "rails": "finalize fires every side effect exactly once",
+          "rust": "ws11_next2_stream_finalize_every_side_effect_once"
+        },
+        {
+          "rails": "appends re-render without firing side effects",
+          "rust": "ws11_next2_stream_appends_render_without_side_effects"
+        },
+        {
+          "rails": "a coalesced update sends a trailing broadcast with the final text",
+          "rust": "ws11_next2_stream_trailing_final_text"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+      "cases": [
+        {
+          "rails": "create bot",
+          "rust": "ws11_next2_bot_factory_fixed_entropy"
+        },
+        {
+          "rails": "reset bot key",
+          "rust": "ws11_next2_bot_reset_fixed_entropy"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs",
+      "cases": [
+        {
+          "rails": "deliver message by webhook",
+          "rust": "ws11_next2_bot_actual_queued_delivery"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+      "cases": [
+        {
+          "rails": "two agents assigning posts to each other stop at the hop limit",
+          "rust": "ws11_next2_assignment_agent_hops_stop_at_limit"
+        },
+        {
+          "rails": "deleting a thread without an agent owner emits nothing",
+          "rust": "ws11_next2_assignment_delete_no_agent_emits_nothing"
+        },
+        {
+          "rails": "a human assignment starts a new root at hop 0",
+          "rust": "ws11_next2_assignment_human_starts_root_zero"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs",
+      "cases": [
+        {
+          "rails": "deleting an agent-owned thread emits work_unassigned",
+          "rust": "ws11_next2_assignment_deleted_owner_snapshot_delivery"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_budgets_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+      "cases": [
+        {
+          "rails": "a stranger cannot read another agent's budget item",
+          "rust": "ws11_next2_budget_stranger_cannot_read_owner_item"
+        },
+        {
+          "rails": "an agent-created handoff counts toward no budget, even with caps exhausted",
+          "rust": "ws11_next2_budget_handoff_ignores_exhausted_caps"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
-    "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
+    "test/models/agent_credential_test.rb": "All named cases are mapped. Absent, blank and malformed HTTP credentials have REST/MCP boundary vectors.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "19 named comparisons plus a production WebSocket comparison of three byte-identical append/update/final phases. Four complete start/trailing and every-side-effect names still await full named-case comparisons; remaining reference/dependency peers remain flagged.",
+    "test/models/message_streaming_test.rb": "All 23 named cases are mapped, including start, trailing replacement and finalize side effects through actual callbacks and WebSocket frames.",
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
-    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
-    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
+    "test/models/user/bot_test.rb": "All 15 named cases are mapped, including reply-token room binding/expiry/revocation, fixed-entropy factory/reset and actual durable queued delivery.",
+    "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations."
   }
 }

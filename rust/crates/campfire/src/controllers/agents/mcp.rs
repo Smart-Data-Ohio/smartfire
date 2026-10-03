@@ -1,6 +1,5 @@
 //! Agents::McpController: stateless Streamable HTTP, with Rails protocol metadata.
-//! Tool operations call WS11's shared services. Unported operations deliberately
-//! produce Internal error; they are tracked as partial in the WS11-api report.
+//! Tool operations call the same installed services as REST.
 use std::sync::LazyLock;
 
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -431,6 +430,7 @@ async fn execute(
     args: Value,
 ) -> std::result::Result<ServiceResult, ToolError> {
     use super::super::presenters::page::db_error;
+    let args = super::id_args::normalize_request(c, agent_id, name, args).await?;
     match name {
         "request_approval" => {
             let identity = *c
@@ -510,7 +510,11 @@ async fn execute(
                     }
                     let mut results = vec![];
                     for id in ids {
-                        let result = acknowledge(tx, agent_id, ruby_i64(&id))?;
+                        let resolved=if id.is_array() {
+                            let types=campfire_db::models::agent_delivery::DELIVERABLE_TYPES.iter().map(|s|format!("'{s}'")).collect::<Vec<_>>().join(",");
+                            super::id_args::select(tx.conn(),"agent_events",&id,&format!("AND agent_id=? AND event_type IN ({types}) AND outcome<>'suppressed'"),&[agent_id])?
+                        } else {super::reads::lookup_ids(&id).first().copied().unwrap_or(0)};
+                        let result = acknowledge(tx, agent_id, resolved)?;
                         results.push(if result.is_ok() {
                             json!({"id":id,"outcome":"acknowledged"})
                         } else {
@@ -721,33 +725,50 @@ async fn execute(
         "create_fizzy_card" => {
             required(&args, "board_id")?;
             required(&args, "title")?;
-            let mut args = super::integrations::action_fields(args, &["account_id", "board_id", "title", "description", "external_id"]);
+            let mut args = super::integrations::action_fields(
+                args,
+                &[
+                    "account_id",
+                    "board_id",
+                    "title",
+                    "description",
+                    "external_id",
+                ],
+            );
             args["kind"] = json!("create");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "comment_on_fizzy_card" => {
             required(&args, "number")?;
             required(&args, "body")?;
-            let mut args = super::integrations::action_fields(args, &["account_id", "number", "body", "external_id"]);
+            let mut args = super::integrations::action_fields(
+                args,
+                &["account_id", "number", "body", "external_id"],
+            );
             args["kind"] = json!("comment");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "move_fizzy_card" => {
             required(&args, "number")?;
             required(&args, "column_id")?;
-            let mut args = super::integrations::action_fields(args, &["account_id", "number", "column_id", "external_id"]);
+            let mut args = super::integrations::action_fields(
+                args,
+                &["account_id", "number", "column_id", "external_id"],
+            );
             args["kind"] = json!("move");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "close_fizzy_card" => {
             required(&args, "number")?;
-            let mut args = super::integrations::action_fields(args, &["account_id", "number", "external_id"]);
+            let mut args =
+                super::integrations::action_fields(args, &["account_id", "number", "external_id"]);
             args["kind"] = json!("close");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "reopen_fizzy_card" => {
             required(&args, "number")?;
-            let mut args = super::integrations::action_fields(args, &["account_id", "number", "external_id"]);
+            let mut args =
+                super::integrations::action_fields(args, &["account_id", "number", "external_id"]);
             args["kind"] = json!("reopen");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }

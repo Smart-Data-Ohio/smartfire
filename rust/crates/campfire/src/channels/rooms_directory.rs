@@ -3,11 +3,31 @@ use crate::{
     app::App,
     controllers::presenters::{accounts, page, rooms_directory},
 };
+use askama::Template;
 use campfire_db::{Account, Membership, Room, User, broadcasts::Partial};
 
 /// Read committed rows on the committing thread; no actor/request/session enters these views.
 pub(super) fn render(app: &App, partial: &Partial) -> anyhow::Result<Option<String>> {
     match partial {
+        Partial::UserStatus { user_id } => app
+            .db
+            .read_blocking(|conn| {
+                let status = crate::controllers::presenters::status_settings::profile_status(
+                    conn,
+                    &app.secrets,
+                    *user_id,
+                    *user_id,
+                    app.db.env().now(),
+                )?;
+                campfire_views::users::statuses::StatusBadge {
+                    presence: &status.presence,
+                    status_text: status.status_text.as_deref(),
+                }
+                .render()
+                .map_err(|error| campfire_db::Error::Other(error.to_string()))
+            })
+            .map(Some)
+            .map_err(Into::into),
         Partial::DirectSidebar {
             membership_id,
             member_ids,

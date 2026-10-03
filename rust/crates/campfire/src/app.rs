@@ -287,7 +287,10 @@ fn router(app: &App, kit: Kit) -> Router {
         axum::routing::post(campfire_kit::unparsed_action(controllers::github::webhooks::create))
             .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
     };
-    let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
+    let dispatch = || axum::routing::any(
+        campfire_kit::action(dispatch_with_fragment_cache)
+            .json_body_parser(controllers::accounts::bots::github_connections::scoped_json_body_params),
+    );
     let routes = Router::new()
         .merge(
             app.cable
@@ -623,7 +626,7 @@ mod google_meeting_refresh_tests;
 mod google_push_channel_tests;
 
 #[cfg(test)]
-mod google_test_support;
+pub(crate) mod google_test_support;
 
 #[cfg(test)]
 #[path = "../../../test-support/asset_goldens.rs"]

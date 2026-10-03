@@ -39,7 +39,11 @@ fn board_sla_nudge_models_match_rails_validations_and_wait_boundaries() {
         let row = row.clone();
         t.write(move |tx| {
             if row["duplicate"] == true {
-                BoardSlaNudge::create(tx, input(&oracle()["models"][0]["input"]))?;
+                let stored = BoardSlaNudge::create(tx, input(&oracle()["models"][0]["input"]))?;
+                if row["name"] == "duplicate-id-zero" {
+                    tx.conn().execute("UPDATE board_sla_nudges SET id=0 WHERE id=?", [stored.id])?;
+                    assert!(BoardSlaNudge::validate(tx.conn(), &input(&row["input"]), Some(0))?.is_empty());
+                }
             }
             let attributes = input(&row["input"]);
             let errors = BoardSlaNudge::validate(tx.conn(), &attributes, None)?;

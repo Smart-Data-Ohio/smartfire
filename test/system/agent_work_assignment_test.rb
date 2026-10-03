@@ -56,7 +56,7 @@ class AgentWorkAssignmentTest < ApplicationSystemTestCase
       open_threads
       click_button "New thread"
       assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
-      fill_in "Thread name", with: name
+      fill_in_thread_name name
       fill_in "First message", with: first_message
       find("#thread-panel [data-thread-panel-target='createSubmit']").click
       assert_selector "#thread-panel [data-thread-panel-target='conversation']", visible: true, wait: 10

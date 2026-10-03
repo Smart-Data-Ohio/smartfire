@@ -88,3 +88,9 @@ impl Error {
 mod golden;
 #[cfg(test)]
 mod golden_smartfire;
+
+/// Ruby Date._parse, with comp=false as used by Time.zone.parse.
+pub mod date_parse;
+pub mod datetime;
+
+pub mod numbers;
