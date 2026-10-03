@@ -182,7 +182,10 @@ impl Card {
     }
     fn quote_header(&self, quote: &Value) -> h::Html {
         let author = self.quote_author(quote);
-        if let Some(url) = present(quote["url"].as_str()) {
+        // Rails links only stored quote URLs that start with http:// or https://.
+        let url = present(quote["url"].as_str())
+            .filter(|url| url.starts_with("http://") || url.starts_with("https://"));
+        if let Some(url) = url {
             h::link_to(
                 url,
                 h::attrs()

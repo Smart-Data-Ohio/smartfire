@@ -65,7 +65,7 @@
             <% if quote["author_name"].present? %><strong><%= quote["author_name"] %></strong><% end %>
             <% if quote["author_handle"].present? %><span class="x-post-card__quote-handle">@<%= quote["author_handle"] %></span><% end %>
           <% end %>
-          <% if quote["url"].present? %>
+          <% if quote["url"].present? && quote["url"].to_s.start_with?("http://", "https://") %>
             <%= link_to quote["url"], target: "_blank", rel: "noopener noreferrer", class: "x-post-card__quote-link" do %><%= author %><% end %>
           <% else %>
             <%= author %>

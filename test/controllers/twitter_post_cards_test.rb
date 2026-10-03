@@ -54,10 +54,35 @@ class TwitterPostCardsTest < ActionDispatch::IntegrationTest
       assert_select ".x-post-card__play"
       assert_select ".x-post-card__quote", text: /We go up/
       assert_select ".x-post-card__quote-handle", text: "@NASA"
+      assert_select "a.x-post-card__quote-link[href='https://x.com/NASA/status/123']"
       assert_select ".x-post-card__count", text: "18K replies"
       assert_select ".x-post-card__count", text: "125K reposts"
       assert_select ".x-post-card__count", text: "311K likes"
       assert_select ".x-post-card__link[href='https://x.com/jack/status/131']", text: "View on X"
+    end
+  end
+
+  test "a stored quote url that is not http or https renders the quote without a link" do
+    message = @room.messages.create!(
+      creator: @creator, markdown_source: "look https://x.com/jack/status/135",
+      client_message_id: "x-card-quote-scheme"
+    )
+    message.twitter_posts.first.update!(
+      author_handle: "jack", author_name: "jack Bauer", text: "Quoting",
+      quote: { "url" => "javascript:void(0)//https://x.com/i/status/123", "author_name" => "NASA",
+        "author_handle" => "NASA", "text" => "We go up" },
+      fetched_at: Time.current, fetch_error: nil
+    )
+
+    get room_messages_url(@room)
+
+    assert_response :success
+    within_twitter_cards(message) do
+      assert_select ".x-post-card__quote", text: /We go up/
+      assert_select ".x-post-card__quote-author strong", text: "NASA"
+      assert_select ".x-post-card__quote-handle", text: "@NASA"
+      assert_select ".x-post-card__quote-link", count: 0
+      assert_select ".x-post-card__quote a", count: 0
     end
   end
 
