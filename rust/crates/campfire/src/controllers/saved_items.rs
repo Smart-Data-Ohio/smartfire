@@ -70,6 +70,16 @@ pub async fn index(c: &mut Ctx) -> Result {
     })
     .await
 }
+/// `/remind` and `/saved` accept years beyond Jiff's 9999; app/helpers/time_helper.rb
+/// renders them with `iso8601` all the same.
+fn instant(at: campfire_db::Timestamp) -> campfire_views::time::Instant {
+    match at.try_jiff() {
+        Some(at) => campfire_views::time::Instant::Civil(at),
+        None => campfire_views::time::Instant::Wide(Box::new(move |zone| {
+            rails_compat::datetime::render(at, zone, true)
+        })),
+    }
+}
 pub(crate) fn view(
     presenter: &Presenter<'_>,
     conn: &campfire_db::Connection,
@@ -81,8 +91,8 @@ pub(crate) fn view(
         id: item.id,
         status: item.status.clone(),
         created_at: item.created_at.jiff(),
-        remind_at: item.remind_at.map(|at| at.jiff()),
-        reminded_at: item.reminded_at.map(|at| at.jiff()),
+        remind_at: item.remind_at.map(instant),
+        reminded_at: item.reminded_at.map(instant),
         room_name: presenter
             .room_display_name(&Room::find(conn, message.room_id)?, Some(viewer))?,
         author_name: presenter.user(message.creator_id)?.name,

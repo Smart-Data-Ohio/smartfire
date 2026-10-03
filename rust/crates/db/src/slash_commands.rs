@@ -233,16 +233,41 @@ fn user_zone(tx: &Tx<'_>, id: i64) -> Result<String> {
         .unwrap_or_else(|| "UTC".into()))
 }
 fn long(time: Timestamp, zone_name: &str) -> String {
+    if time.try_jiff().is_none() {
+        return wide_long(time, zone_name, true);
+    }
     time.jiff()
         .to_zoned(zone(zone_name))
         .strftime("%B %d, %Y %H:%M")
         .to_string()
 }
 fn date_long(time: Timestamp, zone_name: &str) -> String {
+    if time.try_jiff().is_none() {
+        return wide_long(time, zone_name, false);
+    }
     time.jiff()
         .to_zoned(zone(zone_name))
         .strftime("%B %d, %Y")
         .to_string()
+}
+fn wide_long(time: Timestamp, zone_name: &str, clock: bool) -> String {
+    // Reuse WS11's shared wide, TZInfo-aware rendering. Timestamp's database
+    // decoder supplies a calendar proxy solely for the English month/day label.
+    let encoded = rails_compat::datetime::render(time, &zone(zone_name), false);
+    let end = encoded[usize::from(encoded.starts_with('-'))..]
+        .find('-')
+        .unwrap()
+        + usize::from(encoded.starts_with('-'));
+    let year = &encoded[..end];
+    let local = Timestamp::parse_db(&encoded.replace('T', " "))
+        .unwrap()
+        .calendar_proxy()
+        .0;
+    let mut result = format!("{}{}", local.strftime("%B %d, "), year);
+    if clock {
+        result.push_str(&local.strftime(" %H:%M").to_string());
+    }
+    result
 }
 fn past(time: Timestamp, zone_name: &str) -> CommandResult {
     CommandResult::error(format!("“{}” is in the past.", long(time, zone_name)))
@@ -444,7 +469,7 @@ pub fn event_stub(c: &Context, args: &str, zone_name: &str, now: Timestamp) -> C
     if let Some(t) = time {
         pairs.push((
             "event[starts_at]",
-            t.jiff().strftime("%Y-%m-%dT%H:%M:%SZ").to_string(),
+            rails_compat::datetime::render(t, &jiff::tz::TimeZone::UTC, true),
         ));
     }
     pairs.push(("event[time_zone]", zone_name.into()));
@@ -708,3 +733,6 @@ fn broadcast_ooo(tx: &mut Tx<'_>, user: i64) -> Result<()> {
         .ok_or(Error::RecordNotFound("User"))?;
     settings.announce_ooo(tx)
 }
+
+#[cfg(test)]
+mod relative_overflow_tests;

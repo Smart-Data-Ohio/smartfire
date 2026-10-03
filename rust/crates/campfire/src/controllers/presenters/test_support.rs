@@ -156,10 +156,16 @@ pub fn david_cookie() -> String {
 
 pub struct TestApp {
     pub booted: Booted,
+    publications: std::sync::OnceLock<campfire_cable::pubsub::PublicationCapture>,
     _dir: tempfile::TempDir,
 }
 
 impl TestApp {
+    /// Start only when an ordered producer assertion is needed. Nothing is recorded by default.
+    pub fn publications(&self) -> &campfire_cable::pubsub::PublicationCapture {
+        self.publications.get_or_init(|| self.booted.app.cable.capture_publications())
+    }
+
     pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
         Self::boot_with_huddle_services(clock, crate::integrations::net::Network::system(), settings, huddle).await
     }
@@ -408,11 +414,11 @@ impl TestApp {
                 .await
                 .unwrap(),
         }};
-        Some(TestApp { booted, _dir: dir })
+        Some(TestApp { booted, _dir: dir, publications: Default::default() })
     }
 
     pub async fn stop_jobs(self) -> (crate::app::App, tempfile::TempDir) {
-        let Self { booted, _dir } = self;
+        let Self { booted, _dir, .. } = self;
         let app = booted.app.clone();
         booted
             .jobs
@@ -809,6 +815,7 @@ async fn ws8bm_browser_host_without_jobs() {
     let app = TestApp {
         booted,
         _dir: tempfile::tempdir().unwrap(),
+        publications: Default::default(),
     }
     .without_job_runner()
     .await;
