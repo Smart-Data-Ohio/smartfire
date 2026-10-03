@@ -501,10 +501,10 @@ async fn ws11ui_next_numeric_expiry_saves_match_rails_raw_writer() {
         if list.status.as_u16() as u64 != case["list_status"].as_u64().unwrap() {
             failures.push(format!("numeric list status {}", list.status));
         }
-        if let Some(body) = case["list_body"].as_str() {
-            if list.text() != body {
-                failures.push("numeric list error body differs".into());
-            }
+        if let Some(body) = case["list_body"].as_str()
+            && list.text() != body
+        {
+            failures.push("numeric list error body differs".into());
         }
     }
     println!(
