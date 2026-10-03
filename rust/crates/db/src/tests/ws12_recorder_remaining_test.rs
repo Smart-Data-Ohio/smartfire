@@ -8,16 +8,17 @@ use serde_json::{Value, json};
 fn facts(conn: &crate::Connection) -> crate::Result<Value> {
     let rows = crate::sql::query_all(
         conn,
-        "SELECT user_id,source_type,event_type,read_at,handled_at FROM activity_items ORDER BY user_id,source_type,source_id",
+        "SELECT user_id,source_type,source_id,event_type,read_at,handled_at FROM activity_items ORDER BY user_id,source_type,source_id",
         [],
         |r| {
             Ok(json!([
                 r.get::<_, i64>(0)?,
                 r.get::<_, String>(1)?,
-                r.get::<_, String>(2)?,
-                r.get::<_, Option<crate::Timestamp>>(3)?
-                    .map(|t| t.as_second()),
+                r.get::<_, i64>(2)?,
+                r.get::<_, String>(3)?,
                 r.get::<_, Option<crate::Timestamp>>(4)?
+                    .map(|t| t.as_second()),
+                r.get::<_, Option<crate::Timestamp>>(5)?
                     .map(|t| t.as_second())
             ]))
         },

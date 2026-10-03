@@ -39,7 +39,7 @@ restore=-> do
  conn.execute('PRAGMA foreign_keys=ON');ActiveSupport::IsolatedExecutionState.clear
 end
 snapshot=-> do
- ActivityItem.order(:user_id,:source_type,:source_id).map{|i|[i.user_id,i.source_type,i.event_type,i.read_at&.to_i,i.handled_at&.to_i]}
+ ActivityItem.order(:user_id,:source_type,:source_id).map{|i|[i.user_id,i.source_type,i.source_id,i.event_type,i.read_at&.to_i,i.handled_at&.to_i]}
 end
 rows=cases.map do |key,actions|
  restore.call;common.each{|sql|conn.execute(sql)}

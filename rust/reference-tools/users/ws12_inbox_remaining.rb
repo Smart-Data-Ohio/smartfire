@@ -22,6 +22,7 @@ ApplicationController.prepend(Ws12InboxTokens)
 # Fix generated fixture identities before calling real source writers.
 ws12_uuid=0
 SecureRandom.define_singleton_method(:uuid){ws12_uuid+=1;format('00000000-0000-4000-8000-%012d',ws12_uuid)}
+Random.define_singleton_method(:uuid){SecureRandom.uuid}
 root=ENV.fetch('PARITY_WORK'); conn=ActiveRecord::Base.connection
 base=JSON.parse(File.read(File.join(root,'vectors/inbox-http.json')))['setup']
 base.each{|sql|conn.execute(sql)}

@@ -23,6 +23,7 @@ ApplicationController.prepend(Ws12WorkTokens)
 # Generated fixture identities are deterministic inputs, not response masks.
 ws12_uuid=0
 SecureRandom.define_singleton_method(:uuid){ws12_uuid+=1;format('00000000-0000-4000-8000-%012d',ws12_uuid)}
+Random.define_singleton_method(:uuid){SecureRandom.uuid}
 root=ENV.fetch('PARITY_WORK');conn=ActiveRecord::Base.connection
 labels=JSON.parse(File.read(File.join(root,'parity/.seed/default/labels.json')))
 tables=%w[users rooms memberships messages action_text_rich_texts channel_threads thread_memberships work_thread_events work_thread_links github_pull_requests events event_attendances event_references thread_tags activity_items agent_grants agents agent_credentials sqlite_sequence]
