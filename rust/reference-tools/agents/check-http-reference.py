@@ -36,6 +36,7 @@ def main():
     files += ["app/controllers/messages_controller.rb", "app/models/user/bot.rb", "app/models/message/bot_webhook_fanout.rb", "app/models/message/mention_preloader.rb", "app/models/agent/delivery.rb", "app/jobs/bot/webhook_job.rb"]
     files += ["app/models/work_thread_link.rb", "app/models/github/pull_request.rb"]
     files += ["app/services/agents/work_handoffs.rb", "app/models/work_handoff.rb", "app/models/work_thread_event.rb", "app/models/board_tag_assignment.rb"]
+    files += ["app/models/activity_item.rb", "app/models/agent_budget_notice.rb", "app/services/agents/budgets.rb", "app/services/activity_items/recorder.rb", "app/models/webhook.rb"]
     assert (root / "test/fixtures/files/moon.jpg").read_bytes() == (root / "rust/vectors/users_logos/moon.jpg").read_bytes()
     lines = subprocess.check_output([
         "docker", "run", "--rm", "--name", "ws11api-source-check", "--entrypoint", "sha256sum",
@@ -44,6 +45,10 @@ def main():
     for file, line in zip(files, lines, strict=True):
         pinned = subprocess.check_output(["git", "show", f"d7c7de92:{file}"], cwd=root)
         check_source(pinned, line.split()[0], (root / file).read_bytes(), file)
+    named_files=["test/models/message_streaming_test.rb", "test/models/user/bot_test.rb", "test/models/channel_thread_agent_assignment_test.rb", "test/models/agent_budgets_test.rb"]
+    for file in named_files:
+        assert (root/file).read_bytes()==subprocess.check_output(["git","show",f"d7c7de92:{file}"],cwd=root),file
+    print("WS11-api new named sources: 4 pinned test files matched checkout; test sources are not shipped in the Rails image")
     print(f"WS11-api reference sources: {len(files)} pinned files matched; 0 image or checkout mismatches (d7c7de92)")
 
 

@@ -71,15 +71,13 @@ class VerifierInjections(unittest.TestCase):
         expected = json.dumps(vector).encode()
         for case_index in range(len(vector['cases'])):
             for response in ['baseline_proxy', 'proxy']:
-                self.assertIsNone(vector['cases'][case_index][response]['headers']['Content-Transfer-Encoding'])
-                changed = deepcopy(vector)
-                changed['cases'][case_index][response]['headers']['Content-Transfer-Encoding'] = 'binary'
-                with self.assertRaises(AssertionError):
-                    api['compare_vectors'](json.dumps(changed).encode(), expected, 'proxy transfer encoding drift')
-                changed = deepcopy(vector)
-                del changed['cases'][case_index][response]['headers']['Content-Transfer-Encoding']
-                with self.assertRaises(AssertionError):
-                    api['compare_vectors'](json.dumps(changed).encode(), expected, 'proxy header omitted from oracle')
+                headers = vector['cases'][case_index][response]['headers']
+                self.assertNotIn('content-transfer-encoding', headers)
+                for name, value in [('content-transfer-encoding', ['binary']), ('x-unexpected', ['new']), ('content-type', ['wrong']), ('x-request-id', ['a', 'b'])]:
+                    changed = deepcopy(vector)
+                    changed['cases'][case_index][response]['headers'][name] = value
+                    with self.assertRaises(AssertionError):
+                        api['compare_vectors'](json.dumps(changed).encode(), expected, 'complete proxy header drift')
 
     def test_approved_difference_is_narrow(self):
         root = Path(__file__).resolve().parents[2]
