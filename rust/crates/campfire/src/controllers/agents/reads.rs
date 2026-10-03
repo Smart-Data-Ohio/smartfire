@@ -47,12 +47,16 @@ pub(super) fn lookup_ids(value: &Value) -> Vec<i64> {
                     .map(|n| n as i64)
             }),
             Value::String(s) => {
-                // Ruby's decimal to_i accepts ASCII leading whitespace and
-                // underscores between digits, but not Unicode whitespace.
-                let s = s.trim_start_matches(|c: char| c.is_ascii_whitespace());
+                // Ruby's decimal to_i also accepts vertical tab and 0d/0D.
+                // Active Model rejects nonnumeric strings and out-of-range IDs.
+                let s = s.trim_start_matches([' ', '\t', '\n', '\u{b}', '\u{c}', '\r']);
                 let bytes = s.as_bytes();
                 let mut offset = usize::from(s.starts_with(['+', '-']));
                 let mut decimal = s[..offset].to_owned();
+                let numeric = bytes.get(offset).is_some_and(u8::is_ascii_digit);
+                if s[offset..].starts_with("0d") || s[offset..].starts_with("0D") {
+                    offset += 2;
+                }
                 let mut digits = 0;
                 while let Some(byte) = bytes.get(offset) {
                     if byte.is_ascii_digit() {
@@ -68,7 +72,13 @@ pub(super) fn lookup_ids(value: &Value) -> Vec<i64> {
                         break;
                     }
                 }
-                (digits > 0).then(|| decimal.parse().ok()).flatten()
+                if digits > 0 {
+                    decimal.parse().ok()
+                } else {
+                    // A numeric prefix with no decimal digits still casts to 0
+                    // (e.g. 0d or 0d_1), rather than a nonnumeric NULL predicate.
+                    numeric.then_some(0)
+                }
             }
             Value::Bool(value) => Some(i64::from(*value)),
             _ => None,

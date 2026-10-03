@@ -25,24 +25,25 @@ fn owner_agent(tx: &Tx<'_>, owner: Option<i64>) -> Result<Option<i64>> {
 pub fn enqueue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<()> {
     queue_webhook(tx, event).map(|_| ())
 }
-fn queue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<bool> {
+fn queue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<Option<crate::Timestamp>> {
     if !WORK_TYPES.contains(&event.event_type.as_str()) || event.webhook_status != "none" {
-        return Ok(false);
+        return Ok(None);
     }
     let Some(room_id) = event.room_id else {
-        return Ok(false);
+        return Ok(None);
     };
     if !webhook_eligible(tx, event.agent_id, room_id)? {
-        return Ok(false);
+        return Ok(None);
     }
-    let changed=tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND webhook_status='none'",params![tx.now(),event.id])?;
+    let next_attempt_at = tx.now();
+    let changed=tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND webhook_status='none'",params![next_attempt_at,event.id])?;
     if changed != 0 {
         tx.emit_after_commit(crate::Event::job(&EventWebhookJob {
             event_id: event.id,
             attempt: Some(event.webhook_attempts),
         }));
     }
-    Ok(changed != 0)
+    Ok((changed != 0).then_some(next_attempt_at))
 }
 fn webhook_eligible(tx: &Tx<'_>, agent_id: i64, room_id: i64) -> Result<bool> {
     // One current statement, retaining suspended/user/deleted-room/revoked-grant
@@ -111,9 +112,9 @@ fn record(
             ..Default::default()
         },
     )?;
-    if queue_webhook(tx, &event)? {
+    if let Some(next_attempt_at) = queue_webhook(tx, &event)? {
         event.webhook_status = "pending".into();
-        event.webhook_next_attempt_at = Some(tx.now());
+        event.webhook_next_attempt_at = Some(next_attempt_at);
     }
     Ok(event)
 }

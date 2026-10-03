@@ -269,8 +269,8 @@ pub fn create_step_service(
         tx,
         agent_id,
         NewAgentStep {
-            message_id: integer(fields.get("message_id")),
-            channel_thread_id: integer(fields.get("thread_id")),
+            message_id: integer(fields.get("message_id").filter(|value| !mcp::blank(value))),
+            channel_thread_id: integer(fields.get("thread_id").filter(|value| !mcp::blank(value))),
             name: attribute_string(fields.get("name")).unwrap_or_default(),
             status: attribute_string(fields.get("status")).unwrap_or_else(|| "running".into()),
             input_summary: attribute_string(fields.get("input_summary")),
@@ -489,4 +489,6 @@ pub fn ruby_inspect(value: &Value) -> String {
 }
 
 /// Active Record's find_by integer candidate coercion for sibling API transports.
-pub(super) fn lookup_id_candidates(value:&Value)->Vec<i64> {reads::lookup_ids(value)}
+pub(super) fn lookup_id_candidates(value: &Value) -> Vec<i64> {
+    reads::lookup_ids(value)
+}

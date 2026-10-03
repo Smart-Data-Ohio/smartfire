@@ -289,12 +289,13 @@ pub fn create_delivered(tx: &Tx<'_>, mut attributes: NewEvent) -> Result<AgentEv
     attributes.outcome = Some("delivered".into());
     let mut event = AgentEvent::create(tx, attributes)?;
     if has_webhook(tx, event.agent_id)? {
+        let next_attempt_at = tx.now();
         tx.conn().execute(
             "UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",
-            params![tx.now(), event.id],
+            params![next_attempt_at, event.id],
         )?;
         event.webhook_status = "pending".into();
-        event.webhook_next_attempt_at = Some(tx.now());
+        event.webhook_next_attempt_at = Some(next_attempt_at);
     }
     Ok(event)
 }
