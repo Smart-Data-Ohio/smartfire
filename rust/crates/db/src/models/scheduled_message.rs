@@ -220,6 +220,37 @@ impl ScheduledMessage {
         Ok(true)
     }
 
+    /// Page-scoped sendability, using the same association rules as `sendable`.
+    /// Dispatch still rechecks inside its writer. JSON keeps bind count fixed
+    /// regardless of the number of visible drafts.
+    pub fn sendable_ids(
+        conn: &Connection,
+        rows: &[Self],
+    ) -> Result<std::collections::HashSet<i64>> {
+        if rows.is_empty() {
+            return Ok(Default::default());
+        }
+        let ids = rows.iter().map(|row| row.id).collect::<Vec<_>>();
+        Ok(query_all(
+            conn,
+            "SELECT DISTINCT s.id FROM scheduled_messages s
+             JOIN users u ON u.id=s.user_id JOIN rooms r ON r.id=s.room_id
+             JOIN memberships m ON m.room_id=s.room_id AND m.user_id=s.user_id
+             LEFT JOIN channel_threads t ON t.id=s.thread_id
+             WHERE s.id IN (SELECT value FROM json_each(?))
+             AND u.status=? AND u.role<>? AND r.deleted_at IS NULL
+             AND (t.id IS NULL OR t.room_id=s.room_id)",
+            params![
+                serde_json::json!(ids).to_string(),
+                crate::models::user::Status::Active as i64,
+                crate::models::user::Role::Bot as i64
+            ],
+            |row| row.get(0),
+        )?
+        .into_iter()
+        .collect())
+    }
+
     pub fn drop(&mut self, tx: &mut Tx<'_>, reason: Option<&str>, now: Timestamp) -> Result<()> {
         tx.conn().execute_cached("UPDATE scheduled_messages SET dropped_at = ?, drop_reason = ?, updated_at = ? WHERE id = ?",
             params![now, reason, tx.now(), self.id])?;

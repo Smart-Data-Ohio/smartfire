@@ -17,7 +17,7 @@ NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links
          "older_provider_callbacks", "bounded_provider_callbacks", "mapped_provider_callbacks",
          "older_owner_callbacks", "older_calendar_callbacks", "older_calendar_jobs", "older_embed_jobs", "pin_poll_scaling", "exceptional_inputs", "slash_named", "older_calendar_execution", "older_embed_children", "older_embed_failures", "final_state_siblings",
          "calendar_retry_consumers", "relative_split_inputs", "container_inputs", "relative_consumers", "adapter_rejections", "wide_date_html", "wide_http_html", "periodic_delivery", "root-declarations",
-         "relative_overflow_inputs", "relative_overflow_consumers"]
+         "relative_overflow_inputs", "relative_overflow_consumers", "review_229"]
 # Oracles produced by another generator in a named mode: name -> (script, extra arguments).
 MODES = {"relative_overflow_consumers": ("relative_consumers", ["overflow"])}
 # WS8BM2_ORACLE_NAMES=a,b replays a subset, e.g. the oracles a change regenerated.

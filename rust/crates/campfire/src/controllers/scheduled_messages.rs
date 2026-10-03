@@ -89,20 +89,72 @@ pub async fn index(c: &mut Ctx) -> Result {
             let viewer = User::find(conn, user_id)?;
             let mut presenter = Presenter::new(conn, &app, None);
             presenter.render_zone = zone;
+            let pending = ScheduledMessage::owned_by(conn, user_id, false)?;
+            let history = ScheduledMessage::owned_by(conn, user_id, true)?;
+            let rows = pending.iter().chain(&history).collect::<Vec<_>>();
+            let rooms = Room::for_ids(
+                conn,
+                &rows.iter().map(|row| row.room_id).collect::<Vec<_>>(),
+            )?;
+            let names = Room::display_names_for(conn, &rooms, Some(&viewer))?;
+            let threads = ChannelThread::for_ids(
+                conn,
+                &rows
+                    .iter()
+                    .filter_map(|row| row.thread_id)
+                    .collect::<Vec<_>>(),
+            )?
+            .into_iter()
+            .map(|thread| (thread.id, thread.name))
+            .collect::<std::collections::HashMap<_, _>>();
+            let messages = Message::for_ids(
+                conn,
+                &rows
+                    .iter()
+                    .filter_map(|row| row.sent_message_id)
+                    .collect::<Vec<_>>(),
+            )?
+            .into_iter()
+            .map(|message| (message.id, campfire_db::message_pin::message_path(&message)))
+            .collect::<std::collections::HashMap<_, _>>();
+            let sendable = ScheduledMessage::sendable_ids(conn, &pending)?;
+            let render = |row: &ScheduledMessage| -> campfire_db::Result<_> {
+                let name = names
+                    .get(&row.room_id)
+                    .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
+                let thread = row
+                    .thread_id
+                    .map(|id| {
+                        threads
+                            .get(&id)
+                            .cloned()
+                            .ok_or(campfire_db::Error::RecordNotFound("ChannelThread"))
+                    })
+                    .transpose()?;
+                let message_path = row
+                    .sent_message_id
+                    .and_then(|id| messages.get(&id).cloned());
+                Ok(view_loaded(
+                    &presenter,
+                    row,
+                    name.clone(),
+                    thread,
+                    message_path,
+                ))
+            };
             let mut upcoming = Vec::new();
             let mut stranded = Vec::new();
-            for row in ScheduledMessage::owned_by(conn, user_id, false)? {
-                let sendable = row.sendable(conn)?;
-                let view = view(&presenter, conn, &viewer, &row)?;
-                if sendable {
+            for row in &pending {
+                let view = render(row)?;
+                if sendable.contains(&row.id) {
                     upcoming.push(view)
                 } else {
                     stranded.push(view)
                 }
             }
-            let past = ScheduledMessage::owned_by(conn, user_id, true)?
+            let past = history
                 .iter()
-                .map(|row| view(&presenter, conn, &viewer, row))
+                .map(render)
                 .collect::<campfire_db::Result<Vec<_>>>()?;
             Ok((upcoming, stranded, past))
         })
@@ -118,32 +170,51 @@ pub async fn index(c: &mut Ctx) -> Result {
     })
     .await
 }
+#[cfg(test)]
 pub(crate) fn view(
     presenter: &Presenter<'_>,
     conn: &campfire_db::Connection,
     viewer: &User,
     row: &ScheduledMessage,
 ) -> campfire_db::Result<campfire_views::scheduled_messages::Item> {
+    let room_name = presenter.room_display_name(&Room::find(conn, row.room_id)?, Some(viewer))?;
+    let thread_name = row
+        .thread_id
+        .map(|id| ChannelThread::find(conn, id).map(|thread| thread.name))
+        .transpose()?;
+    let message_path = row
+        .sent_message_id
+        .map(|id| Message::find_by_id(conn, id))
+        .transpose()?
+        .flatten()
+        .as_ref()
+        .map(campfire_db::message_pin::message_path);
+    Ok(view_loaded(
+        presenter,
+        row,
+        room_name,
+        thread_name,
+        message_path,
+    ))
+}
+fn view_loaded(
+    presenter: &Presenter<'_>,
+    row: &ScheduledMessage,
+    room_name: String,
+    thread_name: Option<String>,
+    message_path: Option<String>,
+) -> campfire_views::scheduled_messages::Item {
     let zone = &presenter.render_zone;
-    Ok(campfire_views::scheduled_messages::Item {
+    campfire_views::scheduled_messages::Item {
         id: row.id,
-        room_name: presenter.room_display_name(&Room::find(conn, row.room_id)?, Some(viewer))?,
-        thread_name: row
-            .thread_id
-            .map(|id| ChannelThread::find(conn, id).map(|thread| thread.name))
-            .transpose()?,
+        room_name,
+        thread_name,
         body: row.markdown_source.clone(),
         send_at: features::html_datetime(row.send_at, zone),
         send_value: rails_compat::datetime::format(row.send_at, zone.tz(), "%Y-%m-%dT%H:%M"),
         sent_at: row.sent_at.map(|at| features::html_datetime(at, zone)),
-        message_path: row
-            .sent_message_id
-            .map(|id| Message::find_by_id(conn, id))
-            .transpose()?
-            .flatten()
-            .as_ref()
-            .map(campfire_db::message_pin::message_path),
-    })
+        message_path,
+    }
 }
 pub async fn create(c: &mut Ctx) -> Result {
     prepare(c).await?;
@@ -382,11 +453,17 @@ pub async fn send_now(c: &mut Ctx) -> Result {
     prepare(c).await?;
     let initial = pending(c).await?;
     let origin = page::renderer_base_url(c);
+    let zone = features::user_zone(c).await?;
     let (sent, row) = c
         .app()
         .db
         .write_scoped(
-            move || crate::channels::message_features::origin(&origin),
+            move || {
+                (
+                    crate::channels::message_features::origin(&origin),
+                    page::enter_time_zone(zone),
+                )
+            },
             move |tx| {
                 let sent = ScheduledMessage::dispatch(tx, initial.id, tx.now(), true)?;
                 Ok((sent, ScheduledMessage::find(tx.conn(), initial.id)?))
