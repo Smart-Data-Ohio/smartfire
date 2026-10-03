@@ -153,13 +153,12 @@ impl CalendarEvent {
         if ids.is_empty() {
             return Ok(result);
         }
-        let sql = format!(
-            "SELECT r.message_id,e.* FROM events e JOIN event_references r ON r.event_id=e.id JOIN messages m ON m.id=r.message_id AND m.room_id=e.room_id WHERE r.message_id IN ({}) ORDER BY e.starts_at,e.id",
-            crate::sql::placeholders(ids.len())
-        );
+        // One JSON bind also bounds large message/quote pages and repeated IDs.
+        let ids = serde_json::to_string(ids).expect("integer IDs serialize");
+        let sql = "SELECT r.message_id,e.* FROM events e JOIN event_references r ON r.event_id=e.id JOIN messages m ON m.id=r.message_id AND m.room_id=e.room_id WHERE r.message_id IN (SELECT value FROM json_each(?1)) ORDER BY e.starts_at,e.id";
         for row in conn
-            .prepare(&sql)?
-            .query_map(rusqlite::params_from_iter(ids), |row| {
+            .prepare(sql)?
+            .query_map([ids], |row| {
                 Ok((row.get::<_, i64>("message_id")?, Self::from_row(row)?))
             })?
         {
@@ -488,25 +487,9 @@ impl CalendarEvent {
     }
     /// Register the record callback at its first save, preserving Rails delivery order.
     pub(super) fn broadcast_cards(&self, tx: &mut Tx<'_>) -> Result<()> {
-        use crate::broadcasts::{Broadcast, Partial, conversation_messages, message_dom_id};
-        let ids = query_all(
-            tx.conn(),
-            "SELECT message_id FROM event_references WHERE event_id=? ORDER BY message_id",
-            [self.id],
-            |r| r.get::<_, i64>(0),
-        )?;
-        for id in ids {
-            let message = crate::Message::find(tx.conn(), id)?;
-            tx.emit_broadcast_once(
-                "events",
-                self.id,
-                &Broadcast::replace_keeping_scroll(
-                    conversation_messages(tx.conn(), &message)?,
-                    message_dom_id(&message, Some("event_cards")),
-                    Partial::EventCards { message_id: id },
-                ),
-            );
-        }
+        // Rails resolves referencing_messages in after_update_commit, not at save.
+        // The app consumer batches facts and renders; the domain carries only identity.
+        tx.emit_broadcast_once("events", self.id, &CardUpdate { event_id: self.id });
         Ok(())
     }
     pub(super) fn update_callbacks(&self, tx: &mut Tx<'_>) -> Result<()> {
@@ -544,4 +527,14 @@ pub(super) fn member(conn: &Connection, room_id: i64, user_id: i64) -> Result<bo
         "SELECT 1 FROM memberships WHERE room_id=? AND user_id=?",
         params![room_id, user_id],
     )
+}
+
+/// FLAGGED WS14 consumer contract: Event#broadcast_event_card_updates.
+/// The record guard suppresses updates followed by destroy in the same transaction.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CardUpdate {
+    pub event_id: i64,
+}
+impl crate::Broadcast for CardUpdate {
+    const KIND: &'static str = "Event#broadcast_event_card_updates";
 }
