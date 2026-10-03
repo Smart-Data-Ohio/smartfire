@@ -30,5 +30,5 @@ its successful conditional UPDATE. No row reread is added and queue atomicity is
 
 Step parents apply Rails presence before integer coercion. An empty array no longer
 becomes parent ID zero; both absent parents produce the shared 422 required-parent
-validation. The two MCP envelopes and REST 422 controls leave domain rows and jobs
-unchanged. Work/step service authorization and validation ownership remain unchanged.
+validation. The two MCP envelopes and REST 422 controls make no step or job writes;
+normal agent/credential authentication usage timestamps match Rails. Work/step service authorization and validation ownership remain unchanged.
