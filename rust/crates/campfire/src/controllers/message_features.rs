@@ -259,3 +259,5 @@ mod older_embed_failure_tests;
 mod comparison_support;
 #[cfg(test)]
 mod final_state_sibling_tests;
+#[cfg(test)]
+mod calendar_retry_consumer_tests;
