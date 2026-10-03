@@ -232,3 +232,9 @@ mod slash_commands_test;
 mod board_automation_review_casts_test;
 mod board_automation_review_races_test;
 mod agent_next2_cases_test;
+
+mod agent_budget_notice_reader_test;
+
+mod agent_capability_batch_test;
+
+mod agent_event_clock_test;

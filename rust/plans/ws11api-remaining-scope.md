@@ -1,8 +1,7 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-2`, stacked on #205 (45bffea35), merged
-with main 21be05f47f3c0967f97eefcc35b057df4e2268c4, including the lead's
-#205 merge. The #205 branch is not rewritten.
+Updated on `rust/ws11api-next-3`, starting at 914bd16ff; #210's branch is
+untouched. Current main c6c37fb8f is merged with merge commit e26c8f9ac.
 The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
@@ -27,9 +26,18 @@ accepted; ws11api-approved-differences.md records the exact scope.
 Both approved JPEG/video crash differences and unconditional committed-file retention
 remain explicitly documented; they are deliberate differences, not unported API paths.
 
-The preceding round trimmed repeated capability and serialization-identity reads in
-WS11's write adapters and ledger webhook callback. This round batches array
-candidates. WS12 services and their authorization, history, audit and queue behavior remain authoritative and unchanged.
+The preceding rounds trimmed repeated capability/serialization-identity reads and
+batched array candidates. This round fixes nested/singleton/null/hash integer
+candidate coercion, sweeps scalar-ID service adapters with the shared Rails matrix,
+and corrects executor query caching in the uncached oracle. WS12 services retain
+authorization, history, audit and queue ownership. The named-case checker now
+recognizes the nine assignment macro invocations, preserves pinned delivery case
+order and runs in CI seed preparation. Race differences from Astra's #205
+classification remain explicitly approved, with current-state checks retained.
+
+The typed AgentBudgetNotice owner API is exported, and all three activity presenter
+read seams use its batch reader. `ws11api-budget-notice-reader.md` records its exact
+API and audiences. WS12 owns its ActivityItems::Recorder source integration.
 
 ## Completed API behavior checked by the audit
 
@@ -64,9 +72,9 @@ exact byte comparisons; sizes/checksums are never masked.
 
 ## Broader named-case evidence still partial
 
-The pinned domain inventory has 378 cases in 26 files. This round closes all
+The pinned domain inventory has 378 cases in 26 files. The preceding round closed all
 13 remaining WS11-owned names: four streaming projections, three bot cases,
-four assignment callbacks and two budget comparisons. The ledger is now
+four assignment callbacks and two budget comparisons. The ledger remains
 **325 comparisons, 53 deferred** (previously 312/66). Executed pass counts are
 reported separately from mapping counts. Each new named comparison has a fresh
 pinned Rails vector and an independently wrong observable negative control.
@@ -168,8 +176,13 @@ Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/valida
 
 ## Peer-owned fixed read costs
 
-Query growth remains flat at 5/50 owned rows. The remaining fixed gap is primarily
-inside WS12's `agent_work::{find_owned,writable,update_work,set_result,handoff_work}`,
+This round removes repeated adapter capability and room lookups, repeated ledger
+identity/hop/actor facts, eligibility reads and post-insert/update ledger reloads.
+Complete current authorization and fresh private-account sealing remain. Query
+growth stays flat at 5/50 owned rows; exact before/after totals are recorded in
+ws11api-next-3-report.md. Required WS11 auth, response and event reads remain;
+those costs are not assigned to peers. The largest remaining fixed gap is inside
+WS12's `agent_work::{find_owned,writable,update_work,set_result,handoff_work}`,
 `ChannelThread::{create_board_post,update_work,update_result}` and their after-commit
 board rendering. They repeat thread/room/owner membership/capability reads and complete
 board render preloads per callback. WS12 owns those service/read-boundary optimizations;

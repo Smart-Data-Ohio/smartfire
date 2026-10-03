@@ -1,5 +1,5 @@
 //! Agents::Reactions transport adapter over the shared Boost and icon APIs.
-use super::{ruby_i64, text};
+use super::{reads::lookup_ids, text};
 use crate::app::AppCtx;
 use crate::controllers::presenters::page::db_error;
 use campfire_db::models::{agent_access, agent_service::ServiceResult};
@@ -7,31 +7,10 @@ use campfire_db::{Agent, Boost, Message, Room};
 use campfire_kit::{Ctx, Result};
 use serde_json::{Value, json};
 
-// find_by(id: Array) binds a flattened IN list; it does not call Array#to_i.
-fn lookup_ids(value: &Value, ids: &mut Vec<i64>) -> campfire_db::Result<()> {
-    match value {
-        Value::Array(values) => {
-            for value in values {
-                lookup_ids(value, ids)?;
-            }
-        }
-        Value::Number(_) | Value::String(_) => ids.push(ruby_i64(value)),
-        Value::Object(_) => {
-            return Err(campfire_db::Error::Other(
-                "can't cast Hash for message id".into(),
-            ));
-        }
-        _ => {}
-    }
-    Ok(())
-}
-
 pub(super) async fn operation(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
     let result=c.app().db.write(move |tx| {
         let agent=Agent::find(tx.conn(),agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-        let mut ids=vec![];
-        lookup_ids(&args["message_id"],&mut ids)?;
-        ids.sort_unstable();
+        let ids=lookup_ids(&args["message_id"]);
         let message=campfire_db::models::agent_reading::message_by_ids(tx.conn(),&ids)?;
         let Some(message)=message else {return Ok(ServiceResult::fail("Message not found",404));};
         if Room::find_for_user(tx.conn(),agent.user_id,message.room_id)?.is_none() {

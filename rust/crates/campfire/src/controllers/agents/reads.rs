@@ -4,7 +4,9 @@ use crate::{
     app::AppCtx,
     controllers::{messages, presenters::page::db_error},
 };
-use campfire_db::models::{agent_access, agent_payloads, agent_reading, agent_service::ServiceResult};
+use campfire_db::models::{
+    agent_access, agent_payloads, agent_reading, agent_service::ServiceResult,
+};
 use campfire_db::{Agent, AgentGrant, Room};
 use campfire_kit::{Ctx, Result};
 use serde_json::{Value, json};
@@ -30,23 +32,73 @@ pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<
         _ => work(c, agent_id, op, args).await,
     }
 }
-// Active Record find_by(id:) flattens IN lists. Other scalar shapes cannot match
-// an integer key; unlike Ruby to_i they are not page-limit conversion errors.
+// Active Record's ArrayHandler casts each top-level candidate separately.
+// After compacting nils, a singleton predicate delegates back to ArrayHandler;
+// nested values in a multi-candidate IN predicate serialize independently.
 pub(super) fn lookup_ids(value: &Value) -> Vec<i64> {
-    fn collect(value: &Value, ids: &mut Vec<i64>) {
+    fn cast(value: &Value) -> Option<i64> {
         match value {
-            Value::Array(values) => {
-                for value in values {
-                    collect(value, ids);
+            Value::Number(n) => n.as_i64().or_else(|| {
+                if n.is_u64() {
+                    return None;
+                }
+                n.as_f64()
+                    .filter(|n| *n >= i64::MIN as f64 && *n < i64::MAX as f64)
+                    .map(|n| n as i64)
+            }),
+            Value::String(s) => {
+                // Ruby's decimal to_i also accepts vertical tab and 0d/0D.
+                // Active Model rejects nonnumeric strings and out-of-range IDs.
+                let s = s.trim_start_matches([' ', '\t', '\n', '\u{b}', '\u{c}', '\r']);
+                let bytes = s.as_bytes();
+                let mut offset = usize::from(s.starts_with(['+', '-']));
+                let mut decimal = s[..offset].to_owned();
+                let numeric = bytes.get(offset).is_some_and(u8::is_ascii_digit);
+                if s[offset..].starts_with("0d") || s[offset..].starts_with("0D") {
+                    offset += 2;
+                }
+                let mut digits = 0;
+                while let Some(byte) = bytes.get(offset) {
+                    if byte.is_ascii_digit() {
+                        decimal.push(char::from(*byte));
+                        digits += 1;
+                        offset += 1;
+                    } else if *byte == b'_'
+                        && digits > 0
+                        && bytes.get(offset + 1).is_some_and(u8::is_ascii_digit)
+                    {
+                        offset += 1;
+                    } else {
+                        break;
+                    }
+                }
+                if digits > 0 {
+                    decimal.parse().ok()
+                } else {
+                    // A numeric prefix with no decimal digits still casts to 0
+                    // (e.g. 0d or 0d_1), rather than a nonnumeric NULL predicate.
+                    numeric.then_some(0)
                 }
             }
-            Value::Number(_) | Value::String(_) => ids.push(ruby_i64(value)),
-            Value::Bool(value) => ids.push(i64::from(*value)),
-            _ => {}
+            Value::Bool(value) => Some(i64::from(*value)),
+            _ => None,
         }
     }
-    let mut ids = Vec::new();
-    collect(value, &mut ids);
+    let mut value = value;
+    while let Value::Array(values) = value {
+        let mut present = values.iter().filter(|v| !v.is_null());
+        if let Some(first) = present.next()
+            && present.next().is_none()
+        {
+            value = first;
+        } else {
+            break;
+        }
+    }
+    let mut ids = match value {
+        Value::Array(values) => values.iter().filter_map(cast).collect(),
+        other => cast(other).into_iter().collect::<Vec<_>>(),
+    };
     ids.sort_unstable();
     ids.dedup();
     ids
@@ -109,22 +161,42 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
             let agent =
                 Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
             let threads = if single {
-                let ids=args.get("work_id").map(lookup_ids).unwrap_or_default();
-                agent_reading::thread_by_ids(conn,&ids)?.into_iter().collect()
+                let ids = args.get("work_id").map(lookup_ids).unwrap_or_default();
+                agent_reading::thread_by_ids(conn, &ids)?
+                    .into_iter()
+                    .collect()
             } else if op == "list_board_posts" {
-                let status=text(args.get("status")).unwrap_or_default();
-                let status=campfire_richtext::ruby::strip(&status);
-                let status=if status.is_empty(){"open"}else{status};
-                let owner=text(args.get("owner")).unwrap_or_default();
-                let owner=campfire_richtext::ruby::strip(&owner);
-                let tag=text(args.get("tag")).unwrap_or_default();
-                let tag=campfire_richtext::ruby::strip(&tag).to_lowercase();
-                agent_reading::board_posts(conn,args.get("room_id").map_or(0,ruby_i64),agent.user_id,status,owner,&tag)?
+                let status = text(args.get("status")).unwrap_or_default();
+                let status = campfire_richtext::ruby::strip(&status);
+                let status = if status.is_empty() { "open" } else { status };
+                let owner = text(args.get("owner")).unwrap_or_default();
+                let owner = campfire_richtext::ruby::strip(&owner);
+                let tag = text(args.get("tag")).unwrap_or_default();
+                let tag = campfire_richtext::ruby::strip(&tag).to_lowercase();
+                agent_reading::board_posts(
+                    conn,
+                    args.get("room_id").map_or(0, ruby_i64),
+                    agent.user_id,
+                    status,
+                    owner,
+                    &tag,
+                )?
             } else {
-                let rooms=Room::for_user(conn,agent.user_id)?.into_iter().map(|r|r.id).collect::<Vec<_>>();
-                let allowed=agent_access::capabilities_for_users_in_rooms(conn,&[agent.user_id],&rooms,"read_messages")?;
-                let rooms=rooms.into_iter().filter(|room|allowed.contains(&(agent.user_id,*room))).collect::<Vec<_>>();
-                agent_reading::owned_work(conn,agent.user_id,&rooms)?
+                let rooms = Room::for_user(conn, agent.user_id)?
+                    .into_iter()
+                    .map(|r| r.id)
+                    .collect::<Vec<_>>();
+                let allowed = agent_access::capabilities_for_users_in_rooms(
+                    conn,
+                    &[agent.user_id],
+                    &rooms,
+                    "read_messages",
+                )?;
+                let rooms = rooms
+                    .into_iter()
+                    .filter(|room| allowed.contains(&(agent.user_id, *room)))
+                    .collect::<Vec<_>>();
+                agent_reading::owned_work(conn, agent.user_id, &rooms)?
             };
             Ok(threads)
         })
@@ -142,7 +214,7 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         .db
         .read(move |conn| {
             let owner = Agent::find(conn, agent_id)?.and_then(|agent| agent.owner_id);
-            let values = agent_payloads::work_payloads(conn,&records,owner,&access)?;
+            let values = agent_payloads::work_payloads(conn, &records, owner, &access)?;
             Ok(if single {
                 values.into_iter().next().unwrap_or(Value::Null)
             } else {
@@ -152,4 +224,66 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         .await
         .map_err(db_error)?;
     Ok(ServiceResult::ok(payload, 200))
+}
+
+#[cfg(test)]
+mod id_cast_tests {
+    use serde_json::{Value, json};
+
+    #[test]
+    fn ws11_next3_active_record_integer_candidates() {
+        let vector: Value =
+            serde_json::from_str(include_str!("../../../../../vectors/agent_id_casting.json"))
+                .unwrap();
+        for case in vector["cases"].as_array().unwrap() {
+            assert_eq!(
+                json!(super::lookup_ids(&case["input"])),
+                case["candidates"],
+                "{}",
+                case["input"]
+            );
+        }
+    }
+    #[test]
+    fn pr214_scalar_array_corpus_matches_rails_predicates() {
+        let vector: Value =
+            serde_json::from_str(include_str!("../../../../../vectors/pr214_id_corpus.json"))
+                .unwrap();
+        let allowed = vector["allowed"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_i64().unwrap())
+            .collect::<Vec<_>>();
+        let mut mismatches = Vec::new();
+        for case in vector["cases"].as_array().unwrap() {
+            let selected = super::lookup_ids(&case["input"])
+                .into_iter()
+                .filter(|id| allowed.contains(id))
+                .collect::<Vec<_>>();
+            if json!(selected) != case["selected"] {
+                mismatches.push(format!(
+                    "form={} position={} input={} actual={:?} expected={}",
+                    case["form"], case["position"], case["input"], selected, case["selected"]
+                ));
+            }
+        }
+        println!(
+            "PR214 ID corpus: {} scalar forms; {} positions; {} cases; {} mismatches",
+            vector["scalar_forms"],
+            vector["positions"],
+            vector["cases"].as_array().unwrap().len(),
+            mismatches.len()
+        );
+        assert!(
+            mismatches.is_empty(),
+            "{}",
+            mismatches
+                .iter()
+                .take(12)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
 }

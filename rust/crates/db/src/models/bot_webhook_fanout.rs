@@ -55,12 +55,22 @@ pub fn hop_for_message(tx: &Tx<'_>, message: &Message) -> Result<i64> {
 }
 
 pub fn hop_and_chain_for_message(tx: &Tx<'_>, message: &Message) -> Result<(i64, Option<String>)> {
-    if crate::sql::exists(
+    let sender = query_one(
         tx.conn(),
-        "SELECT 1 FROM agents WHERE user_id=?",
+        "SELECT id FROM agents WHERE user_id=?",
         [message.creator_id],
-    )? {
-        return hop_and_chain_for_actor(tx, Some(message.creator_id));
+        |r| r.get(0),
+    )?;
+    hop_and_chain_for_message_sender(tx, message, sender)
+}
+
+pub(crate) fn hop_and_chain_for_message_sender(
+    tx: &Tx<'_>,
+    message: &Message,
+    sender: Option<i64>,
+) -> Result<(i64, Option<String>)> {
+    if let Some(agent_id) = sender {
+        return hop_and_chain_for_agent(tx, agent_id, Some(message.creator_id));
     }
     if !message.creator(tx.conn())?.is_bot() {
         return Ok((0, None));
@@ -127,6 +137,13 @@ pub fn hop_and_chain_for_actor(
     let Some(agent_id) = agent else {
         return Ok((0, None));
     };
+    hop_and_chain_for_agent(tx, agent_id, actor_id)
+}
+fn hop_and_chain_for_agent(
+    tx: &Tx<'_>,
+    agent_id: i64,
+    actor_id: Option<i64>,
+) -> Result<(i64, Option<String>)> {
     let trigger = query_one(
         tx.conn(),
         "SELECT * FROM agent_events WHERE agent_id = ? AND event_type IN ('mention','direct_message','reply','work_assigned','work_unassigned','work_handed_off') AND outcome IN ('pending','delivered','acknowledged') AND created_at >= ? AND (actor_id IS NULL OR actor_id != ?) ORDER BY id DESC LIMIT 1",

@@ -1398,12 +1398,12 @@
       "rust_file": "rust/crates/db/src/tests/agent_next_cases_test.rs",
       "cases": [
         {
-          "rails": "self-assigned work does not raise the agent's own hop count",
-          "rust": "ws11_next_delivery_self_assigned_work_does_not_raise_hop"
-        },
-        {
           "rails": "rate check and insert run inside the agent lock",
           "rust": "ws11_next_delivery_rate_check_and_insert_share_writer_lock"
+        },
+        {
+          "rails": "self-assigned work does not raise the agent's own hop count",
+          "rust": "ws11_next_delivery_self_assigned_work_does_not_raise_hop"
         }
       ]
     },
@@ -1549,12 +1549,12 @@
     }
   ],
   "boundary_deferred": {
-    "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
+    "test/models/agent_credential_test.rb": "All named cases are mapped. Absent, blank and malformed HTTP credentials have REST/MCP boundary vectors.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "19 named comparisons plus a production WebSocket comparison of three byte-identical append/update/final phases. Four complete start/trailing and every-side-effect names still await full named-case comparisons; remaining reference/dependency peers remain flagged.",
+    "test/models/message_streaming_test.rb": "All 23 named cases are mapped, including start, trailing replacement and finalize side effects through actual callbacks and WebSocket frames.",
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
-    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
-    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
+    "test/models/user/bot_test.rb": "All 15 named cases are mapped, including reply-token room binding/expiry/revocation, fixed-entropy factory/reset and actual durable queued delivery.",
+    "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations."
   }
 }
