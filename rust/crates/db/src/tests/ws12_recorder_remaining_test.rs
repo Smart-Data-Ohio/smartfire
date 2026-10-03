@@ -338,7 +338,9 @@ fn ws12_recorder_c199_room_candidates_and_fanout_stay_flat_at_two_sizes() {
         let size = row["size"].as_i64().unwrap();
         let t = channel_thread_test::frozen();
         t.clock.travel_to(crate::Timestamp::from_second(1772467200));
+        let setup = oracle["rows"][0]["setup"].clone();
         let message=t.write(move |tx| {
+            for sql in setup.as_array().unwrap(){tx.conn().execute_batch(sql.as_str().unwrap())?;}
             tx.conn().execute("DELETE FROM activity_items",[])?;tx.conn().execute("DELETE FROM keyword_alerts",[])?;
             for i in 0..size {let uid=901863000+i;
                 tx.conn().execute("INSERT INTO users(id,name,role,status,created_at,updated_at) VALUES(?,'Quiet recipient',0,0,?,?)",rusqlite::params![uid,tx.now(),tx.now()])?;

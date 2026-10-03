@@ -11,7 +11,7 @@ conn=ActiveRecord::Base.connection
 id=->(name){ActiveRecord::FixtureSet.identify(name)}
 room=id.call('designers'); author=id.call('jz'); recipient=id.call('david')
 thread=901860001
-common=["DELETE FROM sqlite_sequence WHERE name='messages'", "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)", "DELETE FROM activity_items", "DELETE FROM keyword_alerts", "UPDATE memberships SET involvement='mentions' WHERE room_id=#{room}",
+common=["INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,#{room},#{author},'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')", "DELETE FROM sqlite_sequence WHERE name='messages'", "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)", "DELETE FROM activity_items", "DELETE FROM keyword_alerts", "UPDATE memberships SET involvement='mentions' WHERE room_id=#{room}",
  "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(#{thread},'Recorder clauses',#{room},#{author},'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
  "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(#{thread},#{author},'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
  "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(#{thread},#{recipient},'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"]

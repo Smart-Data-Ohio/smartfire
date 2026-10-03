@@ -10,6 +10,7 @@
     {
       "id": "c191",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -39,6 +40,7 @@
     {
       "id": "c192",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -68,6 +70,7 @@
     {
       "id": "c196",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -106,6 +109,7 @@
     {
       "id": "c201",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -137,6 +141,7 @@
     {
       "id": "c203",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -177,6 +182,7 @@
     {
       "id": "c204",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -233,6 +239,7 @@
     {
       "id": "c205",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -264,6 +271,7 @@
     {
       "id": "c208",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -320,6 +328,7 @@
     {
       "id": "c210",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -385,6 +394,7 @@
     {
       "id": "c213",
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",
@@ -459,6 +469,7 @@
     ],
     "c177": {
       "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
         "DELETE FROM sqlite_sequence WHERE name='messages'",
         "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
         "DELETE FROM activity_items",

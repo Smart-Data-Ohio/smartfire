@@ -445,7 +445,7 @@ async fn ws12_ordinary_work_owner_options_batch_agent_profiles_at_two_sizes() {
             .filter(|o| {
                 o["id"]
                     .as_i64()
-                    .is_some_and(|id| id >= 901896000 && id < 901896000 + size)
+                    .is_some_and(|id| (901896000..901896000 + size).contains(&id))
             })
             .collect::<Vec<_>>();
         assert_eq!(extra.len(), size as usize);
