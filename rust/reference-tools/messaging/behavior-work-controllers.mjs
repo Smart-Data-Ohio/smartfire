@@ -1,6 +1,8 @@
 // Exact assertion scopes of channel_threads_controller_test.rb:304-505.
 // Controller declarations use real token-bearing HTTP; browser visibility is not a scope here.
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 export const workControllerCases=[
   'converts a thread to work, assigns an eligible owner, and keeps an audit trail',
   'work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable',
@@ -13,12 +15,26 @@ export const workControllerCases=[
 ];
 export async function workControllers({author,recipient,base,caseName,fixture}) {
   const url=`${base}/rooms/654632876/threads/${fixture.thread_id}.json`;
-  async function request(page,input,expected=200) {
+  const databases=JSON.parse(process.env.WS8BM_WORK_DATABASES||'{}');
+  assert.ok(databases[base],'fresh work-controller database path required');
+  const counts=()=>JSON.parse(execFileSync('python3',[
+    fileURLToPath(new URL('./behavior_work_rows.py',import.meta.url)),databases[base],String(fixture.eligible_agent_id),
+  ],{encoding:'utf8'}));
+  async function request(page,input,expected=200,agentDelta=0) {
+    const before=input===null?null:counts();
     const response=await page.evaluate(async({url,input})=>{
       const result=await fetch(url,{method:input===null?'GET':'PATCH',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').content},...(input===null?{}:{body:JSON.stringify({thread:input})})});
       return {status:result.status,body:await result.text()};
     },{url,input});
     assert.equal(response.status,expected,`${caseName}: ${response.body}`);
+    if(before) {
+      const after=counts();
+      // Pinned Rails :308,315,336,360,379: one GLOBAL event per successful
+      // change and zero on refusal. Separate snapshots prevent later writes
+      // from cancelling an earlier incorrect delta.
+      assert.equal(after.work_events-before.work_events,expected===200?1:0,`work-event-count: ${caseName}: PATCH ${JSON.stringify(input)}`);
+      assert.equal(after.agent_events-before.agent_events,agentDelta,`agent-event-count: ${caseName}: PATCH ${JSON.stringify(input)}`);
+    }
     const body=response.body?JSON.parse(response.body):null;
     if(expected===200)assert.equal(body.thread.name,'Design discussion');
     return body;
@@ -45,7 +61,7 @@ export async function workControllers({author,recipient,base,caseName,fixture}) 
     const before=await thread();const after=(await request(author,{work_status:'',work_owner_id:''})).thread;
     assert.equal(after.work_history.length,before.work_history.length+1);assert.equal(after.work_status,null);assert.equal(after.work_owner,null);
   } else if(caseName.startsWith('a manager can assign')) {
-    await request(author,{work_status:'planned'});const after=(await request(author,{work_owner_id:fixture.eligible_id})).thread;
+    await request(author,{work_status:'planned'});const after=(await request(author,{work_owner_id:fixture.eligible_id},200,1)).thread;
     assert.equal(after.work_owner.id,fixture.eligible_id);assert.equal(after.work_owner.agent,true);
   } else if(caseName.startsWith('the owner picker')) {
     const options=(await thread()).work_owner_options;assert.ok(options.some(row=>row.name==='Kevin'));
