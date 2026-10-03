@@ -1,3 +1,12 @@
+> Measurement correction (#210): the original recorder counted SELECT notifications,
+> including three query-cache hits. Its outer uncached block was undone by the
+> request executor. The fixed recorder disables every pool after the executor's
+> AR hook and asserts zero cache hits/enabled-cache SELECT events. It reproduces
+> 29/29 thread and 30/30 cursor executions with caching truly disabled. With
+> normal request caching, Astra measured 26/26 and 27/27 physical executions plus
+> three hits; the former explanation of three fixture/setup reads was incorrect.
+> All response/state vectors and the flat candidate-growth result are unchanged.
+
 # WS11 API next-2 report
 
 Verified code checkpoint: `1c6b6bfbd61eb1317d79cc39c69900012768c474`; main merged through `21be05f47f3c0967f97eefcc35b057df4e2268c4` (#196, #201,
@@ -41,9 +50,10 @@ normalization has no database lookup per element.
 | REST context thread |27/27|27/27|26/26|
 
 These are SELECT counts after warmup. Rust reader counts use reader connections;
-reactions include the writer. The fresh Rails recorder explicitly disables the
-query cache. The supplied independent review reports Rails thread/before at
-26/27 rather than this recorder's 29/30; both measurement windows are flat.
+reactions include the writer. This historical recorder counted three cache hits
+as SELECT notifications because the executor re-enabled caching. The next-3
+correction asserts zero cache hits and reproduces physical uncached 29/30; normal
+request caching gives physical 26/27 with three hits. Both windows stay flat.
 No claimed count is substituted from the review for the fresh measurement.
 The 24 vectors include multiple valid candidates, conversation-only cursors,
 global selection before membership, revoked grants before invalid limits and

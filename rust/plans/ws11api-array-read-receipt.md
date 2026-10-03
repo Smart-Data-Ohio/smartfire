@@ -1,3 +1,12 @@
+> Measurement correction (#210): the original recorder counted SELECT notifications,
+> including three query-cache hits. Its outer uncached block was undone by the
+> request executor. The fixed recorder disables every pool after the executor's
+> AR hook and asserts zero cache hits/enabled-cache SELECT events. It reproduces
+> 29/29 thread and 30/30 cursor executions with caching truly disabled. With
+> normal request caching, Astra measured 26/26 and 27/27 physical executions plus
+> three hits; the former explanation of three fixture/setup reads was incorrect.
+> All response/state vectors and the flat candidate-growth result are unchanged.
+
 # Agent array lookup regression
 
 The new two-size regression was run before replacing the per-candidate loops on
@@ -24,12 +33,12 @@ After batching, the same reader/writer instrumentation reports:
 | REST context message | 28/28 | 28/28 | 33/33 |
 | REST context thread | 27/27 | 27/27 | 26/26 |
 
-The independent review measured Rails thread/before at 26/27; the fresh recorder
-uses uncached SQL notification capture and its own fixture setup, with three
-additional fixed reads. Neither recorder grows with candidate count. Rust reader
-counts capture reader connections; reactions capture both reader and writer
-SELECTs after two idempotent warmups. This distinction is explicit rather than
-silently comparing different measurement boundaries.
+The original fresh recorder counted SQL notifications, including three query-cache
+hits; it was not actually uncached because the executor re-enabled the cache.
+The corrected recorder disables caching after that hook and asserts zero hits.
+Astra's normal-cache physical executions are 26/27; the truly uncached capture is
+29/30. Both stay flat. Rust reader counts use reader connections; reactions also
+capture the writer after two idempotent warmups.
 
 The Rails recorder is `array_read_contract.rb`, pinned at d7c7de92. The 24 exact
 status/body/selected-header vectors cover both sizes and global thread selection
@@ -46,7 +55,8 @@ is fixed. REST `/agents/context` shares those helpers. Room arrays in board
 filters use the preloaded accessible-room relation. Work write array IDs already
 use a single JSON-backed IN query. MCP `ack_events` deliberately retains its
 per-event authorization/acknowledgment loop, matching Rails' loop and maximum100;
-it is not an array-candidate find_by lookup. Drive IDs have no per-ID database
+its individual members can themselves be candidate arrays, now covered by the
+next-3 matrix and bounded scoped lookup. Drive IDs have no per-ID database
 lookup. Scalar-only parameters retain their existing Ruby coercion rules.
 
 Commands used (from the worktree; target and environment in `.scratch/next-2/run.sh`):

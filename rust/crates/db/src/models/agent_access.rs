@@ -55,6 +55,45 @@ pub fn capabilities_for_agents(
     .collect())
 }
 
+/// Request-local capability facts for a current user. None preserves the human/
+/// missing-agent behavior of capability_for_user; membership remains separate.
+pub fn capabilities_for_user_in_room(
+    conn: &Connection,
+    user_id: i64,
+    room_id: i64,
+    capabilities: &[&str],
+) -> Result<std::collections::HashMap<String, Option<bool>>> {
+    Ok(query_all(
+        conn,
+        "SELECT requested.value, CASE WHEN a.id IS NULL THEN NULL ELSE
+         a.suspended_at IS NULL AND u.status=0 AND r.id IS NOT NULL AND r.deleted_at IS NULL
+         AND ((requested.value IN ('read_messages','post_messages','react')
+           AND NOT EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id))
+           OR EXISTS (SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id
+             AND g.capability=requested.value AND g.revoked_at IS NULL
+             AND (g.room_id IS NULL OR g.room_id=?))) END
+         FROM json_each(?) requested LEFT JOIN agents a ON a.user_id=?
+         LEFT JOIN users u ON u.id=a.user_id LEFT JOIN rooms r ON r.id=?",
+        params![
+            room_id,
+            serde_json::json!(capabilities).to_string(),
+            user_id,
+            room_id
+        ],
+        |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<bool>>(1)?)),
+    )?
+    .into_iter()
+    .map(|(cap, allowed)| {
+        let allowed = if CAPABILITIES.contains(&cap.as_str()) {
+            allowed
+        } else {
+            allowed.map(|_| false)
+        };
+        (cap, allowed)
+    })
+    .collect())
+}
+
 fn active_agent(conn: &Connection, agent_id: i64) -> Result<Option<(i64, bool)>> {
     let user = query_one(
         conn,
@@ -345,7 +384,11 @@ pub fn reset_webhook_signing_secret(
     encryption: &rails_compat::ar_encryption::ArEncryption,
     agent_id: i64,
 ) -> Result<String> {
-    if !tx.in_transaction() { return Err(crate::Error::Other("agent signing secret reset requires the writer transaction".into())); }
+    if !tx.in_transaction() {
+        return Err(crate::Error::Other(
+            "agent signing secret reset requires the writer transaction".into(),
+        ));
+    }
     let (secret, encrypted) = super::webhook::new_signing_secret(encryption);
     tx.conn().execute_cached(
         "UPDATE agents SET webhook_signing_secret = ?, updated_at = ? WHERE id = ?",

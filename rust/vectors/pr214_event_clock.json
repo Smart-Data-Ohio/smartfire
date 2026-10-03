@@ -1,0 +1,22 @@
+{
+  "reference_pin": "d7c7de92",
+  "rows": [
+    {
+      "kind": "approval_decided",
+      "returned": "2027-01-15T08:00:00.000001Z",
+      "stored": "2027-01-15T08:00:00.000001Z",
+      "webhook_status": "pending",
+      "equal": true,
+      "delta_microseconds": 0
+    },
+    {
+      "kind": "work_assigned",
+      "returned": "2027-01-15T08:00:00.000002Z",
+      "stored": "2027-01-15T08:00:00.000002Z",
+      "webhook_status": "pending",
+      "equal": true,
+      "delta_microseconds": 0
+    }
+  ],
+  "calls": 2
+}
