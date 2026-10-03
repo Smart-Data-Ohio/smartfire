@@ -21,6 +21,25 @@ module Message::Attachment
   end
 
   def process_attachment
+    return unless attachment?
+
+    if ActiveRecord::Base.current_transaction.open?
+      # Both the original multipart upload and a generated preview image
+      # upload in Active Storage's record after_commit callbacks. Enqueue
+      # only after those callbacks and the outermost transaction finish.
+      ActiveRecord.after_all_transactions_commit do
+        Rails.error.handle(context: { message_id: id }) do
+          Message::AttachmentProcessingJob.perform_later(self)
+        end
+      end
+    else
+      # A processing error must not turn an already committed post into a
+      # failed request. Transactional callers process in the retryable job.
+      Rails.error.handle(context: { message_id: id }) { process_attachment_now }
+    end
+  end
+
+  def process_attachment_now
     ensure_attachment_analyzed
     process_attachment_thumbnail
   end
