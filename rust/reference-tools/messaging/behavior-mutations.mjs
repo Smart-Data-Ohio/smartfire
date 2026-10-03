@@ -335,6 +335,8 @@ export async function installMutation(page,caseName,probe,variant='default') {
     return page.locator(stateSelector).evaluateAll((elements,selector)=>elements.map(element=>({
       selector,opacity:getComputedStyle(element).opacity,
       visibility:getComputedStyle(element).visibility,display:getComputedStyle(element).display,
+      fontSize:getComputedStyle(element).fontSize,background:getComputedStyle(element).backgroundColor,position:getComputedStyle(element).position,
+      width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height,
       seleniumVisible:window.__ws8bmSeleniumVisible(element),
     })),stateSelector).catch(()=>[]);
   });
