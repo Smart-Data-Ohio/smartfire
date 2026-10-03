@@ -128,6 +128,8 @@ class HuddlePresenceTest < ApplicationSystemTestCase
   end
 
   test "the sidebar aggregate poll runs on connect and skips in-flight refreshes" do
+    # Expiration is arranged explicitly below; browser setup must not age the grant.
+    freeze_time
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     grant.record_seen!
 
@@ -136,6 +138,22 @@ class HuddlePresenceTest < ApplicationSystemTestCase
 
     within "##{dom_id(@room, :list)}" do
       assert_selector ".voice-stack--live .voice-stack__count", text: "1"
+    end
+
+    # The initial HTML already shows the grant, before the connect poll
+    # finishes. Reconnecting during that request skips the expired-grant poll.
+    page.document.synchronize(10) do
+      idle = page.evaluate_script <<~JS
+        (() => {
+          const element = document.querySelector('[data-controller~="huddle-presence"]')
+          const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence")
+          if (!controller) return false
+          // Stop periodic refreshes before observing idle; no tick may invalidate it.
+          clearInterval(controller.refreshTimer)
+          return controller.inFlightRefresh === false
+        })()
+      JS
+      raise Capybara::ExpectationNotMet, "initial presence poll is still in flight" unless idle
     end
 
     # The grant quietly expires: no broadcast fires, so the sidebar row goes
@@ -156,12 +174,21 @@ class HuddlePresenceTest < ApplicationSystemTestCase
     # immediately through the real connect() instead of waiting out the
     # 15-second interval; the header stack's own interval cannot explain a
     # clear this fast, and it polls a different URL anyway.
-    page.execute_script(<<~JS)
+    result = page.driver.browser.execute_async_script(<<~JS)
+      const done = arguments[arguments.length - 1]
       const element = document.querySelector('[data-controller~="huddle-presence"]')
       const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence")
+      const refresh = controller.refresh
+      let connecting
+      controller.refresh = function() { return connecting = refresh.call(this) }
       controller.disconnect()
       controller.connect()
+      controller.refresh = refresh
+      // This case drives connect and overlapping refreshes explicitly.
+      clearInterval(controller.refreshTimer)
+      connecting.then(() => done(null), error => done(String(error)))
     JS
+    assert_nil result
 
     within "##{dom_id(@room, :list)}" do
       assert_no_selector ".voice-stack--live", wait: 10
@@ -171,22 +198,19 @@ class HuddlePresenceTest < ApplicationSystemTestCase
 
     # Two refreshes issued back to back share one request: the second sees
     # the first still in flight and skips itself.
-    page.execute_script(<<~JS)
+    fetches = page.driver.browser.execute_async_script(<<~JS)
+      const done = arguments[arguments.length - 1]
       window.presenceFetches = 0
       const element = document.querySelector('[data-controller~="huddle-presence"]')
       const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence")
-      controller.refresh()
-      controller.refresh()
+      const first = controller.refresh()
+      const second = controller.refresh()
+      const fetches = window.presenceFetches
+      Promise.all([first, second]).then(() => {
+        done(fetches)
+      }, error => done(String(error)))
     JS
-    Timeout.timeout(10) do
-      sleep 0.05 until page.evaluate_script("window.presenceFetches") >= 1
-    end
-    # No settle sleep: the two refresh() calls ran in one synchronous
-    # script block, and the in-flight guard runs before refresh's first
-    # await, so the second already decided to skip (or wrongly fetched)
-    # before the first fetch above could be observed. The count is final;
-    # the 15 s interval cannot add another in this test.
-    assert_equal 1, page.evaluate_script("window.presenceFetches"),
+    assert_equal 1, fetches,
       "back-to-back refreshes issued duplicate aggregate polls"
   end
 

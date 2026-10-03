@@ -107,6 +107,14 @@ module SystemTestHelper
     JS
   end
 
+  def fill_in_thread_name(name)
+    # beginCreate shows the form before its animation-frame callback focuses
+    # First message. Typing sooner lets that callback interrupt the title.
+    assert_focused "[data-thread-panel-target='createMessage']", wait: 10
+    fill_in "Thread name", with: name
+    assert_field "Thread name", with: name
+  end
+
   def within_message(message, &block)
     within "#" + dom_id(message), &block
   end

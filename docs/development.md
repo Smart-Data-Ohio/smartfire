@@ -57,6 +57,39 @@ And the browser-based system tests with:
 bin/rails test:system
 ```
 
+### Browser startup failures on a shared host
+
+A missing `Designers` link in `SystemTestHelper#sign_in` can be a browser
+startup failure even when authentication and the room response succeed.
+Check `page.driver.browser.logs.get(:browser)`: a reproduced Chromium
+failure logged `net::ERR_NETWORK_CHANGED` for `application.js`, Turbo,
+and stylesheets. Turbo never initialized, so the sidebar frame stayed
+empty. Waiting longer for the link cannot repair aborted module imports;
+keep the sign-in assertion and investigate the network environment.
+
+On Linux, loopback-only tests can run with the browser and Rails server
+in the same private network namespace. Install matching Chromium and
+ChromeDriver first, then run, adjusting `SE_BROWSER_PATH` to the installed
+browser (use the actual executable to avoid desktop launcher flags and
+extensions):
+
+```sh
+bwrap --bind / / --dev-bind /dev /dev --proc /proc --unshare-net -- \
+  env SE_OFFLINE=true SE_BROWSER_PATH=/usr/lib/chromium/chromium PARALLEL_WORKERS=1 \
+  bin/rails test test/system/composer_test.rb test/system/channel_members_test.rb \
+    test/system/huddle_presence_test.rb
+```
+
+This isolates the test network interfaces and uses installed browser binaries.
+Tests that need other services must start those services inside the same
+namespace. The sign-in helper keeps its visible navigation assertion.
+
+Capture authentication status as well: a later reproduction served the
+sidebar with 200 and then returned 401 for a member poll, leaving the frame
+empty. Its cause remains unconfirmed, so network isolation alone does not
+establish a sign-in fix. Preserve the browser console and session lookup
+state when investigating this separate failure.
+
 ### Checking for date-dependent tests
 
 `TEST_CLOCK_OFFSET_DAYS` shifts the suite clock forward by that many days,
