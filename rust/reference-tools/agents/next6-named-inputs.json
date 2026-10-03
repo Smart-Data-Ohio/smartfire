@@ -62,7 +62,8 @@
           "method": "get",
           "path": "/rooms/486777696/agents/posts"
         }
-      ]
+      ],
+      "mutation": "next6_posts_order"
     },
     {
       "key": "posts_reply",
@@ -113,7 +114,8 @@
           "method": "get",
           "path": "/rooms/486777696/agents/posts"
         }
-      ]
+      ],
+      "mutation": "next6_posts_reply"
     },
     {
       "key": "posts_status",
@@ -165,7 +167,8 @@
           "method": "get",
           "path": "/rooms/486777696/agents/posts?status=open"
         }
-      ]
+      ],
+      "mutation": "next6_posts_status"
     },
     {
       "key": "posts_owner",
@@ -217,7 +220,8 @@
           "method": "get",
           "path": "/rooms/486777696/agents/posts?owner=999999"
         }
-      ]
+      ],
+      "mutation": "next6_posts_owner"
     },
     {
       "key": "posts_cap",
@@ -1041,7 +1045,8 @@
           "method": "get",
           "path": "/rooms/486777696/agents/posts"
         }
-      ]
+      ],
+      "mutation": "next6_posts_cap"
     },
     {
       "key": "posts_legacy",
@@ -1073,7 +1078,8 @@
             "title": "Legacy post"
           }
         }
-      ]
+      ],
+      "mutation": "next6_posts_legacy"
     },
     {
       "key": "posts_left",
@@ -1105,7 +1111,8 @@
           "method": "get",
           "path": "/rooms/486777696/agents/posts"
         }
-      ]
+      ],
+      "mutation": "next6_posts_left"
     },
     {
       "key": "shared_payload",
@@ -1135,7 +1142,8 @@
           "method": "get",
           "path": "/agents/events?envelope=1"
         }
-      ]
+      ],
+      "mutation": "next6_shared_payload"
     },
     {
       "key": "work_order",
@@ -1185,7 +1193,8 @@
           "method": "get",
           "path": "/agents/work"
         }
-      ]
+      ],
+      "mutation": "next6_work_order"
     },
     {
       "key": "work_empty",
@@ -1206,7 +1215,8 @@
           "path": "/agents/work",
           "auth": "session"
         }
-      ]
+      ],
+      "mutation": "next6_work_empty"
     },
     {
       "key": "work_links_show",
@@ -1227,7 +1237,8 @@
           "method": "get",
           "path": "/agents/work/1900700020"
         }
-      ]
+      ],
+      "mutation": "next6_work_links_show"
     },
     {
       "key": "work_links_list",
@@ -1264,7 +1275,8 @@
           "method": "get",
           "path": "/agents/work"
         }
-      ]
+      ],
+      "mutation": "next6_work_links_list"
     },
     {
       "key": "work_note_history",
@@ -1296,7 +1308,8 @@
           "auth": "session",
           "projection": "note"
         }
-      ]
+      ],
+      "mutation": "next6_work_note_history"
     },
     {
       "key": "work_orphaned",
@@ -1336,7 +1349,8 @@
           "method": "get",
           "path": "/agents/work"
         }
-      ]
+      ],
+      "mutation": "next6_work_orphaned"
     },
     {
       "key": "result_permissions",
@@ -1373,7 +1387,8 @@
             "markdown": "Hijacked"
           }
         }
-      ]
+      ],
+      "mutation": "next6_result_permissions"
     },
     {
       "key": "result_precedence",
@@ -1406,7 +1421,8 @@
           "path": "/agents/work/1900700020/result",
           "body": {}
         }
-      ]
+      ],
+      "mutation": "next6_result_precedence"
     },
     {
       "key": "assignment_poll",
@@ -1427,7 +1443,8 @@
           "method": "get",
           "path": "/agents/events?envelope=1"
         }
-      ]
+      ],
+      "mutation": "next6_assignment_poll"
     },
     {
       "key": "assignment_links",
@@ -1452,7 +1469,8 @@
           "method": "get",
           "path": "/agents/events?envelope=1"
         }
-      ]
+      ],
+      "mutation": "next6_assignment_links"
     },
     {
       "key": "unassignment_poll",
@@ -1477,7 +1495,8 @@
           "method": "get",
           "path": "/agents/events?envelope=1"
         }
-      ]
+      ],
+      "mutation": "next6_unassignment_poll"
     },
     {
       "key": "assignment_ack",
@@ -1498,7 +1517,8 @@
           "method": "post",
           "path": "/agents/events/1901303001/ack"
         }
-      ]
+      ],
+      "mutation": "next6_assignment_ack"
     },
     {
       "key": "assignment_webhook",
@@ -1526,7 +1546,8 @@
           "method": "get",
           "path": "/agents/events?envelope=1"
         }
-      ]
+      ],
+      "mutation": "next6_assignment_webhook"
     },
     {
       "key": "assignment_no_read",
@@ -1558,7 +1579,8 @@
           "method": "get",
           "path": "/agents/work/1900700020"
         }
-      ]
+      ],
+      "mutation": "next6_assignment_no_read"
     },
     {
       "key": "assignment_revoked",
@@ -1591,7 +1613,8 @@
           "method": "get",
           "path": "/agents/events?envelope=1"
         }
-      ]
+      ],
+      "mutation": "next6_assignment_revoked"
     },
     {
       "key": "assignment_left",
@@ -1621,7 +1644,8 @@
           "method": "get",
           "path": "/agents/events?envelope=1"
         }
-      ]
+      ],
+      "mutation": "next6_assignment_left"
     },
     {
       "key": "work_message_rate",
@@ -1690,7 +1714,8 @@
           "path": "/agents/events?envelope=1",
           "auth": "receiver"
         }
-      ]
+      ],
+      "mutation": "next6_work_message_rate"
     },
     {
       "key": "handoff_poll",
@@ -1720,7 +1745,8 @@
           "path": "/agents/events?envelope=1",
           "auth": "receiver"
         }
-      ]
+      ],
+      "mutation": "next6_handoff_poll"
     },
     {
       "key": "handoff_ack",
@@ -1750,7 +1776,8 @@
           "path": "/agents/events/1901303002/ack",
           "auth": "receiver"
         }
-      ]
+      ],
+      "mutation": "next6_handoff_ack"
     },
     {
       "key": "handoff_webhook",
@@ -1788,7 +1815,8 @@
           "path": "/agents/events?envelope=1",
           "auth": "receiver"
         }
-      ]
+      ],
+      "mutation": "next6_handoff_webhook"
     },
     {
       "key": "handoff_throttle",
@@ -3373,7 +3401,8 @@
             ]
           }
         }
-      ]
+      ],
+      "mutation": "next6_handoff_throttle"
     },
     {
       "key": "handoff_shared_throttle",
@@ -5155,7 +5184,8 @@
             ]
           }
         }
-      ]
+      ],
+      "mutation": "next6_handoff_shared_throttle"
     },
     {
       "key": "board_flow",
@@ -5241,7 +5271,8 @@
         {
           "action": "inbox"
         }
-      ]
+      ],
+      "mutation": "next6_board_flow"
     }
   ]
 }

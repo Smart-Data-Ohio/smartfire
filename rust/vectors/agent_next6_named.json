@@ -73,6 +73,7 @@
           "path": "/rooms/486777696/agents/posts"
         }
       ],
+      "mutation": "next6_posts_order",
       "observations": [
         {
           "method": "get",
@@ -520,6 +521,7 @@
           "path": "/rooms/486777696/agents/posts"
         }
       ],
+      "mutation": "next6_posts_reply",
       "observations": [
         {
           "method": "get",
@@ -844,6 +846,7 @@
           "path": "/rooms/486777696/agents/posts?status=open"
         }
       ],
+      "mutation": "next6_posts_status",
       "observations": [
         {
           "method": "get",
@@ -1265,6 +1268,7 @@
           "path": "/rooms/486777696/agents/posts?owner=999999"
         }
       ],
+      "mutation": "next6_posts_owner",
       "observations": [
         {
           "method": "get",
@@ -2428,6 +2432,7 @@
           "path": "/rooms/486777696/agents/posts"
         }
       ],
+      "mutation": "next6_posts_cap",
       "observations": [
         {
           "method": "get",
@@ -10417,6 +10422,7 @@
           }
         }
       ],
+      "mutation": "next6_posts_legacy",
       "observations": [
         {
           "method": "get",
@@ -10631,6 +10637,7 @@
           "path": "/rooms/486777696/agents/posts"
         }
       ],
+      "mutation": "next6_posts_left",
       "observations": [
         {
           "method": "get",
@@ -10840,6 +10847,7 @@
           "path": "/agents/events?envelope=1"
         }
       ],
+      "mutation": "next6_shared_payload",
       "observations": [
         {
           "method": "post",
@@ -11127,6 +11135,7 @@
           "path": "/agents/work"
         }
       ],
+      "mutation": "next6_work_order",
       "observations": [
         {
           "method": "get",
@@ -11436,6 +11445,7 @@
           "auth": "session"
         }
       ],
+      "mutation": "next6_work_empty",
       "observations": [
         {
           "method": "get",
@@ -11554,6 +11564,7 @@
           "path": "/agents/work/1900700020"
         }
       ],
+      "mutation": "next6_work_links_show",
       "observations": [
         {
           "method": "get",
@@ -11670,6 +11681,7 @@
           "path": "/agents/work"
         }
       ],
+      "mutation": "next6_work_links_list",
       "observations": [
         {
           "method": "get",
@@ -11942,6 +11954,7 @@
           "projection": "note"
         }
       ],
+      "mutation": "next6_work_note_history",
       "observations": [
         {
           "method": "patch",
@@ -12137,6 +12150,7 @@
           "path": "/agents/work"
         }
       ],
+      "mutation": "next6_work_orphaned",
       "observations": [
         {
           "method": "get",
@@ -12414,6 +12428,7 @@
           }
         }
       ],
+      "mutation": "next6_result_permissions",
       "observations": [
         {
           "method": "put",
@@ -12599,6 +12614,7 @@
           "body": {}
         }
       ],
+      "mutation": "next6_result_precedence",
       "observations": [
         {
           "method": "put",
@@ -12767,6 +12783,7 @@
           "path": "/agents/events?envelope=1"
         }
       ],
+      "mutation": "next6_assignment_poll",
       "observations": [
         {
           "method": "get",
@@ -12942,6 +12959,7 @@
           "path": "/agents/events?envelope=1"
         }
       ],
+      "mutation": "next6_assignment_links",
       "observations": [
         {
           "method": "get",
@@ -13117,6 +13135,7 @@
           "path": "/agents/events?envelope=1"
         }
       ],
+      "mutation": "next6_unassignment_poll",
       "observations": [
         {
           "method": "get",
@@ -13355,6 +13374,7 @@
           "path": "/agents/events/1901303001/ack"
         }
       ],
+      "mutation": "next6_assignment_ack",
       "observations": [
         {
           "method": "post",
@@ -13533,6 +13553,7 @@
           "path": "/agents/events?envelope=1"
         }
       ],
+      "mutation": "next6_assignment_webhook",
       "observations": [
         {
           "action": "deliver",
@@ -13722,6 +13743,7 @@
           "path": "/agents/work/1900700020"
         }
       ],
+      "mutation": "next6_assignment_no_read",
       "observations": [
         {
           "action": "deliver",
@@ -13905,6 +13927,7 @@
           "path": "/agents/events?envelope=1"
         }
       ],
+      "mutation": "next6_assignment_revoked",
       "observations": [
         {
           "method": "get",
@@ -14102,6 +14125,7 @@
           "path": "/agents/events?envelope=1"
         }
       ],
+      "mutation": "next6_assignment_left",
       "observations": [
         {
           "method": "get",
@@ -14390,6 +14414,7 @@
           "auth": "receiver"
         }
       ],
+      "mutation": "next6_work_message_rate",
       "observations": [
         {
           "method": "get",
@@ -16428,6 +16453,7 @@
           "auth": "receiver"
         }
       ],
+      "mutation": "next6_handoff_poll",
       "observations": [
         {
           "method": "post",
@@ -16723,6 +16749,7 @@
           "auth": "receiver"
         }
       ],
+      "mutation": "next6_handoff_ack",
       "observations": [
         {
           "method": "post",
@@ -17026,6 +17053,7 @@
           "auth": "receiver"
         }
       ],
+      "mutation": "next6_handoff_webhook",
       "observations": [
         {
           "method": "post",
@@ -18884,6 +18912,7 @@
           }
         }
       ],
+      "mutation": "next6_handoff_throttle",
       "observations": [
         {
           "method": "post",
@@ -42544,6 +42573,7 @@
           }
         }
       ],
+      "mutation": "next6_handoff_shared_throttle",
       "observations": [
         {
           "method": "post",
@@ -64238,6 +64268,7 @@
           "action": "inbox"
         }
       ],
+      "mutation": "next6_board_flow",
       "observations": [
         {
           "method": "post",
