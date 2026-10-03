@@ -292,10 +292,19 @@ class StageTest < ApplicationSystemTestCase
     wait_for_cable_connection
     page.execute_script("window.stageJoinEvents = []; window.addEventListener('huddle:join', event => window.stageJoinEvents.push(event.detail))")
 
+    # Cable can connect before this lazily loaded controller binds the button.
+    wait_for_condition("the stage launcher did not connect") do
+      page.evaluate_script(<<~JS)
+        !!window.Stimulus?.getControllerForElementAndIdentifier(
+          document.querySelector(".huddle-launcher"), "huddle-launcher"
+        )
+      JS
+    end
+
     click_button "Join stage"
 
-    Timeout.timeout(Capybara.default_max_wait_time) do
-      sleep 0.05 until page.evaluate_script("window.stageJoinEvents.length") > 0
+    wait_for_condition("the stage launcher did not dispatch huddle:join", timeout: Capybara.default_max_wait_time) do
+      page.evaluate_script("window.stageJoinEvents.length") > 0
     end
     assert_equal [ { "roomId" => room.id, "roomName" => "Town Hall", "canPublishHint" => false } ], page.evaluate_script("window.stageJoinEvents")
 
@@ -763,11 +772,15 @@ class StageTest < ApplicationSystemTestCase
     end
 
     def wait_for_condition(message, timeout: 20)
-      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
-      until yield
-        flunk message if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
-        sleep 0.1
+      matched = false
+      begin
+        page.document.synchronize(timeout) do
+          matched = yield
+          raise Capybara::ExpectationNotMet unless matched
+        end
+      rescue Capybara::ExpectationNotMet
+        # Report the last observation through a counted assertion below.
       end
-      assert true
+      assert matched, message
     end
 end

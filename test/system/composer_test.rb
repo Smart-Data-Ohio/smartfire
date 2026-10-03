@@ -254,7 +254,7 @@ class ComposerTest < ApplicationSystemTestCase
     open_threads
     click_button "New thread"
     assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
-    fill_in "Thread name", with: thread_name
+    fill_in_thread_name thread_name
     fill_in "First message", with: "The thread for draft persistence."
     find("#thread-panel [data-thread-panel-target='createSubmit']").click
     assert_selector "#thread-panel [data-thread-panel-target='conversation']", visible: true, wait: 10

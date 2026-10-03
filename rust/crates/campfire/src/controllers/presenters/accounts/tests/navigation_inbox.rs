@@ -139,7 +139,8 @@ async fn inbox_reader_excludes_other_owners_and_revoked_message_sources() {
     assert!(
         !items
             .iter()
-            .any(|i| ["Message", "AgentApproval"].contains(&i.source_type.as_str()))
+            .any(|i| ["Message", "AgentApproval"].contains(&i.source_type.as_str())),
+        "inbox must exclude revoked message sources and approvals owned by another user"
     );
     let mut member = test.browser("198.51.100.142");
     member.sign_in(&test.label("emails.kevin")).await;

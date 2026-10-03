@@ -232,4 +232,6 @@ pub fn id(label: &str) -> i64 {
 
 mod slash_commands_test;
 
+mod board_automation_review_casts_test;
+mod board_automation_review_races_test;
 mod agent_next2_cases_test;

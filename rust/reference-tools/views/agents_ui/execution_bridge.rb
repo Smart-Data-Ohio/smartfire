@@ -37,6 +37,7 @@ expected = {
   'deactivated' => ['failed', 'Agent is suspended or deactivated', 0]
 }
 expected.each do |name, (status, message, count)|
+ [false,true].each do |html|
   agent.update!(suspended_at: nil)
   bot.update!(status: :active)
   account.update!(github_login: 'machine')
@@ -45,8 +46,8 @@ expected.each do |name, (status, message, count)|
   approval = AgentApproval.create!(agent:, room:, agent_credential: credential, action: action.action_name, summary: action.summary, payload: action.payload_json, github_account_id: account.id, github_login: account.github_login)
   browser = ActionDispatch::Integration::Session.new(Rails.application)
   browser.host! 'campfire.test'
-  browser.patch("/agent_approvals/#{approval.id}.json", params: { decision: 'approved' }, headers: { 'Cookie' => "session_token=#{labels.fetch('session_cookies.david')}", 'HTTP_USER_AGENT' => 'Mozilla/5.0 Chrome/140.0.0.0' })
-  raise "#{name}: approval HTTP #{browser.response.status}" unless browser.response.status == 200 && JSON.parse(browser.response.body)['status'] == 'approved'
+  browser.patch("/agent_approvals/#{approval.id}#{html ? '' : '.json'}", params: { decision: 'approved' }, headers: { 'Cookie' => "session_token=#{labels.fetch('session_cookies.david')}", 'Accept' => html ? 'text/html' : 'application/json', 'HTTP_USER_AGENT' => 'Mozilla/5.0 Chrome/140.0.0.0' })
+  raise "#{name}: approval HTTP #{browser.response.status}" unless html ? (browser.response.status == 303 && browser.response.body == '' && browser.response.headers['Location'] == 'http://campfire.test/activity') : (browser.response.status == 200 && JSON.parse(browser.response.body)['status'] == 'approved')
   case name
   when 'identity_changed' then account.update!(github_login: 'changed')
   when 'grant_revoked' then grant.revoke!
@@ -64,8 +65,9 @@ expected.each do |name, (status, message, count)|
   raise "#{name}: wrong transport count #{requests.size}" unless requests.size == count
   raise "#{name}: wrong transport body" if count == 1 && requests.first != { path: '/repos/rails/rails/issues/999/comments', body: 'Nice work' }
   grant.revoke! unless grant.revoked?
+ end
 end
-puts 'Rails human approval execution bridge: 6 HTTP decisions; 6 real job outcomes; 2 remote calls; 6 duplicate executions are idempotent; 0 failures'
+puts 'Rails human approval execution bridge: 12 HTML/JSON HTTP decisions; 12 real job outcomes; 4 remote calls; 12 duplicate executions are idempotent; 0 failures'
 
 agent.update!(suspended_at: nil)
 bot.update!(status: :active)
@@ -82,6 +84,7 @@ Fizzy::Client.define_singleton_method(:new) do |token:|
   fizzy_client
 end
 expected.each do |name, (status, message, count)|
+ [false,true].each do |html|
   agent.update!(suspended_at: nil)
   bot.update!(status: :active)
   fizzy.update!(fizzy_user_id: 'fixture-user')
@@ -90,8 +93,8 @@ expected.each do |name, (status, message, count)|
   approval = AgentApproval.create!(agent:, agent_credential: credential, action: action.action_name, summary: action.summary, payload: action.payload_json, fizzy_connected_account_id: fizzy.id, fizzy_user_id: fizzy.fizzy_user_id)
   browser = ActionDispatch::Integration::Session.new(Rails.application)
   browser.host! 'campfire.test'
-  browser.patch("/agent_approvals/#{approval.id}.json", params: { decision: 'approved' }, headers: { 'Cookie' => "session_token=#{labels.fetch('session_cookies.david')}", 'HTTP_USER_AGENT' => 'Mozilla/5.0 Chrome/140.0.0.0' })
-  raise "Fizzy #{name}: approval HTTP #{browser.response.status}" unless browser.response.status == 200 && JSON.parse(browser.response.body)['status'] == 'approved'
+  browser.patch("/agent_approvals/#{approval.id}#{html ? '' : '.json'}", params: { decision: 'approved' }, headers: { 'Cookie' => "session_token=#{labels.fetch('session_cookies.david')}", 'Accept' => html ? 'text/html' : 'application/json', 'HTTP_USER_AGENT' => 'Mozilla/5.0 Chrome/140.0.0.0' })
+  raise "Fizzy #{name}: approval HTTP #{browser.response.status}" unless html ? (browser.response.status == 303 && browser.response.body == '' && browser.response.headers['Location'] == 'http://campfire.test/activity') : (browser.response.status == 200 && JSON.parse(browser.response.body)['status'] == 'approved')
   case name
   when 'identity_changed' then fizzy.update!(fizzy_user_id: 'changed')
   when 'grant_revoked' then grant.revoke!
@@ -109,5 +112,6 @@ expected.each do |name, (status, message, count)|
   raise "Fizzy #{name}: wrong transport count #{fizzy_requests.size}" unless fizzy_requests.size == count
   raise "Fizzy #{name}: wrong transport body" if count == 1 && fizzy_requests.first != { path: '/12345/cards/579/comments.json', body: 'Nice work' }
   grant.revoke! unless grant.revoked?
+ end
 end
-puts 'Rails human Fizzy approval execution bridge: 6 HTTP decisions; 6 real job outcomes; 2 remote calls; 6 duplicate executions are idempotent; 0 failures'
+puts 'Rails human Fizzy approval execution bridge: 12 HTML/JSON HTTP decisions; 12 real job outcomes; 4 remote calls; 12 duplicate executions are idempotent; 0 failures'

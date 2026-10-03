@@ -162,10 +162,13 @@ fn board_automation_digests_match_rails_daily_claims_quiet_notes_order_and_escap
         let emitted = t
             .events()
             .iter()
-            .filter_map(|e| e.as_broadcast())
+            .filter_map(|event| match event {
+                Event::Broadcast(request) => request.decode::<crate::models::board_automations::DigestNotes>().map(|notes| notes.unwrap()),
+                _ => None,
+            })
             .collect::<Vec<_>>();
         assert_eq!(
-            emitted.len(),
+            emitted.iter().map(|notes| notes.message_ids.len()).sum::<usize>(),
             (t.read(Message::count) - before) as usize,
             "one append per quiet note"
         );

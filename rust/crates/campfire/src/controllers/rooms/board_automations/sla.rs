@@ -8,17 +8,23 @@ use campfire_kit::{Ctx, Error, Result, StatusCode};
 pub async fn update_sla_rules(c: &mut Ctx) -> Result {
     let room = board(c).await?;
     let submitted = c.params.get("sla_rules").map(|p| p.to_json());
-    // Rails fetches an unpermitted empty Parameters object if no accepted rule is present.
-    let accepted = submitted.as_ref().is_some_and(serde_json::Value::is_object);
-    if !accepted {
-        return Err(Error::internal(anyhow::anyhow!(
-            "unable to convert unpermitted parameters to hash"
-        )));
+    let submitted = submitted
+        .as_ref()
+        .and_then(|value| permit_nested(value, true))
+        .ok_or_else(|| Error::BadRequest("invalid SLA rules".into()))?;
+    // Array#to_h accepts an empty filtered array; retained hashes raise in Rails.
+    let submitted = match submitted {
+        serde_json::Value::Object(fields) => fields,
+        serde_json::Value::Array(values) if values.is_empty() => Default::default(),
+        _ => return Err(Error::BadRequest("invalid SLA rules array".into())),
+    };
+    if submitted.values().any(serde_json::Value::is_array) {
+        return Err(Error::BadRequest("invalid SLA status array".into()));
     }
     let updates: Vec<_> = campfire_db::models::channel_thread::WORK_STATUSES
         .iter()
         .map(|status| {
-            let fields = &submitted.as_ref().unwrap()[status];
+            let fields = submitted.get(*status).unwrap_or(&serde_json::Value::Null);
             let field = |name| {
                 fields
                     .get(name)
@@ -139,4 +145,66 @@ pub async fn update_sla_rules(c: &mut Ctx) -> Result {
         super::super::audit_room(c, &room, "board.automation.change", changes).await?;
     }
     redirect(c, &room, Some("SLA timers saved."), None)
+}
+
+// Pinned ActionController::Parameters#permit: a numeric-key hash is a nested
+// attributes collection whenever a numeric key has a hash value. In that case
+// direct keys are discarded, even when mixed with otherwise permitted statuses.
+fn numeric_attribute(key: &str, value: &serde_json::Value) -> bool {
+    let key = key.strip_prefix('-').unwrap_or(key);
+    !key.is_empty() && key.bytes().all(|b| b.is_ascii_digit()) && value.is_object()
+}
+fn permit_nested(value: &serde_json::Value, statuses: bool) -> Option<serde_json::Value> {
+    use serde_json::Value;
+    match value {
+        Value::Array(values) => Some(Value::Array(
+            values
+                .iter()
+                .filter_map(|v| v.as_object().map(|fields| permit_fields(fields, statuses)))
+                .collect(),
+        )),
+        Value::Object(fields)
+            if fields
+                .iter()
+                .any(|(key, value)| numeric_attribute(key, value)) =>
+        {
+            Some(Value::Object(
+                fields
+                    .iter()
+                    .filter(|(key, value)| numeric_attribute(key, value))
+                    .map(|(key, value)| {
+                        (
+                            key.clone(),
+                            permit_fields(value.as_object().unwrap(), statuses),
+                        )
+                    })
+                    .collect(),
+            ))
+        }
+        Value::Object(fields) => Some(permit_fields(fields, statuses)),
+        _ => None,
+    }
+}
+fn permit_fields(
+    fields: &serde_json::Map<String, serde_json::Value>,
+    statuses: bool,
+) -> serde_json::Value {
+    let mut permitted = serde_json::Map::new();
+    let keys: &[&str] = if statuses {
+        &campfire_db::models::channel_thread::WORK_STATUSES
+    } else {
+        &["nudge_after_minutes", "escalate_after_minutes"]
+    };
+    for key in keys {
+        if let Some(value) = fields.get(*key) {
+            if statuses {
+                if let Some(value) = permit_nested(value, false) {
+                    permitted.insert((*key).into(), value);
+                }
+            } else if !value.is_array() && !value.is_object() {
+                permitted.insert((*key).into(), value.clone());
+            }
+        }
+    }
+    serde_json::Value::Object(permitted)
 }

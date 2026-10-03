@@ -33,13 +33,10 @@ impl PullRequestThread {
         if ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
-        let sql = format!(
-            "SELECT DISTINCT t.room_id,t.github_pull_request_id,t.channel_thread_id FROM github_pull_request_threads t JOIN messages m ON m.room_id=t.room_id JOIN github_pull_request_references r ON r.message_id=m.id AND r.github_pull_request_id=t.github_pull_request_id WHERE m.id IN ({})",
-            vec!["?"; ids.len()].join(",")
-        );
+        let sql = "SELECT DISTINCT t.room_id,t.github_pull_request_id,t.channel_thread_id FROM github_pull_request_threads t JOIN messages m ON m.room_id=t.room_id JOIN github_pull_request_references r ON r.message_id=m.id AND r.github_pull_request_id=t.github_pull_request_id WHERE m.id IN (SELECT value FROM json_each(?))";
         Ok(conn
-            .prepare(&sql)?
-            .query_map(rusqlite::params_from_iter(ids), |row| {
+            .prepare(sql)?
+            .query_map([serde_json::json!(ids).to_string()], |row| {
                 Ok(((row.get(0)?, row.get(1)?), row.get(2)?))
             })?
             .collect::<rusqlite::Result<_>>()?)

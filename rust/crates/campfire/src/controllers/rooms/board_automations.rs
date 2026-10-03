@@ -3,9 +3,7 @@ mod sla;
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::presenters::page::{self, db_error};
-use campfire_db::{
-    BoardSlaRule, BoardTagAssignment, NewBoardSlaRule, NewBoardTagAssignment, Room, User,
-};
+use campfire_db::{BoardSlaRule, BoardTagAssignment, NewBoardSlaRule, Room, User};
 use campfire_kit::{Ctx, Redirect, Result, StatusCode};
 use campfire_views::rooms::board_automations::{Settings, TagRule};
 pub use sla::update_sla_rules;
@@ -153,21 +151,38 @@ async fn render(
 fn text(c: &Ctx, key: &str) -> String {
     c.params
         .get(key)
-        .map(|p| campfire_richtext::ruby::json_value_to_s(&p.to_json()))
+        .map(|p| match p.to_json() {
+            // ActiveModel::Type::String casts booleans before normalize_tag.
+            serde_json::Value::Bool(true) => "t".into(),
+            serde_json::Value::Bool(false) => "f".into(),
+            value => campfire_richtext::ruby::json_value_to_s(&value),
+        })
         .unwrap_or_default()
 }
 pub async fn create_tag_assignment(c: &mut Ctx) -> Result {
     let room = board(c).await?;
-    let input = NewBoardTagAssignment {
-        room_id: room.id,
-        tag: text(c, "tag"),
-        assignee_id: super::cast_integer(&text(c, "assignee_id")).unwrap_or(0),
-        created_by_id: require_current_user(c)?.id,
+    let assignee_id = match c.params.get("assignee_id").map(|p| p.to_json()) {
+        Some(serde_json::Value::Bool(value)) => Some(i64::from(value)),
+        Some(serde_json::Value::Number(value)) => value.as_i64().or_else(|| {
+            value
+                .as_f64()
+                .filter(|n| n.is_finite() && *n >= i64::MIN as f64 && *n < -(i64::MIN as f64))
+                .map(|n| n as i64)
+        }),
+        Some(serde_json::Value::String(value)) => {
+            BoardSlaRule::cast_threshold(Some(&value)).and_then(|value| value.parse().ok())
+        }
+        _ => None,
     };
+    let room_id = room.id;
+    let tag = text(c, "tag");
+    let created_by_id = require_current_user(c)?.id;
     let saved = c
         .app()
         .db
-        .write(move |tx| BoardTagAssignment::create(tx, input))
+        .write(move |tx| {
+            BoardTagAssignment::create_from_form(tx, room_id, tag, assignee_id, created_by_id)
+        })
         .await;
     let saved = match saved {
         Ok(saved) => saved,
@@ -244,13 +259,11 @@ fn blank(input: &NewBoardSlaRule) -> bool {
     input
         .nudge_after_minutes
         .as_deref()
-        .unwrap_or("")
-        .is_empty()
+        .is_none_or(campfire_richtext::ruby::is_blank)
         && input
             .escalate_after_minutes
             .as_deref()
-            .unwrap_or("")
-            .is_empty()
+            .is_none_or(campfire_richtext::ruby::is_blank)
 }
 fn label(status: &str) -> &str {
     match status {

@@ -108,7 +108,13 @@ impl BoardSlaRule {
             return None;
         }
         let negative = value.starts_with('-');
-        let unsigned = value.strip_prefix(['+', '-']).unwrap_or(value).as_bytes();
+        let unsigned = value.strip_prefix(['+', '-']).unwrap_or(value);
+        // String#to_i accepts the explicit decimal prefix, including after a sign.
+        let unsigned = unsigned
+            .strip_prefix("0d")
+            .or_else(|| unsigned.strip_prefix("0D"))
+            .unwrap_or(unsigned)
+            .as_bytes();
         let mut digits = String::new();
         for (index, byte) in unsigned.iter().copied().enumerate() {
             if byte.is_ascii_digit() {

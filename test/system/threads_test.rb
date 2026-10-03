@@ -100,7 +100,7 @@ class ThreadsTest < ApplicationSystemTestCase
     open_threads
     click_button "New thread"
     assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
-    fill_in "Thread name", with: thread_name
+    fill_in_thread_name thread_name
     fill_in "First message", with: first_message
 
     # A second beginCreate for the same context used to blank the name, and
@@ -307,7 +307,7 @@ class ThreadsTest < ApplicationSystemTestCase
     assert_selector "#thread-panel [data-thread-panel-target='browser']", visible: true
     click_button "New thread"
     assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true
-    fill_in "Thread name", with: "Mobile second thread"
+    fill_in_thread_name "Mobile second thread"
     fill_in "First message", with: "A second mobile thread."
     find("#thread-panel [data-thread-panel-target='createSubmit']").click
     assert_selector "#thread-panel [data-thread-panel-target='conversation']", visible: true, wait: 10
@@ -552,7 +552,7 @@ class ThreadsTest < ApplicationSystemTestCase
       click_button "Create thread"
 
       assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
-      fill_in "Thread name", with: name
+      fill_in_thread_name name
       fill_in "First message", with: first_message
       find("#thread-panel [data-thread-panel-target='createSubmit']").click
       wait_for_thread_conversation(name)
@@ -562,7 +562,7 @@ class ThreadsTest < ApplicationSystemTestCase
       open_threads
       click_button "New thread"
       assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
-      fill_in "Thread name", with: name
+      fill_in_thread_name name
       fill_in "First message", with: first_message
       find("#thread-panel [data-thread-panel-target='createSubmit']").click
       wait_for_thread_conversation(name)

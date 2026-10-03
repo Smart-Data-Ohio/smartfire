@@ -52,6 +52,33 @@ impl BoardTagAssignment {
         )
     }
     pub fn create(tx: &mut Tx<'_>, attributes: NewBoardTagAssignment) -> Result<Self> {
+        let assignee_id = Some(attributes.assignee_id);
+        Self::create_with_assignee(tx, attributes, assignee_id)
+    }
+    /// A form's absent integer foreign key is nil, distinct from an explicit user ID zero.
+    pub fn create_from_form(
+        tx: &mut Tx<'_>,
+        room_id: i64,
+        tag: String,
+        assignee_id: Option<i64>,
+        created_by_id: i64,
+    ) -> Result<Self> {
+        Self::create_with_assignee(
+            tx,
+            NewBoardTagAssignment {
+                room_id,
+                tag,
+                assignee_id: assignee_id.unwrap_or_default(),
+                created_by_id,
+            },
+            assignee_id,
+        )
+    }
+    fn create_with_assignee(
+        tx: &mut Tx<'_>,
+        attributes: NewBoardTagAssignment,
+        assignee_id: Option<i64>,
+    ) -> Result<Self> {
         let mut rule = Self {
             id: 0,
             room_id: attributes.room_id,
@@ -62,7 +89,8 @@ impl BoardTagAssignment {
             updated_at: tx.now(),
         };
         rule.normalize();
-        rule.validate_excluding(tx.conn(), None)?.into_result()?;
+        rule.validate_with_assignee(tx.conn(), None, assignee_id)?
+            .into_result()?;
         rule.id = tx.conn().query_row("INSERT INTO board_tag_assignments(room_id,tag,assignee_id,created_by_id,created_at,updated_at) VALUES (?,?,?,?,?,?) RETURNING id",
             params![rule.room_id,rule.tag,rule.assignee_id,rule.created_by_id,rule.created_at,rule.updated_at], |r|r.get(0))?;
         Ok(rule)
@@ -108,9 +136,20 @@ impl BoardTagAssignment {
         self.validate_excluding(conn, Some(self.id))
     }
     fn validate_excluding(&self, conn: &Connection, existing_id: Option<i64>) -> Result<Errors> {
+        self.validate_with_assignee(conn, existing_id, Some(self.assignee_id))
+    }
+    fn validate_with_assignee(
+        &self,
+        conn: &Connection,
+        existing_id: Option<i64>,
+        assignee_id: Option<i64>,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
         let room = Room::find_by_id(conn, self.room_id)?;
-        let assignee = User::find_by_id(conn, self.assignee_id)?;
+        let assignee = match assignee_id {
+            Some(id) => User::find_by_id(conn, id)?,
+            None => None,
+        };
         if room.is_none() {
             errors.add("room", "must exist");
         }

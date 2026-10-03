@@ -121,7 +121,7 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
             })
             .await
             .unwrap();
-        let created = receive(&mut owner_socket).await;
+        let created = receive_expected(&mut owner_socket, "committed approval must broadcast its activity item").await;
         assert_eq!(created["message"], json!({"activityItemId":item_id}));
         let response = owner
             .form(
@@ -217,10 +217,18 @@ where
     S: Stream<Item = Result<Message, E>> + Unpin,
     E: std::fmt::Debug,
 {
+    receive_expected(socket, "cable frame before timeout").await
+}
+
+async fn receive_expected<S, E>(socket: &mut S, expectation: &str) -> Value
+where
+    S: Stream<Item = Result<Message, E>> + Unpin,
+    E: std::fmt::Debug,
+{
     loop {
         let frame = tokio::time::timeout(std::time::Duration::from_secs(2), socket.next())
             .await
-            .expect("cable frame before timeout")
+            .expect(expectation)
             .unwrap()
             .unwrap();
         if let Message::Text(text) = frame {
@@ -350,7 +358,7 @@ async fn message_step_callbacks_replace_current_message_in_room_and_thread_witho
             })
             .await
             .unwrap();
-        let frame = receive(&mut socket).await;
+        let frame = receive_expected(&mut socket, "committed message step must broadcast the current message").await;
         let html = frame["message"].as_str().unwrap();
         assert!(
             html.starts_with(&format!(
@@ -359,7 +367,7 @@ async fn message_step_callbacks_replace_current_message_in_room_and_thread_witho
             "{html}"
         );
         assert!(html.contains("Message carrying structured progress"));
-        assert!(html.contains("Inspect &lt;message&gt;"));
+        assert!(html.contains("Inspect &lt;message&gt;"), "message step callback must render current uncached steps");
         assert!(html.contains("Safe &amp; escaped"));
         for private in [
             "authenticity_token",
@@ -529,7 +537,7 @@ async fn working_presence_is_polled_and_does_not_emit_status_callbacks() {
         format!("status_badge_agent_{id}"),
         format!("directory_row_agent_{id}"),
     ] {
-        let frame = receive(&mut socket).await;
+        let frame = receive_expected(&mut socket, "committed status note must broadcast both status fragments").await;
         assert_eq!(frame["identifier"], identifier);
         let html = frame["message"].as_str().unwrap();
         assert!(html.starts_with(&format!(
@@ -623,7 +631,7 @@ async fn status_callback_replaces_badge_then_directory_over_live_socket_after_co
         format!("status_badge_agent_{id}"),
         format!("directory_row_agent_{id}"),
     ] {
-        let frame = receive(&mut socket).await;
+        let frame = receive_expected(&mut socket, "committed agent status must broadcast both status fragments").await;
         assert_eq!(frame["identifier"], identifier);
         let html = frame["message"].as_str().unwrap();
         assert!(
@@ -771,7 +779,7 @@ async fn thread_step_callback_renders_ordered_steps_and_updates_over_live_socket
         })
         .await
         .unwrap();
-    let frame = receive(&mut socket).await;
+    let frame = receive_expected(&mut socket, "committed thread step must broadcast ordered steps").await;
     let html = frame["message"].as_str().unwrap();
     assert!(html.starts_with(&format!(
         "<turbo-stream action=\"replace\" target=\"agent_steps_channel_thread_{thread_id}\""
