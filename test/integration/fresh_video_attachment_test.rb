@@ -83,6 +83,27 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
   end
 
   [ :room, :thread ].each do |destination|
+    [ :multipart, :direct ].each do |upload|
+      test "replacing a #{destination} attachment with a fresh #{upload} video generates its preview" do
+        sign_in :david
+        thread = create_thread if destination == :thread
+        message = @room.messages.create!(creator: users(:david), thread: thread,
+          attachment: fixture_file_upload("moon.jpg", "image/jpeg"))
+        url = thread ? room_thread_message_url(@room, thread, message) : room_message_url(@room, message)
+
+        patch url, params: { message: { attachment: video_upload(upload) } },
+          headers: { "Accept" => "application/json" }
+
+        assert_response :success
+        assert_equal "alpha-centuri.mov", message.reload.attachment.filename.to_s
+        assert_video_ready(message)
+        assert_rendered_turbo_stream_broadcast thread || @room, :messages,
+          action: "replace", target: [ message, :presentation ] do
+          assert_select "video.message__attachment[poster]"
+        end
+      end
+    end
+
     test "forwarding a fresh video to a #{destination} creates its own preview" do
       source = @room.messages.create!(creator: users(:david), body: "A fresh video", attachment: video_upload(:direct))
       target = { room_id: @room.id }
@@ -230,6 +251,81 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
     perform_enqueued_jobs(only: Message::AttachmentProcessingJob)
 
     assert_no_enqueued_jobs only: Message::AttachmentProcessingJob
+  end
+
+  [ :raised, :refused ].each do |failure|
+    test "rendering recovers a fresh video after a #{failure} enqueue" do
+      sign_in :david
+      thread = create_thread
+      enqueue = Message::AttachmentProcessingJob.stubs(:perform_later)
+      failure == :raised ? enqueue.raises(RuntimeError, "queue unavailable") : enqueue.returns(false)
+      post room_thread_messages_url(@room, thread),
+        params: { message: { attachment: video_upload(:multipart) } },
+        headers: { "Accept" => "application/json" }
+      assert_response :created
+      message = thread.messages.sole
+      assert_not message.attachment.blob.preview_image.attached?
+      Message::AttachmentProcessingJob.unstub(:perform_later)
+
+      assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
+        2.times do
+          get room_thread_messages_url(@room, thread)
+          assert_response :success
+          assert_select "video.message__attachment", 1
+          assert_select "video.message__attachment[poster]", 0
+        end
+      end
+      assert_video_ready(message)
+    end
+  end
+
+  test "rendering recovers a video after inline processing failed" do
+    sign_in :david
+    Message.any_instance.stubs(:process_attachment_now).raises(ActiveStorage::PreviewError, "decoder unavailable")
+    token = SecureRandom.uuid
+    post room_messages_url(@room),
+      params: { message: { attachment: video_upload(:multipart), client_message_id: token } }, as: :turbo_stream
+    assert_response :success
+    message = Message.find_by!(client_message_id: token)
+    assert_not message.attachment.blob.preview_image.attached?
+    Message.any_instance.unstub(:process_attachment_now)
+
+    get room_messages_url(@room)
+
+    assert_response :success
+    assert_video_ready(message)
+  end
+
+  test "a decoder finishing after an attachment edit does not broadcast the old video" do
+    sign_in :david
+    thread = create_thread
+    message = thread.post_message!(creator: users(:david), attributes: { attachment: video_upload(:direct) })
+    original = message.attachment.blob
+    edited_broadcasts = nil
+    edited_stamp = nil
+    # Pause at the real FFmpeg boundary, edit through PATCH, then allow the
+    # decoder to produce its actual JPEG and WebP. No preview output is stubbed.
+    subscription = ActiveSupport::Notifications.subscribe("preview.active_storage") do |event|
+      next unless event.payload[:key] == original.key
+
+      patch room_thread_message_url(@room, thread, message),
+        params: { message: { attachment: fixture_file_upload("moon.jpg", "image/jpeg") } },
+        headers: { "Accept" => "application/json" }
+      assert_response :success
+      edited_broadcasts = find_broadcasts_for(thread, :messages)
+      edited_stamp = Message.find(message.id).updated_at
+    end
+
+    Message::AttachmentProcessingJob.perform_now(message)
+
+    assert edited_broadcasts, "the real decoder must have reached the pause"
+    assert original.reload.preview_image.attached?, "the real decoder must finish"
+    assert_equal "moon.jpg", message.reload.attachment.filename.to_s
+    assert_equal edited_broadcasts, find_broadcasts_for(thread, :messages),
+      "completion must not overwrite the edit's image presentation"
+    assert_equal edited_stamp, message.updated_at
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscription) if subscription
   end
 
   test "already processed videos remain usable inside a transaction" do
