@@ -23,6 +23,25 @@ pointer_spec.loader.exec_module(ledger)
 
 
 class AuditGuards(unittest.TestCase):
+    def test_external_browser_mappings_require_a_real_browser_receipt(self):
+        rows = json.loads((audit.ROOT / "rust/plans/ws12-assertion-reconciliation.json").read_text())["cases"]
+        tests = [test for row in rows for test in row["tests"]
+                 if test["rust_file"].endswith("/ws12_browser_remaining_tests.rs")]
+        self.assertEqual(len(tests), 7)
+        for test in tests:
+            with self.subTest(test=test["rust_test"]):
+                self.assertTrue(test["run_ignored"])
+                self.assertEqual(test["harness"], "rust/parity/system/ws12")
+                qualified = "controllers::ws12_browser_remaining_tests::" + test["rust_test"]
+                # Even an older workspace pass cannot substitute for the external run.
+                with self.assertRaisesRegex(AssertionError, "dedicated passing browser receipt"):
+                    ledger.verify_test_receipt(test, {qualified}, set())
+                ignored = ledger.passed_tests(f"test {qualified} ... ignored, requires Node\n")
+                with self.assertRaisesRegex(AssertionError, "dedicated passing browser receipt"):
+                    ledger.verify_test_receipt(test, {qualified}, ignored)
+                passed = ledger.passed_tests(f"test {qualified} ... ok\n")
+                ledger.verify_test_receipt(test, set(), passed)
+
     def test_api_owned_inventory_matches_the_named_api_ledger(self):
         rows = json.loads((audit.ROOT / "rust/plans/ws12-assertion-reconciliation.json").read_text())["cases"]
         api = json.loads((audit.ROOT / "rust/plans/ws11api-named-api-cases.json").read_text())
@@ -113,7 +132,7 @@ class AuditGuards(unittest.TestCase):
         self.assertEqual(combined.count('ws12_coverage_mutant('), 2)
         self.assertEqual(combined.count('std::env::var('), 2)
 
-    def campaign(self, summary, returncode=0, selector=None):
+    def campaign(self, summary, returncode=0, selector=None, run_ignored=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / "target"
@@ -131,12 +150,15 @@ class AuditGuards(unittest.TestCase):
             catalog = {"declarations": [{"id": "c000", "file": "test/example.rb", "line": 1,
                 "test": "example", "mutation": "wrong", "tests": [{
                     "rust_file": "rust/crates/campfire/example.rs", "rust_test": "named_assertion"}]}]}
+            if run_ignored:
+                catalog["declarations"][0]["tests"][0]["run_ignored"] = True
             args = argparse.Namespace(scratch=root / "scratch", target=target, action="baseline",
                                       declaration=selector, workers=1, previous_tests=False)
             invoked = []
 
             def run(command, **kwargs):
                 invoked.append(command)
+                self.assertEqual("--ignored" in command, run_ignored)
                 self.assertTrue((args.scratch / "tmp").is_dir())
                 kwargs["stdout"].write(summary)
                 return subprocess.CompletedProcess(command, returncode)
@@ -160,6 +182,9 @@ class AuditGuards(unittest.TestCase):
 
     def test_baseline_creates_tmp_and_never_discovers_the_production_binary(self):
         self.campaign("test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured;\n")
+
+    def test_explicit_external_baseline_runs_ignored_assertions(self):
+        self.campaign("test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured;\n", run_ignored=True)
 
     def test_a_baseline_failure_is_not_a_successful_campaign(self):
         with self.assertRaisesRegex(SystemExit, "baseline failed"):

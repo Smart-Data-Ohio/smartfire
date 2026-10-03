@@ -141,11 +141,11 @@ def run(catalog, args):
             kind = "db" if "/crates/db/" in test["rust_file"] else "app"
             names = [name for name in listed[kind] if name.rsplit("::", 1)[-1] == test["rust_test"]]
             assert len(names) == 1, test
-            groups[kind].extend(names)
+            groups[(kind, test.get("run_ignored", False))].extend(names)
         result = {key: row[key] for key in ["id", "file", "line", "test", "mutation"]}
         result["groups"] = []
-        for kind, names in groups.items():
-            cache_key = (kind, tuple(dict.fromkeys(names)))
+        for (kind, run_ignored), names in groups.items():
+            cache_key = (kind, run_ignored, tuple(dict.fromkeys(names)))
             cached = None
             if args.action == "baseline":
                 with cache_lock:
@@ -168,7 +168,10 @@ def run(catalog, args):
                     env.pop("WS12_ASSERTION_MUTATION", None)
                 command = (["bwrap", "--bind", "/", "/", "--unshare-net"] if kind == "app" else []) + [
                     str(binaries[kind]), "--exact", *dict.fromkeys(names), "--test-threads=1", "--nocapture"]
-                path = logs / f"{row['id']}-{kind}.log"
+                if run_ignored:
+                    command.append("--ignored")
+                suffix = "-ignored" if run_ignored else ""
+                path = logs / f"{row['id']}-{kind}{suffix}.log"
                 with path.open("w") as output:
                     done = subprocess.run(command, cwd=ROOT / f"rust/crates/{'db' if kind == 'db' else 'campfire'}",
                                           env=env, stdout=output, stderr=subprocess.STDOUT, timeout=600)
@@ -178,7 +181,8 @@ def run(catalog, args):
                 count = re.search(r"(\d+) passed; (\d+) failed; (\d+) ignored;", summaries[-1])
                 assert count and int(count[1]) + int(count[2]) == len(set(names)) and int(count[3]) == 0, \
                     (row["id"], "all selected assertions must run", summaries)
-                group = {"kind": kind, "tests": list(dict.fromkeys(names)), "exit": done.returncode,
+                group = {"kind": kind, "run_ignored": run_ignored,
+                         "tests": list(dict.fromkeys(names)), "exit": done.returncode,
                          "hits": text.count("WS12_COVERAGE_HIT " + row["mutation"]),
                          "assertion_failed": "assertion `" in text or "assertion failed:" in text,
                          "summaries": summaries,

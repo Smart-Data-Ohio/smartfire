@@ -17099,7 +17099,9 @@
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-          "rust_test": "ws12_browser_c221_original_named_system_assertions"
+          "rust_test": "ws12_browser_c221_original_named_system_assertions",
+          "run_ignored": true,
+          "harness": "rust/parity/system/ws12"
         }
       ],
       "reconciliation": "mapped",
@@ -17173,7 +17175,9 @@
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-          "rust_test": "ws12_browser_c222_original_named_system_assertions"
+          "rust_test": "ws12_browser_c222_original_named_system_assertions",
+          "run_ignored": true,
+          "harness": "rust/parity/system/ws12"
         }
       ],
       "reconciliation": "mapped",
@@ -17244,7 +17248,9 @@
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-          "rust_test": "ws12_browser_c223_original_named_system_assertions"
+          "rust_test": "ws12_browser_c223_original_named_system_assertions",
+          "run_ignored": true,
+          "harness": "rust/parity/system/ws12"
         }
       ],
       "reconciliation": "mapped",
@@ -17315,7 +17321,9 @@
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-          "rust_test": "ws12_browser_c224_original_named_system_assertions"
+          "rust_test": "ws12_browser_c224_original_named_system_assertions",
+          "run_ignored": true,
+          "harness": "rust/parity/system/ws12"
         }
       ],
       "reconciliation": "mapped",
@@ -17387,7 +17395,9 @@
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-          "rust_test": "ws12_browser_c225_original_named_system_assertions"
+          "rust_test": "ws12_browser_c225_original_named_system_assertions",
+          "run_ignored": true,
+          "harness": "rust/parity/system/ws12"
         }
       ],
       "reconciliation": "mapped",
@@ -17459,7 +17469,9 @@
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-          "rust_test": "ws12_browser_c226_original_named_system_assertions"
+          "rust_test": "ws12_browser_c226_original_named_system_assertions",
+          "run_ignored": true,
+          "harness": "rust/parity/system/ws12"
         }
       ],
       "reconciliation": "mapped",
@@ -17543,7 +17555,9 @@
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-          "rust_test": "ws12_browser_c227_original_named_system_assertions"
+          "rust_test": "ws12_browser_c227_original_named_system_assertions",
+          "run_ignored": true,
+          "harness": "rust/parity/system/ws12"
         }
       ],
       "reconciliation": "mapped",

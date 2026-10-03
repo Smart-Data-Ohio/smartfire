@@ -1,6 +1,7 @@
 //! Original WS12 system declarations: production router/assets/forms/Cable in Chromium.
 //! The same committed driver is replayed against Rails; the Unix forwarder keeps
 //! each browser inside a network-isolated pinned image, including mutation runs.
+//! Run explicitly with `parity/system/ws12`; the normal CI toolchain has no Node/browser.
 use super::presenters::test_support::{Req, TestApp};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -162,36 +163,43 @@ async fn compare(key: &str) {
 }
 
 #[tokio::test]
+#[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c221_original_named_system_assertions() {
     compare("c221").await;
 }
 
 #[tokio::test]
+#[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c222_original_named_system_assertions() {
     compare("c222").await;
 }
 
 #[tokio::test]
+#[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c223_original_named_system_assertions() {
     compare("c223").await;
 }
 
 #[tokio::test]
+#[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c224_original_named_system_assertions() {
     compare("c224").await;
 }
 
 #[tokio::test]
+#[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c225_original_named_system_assertions() {
     compare("c225").await;
 }
 
 #[tokio::test]
+#[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c226_original_named_system_assertions() {
     compare("c226").await;
 }
 
 #[tokio::test]
+#[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c227_original_named_system_assertions() {
     compare("c227").await;
 }

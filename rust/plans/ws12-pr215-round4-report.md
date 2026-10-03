@@ -410,3 +410,78 @@ WS12_LEDGER_NEGATIVE_CONTROLS 3 rejected; 0 false credits
 Ran 11 tests in 0.110s
 OK
 ```
+
+## PR #225 CI browser-test convention fix
+
+The `gh run view 37147313307 --log` receipt confirms all seven c221–c227 tests
+failed while spawning host Node in the gating toolchain. Main was fetched and
+merged first: `origin/main` at 7e35a5fd6 was already included, so Git reported
+`Already up to date.` No history was rewritten.
+
+The seven tests now use explicit `#[ignore]` attributes naming `parity/system/ws12`,
+following WS13's `huddle_system_cases_in_real_browser`
+(`rust/crates/campfire/src/controllers/rooms/system_browser_tests.rs:13`) and
+WS8bm's external host fixture
+(`rust/crates/campfire/src/controllers/presenters/test_support.rs:793`). WS11-UI
+also uses a separate browser runner, documented in
+`rust/reference-tools/views/agents_ui/SYSTEM.md`. The normal nextest invocation
+has no `--run-ignored`, and its JUnit profile records ignores. We verified the
+permitted equivalent locally with `CI=1` and an empty PATH: all seven are
+explicitly ignored, without starting Node or a browser.
+
+`rust/parity/system/ws12` is the explicit, failing-on-missing-dependency harness;
+`rust/parity/system/WS12.md` documents its dependencies, seed requirements and
+receipt commands. It uses the same pinned Chromium image/driver and unchanged
+assertions, with one test thread. The fresh real-browser run passes all seven
+at both 10 and 100 members. The initial harness run exposed the Unix socket path
+limit in this deeply nested worktree; the corrected harness uses the approved
+short cache path. That interrupted failed receipt is retained as
+`.scratch/pr225-browser-ci/logs/browser-long-socket.log`.
+
+Both coverage catalogs mark these seven tests `run_ignored` and name the harness.
+The producer replay runner honors `--ignored` for those tests, separately from
+ordinary tests, retaining its executed-test guard. The reconciliation checker
+requires `--browser-test-log` for these mappings; a default ignored result or
+an older workspace pass alone cannot credit them. Two added unit guards cover
+explicit replay selection and the missing/ignored-versus-passing browser receipt.
+Mapping totals remain 179/52. No product assertions, vector bytes or owning-domain
+code changed.
+
+Scoped verification rerun:
+
+```sh
+.scratch/pr225-browser-ci/run.sh cargo test --locked -p campfire controllers::ws12_browser_remaining_tests --no-run
+python3 .scratch/pr225-browser-ci/no-node.py
+.scratch/pr225-browser-ci/run.sh parity/system/ws12
+python3 rust/reference-tools/users/ws12_assertion_mutations_test.py
+python3 rust/reference-tools/agents/check-case-ports.py
+python3 rust/reference-tools/users/verify_ws12_mutation_controls.py --test-log .scratch/pr215-round4/logs/workspace-verified.log --browser-test-log .scratch/pr225-browser-ci/logs/browser.log --scratch .scratch/pr225-browser-ci/ledger-controls
+```
+
+The final ledger command uses the prior workspace receipt for the unchanged
+ordinary tests and the freshly executed dedicated Chromium receipt for these
+seven tests. It does not claim a new full-workspace run. The missing-browser-
+receipt negative control also fails at the intended dedicated-receipt assertion.
+Only one Cargo build ran at a time; the configured rustc throttle stayed enabled.
+The target created for this round is deleted before push; raw logs remain under
+`.scratch/pr225-browser-ci/logs/`.
+
+Raw summary lines (no-Node default run, real-browser run/read probes, tooling):
+
+```text
+test result: ok. 0 passed; 0 failed; 7 ignored; 0 measured; 2771 filtered out; finished in 0.00s
+WS12_BROWSER_READS c221 members=10/100 SELECTs=14/14
+WS12_BROWSER_READS c222 members=10/100 SELECTs=14/14
+WS12_BROWSER_READS c223 members=10/100 SELECTs=23/23
+WS12_BROWSER_READS c224 members=10/100 SELECTs=22/22
+WS12_BROWSER_READS c225 members=10/100 SELECTs=25/25
+WS12_BROWSER_READS c226 members=10/100 SELECTs=23/23
+WS12_BROWSER_READS c227 members=10/100 SELECTs=23/23
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 2771 filtered out; finished in 71.33s
+Ran 13 tests in 0.103s
+OK
+WS11 broader named API assertions: 20 passed; 31 pending; owner WS11-API (unblocked)
+WS11 source case files: 26 pinned Git files matched; 0 checkout mismatches
+WS12 assertion reconciliation: 231 declarations; 179 executed mutation-backed mappings; 52 explicitly flagged; 0 missing or non-running credited tests
+WS12_LEDGER_NEGATIVE_CONTROLS 3 rejected; 0 false credits
+```
