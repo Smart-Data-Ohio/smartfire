@@ -28,6 +28,7 @@ RUST = ROOT / "rust"
 SCRATCH = ROOT / ".scratch"
 PIN = "d7c7de9264c63015be398001d7a1094e7695a6db"
 CASES = {
+    "motion": ['mobile drawer animates in, lands in place, and returns focus with motion on', 'member selection mode moves no rows and resizes nothing', 'people directory bar shifts no rows when toggling', 'people directory bar stays stuck while scrolling', 'room menu measures at full scale when clamping to the viewport edge', 'mobile drawer keeps the room list scroll position across close and reopen', 'mobile drawer reveals a current room far down the list on first open', 'mobile drawer reopens on the current room when it is already in view'],
     "mobile_layout": ['the profile page fits phone widths without scrolling sideways', 'headers outside the workspace shell stay opaque over scrolled content', 'headers outside the workspace shell never cover the page or its scrollbar', 'pages outside the workspace shell show no drawer toggle that opens nothing', 'every drawer destination has one toggle that opens the drawer on itself'],
     "channel_threads_controller": ['converts a thread to work, assigns an eligible owner, and keeps an audit trail', 'work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable', 'assigned owner can change work status but cannot reassign it', 'only a thread manager can remove work tracking', 'a manager can assign an eligible agent and the agent is notified', 'the owner picker lists eligible agents with profiles and excludes ineligible ones', 'a member who cannot manage the thread cannot assign an agent', 'ordinary thread fields remain separate from work tracking'],
     "sending_messages": ["sending messages between two users", "editing messages", "deleting messages"],
@@ -311,7 +312,9 @@ for file in files:
             work = Path(directory)
             fixture = work / "fixture"
             shutil.copytree(RUST / "parity/.seed/default", fixture)
-            if file == "channel_threads_controller":
+            if file == "motion":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "motion", case], cwd=ROOT, env=env, check=True)
+            elif file == "channel_threads_controller":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "work-controller", case], cwd=ROOT, env=env, check=True)
             elif file == "mobile_layout":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "mobile-layout"], cwd=ROOT, env=env, check=True)
@@ -453,9 +456,9 @@ for file in files:
                     databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
                     for database in databases:
                         with sqlite3.connect(database) as conn:
-                            if file == "mobile_layout" or case.startswith("text fields"):
+                            if file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
-                                    for table in ["messages","channel_threads"]:
+                                    for table in (["messages","channel_threads","users","rooms"] if file == "motion" else ["messages","channel_threads"]):
                                         query=f"SELECT * FROM {table} ORDER BY id"
                                         assert conn.execute(query).fetchall()==seed.execute(query).fetchall()
                             elif file == "channel_threads_controller":

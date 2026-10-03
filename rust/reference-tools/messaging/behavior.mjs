@@ -19,6 +19,7 @@ import {codeHighlighting} from './behavior-code.mjs';
 import {threadContinuation,continuationCases} from './behavior-thread-continuation.mjs';
 import {workControllers} from './behavior-work-controllers.mjs';
 import {mobileContinuation} from './behavior-mobile-continuation.mjs';
+import {motion,motionCases} from './behavior-motion.mjs';
 import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
@@ -27,7 +28,7 @@ const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
+assert.ok(['motion','mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
@@ -119,6 +120,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     async function field(page,value,options={}) {
       await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value',value,options);
     }
+    if(file==='motion') {await motion({author,base,caseName,fixture});return;}
     if(file==='mobile_layout'||caseName.startsWith('text fields')) {await mobileContinuation({author,base,caseName,fixture});return;}
     if(file==='channel_threads_controller') {await workControllers({author,recipient,base,caseName,fixture});return;}
     if(file==='message_list_a11y') {

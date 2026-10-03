@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {workControllerCases} from './behavior-work-controllers.mjs';
 import {mutationTarget} from './behavior-discrimination.mjs';
+import {motionCases} from './behavior-motion.mjs';
 import {actionMutations} from './behavior-action-mutations.mjs';
 const list='controllers/message_list_controller-';
 const actions='controllers/message_actions_controller-';
@@ -10,6 +11,14 @@ const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
   ...actionMutations,
+  [motionCases[0],['messages-','.message__quick-reaction {','#sidebar .sidebar__container { transition-duration: 0s !important; }\n.message__quick-reaction {']],
+  [motionCases[1],['messages-','.message__quick-reaction {','#channel-members .is-selecting .member-panel__avatar { transform: translateX(10px) !important; }\n.message__quick-reaction {']],
+  [motionCases[2],['messages-','.message__quick-reaction {','#main-content:has(.multi-select-bar:not([hidden])) .people-directory__row { transform: translateY(10px) !important; }\n.message__quick-reaction {']],
+  [motionCases[3],['messages-','.message__quick-reaction {','.people-directory .multi-select-bar { position: static !important; }\n.message__quick-reaction {']],
+  [motionCases[4],['messages-','.message__quick-reaction {','#room-menu:not([hidden]) { left: calc(100vw - 10px) !important; }\n.message__quick-reaction {']],
+  [motionCases[5],['messages-','.message__quick-reaction {','@media (max-width: 63.999rem) { #sidebar:not(.open) .sidebar__scroll { display: none !important; } }\n.message__quick-reaction {']],
+  [motionCases[6],['controllers/workspace_navigation_controller-','currentRoom.focus()','focusableFault(this.sidebarTarget); function focusableFault(sidebar) { sidebar.querySelector("a[href],button:not([disabled])")?.focus() }']],
+  [motionCases[7],['controllers/workspace_navigation_controller-','target?.focus({ preventScroll: true })','(allowReveal ? target : focusable[0])?.focus({ preventScroll: true })']],
   ['thread code stays readable in both themes and scrolls within a narrow screen',['models/code_highlighter-','span.className = "code-token"','span.className = "missing-code-token"']],
   ...workControllerCases.map(name=>[name,['work-controller-json-response']]),
   ['the profile page fits phone widths without scrolling sideways',['messages-','.message__quick-reaction {','#main-content fieldset { min-width: 1000px !important; }\n.message__quick-reaction {']],

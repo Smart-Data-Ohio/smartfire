@@ -7,6 +7,19 @@ if %w[workspace-upload message_list message_destinations history boosts toolbar 
   Room.find(654632876).root_messages.where.not(id: [309456473, 908005739, 607264868]).destroy_all
 end
 case kind
+when "motion"
+  user=User.find(773523953);hq=Room.find_by!(name:"HQ")
+  hq.memberships.grant_to(user)
+  room=hq;scenario=ARGV[1].to_s
+  if scenario.start_with?("mobile drawer keeps", "mobile drawer reveals", "mobile drawer reopens")
+    15.times { |index| Rooms::Closed.create!(name:"Scroll room #{index}",creator:user).memberships.create!(user:user) }
+    if scenario.start_with?("mobile drawer reveals")
+      room=Rooms::Closed.create!(name:"Zz far room",creator:user);room.memberships.create!(user:user)
+    end
+  elsif scenario.start_with?("people directory bar stays")
+    12.times { |index| User.create!(name:"Sticky User #{index}",email_address:"sticky#{index}@example.test") }
+  end
+  File.write(Rails.root.join("storage/db/browser-fixture.json"),JSON.generate(motion_room_id:room.id,jason_id:User.find_by!(name:"Jason").id))
 when "mobile-layout"
   # MobileLayoutTest signs in JZ from the ordinary fixtures, which contain no
   # enrolled credential or remembered device. The rich parity seed adds both

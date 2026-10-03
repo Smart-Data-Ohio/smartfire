@@ -1,6 +1,7 @@
 // Credit only the assertion named by the served mutation. Source anchors keep
 // this contract reviewable without line-number drift. Unknown failures fail closed.
 import {readFileSync} from 'node:fs';
+import {motionCases} from './behavior-motion.mjs';
 import {workControllerCases} from './behavior-work-controllers.mjs';
 const helpers=new Set(['behavior-visibility.mjs','behavior-text.mjs']);
 export function assertionFrames(error) {
@@ -24,6 +25,16 @@ export function assertionFrames(error) {
 const target=(module,anchor,message)=>({module:`behavior-${module}.mjs`,anchor,message});
 const D=new Map();
 const add=(names,module,anchor,message)=>{for(const name of names) D.set(name,[target(module,anchor,message)]);};
+for(const [index,anchor] of [
+  [0,"'motion: drawer starts off-canvas'"],
+  [1,"'motion: member-select positions'"],
+  [2,"'motion: directory-select positions'"],
+  [3,"'motion: sticky bar inside scrollport'"],
+  [4,"'motion: menu clamped inside viewport'"],
+  [5,"'motion: closed drawer keeps offset'"],
+  [6,'await firstOpenCurrentFocus(page,current)'],
+  [7,'await reopenedCurrentFocus(page,current)'],
+]) add([motionCases[index]],'motion',anchor);
 add(['the message list is a single tab stop with a roving tabindex'],'message-list','page.waitForFunction(id=>');
 add(['arrow keys move between messages','deleting the focused message moves focus to the surviving tab stop','deleting an older focused message hands focus to its neighbour, not the newest','a late composer autofocus does not steal focus from a message'],'message-list','document.activeElement?.id===id');
 add(['a stream replacing the focused message keeps focus and the tab stop on its replacement','a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement','a direct DOM swap of the focused message keeps focus and the tab stop on its replacement'],'message-list','rows.filter(row=>row.tabIndex===0)');
