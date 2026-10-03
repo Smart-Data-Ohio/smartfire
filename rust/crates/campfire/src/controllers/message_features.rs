@@ -216,6 +216,10 @@ mod panel_tests;
 #[cfg(test)]
 mod pin_poll_scaling_tests;
 #[cfg(test)]
+mod exceptional_input_tests;
+#[cfg(test)]
+mod slash_named_tests;
+#[cfg(test)]
 mod date_tests;
 
 #[cfg(test)]
