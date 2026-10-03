@@ -1225,6 +1225,14 @@ mod agent_polling_tests;
 mod agent_work_validation_tests;
 #[cfg(test)]
 mod agent_work_writes_tests;
+#[cfg(test)]
+mod ws12_agent_work_query_tests;
+#[cfg(test)]
+mod ws12_activity_helper_named_tests;
+#[cfg(test)]
+mod ws12_huddle_copy_tests;
+#[cfg(test)]
+mod ws12_unread_broadcast_tests;
 
 #[cfg(test)]
 mod agent_attachments_tests;
@@ -1249,3 +1257,9 @@ mod agent_array_shape_tests;
 
 #[cfg(test)]
 mod agent_budget_notice_tests;
+
+#[cfg(test)]
+mod ws12_handled_sequence_tests;
+
+#[cfg(test)]
+mod ws12_private_pr_owner_tests;

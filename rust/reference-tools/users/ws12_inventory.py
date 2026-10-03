@@ -28,6 +28,11 @@ patterns = [
 files = sorted({p for pattern in patterns for p in root.glob(pattern)})
 work_cases = set(range(304,518))
 files.append(root / "test/controllers/channel_threads_controller_test.rb")
+# Apply the clause-audited ledger; broad vector presence alone earns no new credit.
+reconciliation_path = root / "rust/plans/ws12-assertion-reconciliation.json"
+reconciliation = {}
+if reconciliation_path.exists():
+    reconciliation = {(row["file"], row["test"]): row for row in json.loads(reconciliation_path.read_text())["cases"]}
 cases = []
 for path in files:
     relative = str(path.relative_to(root))
@@ -169,6 +174,14 @@ for path in files:
         # old per-declaration inventory as a count of missing production behaviours.
         if status=="deferred":
             evidence="Original declaration still needs a complete named assertion mapping; no claim of a missing production path follows from this status. Consult ws12-board-automations-2-unported.md for the current functional gaps. " + evidence
+        reconciled = reconciliation.get((relative, title))
+        if reconciled:
+            owner, evidence = reconciled["owner"], reconciled["evidence"]
+            if reconciled["reconciliation"] == "mapped":
+                status = "ported"
+                evidence += " Executed assertion mappings: " + ", ".join(test["rust_file"] + "::" + test["rust_test"] for test in reconciled["tests"])
+            else:
+                status = "deferred"
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")

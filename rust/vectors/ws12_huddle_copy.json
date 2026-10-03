@@ -1,0 +1,20 @@
+{
+  "rows": [
+    {
+      "event_type": "huddle_missed",
+      "caller_id": 149087659,
+      "room_id": 186869642,
+      "label": "Missed huddle",
+      "author": "Jason",
+      "body": "You missed a huddle from Jason"
+    },
+    {
+      "event_type": "huddle_started",
+      "caller_id": 712064548,
+      "room_id": 699448325,
+      "label": "Incoming huddle",
+      "author": "Kevin",
+      "body": "Kevin started a huddle"
+    }
+  ]
+}

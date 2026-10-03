@@ -139,8 +139,7 @@ async fn check_settings(golden: Value) {
                 row["reads"]
             );
         }
-        let approved_bad_request = row["status"] == 500
-            && row["path"].as_str().unwrap().ends_with("/sla_rules");
+        let approved_bad_request = approved_sla_crash(row);
         let expected_status = if approved_bad_request {
             approved_differences += 1;
             400
@@ -543,4 +542,120 @@ async fn assert_digest_broadcast_bytes(app: &TestApp, rooms: String) {
         actual, expected,
         "batched digest broadcasts preserve shared renderer bytes and order"
     );
+}
+
+// Only pinned, explicitly approved crash inputs may change the Rails 500 response.
+fn approved_sla_crash(row: &Value) -> bool {
+    let inputs: Vec<Value> = serde_json::from_str(include_str!(
+        "../../../../../vectors/board_sla_approved_crash_inputs.json"
+    ))
+    .unwrap();
+    row["status"] == 500
+        && row["method"] == "patch"
+        && row["path"]
+            .as_str()
+            .is_some_and(|path| path.ends_with("/automations/sla_rules"))
+        && inputs.contains(&row["input"])
+}
+
+#[test]
+fn ws12_sla_crash_waiver_does_not_cover_unrelated_server_errors() {
+    for input in [
+        json!({"sla_rules": {}}),
+        json!({"sla_rules": {"planned": {"nudge_after_minutes":"60", "escalate_after_minutes":"240"}}}),
+    ] {
+        assert!(
+            !approved_sla_crash(
+                &json!({"status":500,"method":"patch","path":"/rooms/boards/699448332/automations/sla_rules","input":input})
+            ),
+            "valid shapes cannot inherit a crash waiver"
+        );
+    }
+}
+
+#[tokio::test]
+async fn ws12_sla_missing_and_scalar_shapes_return_empty_400_without_writes() {
+    let golden: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/board_sla_missing_scalars.json"
+    ))
+    .unwrap();
+    assert_eq!(golden["rows"].as_array().unwrap().len(), 9);
+    for row in golden["rows"].as_array().unwrap() {
+        assert_eq!(
+            row["status"], 500,
+            "pinned Rails crashes on this exact input"
+        );
+        assert!(approved_sla_crash(row));
+        let app = TestApp::boot_frozen()
+            .await
+            .expect("default seed")
+            .without_job_runner()
+            .await;
+        let setup = row["setup"].clone();
+        app.db()
+            .write(move |tx| {
+                for sql in setup.as_array().unwrap() {
+                    tx.conn().execute_batch(sql.as_str().unwrap())?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let mut browser = app.sign_in(row["user_id"].as_i64().unwrap()).await;
+        browser.authenticity_token().await;
+        let probe =
+            super::query_probe::SqlProbe::start(app.db(), app.booted.app.config.db_readers).await;
+        let response = browser
+            .write(
+                Req::new(Method::PATCH, row["path"].as_str().unwrap())
+                    .header("content-type", "application/json")
+                    .body(row["input"].to_string()),
+            )
+            .await;
+        let statements = probe.finish().await;
+        assert_eq!(
+            response.status,
+            axum::http::StatusCode::BAD_REQUEST,
+            "{}",
+            row["name"]
+        );
+        assert_eq!(response.body.len(), 0);
+        let writes = statements
+            .iter()
+            .filter(|q| {
+                ["INSERT", "UPDATE", "DELETE", "REPLACE"]
+                    .iter()
+                    .any(|verb| q.sql.trim_start().to_ascii_uppercase().starts_with(verb))
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            writes.is_empty(),
+            "{}: rejected shape attempted writes: {writes:?}",
+            row["name"]
+        );
+        let facts = app
+            .db()
+            .read(|c| {
+                Ok((
+                    c.query_row("SELECT COUNT(*) FROM board_sla_rules", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                    c.query_row(
+                        "SELECT nudge_after_minutes FROM board_sla_rules WHERE id=0",
+                        [],
+                        |r| r.get::<_, i64>(0),
+                    )?,
+                    c.query_row("SELECT COUNT(*) FROM audit_logs", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                ))
+            })
+            .await
+            .unwrap();
+        assert_eq!(facts, (1, 60, 0));
+        println!(
+            "WS12_SLA_REJECT {} Rust=400 body_bytes=0 writes=0 Rails=500",
+            row["name"]
+        );
+    }
 }

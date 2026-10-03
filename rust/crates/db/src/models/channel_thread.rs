@@ -300,7 +300,7 @@ impl ChannelThread {
             .tag_names
             .map(|names| normalize_tag_names(&names));
         let work_status = attributes.work_status.filter(|status| !status.is_empty());
-        let thread = ChannelThread {
+        let mut thread = ChannelThread {
             id: 0,
             room_id: attributes.room_id,
             creator_id: attributes.creator_id,
@@ -350,9 +350,11 @@ impl ChannelThread {
         let tag_names = tag_names.unwrap_or_default();
         Self::register_tag_assignment(tx, id, tag_names.clone(), thread.work_owner_id);
         for name in tag_names {
-            ThreadTag::create(tx, id, &name)?;
+            thread.id = id;
+            ThreadTag::create_for_thread(tx, &thread, &name)?;
         }
-        Self::find(tx.conn(), id)
+        thread.id = id;
+        Ok(thread)
     }
 
     /// The validations of `app/models/channel_thread.rb`, including new owner eligibility.
@@ -491,6 +493,13 @@ impl ChannelThread {
             *self = changed;
             return Err(error);
         }
+        self.save_validated(tx, changed, &room)
+    }
+
+    // Called only after validation under this same writer lock. Tag writes between
+    // validation and this save cannot change room, agent or membership authority.
+    fn save_validated(&mut self, tx: &mut Tx<'_>, changed: ChannelThread, room: &Room) -> Result<()> {
+        if changed == *self { return Ok(()); }
         let now = tx.now();
         let mut changed = changed;
         // WS12: `stamp_work_status_changed_at` on an update that changes the work status.
@@ -536,7 +545,7 @@ impl ChannelThread {
             || changed.work_owner_id != self.work_owner_id
             || changed.last_activity_at != self.last_activity_at;
         *self = changed;
-        self.register_board_update(tx, &room, row_changed, status_changed)?;
+        self.register_board_update(tx, room, row_changed, status_changed)?;
         Ok(())
     }
 

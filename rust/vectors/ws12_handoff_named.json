@@ -1,0 +1,393 @@
+{
+  "rows": [
+    {
+      "key": "history",
+      "facts": {
+        "error": null,
+        "owner": 394959859,
+        "handoff_count": 1,
+        "handoff_thread_matches": true,
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 127326141,
+            "from_owner_is_previous": true,
+            "to_owner": 394959859,
+            "handoff_matches": true,
+            "summary": "Halfway there",
+            "links_count": 1,
+            "questions_count": 1
+          }
+        ],
+        "ledger": [
+          {
+            "receiver": true,
+            "kind": "work_handed_off",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": "Halfway there",
+            "links": [
+              "https://example.com/spec"
+            ],
+            "questions": [
+              "Which API?"
+            ],
+            "webhook": "pending"
+          }
+        ],
+        "audit": [
+          {
+            "actor": 127326141,
+            "target_type": "ChannelThread",
+            "target_matches": true,
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
+          }
+        ],
+        "webhook_jobs": 1
+      }
+    },
+    {
+      "key": "ledger",
+      "facts": {
+        "error": null,
+        "owner": 394959859,
+        "handoff_count": 1,
+        "handoff_thread_matches": true,
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 127326141,
+            "from_owner_is_previous": true,
+            "to_owner": 394959859,
+            "handoff_matches": true,
+            "summary": "Halfway",
+            "links_count": 1,
+            "questions_count": 1
+          }
+        ],
+        "ledger": [
+          {
+            "receiver": true,
+            "kind": "work_handed_off",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": "Halfway",
+            "links": [
+              "https://example.com/a"
+            ],
+            "questions": [
+              "Why?"
+            ],
+            "webhook": "pending"
+          }
+        ],
+        "audit": [
+          {
+            "actor": 127326141,
+            "target_type": "ChannelThread",
+            "target_matches": true,
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
+          }
+        ],
+        "webhook_jobs": 1
+      }
+    },
+    {
+      "key": "unassign",
+      "facts": {
+        "error": null,
+        "owner": 394959859,
+        "handoff_count": 1,
+        "handoff_thread_matches": true,
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 127326141,
+            "from_owner_is_previous": true,
+            "to_owner": 394959859,
+            "handoff_matches": true,
+            "summary": "Yours now",
+            "links_count": 0,
+            "questions_count": 0
+          }
+        ],
+        "ledger": [
+          {
+            "receiver": false,
+            "kind": "work_unassigned",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": null,
+            "links": null,
+            "questions": null,
+            "webhook": "none"
+          },
+          {
+            "receiver": true,
+            "kind": "work_handed_off",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": "Yours now",
+            "links": [],
+            "questions": [],
+            "webhook": "pending"
+          }
+        ],
+        "audit": [
+          {
+            "actor": 127326141,
+            "target_type": "ChannelThread",
+            "target_matches": true,
+            "to_owner": "Bender Bot",
+            "from_owner": "Clippy"
+          }
+        ],
+        "webhook_jobs": 1
+      }
+    },
+    {
+      "key": "audit",
+      "facts": {
+        "error": null,
+        "owner": 394959859,
+        "handoff_count": 1,
+        "handoff_thread_matches": true,
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 127326141,
+            "from_owner_is_previous": true,
+            "to_owner": 394959859,
+            "handoff_matches": true,
+            "summary": "Yours now",
+            "links_count": 0,
+            "questions_count": 0
+          }
+        ],
+        "ledger": [
+          {
+            "receiver": true,
+            "kind": "work_handed_off",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": "Yours now",
+            "links": [],
+            "questions": [],
+            "webhook": "pending"
+          }
+        ],
+        "audit": [
+          {
+            "actor": 127326141,
+            "target_type": "ChannelThread",
+            "target_matches": true,
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
+          }
+        ],
+        "webhook_jobs": 1
+      }
+    },
+    {
+      "key": "webhook",
+      "facts": {
+        "error": null,
+        "owner": 394959859,
+        "handoff_count": 1,
+        "handoff_thread_matches": true,
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 127326141,
+            "from_owner_is_previous": true,
+            "to_owner": 394959859,
+            "handoff_matches": true,
+            "summary": "Yours now",
+            "links_count": 0,
+            "questions_count": 0
+          }
+        ],
+        "ledger": [
+          {
+            "receiver": true,
+            "kind": "work_handed_off",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": "Yours now",
+            "links": [],
+            "questions": [],
+            "webhook": "pending"
+          }
+        ],
+        "audit": [
+          {
+            "actor": 127326141,
+            "target_type": "ChannelThread",
+            "target_matches": true,
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
+          }
+        ],
+        "webhook_jobs": 1
+      }
+    },
+    {
+      "key": "current_owner",
+      "facts": {
+        "error": {
+          "kind": "invalid",
+          "messages": [
+            "Work owner is already the owner of this work"
+          ]
+        },
+        "owner": 394959859,
+        "handoff_count": 0,
+        "handoff_thread_matches": null,
+        "history": [],
+        "ledger": [],
+        "audit": [],
+        "webhook_jobs": 0
+      }
+    },
+    {
+      "key": "stale_agent",
+      "facts": {
+        "error": {
+          "kind": "not_found"
+        },
+        "owner": 773523953,
+        "handoff_count": 0,
+        "handoff_thread_matches": null,
+        "history": [],
+        "ledger": [],
+        "audit": [],
+        "webhook_jobs": 0
+      }
+    },
+    {
+      "key": "stale_human",
+      "facts": {
+        "error": {
+          "kind": "forbidden"
+        },
+        "owner": 773523953,
+        "handoff_count": 0,
+        "handoff_thread_matches": null,
+        "history": [],
+        "ledger": [],
+        "audit": [],
+        "webhook_jobs": 0
+      }
+    },
+    {
+      "key": "untracked",
+      "facts": {
+        "error": {
+          "kind": "not_found"
+        },
+        "owner": null,
+        "handoff_count": 0,
+        "handoff_thread_matches": null,
+        "history": [],
+        "ledger": [],
+        "audit": [],
+        "webhook_jobs": 0
+      }
+    },
+    {
+      "key": "package",
+      "facts": {
+        "error": {
+          "kind": "invalid",
+          "messages": [
+            "Summary is too long (maximum is 2000 characters)"
+          ]
+        },
+        "owner": 127326141,
+        "handoff_count": 0,
+        "handoff_thread_matches": null,
+        "history": [],
+        "ledger": [],
+        "audit": [],
+        "webhook_jobs": 0
+      }
+    },
+    {
+      "key": "receiver_access",
+      "facts": {
+        "error": {
+          "kind": "invalid",
+          "messages": [
+            "Work owner must be an active agent member of the parent room with permission to post"
+          ]
+        },
+        "owner": 127326141,
+        "handoff_count": 0,
+        "handoff_thread_matches": null,
+        "history": [],
+        "ledger": [],
+        "audit": [],
+        "webhook_jobs": 0
+      }
+    },
+    {
+      "key": "stale_sender_profile",
+      "facts": {
+        "error": null,
+        "owner": 394959859,
+        "handoff_count": 1,
+        "handoff_thread_matches": true,
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 127326141,
+            "from_owner_is_previous": true,
+            "to_owner": 394959859,
+            "handoff_matches": true,
+            "summary": "Yours now",
+            "links_count": 0,
+            "questions_count": 0
+          }
+        ],
+        "ledger": [
+          {
+            "receiver": true,
+            "kind": "work_handed_off",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": "Yours now",
+            "links": [],
+            "questions": [],
+            "webhook": "pending"
+          }
+        ],
+        "audit": [
+          {
+            "actor": 127326141,
+            "target_type": "ChannelThread",
+            "target_matches": true,
+            "to_owner": "Bender Bot",
+            "from_owner": "Renamed sender"
+          }
+        ],
+        "webhook_jobs": 1
+      }
+    }
+  ]
+}
