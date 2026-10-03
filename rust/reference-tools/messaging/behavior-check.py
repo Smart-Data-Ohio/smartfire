@@ -215,7 +215,7 @@ subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
 # Preserve continuation's upload boundary as well as URL/PR jobs.
-paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable"}
+paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable", "workspace follows the system theme and mobile navigation remains reachable"}
 needs_paused_jobs=not args.slice and any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
 test_host=build_host(ROOT,env) if needs_paused_jobs else None
 browser_image = "ws8bm-browser-reference-d7c7de92"
