@@ -79,7 +79,7 @@ pub(super) fn normalize(
             conn,
             "rooms",
             &args["room_id"],
-            "AND id IN (SELECT room_id FROM memberships WHERE user_id=?)",
+            "AND deleted_at IS NULL AND id IN (SELECT room_id FROM memberships WHERE user_id=?)",
             &[agent.user_id]
         )?);
     }

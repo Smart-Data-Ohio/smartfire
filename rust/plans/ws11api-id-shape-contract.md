@@ -8,12 +8,13 @@ float truncation and range rejection are pinned in `agent_id_casting.json`.
 Selection stays in the original global/association scope and primary-key order.
 One JSON bind keeps candidate lists below SQLite's parameter limit.
 
-The shared Rails matrix has 111 cases / 117 responses, including Alpha/Beta
+The shared Rails matrix has 117 cases / 123 responses, including Alpha/Beta
 selection, mixed objects followed by valid IDs, reaction replay, scoped cursors,
 context priority/constraints, revoked grants and inactive authentication. It
 sweeps room, thread, message, poll, approval, step, owned-work/post, receiver and
 nested acknowledgement-member candidates across MCP and applicable REST reads.
-GitHub approval PR candidates use global lookup before the existing room-thread
+Soft-deleted member rooms are excluded before selecting a candidate, with six
+service controls covering room-scoped arrays. GitHub approval PR candidates use global lookup before the existing room-thread
 policy. REST strong parameters and path IDs retain their existing permitted
 shape; non-ID arrays and Ruby to_i scalar cursors are not rewritten as row finders.
 Fizzy's external string keys retain WS15e's existing string coercion.
@@ -38,3 +39,9 @@ executor's Active Record hook and asserts zero cache hits/enabled-cache SELECTs.
 Normal cached Rails executions are 26/26 threads and 27/27 cursors (three hits).
 Fully uncached Rails executions are 29/29 and 30/30 with zero hits; these are not
 fixture/setup reads. Historical receipts are explicitly corrected.
+
+The late alive-room control was run in the fresh clone with the previous
+production code and the new oracle. It failed (`2 passed; 1 failed`) on all six
+soft-deleted candidate cases before the association-scope correction. The prior
+full workspace run was interrupted to incorporate this newly exposed edge; it
+is not reported as a passing full-suite run.

@@ -19,11 +19,11 @@ pub fn thread_by_ids(conn: &Connection, ids: &[i64]) -> Result<Option<ChannelThr
         [serde_json::json!(ids).to_string()],ChannelThread::from_row)
 
 }
-/// Work-create transport's current membership lookup. Its caller applies the
-/// deleted-room capability check in the same writer transaction.
+/// Work-create transport's current alive membership lookup, matching user.rooms.
+/// Its caller rechecks live capabilities in the same writer transaction.
 pub fn member_room_by_ids(conn:&Connection,user:i64,ids:&[i64])->Result<Option<Room>> {
     query_one(conn,"SELECT r.* FROM rooms r JOIN memberships m ON m.room_id=r.id
-        WHERE m.user_id=? AND r.id IN (SELECT value FROM json_each(?)) ORDER BY r.id LIMIT 1",
+        WHERE m.user_id=? AND r.deleted_at IS NULL AND r.id IN (SELECT value FROM json_each(?)) ORDER BY r.id LIMIT 1",
         params![user,serde_json::json!(ids).to_string()],Room::from_row)
 }
 

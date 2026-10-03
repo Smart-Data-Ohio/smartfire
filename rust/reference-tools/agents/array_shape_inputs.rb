@@ -140,6 +140,15 @@ add.call('ack_nested_multi_member','ack_events',{event_ids:[[2106750001,[-10],ni
  target=key=='message_id' ? ma : ta
  cases << {name:"rest_#{key}_object_valid",surface:'rest_context',method:'GET',path:'/agents/context?'+URI.encode_www_form([["#{key}[][bad]",'true'],["#{key}[]",target],['limit',3]]),body:nil,setup_sql:'',repeat:1}
 end
+# Soft-deleted member rooms do not participate in the user.rooms association.
+dead_room_setup=setup+"UPDATE rooms SET deleted_at='#{now}' WHERE id=#{foreign_room}; INSERT INTO memberships(id,user_id,room_id,created_at,updated_at) VALUES(2106400003,394959859,#{foreign_room},'#{now}','#{now}');"
+[
+ ['post_message',{body:'Probe',thread_id:-9}], ['start_stream',{markdown_source:'Probe',thread_id:-9}],
+ ['create_board_post',{title:'Probe'}], ['create_poll',{question:'Probe',options:['Only']}],
+ ['register_slash_command',{name:'bad name'}], ['get_poll',{poll_id:2106700003}]
+].each do |tool,args|
+ add.call("dead_member_room_#{tool}",tool,args.merge(room_id:[foreign_room,room]),dead_room_setup)
+end
 # GitHub's PR lookup is global before the room-thread association check.
 pr_setup=setup+"INSERT INTO github_pull_requests(id,owner,repo,number,created_at,updated_at) VALUES(2106760001,'fixture','array',1,'#{now}','#{now}'); INSERT INTO github_pull_request_threads(id,channel_thread_id,room_id,github_pull_request_id,created_at,updated_at) VALUES(2106760002,#{ta},#{room},2106760001,'#{now}','#{now}');"
 [['nested_only',[[2106760001]]],['object_valid',[{bad:true},2106760001]]].each do |shape,value|
