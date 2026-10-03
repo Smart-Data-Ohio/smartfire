@@ -18,6 +18,7 @@ module Twitter
     MAX_ALT_CHARS = 1000
 
     ALLOWED_MEDIA_HOSTS = %w[ pbs.twimg.com video.twimg.com ].freeze
+    ANCHORED_POST_URL = /\A#{Twitter::PostUrl::PATTERN}/
 
     class FetchError < StandardError; end
 
@@ -203,8 +204,11 @@ module Twitter
         }
       end
 
+      # The whole value must be a post URL from its first character. The
+      # shared pattern is unanchored so it can find URLs inside message
+      # text; here that would accept any prefix in front of a post URL.
       def quote_url(value)
-        Twitter::PostUrl.post_url?(value) ? value.to_s : nil
+        value.to_s.match?(ANCHORED_POST_URL) ? value.to_s : nil
       end
 
       def twimg_url(value)
