@@ -3,8 +3,13 @@ require 'action_dispatch/testing/integration'
 require 'active_support/testing/time_helpers'
 extend ActiveSupport::Testing::TimeHelpers
 ApplicationController.allow_forgery_protection=false
+# Exercise the installed production exception renderer, rather than rescuing in
+# the oracle and leaving its response body unspecified.
+Rails.application.env_config['action_dispatch.show_exceptions'] = :all
+Rails.application.env_config['action_dispatch.show_detailed_exceptions'] = false
 ActiveRecord::Base.logger=nil
 Rails.logger=ActiveSupport::Logger.new($stderr)
+Rails.application.env_config['action_dispatch.logger'] = Rails.logger
 labels=JSON.parse(File.read(File.join(ENV.fetch('PARITY_WORK'),'parity/.seed/default/labels.json')))
 user=User.find(labels.fetch('users.david'))
 room=Room.find(labels.fetch('rooms.watercooler'))
@@ -38,11 +43,9 @@ request.call('recurrent reminder count','get','/activity/unread_count.json')
 request.call('delete source','delete',"/rooms/#{room.id}/messages/#{message.id}",{},'text/vnd.turbo-stream.html')
 request.call('deleted source inbox','get','/activity.json?type=reminders')
 request.call('deleted source count','get','/activity/unread_count.json')
-begin
- request.call('deleted source open','post',"/activity/#{item.id}/open.json")
-rescue ActiveRecord::RecordNotFound
- steps << {name:'deleted source open',method:'post',path:"/activity/#{item.id}/open.json",params:{},accept:'application/json',status:404,body:nil}
-end
+request.call('deleted source open JSON','post',"/activity/#{item.id}/open.json")
+request.call('deleted source open HTML','post',"/activity/#{item.id}/open",{},'text/html')
+
 travel_back
 puts JSON.pretty_generate(reference:'d7c7de92',message_id:message.id,steps:)
 warn "Rails inbox lifecycle: #{steps.count{|s|s[:method]}} HTTP responses; 2 real reminder dispatches; reminder, recurrence and deleted-source"

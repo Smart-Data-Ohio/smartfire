@@ -1350,3 +1350,6 @@ mod named_ui_broadcasts;
 
 #[path = "tests/sidebar_review.rs"]
 mod sidebar_review;
+
+#[path = "tests/navigation_followups.rs"]
+mod navigation_followups;

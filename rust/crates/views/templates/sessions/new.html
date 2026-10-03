@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="txt-align-center">
-  <div class="panel {% if ctx.flash_alert.is_some() %}shake{% endif %}">
+  <div class="panel {% if ctx.flash_alert().is_some() %}shake{% endif %}">
     {{ h::account_logo_tag(ctx, Some("center margin-block-end txt-xx-large")) }}
 
 {% let form = h::form_with(ctx.url(h::routes::session().as_str())).class("flex flex-column gap") %}    {% filter form_with(form) %}

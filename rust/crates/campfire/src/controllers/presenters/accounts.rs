@@ -183,10 +183,10 @@ pub fn sidebar_in_zone(conn: &Connection, secrets: &Secrets, user: &User, zone: 
         match campfire_views::users::cached_direct_room_fragment(&row) { Some(html)=>SidebarDirectItem::Fragment(html),None=>row.into() }
     }).collect();
     let voice_memberships=rest.iter().filter(|(_,r)|r.room_type==RoomType::Voice).map(|(m,r)|shared(m,r)).collect();
-    // Voice and direct memberships have already left `rest` in the Rails partition.
+    // Rails categorizes every nonfavorite membership, including Direct and Voice.
     let categories=campfire_db::RoomCategory::ordered_for_user(conn,user.id)?.into_iter().map(|c|campfire_views::users::SidebarCategory {
         id:c.id,name:c.name,collapsed:c.collapsed,
-        rooms:rest.iter().filter(|(m,r)|!r.direct() && r.room_type!=RoomType::Voice && m.room_category_id==Some(c.id)).map(|(m,r)|shared(m,r)).collect(),
+        rooms:rest.iter().filter(|(m,_)|m.room_category_id==Some(c.id)).map(|(m,r)|shared(m,r)).collect(),
     }).collect();
     let other_memberships=rest.iter().filter(|(m,r)|!r.direct() && r.room_type!=RoomType::Voice && m.room_category_id.is_none()).map(|(m,r)|shared(m,r)).collect();
     Ok(Sidebar {favorite_memberships,categories,direct_memberships,other_memberships,voice_memberships,direct_placeholder_users:direct_placeholder_users(conn,secrets,user,zone)?})
