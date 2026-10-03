@@ -13,7 +13,7 @@ export const actionMutations=[
   ['reply and thread buttons drive the composer and the thread panel',[toolbar,'thread() {','thread() { return;']],
   ['the more button opens the shared menu for its message',[toolbar,'more(event) {','more(event) { return;']],
   ['the emoji picker searches and reacts',['boost-create-response']],
-  ['the picker shows category tabs and switches between them',[picker,'chooseTab(event) {','chooseTab(event) { window.__ws8bmMutatedActions?.push({action: "chooseTab", target: event.target.closest("[role=\"tab\"]")?.id}); return;']],
+  ['the picker shows category tabs and switches between them',[picker,'chooseTab(event) {','chooseTab(event) { window.__ws8bmMutatedActions?.push({action: "chooseTab", target: event.target.closest("[role=tab]")?.id}); return;']],
   ['the picker loads its emoji data only on first open',[picker,'this.#connected = true','this.#connected = true; void this.#ensureData()']],
   ['the picker remembers recent reactions',[picker,'localStorage.setItem(RECENT_KEY, JSON.stringify(entries.slice(-100)))','void(entries)']],
   ['the picker Custom tab reacts with a workspace icon',[picker,'else if (this.#tab === "custom") void this.#renderCustom()','else if (this.#tab === "custom") this.#renderRecent()']],

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {mutationNames,mutationVariants} from './behavior-mutations.mjs';
+import {actionMutations} from './behavior-action-mutations.mjs';
 import {mutationTarget,rejectionEvidence} from './behavior-discrimination.mjs';
 function failure(module,anchor,name='TimeoutError') {
   const url=new URL(module,import.meta.url),source=readFileSync(url,'utf8');
@@ -127,4 +128,10 @@ test('menu-owner opacity mutation cannot credit an unrelated closed-menu asserti
   const early=failure('behavior-actions.mjs',"await waitForVisibility(page.locator('.message[data-message-actions-open]'),{state:'hidden'})");
   for(const [name,variant] of [['the more button opens the shared menu for its message','transparent-more-owner'],['copies message text and link and forwards to a server-provided thread destination','transparent-menu-owner']])
     assert.equal(rejectionEvidence(name,variant,valid,early).valid,false);
+});
+
+
+test('the served tab-handler witness is syntactically executable JavaScript',()=>{
+  const replacement=actionMutations.find(([name])=>name==='the picker shows category tabs and switches between them')[1][2];
+  assert.doesNotThrow(()=>new Function(`return class {${replacement}}}`));
 });
