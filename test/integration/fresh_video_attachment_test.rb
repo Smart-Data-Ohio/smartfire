@@ -381,6 +381,154 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
     assert_video_ready(message)
   end
 
+  test "views do not restart exhausted real decoder failures" do
+    sign_in :david
+    thread = create_thread
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("not a QuickTime movie"),
+      filename: "corrupt.mov", content_type: "video/quicktime")
+    decoder_runs = 0
+    subscription = ActiveSupport::Notifications.subscribe("preview.active_storage") do |event|
+      decoder_runs += 1 if event.payload[:key] == blob.key
+    end
+    post room_thread_messages_url(@room, thread),
+      params: { message: { attachment: blob.signed_id } }, as: :json
+    assert_response :created
+    message = thread.messages.sole
+    2.times { perform_enqueued_jobs(only: Message::AttachmentProcessingJob) }
+    assert_raises ActiveStorage::PreviewError do
+      perform_enqueued_jobs(only: Message::AttachmentProcessingJob)
+    end
+    assert_equal 3, decoder_runs
+
+    with_message_caching do
+      3.times do
+        2.times do
+          get room_thread_messages_url(@room, thread)
+          assert_response :success
+          assert_select "##{ActionView::RecordIdentifier.dom_id(message, :presentation)}" do
+            assert_select "video.message__attachment[controls][preload='none']", 1
+            assert_select "video[poster], .spinner, [aria-busy='true'], [role='alert']", 0
+          end
+        end
+        # Drain a mistakenly restarted batch too, so this counts real FFmpeg
+        # invocations rather than merely observing a queued retry.
+        begin
+          3.times { perform_enqueued_jobs(only: Message::AttachmentProcessingJob) }
+        rescue ActiveStorage::PreviewError
+          # Finish checking all views even if they wrongly exhaust a new batch.
+        end
+      end
+    end
+
+    assert_equal 3, decoder_runs, "views must not restart the exhausted decoder budget"
+    travel 1.day do
+      assert_no_enqueued_jobs only: Message::AttachmentProcessingJob do
+        get room_thread_messages_url(@room, thread)
+        assert_response :success
+      end
+    end
+    assert Message.exists?(message.id)
+    assert_equal "not a QuickTime movie", blob.download
+    assert_not blob.reload.preview_image.attached?
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscription) if subscription
+  end
+
+  [ "ActiveJob::EnqueueError", "RuntimeError" ].each do |error_name|
+    test "views back off continuing #{error_name} enqueue refusals and recover afterwards" do
+      sign_in :david
+      thread = create_thread
+      adapter = Message::AttachmentProcessingJob.queue_adapter
+      error_class = error_name.constantize
+      original_enqueue = adapter.method(:enqueue)
+      attempts = 0
+      adapter.define_singleton_method(:enqueue) do |job|
+        if job.is_a?(Message::AttachmentProcessingJob)
+          attempts += 1
+          raise error_class, "queue unavailable"
+        else
+          original_enqueue.call(job)
+        end
+      end
+      post room_thread_messages_url(@room, thread),
+        params: { message: { attachment: video_upload(:direct) } }, as: :json
+      assert_response :created
+      message = thread.messages.sole
+
+      with_message_caching do
+        4.times do
+          get room_thread_messages_url(@room, thread)
+          assert_response :success
+          assert_select "video.message__attachment", 1
+          assert_select "video[poster]", 0
+        end
+        assert_equal 1, attempts, "refused enqueues must not repeat on every view"
+        2.times do |retry_index|
+          travel (retry_index + 1) * (Message::ATTACHMENT_PROCESSING_LEASE + 1.second) do
+            3.times { get room_thread_messages_url(@room, thread) }
+          end
+          assert_equal retry_index + 2, attempts
+        end
+        adapter.singleton_class.remove_method(:enqueue)
+
+        travel 3 * (Message::ATTACHMENT_PROCESSING_LEASE + 1.second) do
+          assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
+            3.times { get room_thread_messages_url(@room, thread) }
+          end
+          assert_video_ready(message)
+        end
+      end
+    ensure
+      adapter.singleton_class.remove_method(:enqueue) if adapter&.singleton_class&.instance_methods(false)&.include?(:enqueue)
+    end
+  end
+
+  [ :before_start, :during_decoder ].each do |edit_time|
+    test "editing the scheduling message #{edit_time} still refreshes another preview owner" do
+      sign_in :david
+      signed_id = video_upload(:direct)
+      scheduler = create_thread.post_message!(creator: users(:david), attributes: { attachment: signed_id })
+      other = create_thread.post_message!(creator: users(:david), attributes: { attachment: signed_id })
+      [ scheduler, other ].each(&:broadcast_create)
+      blob = other.attachment.blob
+      other_stamp = other.updated_at
+      scheduler_after_edit = nil
+      scheduler_stamp = nil
+      edit = -> do
+        patch room_thread_message_url(@room, scheduler.thread, scheduler),
+          params: { message: { attachment: fixture_file_upload("moon.jpg", "image/jpeg") } },
+          headers: { "Accept" => "application/json" }
+        assert_response :success
+        scheduler_after_edit = find_broadcasts_for(scheduler.thread, :messages)
+        scheduler_stamp = Message.find(scheduler.id).updated_at
+      end
+      if edit_time == :before_start
+        edit.call
+      else
+        subscription = ActiveSupport::Notifications.subscribe("preview.active_storage") do |event|
+          edit.call if event.payload[:key] == blob.key
+        end
+      end
+
+      perform_enqueued_jobs(only: Message::AttachmentProcessingJob)
+
+      assert_equal "moon.jpg", scheduler.reload.attachment.filename.to_s
+      if edit_time == :during_decoder
+        assert scheduler_after_edit, "the real decoder must reach the edit boundary"
+        assert_equal scheduler_after_edit, find_broadcasts_for(scheduler.thread, :messages)
+        assert_equal scheduler_stamp, scheduler.updated_at
+      end
+      assert_operator other.reload.updated_at, :>, other_stamp
+      assert_rendered_turbo_stream_broadcast other.thread, :messages,
+        action: "replace", target: [ other, :presentation ] do
+        assert_select "video.message__attachment[poster]"
+      end
+      assert_video_ready(other)
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription) if subscription
+    end
+  end
+
   test "rendering while the real decoder runs does not start competing processing" do
     sign_in :david
     thread = create_thread
