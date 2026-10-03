@@ -248,7 +248,8 @@ fn from_match(c: &Captures<'_>, zone: &TimeZone, now: Timestamp) -> Option<Times
             let (proxy, shift) = now
                 .since(SignedDuration::from_secs(remainder))
                 .calendar_proxy();
-            Timestamp::from_wide_shifted_jiff(proxy, shift + seconds / cycle * I512::from(400))
+            let year_shift = (seconds / cycle).checked_mul(I512::from(400))?;
+            Timestamp::from_wide_shifted_jiff(proxy, shift.checked_add(year_shift)?)
         } else {
             relative_days(
                 now,
@@ -295,7 +296,7 @@ fn relative_days(now: Timestamp, days: I512, zone: &TimeZone) -> Option<Timestam
         .ok()?;
     let naive = Timestamp::from_wide_shifted_jiff(
         target.to_zoned(TimeZone::UTC).ok()?.timestamp(),
-        days / cycle * I512::from(400),
+        (days / cycle).checked_mul(I512::from(400))?,
     )?;
     if let Some(offset) = boundary_offset(zone, naive.transition_second(), true) {
         Some(naive.ago(SignedDuration::from_secs(offset)))
