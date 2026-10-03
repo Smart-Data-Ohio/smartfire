@@ -235,7 +235,12 @@ for line in (RUST / "parity/.env.reference").read_text().splitlines():
 env.update(CAMPFIRE_FROZEN_TIME="2026-03-02T16:00:00Z", CAMPFIRE_LOG="error", TARGET_BIND="127.0.0.1")
 target = Path(env.get("CARGO_TARGET_DIR", RUST / "target"))
 reference = str(RUST / "parity/bin/reference")
-ports = [52020, 52021, 52022]
+# Keep the historical default, while allowing a worker to choose slots outside
+# its OS ephemeral-client range. No application wait or retry is changed.
+port_base = int(env.get("WS8BM_BROWSER_PORT_BASE", "52020"))
+if not 1 <= port_base <= 65533:
+    raise ValueError("WS8BM_BROWSER_PORT_BASE must leave room for three ports")
+ports = [port_base + offset for offset in range(3)]
 # Refuse occupied ports; never stop another worker's listener.
 reservations = []
 try:
