@@ -1,0 +1,106 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "key": "assignment_webhook",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 75,
+      "rails_test": "assignment enqueues the webhook instead of blocking on it",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "hook"
+        },
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Hooked work"
+        },
+        {
+          "action": "deliver",
+          "agent": 773018776
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_assignment_webhook"
+    },
+    {
+      "key": "assignment_no_read",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 97,
+      "rails_test": "assignment posts no webhook without read_messages",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "hook"
+        },
+        {
+          "action": "revoke",
+          "cap": "read_messages"
+        },
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Unread work"
+        },
+        {
+          "action": "deliver",
+          "agent": 773018776
+        },
+        {
+          "method": "get",
+          "path": "/agents/work/1900700020"
+        }
+      ],
+      "mutation": "next6_assignment_no_read"
+    },
+    {
+      "key": "handoff_webhook",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_line": 76,
+      "rails_test": "the handoff enqueues the receiver webhook with the package",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "hook",
+          "agent": 1901100002
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1900700020/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Halfway",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "deliver",
+          "agent": 1901100002
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1",
+          "auth": "receiver"
+        }
+      ],
+      "mutation": "next6_handoff_webhook"
+    }
+  ]
+}

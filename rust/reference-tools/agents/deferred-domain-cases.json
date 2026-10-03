@@ -1,6 +1,6 @@
 {
   "reference_pin": "d7c7de92",
-  "status": "partial",
+  "status": "complete",
   "meaning": "Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.",
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "All named cases are mapped. Absent, blank and malformed HTTP credentials have REST/MCP boundary vectors.",
@@ -15,8 +15,8 @@
   "files": [],
   "broader_named_api_assertions": {
     "ledger": "rust/plans/ws11api-named-api-cases.json",
-    "passed": 20,
-    "pending": 31,
-    "owner": "WS11-API; pending evidence is unblocked, not a missing service"
+    "passed": 51,
+    "pending": 0,
+    "owner": "WS11-API; pending evidence, if any, is unblocked"
   }
 }

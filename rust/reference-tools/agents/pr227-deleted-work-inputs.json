@@ -1,0 +1,126 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "key": "deleted_work_5",
+      "size": 5,
+      "initial_sql": [
+        "DELETE FROM agent_events WHERE agent_id=773018776",
+        "DELETE FROM agent_grants WHERE agent_id=773018776",
+        "UPDATE agents SET status='idle',status_note=NULL,status_changed_at=NULL,working_presence=NULL,working_presence_expires_at=NULL,last_seen_at=NULL WHERE id=773018776",
+        "INSERT INTO agent_grants(agent_id,capability,room_id,granted_by_id,created_at,updated_at) VALUES(773018776,'read_messages',486777696,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750000,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710099,\"work_snapshot\":{\"id\":1922710099,\"thread_id\":1922710099,\"title\":\"Deleted α & β 0\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750001,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710100,\"work_snapshot\":{\"id\":1922710100,\"thread_id\":1922710100,\"title\":\"Deleted α & β 1\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750002,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710101,\"work_snapshot\":{\"id\":1922710101,\"thread_id\":1922710101,\"title\":\"Deleted α & β 2\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750003,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710102,\"work_snapshot\":{\"id\":1922710102,\"thread_id\":1922710102,\"title\":\"Deleted α & β 3\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750004,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710103,\"work_snapshot\":{\"id\":1922710103,\"thread_id\":1922710103,\"title\":\"Deleted α & β 4\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "surface": "rest",
+          "method": "GET",
+          "path": "/agents/events?envelope=1&limit=100"
+        },
+        {
+          "surface": "mcp",
+          "method": "POST",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 227,
+            "method": "tools/call",
+            "params": {
+              "name": "poll_events",
+              "arguments": {
+                "limit": 100
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "key": "deleted_work_50",
+      "size": 50,
+      "initial_sql": [
+        "DELETE FROM agent_events WHERE agent_id=773018776",
+        "DELETE FROM agent_grants WHERE agent_id=773018776",
+        "UPDATE agents SET status='idle',status_note=NULL,status_changed_at=NULL,working_presence=NULL,working_presence_expires_at=NULL,last_seen_at=NULL WHERE id=773018776",
+        "INSERT INTO agent_grants(agent_id,capability,room_id,granted_by_id,created_at,updated_at) VALUES(773018776,'read_messages',486777696,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750000,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710099,\"work_snapshot\":{\"id\":1922710099,\"thread_id\":1922710099,\"title\":\"Deleted α & β 0\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750001,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710100,\"work_snapshot\":{\"id\":1922710100,\"thread_id\":1922710100,\"title\":\"Deleted α & β 1\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750002,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710101,\"work_snapshot\":{\"id\":1922710101,\"thread_id\":1922710101,\"title\":\"Deleted α & β 2\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750003,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710102,\"work_snapshot\":{\"id\":1922710102,\"thread_id\":1922710102,\"title\":\"Deleted α & β 3\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750004,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710103,\"work_snapshot\":{\"id\":1922710103,\"thread_id\":1922710103,\"title\":\"Deleted α & β 4\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750005,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710104,\"work_snapshot\":{\"id\":1922710104,\"thread_id\":1922710104,\"title\":\"Deleted α & β 5\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750006,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710105,\"work_snapshot\":{\"id\":1922710105,\"thread_id\":1922710105,\"title\":\"Deleted α & β 6\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750007,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710106,\"work_snapshot\":{\"id\":1922710106,\"thread_id\":1922710106,\"title\":\"Deleted α & β 7\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750008,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710107,\"work_snapshot\":{\"id\":1922710107,\"thread_id\":1922710107,\"title\":\"Deleted α & β 8\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750009,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710108,\"work_snapshot\":{\"id\":1922710108,\"thread_id\":1922710108,\"title\":\"Deleted α & β 9\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750010,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710109,\"work_snapshot\":{\"id\":1922710109,\"thread_id\":1922710109,\"title\":\"Deleted α & β 10\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750011,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710110,\"work_snapshot\":{\"id\":1922710110,\"thread_id\":1922710110,\"title\":\"Deleted α & β 11\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750012,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710111,\"work_snapshot\":{\"id\":1922710111,\"thread_id\":1922710111,\"title\":\"Deleted α & β 12\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750013,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710112,\"work_snapshot\":{\"id\":1922710112,\"thread_id\":1922710112,\"title\":\"Deleted α & β 13\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750014,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710113,\"work_snapshot\":{\"id\":1922710113,\"thread_id\":1922710113,\"title\":\"Deleted α & β 14\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750015,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710114,\"work_snapshot\":{\"id\":1922710114,\"thread_id\":1922710114,\"title\":\"Deleted α & β 15\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750016,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710115,\"work_snapshot\":{\"id\":1922710115,\"thread_id\":1922710115,\"title\":\"Deleted α & β 16\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750017,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710116,\"work_snapshot\":{\"id\":1922710116,\"thread_id\":1922710116,\"title\":\"Deleted α & β 17\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750018,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710117,\"work_snapshot\":{\"id\":1922710117,\"thread_id\":1922710117,\"title\":\"Deleted α & β 18\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750019,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710118,\"work_snapshot\":{\"id\":1922710118,\"thread_id\":1922710118,\"title\":\"Deleted α & β 19\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750020,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710119,\"work_snapshot\":{\"id\":1922710119,\"thread_id\":1922710119,\"title\":\"Deleted α & β 20\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750021,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710120,\"work_snapshot\":{\"id\":1922710120,\"thread_id\":1922710120,\"title\":\"Deleted α & β 21\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750022,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710121,\"work_snapshot\":{\"id\":1922710121,\"thread_id\":1922710121,\"title\":\"Deleted α & β 22\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750023,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710122,\"work_snapshot\":{\"id\":1922710122,\"thread_id\":1922710122,\"title\":\"Deleted α & β 23\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750024,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710123,\"work_snapshot\":{\"id\":1922710123,\"thread_id\":1922710123,\"title\":\"Deleted α & β 24\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750025,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710124,\"work_snapshot\":{\"id\":1922710124,\"thread_id\":1922710124,\"title\":\"Deleted α & β 25\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750026,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710125,\"work_snapshot\":{\"id\":1922710125,\"thread_id\":1922710125,\"title\":\"Deleted α & β 26\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750027,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710126,\"work_snapshot\":{\"id\":1922710126,\"thread_id\":1922710126,\"title\":\"Deleted α & β 27\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750028,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710127,\"work_snapshot\":{\"id\":1922710127,\"thread_id\":1922710127,\"title\":\"Deleted α & β 28\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750029,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710128,\"work_snapshot\":{\"id\":1922710128,\"thread_id\":1922710128,\"title\":\"Deleted α & β 29\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750030,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710129,\"work_snapshot\":{\"id\":1922710129,\"thread_id\":1922710129,\"title\":\"Deleted α & β 30\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750031,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710130,\"work_snapshot\":{\"id\":1922710130,\"thread_id\":1922710130,\"title\":\"Deleted α & β 31\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750032,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710131,\"work_snapshot\":{\"id\":1922710131,\"thread_id\":1922710131,\"title\":\"Deleted α & β 32\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750033,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710132,\"work_snapshot\":{\"id\":1922710132,\"thread_id\":1922710132,\"title\":\"Deleted α & β 33\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750034,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710133,\"work_snapshot\":{\"id\":1922710133,\"thread_id\":1922710133,\"title\":\"Deleted α & β 34\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750035,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710134,\"work_snapshot\":{\"id\":1922710134,\"thread_id\":1922710134,\"title\":\"Deleted α & β 35\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750036,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710135,\"work_snapshot\":{\"id\":1922710135,\"thread_id\":1922710135,\"title\":\"Deleted α & β 36\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750037,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710136,\"work_snapshot\":{\"id\":1922710136,\"thread_id\":1922710136,\"title\":\"Deleted α & β 37\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750038,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710137,\"work_snapshot\":{\"id\":1922710137,\"thread_id\":1922710137,\"title\":\"Deleted α & β 38\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750039,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710138,\"work_snapshot\":{\"id\":1922710138,\"thread_id\":1922710138,\"title\":\"Deleted α & β 39\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750040,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710139,\"work_snapshot\":{\"id\":1922710139,\"thread_id\":1922710139,\"title\":\"Deleted α & β 40\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750041,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710140,\"work_snapshot\":{\"id\":1922710140,\"thread_id\":1922710140,\"title\":\"Deleted α & β 41\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750042,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710141,\"work_snapshot\":{\"id\":1922710141,\"thread_id\":1922710141,\"title\":\"Deleted α & β 42\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750043,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710142,\"work_snapshot\":{\"id\":1922710142,\"thread_id\":1922710142,\"title\":\"Deleted α & β 43\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750044,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710143,\"work_snapshot\":{\"id\":1922710143,\"thread_id\":1922710143,\"title\":\"Deleted α & β 44\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750045,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710144,\"work_snapshot\":{\"id\":1922710144,\"thread_id\":1922710144,\"title\":\"Deleted α & β 45\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750046,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710145,\"work_snapshot\":{\"id\":1922710145,\"thread_id\":1922710145,\"title\":\"Deleted α & β 46\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750047,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710146,\"work_snapshot\":{\"id\":1922710146,\"thread_id\":1922710146,\"title\":\"Deleted α & β 47\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750048,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710147,\"work_snapshot\":{\"id\":1922710147,\"thread_id\":1922710147,\"title\":\"Deleted α & β 48\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')",
+        "INSERT INTO agent_events(id,agent_id,event_type,room_id,actor_id,outcome,metadata,created_at) VALUES(1922750049,773018776,'work_unassigned',486777696,127326141,'delivered','{\"thread_id\":1922710148,\"work_snapshot\":{\"id\":1922710148,\"thread_id\":1922710148,\"title\":\"Deleted α & β 49\",\"status\":\"planned\",\"assigned_by\":null}}','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "surface": "rest",
+          "method": "GET",
+          "path": "/agents/events?envelope=1&limit=100"
+        },
+        {
+          "surface": "mcp",
+          "method": "POST",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 227,
+            "method": "tools/call",
+            "params": {
+              "name": "poll_events",
+              "arguments": {
+                "limit": 100
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
