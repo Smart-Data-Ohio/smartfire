@@ -36,7 +36,7 @@ pub(crate) fn dispatch(
     text: &str,
     storage: std::sync::Arc<campfire_storage::Storage>,
 ) -> campfire_db::Result<slash_commands::CommandResult> {
-    let result = slash_commands::dispatch(tx, context, text)?;
+    let result = slash_commands::dispatch_in_user_time_zone(tx, context, text)?;
     if let Some(id) = result.message_id {
         let message = campfire_db::Message::find(tx.conn(), id)?;
         crate::messaging::process_message_attachment(tx, storage, &message)?;

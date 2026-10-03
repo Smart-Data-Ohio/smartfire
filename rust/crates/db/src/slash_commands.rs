@@ -146,6 +146,23 @@ pub struct Context {
     pub huddles_configured: bool,
 }
 pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<CommandResult> {
+    dispatch_with_time_zone(tx, context, text, false)
+}
+/// Rails requests run after ApplicationController's user-zone callback. Direct
+/// service calls keep Time.current's ambient UTC zone for duration shortcuts.
+pub fn dispatch_in_user_time_zone(
+    tx: &mut Tx<'_>,
+    context: &Context,
+    text: &str,
+) -> Result<CommandResult> {
+    dispatch_with_time_zone(tx, context, text, true)
+}
+fn dispatch_with_time_zone(
+    tx: &mut Tx<'_>,
+    context: &Context,
+    text: &str,
+    use_user_time_zone: bool,
+) -> Result<CommandResult> {
     let Some(c) = command_pattern().captures(strip(text)) else {
         return Ok(CommandResult::error("Type / to see available commands."));
     };
@@ -182,7 +199,7 @@ pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<Comman
     }
     // Errors from model writes leave the transaction failed; convert validation results
     // only after the command's savepoint has rolled back its rows and deferred effects.
-    match tx.savepoint(|tx| handle(tx, context, &name, args)) {
+    match tx.savepoint(|tx| handle(tx, context, &name, args, use_user_time_zone)) {
         Ok(result) => Ok(result),
         Err(Error::RecordInvalid(errors)) if name != "dnd" => {
             Ok(CommandResult::error(sentence(errors.full_messages())))
@@ -230,8 +247,19 @@ fn date_long(time: Timestamp, zone_name: &str) -> String {
 fn past(time: Timestamp, zone_name: &str) -> CommandResult {
     CommandResult::error(format!("“{}” is in the past.", long(time, zone_name)))
 }
-fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<CommandResult> {
+fn handle(
+    tx: &mut Tx<'_>,
+    c: &Context,
+    name: &str,
+    args: &str,
+    use_user_time_zone: bool,
+) -> Result<CommandResult> {
     let zone_name = user_zone(tx, c.user_id)?;
+    let duration_zone = if use_user_time_zone {
+        &zone_name
+    } else {
+        "UTC"
+    };
     match name {
         "poll" => Ok(CommandResult::new("open_poll")),
         "huddle" => Ok(huddle_launch(c)),
@@ -310,7 +338,8 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
             )))
         }
         "dnd" => {
-            let Some((action, time)) = dnd_action(args, &zone_name, tx.now())? else {
+            let Some((action, time)) = dnd_action(args, &zone_name, duration_zone, tx.now())?
+            else {
                 return Ok(CommandResult::error(
                     "Usage: /dnd [30m|2h|until 5pm|off] — bare /dnd toggles.",
                 ));
@@ -353,7 +382,8 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
                     "Out of office is off.".into()
                 }));
             }
-            let Some((time, note)) = ooo_time_and_note(args, &zone_name, tx.now()) else {
+            let Some((time, note)) = ooo_time_and_note(args, &zone_name, duration_zone, tx.now())
+            else {
                 return Ok(CommandResult::error(
                     "Usage: /ooo <when> [note] — for example “/ooo tomorrow Back soon”, “/ooo friday”, “/ooo 2026-10-05”, or “/ooo 3d”. Bare days and dates run to the end of the day; “/ooo friday 5pm” keeps the time. “/ooo off” clears it.",
                 ));
@@ -529,6 +559,7 @@ fn duration_expiry(now: Timestamp, n: i64, unit: &str, zone_name: &str) -> Optio
 fn dnd_action(
     args: &str,
     zone: &str,
+    duration_zone: &str,
     now: Timestamp,
 ) -> Result<Option<(&'static str, Option<Timestamp>)>> {
     if present(args).is_none() {
@@ -547,7 +578,7 @@ fn dnd_action(
         return Ok(c["n"]
             .parse()
             .ok()
-            .and_then(|n| duration_expiry(now, n, &c["unit"].to_ascii_lowercase(), zone))
+            .and_then(|n| duration_expiry(now, n, &c["unit"].to_ascii_lowercase(), duration_zone))
             .map(|time| ("on", Some(time))));
     }
     let text = re(r"(?i)\Auntil\s+").replace(args, "");
@@ -558,9 +589,10 @@ fn dnd_action(
 fn ooo_time_and_note(
     args: &str,
     zone_name: &str,
+    duration_zone: &str,
     now: Timestamp,
 ) -> Option<(Timestamp, Option<String>)> {
-    if let Some(c)=re(r"(?is)\A(?P<n>[0-9]+)\s*(?P<unit>w(?:eeks?)?|m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\b(?P<rest>.*)\z").captures(args){return Some((duration_expiry(now,c["n"].parse().ok()?,&c["unit"].to_ascii_lowercase(),zone_name)?,present(strip(&c["rest"]))));}
+    if let Some(c)=re(r"(?is)\A(?P<n>[0-9]+)\s*(?P<unit>w(?:eeks?)?|m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\b(?P<rest>.*)\z").captures(args){return Some((duration_expiry(now,c["n"].parse().ok()?,&c["unit"].to_ascii_lowercase(),duration_zone)?,present(strip(&c["rest"]))));}
     ooo_bare_day(args, zone_name, now)
         .or_else(|| time_parser::split_leading_time(args, zone_name, now))
 }
