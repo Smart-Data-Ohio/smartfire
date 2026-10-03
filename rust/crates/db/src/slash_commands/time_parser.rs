@@ -278,13 +278,26 @@ fn from_match(c: &Captures<'_>, zone: &TimeZone, now: Timestamp) -> Option<Times
     }
 }
 pub fn parse(text: &str, zone_name: &str, now: Timestamp) -> Option<Timestamp> {
+    parse_checked(text, zone_name, now).ok().flatten()
+}
+/// Slash TimeParser rescues ArgumentError/TypeError, while RangeError propagates.
+pub fn parse_checked(
+    text: &str,
+    zone_name: &str,
+    now: Timestamp,
+) -> crate::Result<Option<Timestamp>> {
     let text = strip(text);
     let zone = zone(zone_name);
     if let Some(c) = patterns(false).iter().find_map(|p| p.captures(text)) {
-        from_match(&c, &zone, now)
-    } else {
-        fallback(text, &zone, now)
+        return Ok(from_match(&c, &zone, now));
     }
+    match super::calendar::parse(text, &zone, now) {
+        Err(crate::Error::Other(message)) if message.starts_with("ArgumentError:") => Ok(None),
+        result => result,
+    }
+}
+pub fn boundary_offset(zone: &TimeZone, seconds: i64, local: bool) -> Option<i64> {
+    super::calendar::boundary_offset(zone, seconds, local)
 }
 /// Builder inputs use Time.zone.parse, separately from slash-relative phrases.
 /// Ruby's invalid calendar exception differs from an unrecognized string.
@@ -303,12 +316,7 @@ pub fn parse_calendar_time(
     now: Timestamp,
 ) -> Option<Timestamp> {
     let zone = known_zone(zone_name).unwrap_or_else(|| zone(viewer_zone));
-    fallback(text, &zone, now).or_else(|| {
-        // Date._parse also recognizes a standalone month prefix: "junk" means June.
-        let c = re("(?i)(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)").captures(text)?;
-        let date = Date::new(now.jiff().to_zoned(zone.clone()).year(), month(&c[1])?, 1).ok()?;
-        local(date, 0, 0, 0, 0, &zone)
-    })
+    fallback(text, &zone, now)
 }
 
 pub fn known_calendar_zone(name: &str) -> bool {
@@ -357,65 +365,4 @@ pub(crate) fn month(name: &str) -> Option<i8> {
 // filled from now. Explicit offsets denote absolute instants; clock-only forms stay today.
 pub(crate) fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     super::calendar::parse(text, zone, now).ok().flatten()
-}
-
-pub(super) fn offset_pattern() -> &'static Regex {
-    static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,6}|[0-9]{1,2})|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
-}
-pub(super) fn parsed_offset(text: &str) -> Option<i32> {
-    let c = offset_pattern().captures(text)?;
-    let token = c["offset"].to_ascii_lowercase();
-    if let Some(number) =
-        re(r"[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,6}|[0-9]{1,2})").find(&token)
-    {
-        let number = number.as_str();
-        let fields = number[1..].split(':').collect::<Vec<_>>();
-        let (hour, minute, second) = if fields.len() > 1 {
-            (
-                fields[0].parse::<i32>().ok()?,
-                fields[1].parse::<i32>().ok()?,
-                fields
-                    .get(2)
-                    .map(|s| s.parse::<i32>())
-                    .transpose()
-                    .ok()?
-                    .unwrap_or(0),
-            )
-        } else {
-            let digits = &number[1..];
-            if digits.len() <= 2 {
-                (digits.parse::<i32>().ok()?, 0, 0)
-            } else if digits.len() >= 5 {
-                (
-                    digits[..digits.len() - 4].parse::<i32>().ok()?,
-                    digits[digits.len() - 4..digits.len() - 2]
-                        .parse::<i32>()
-                        .ok()?,
-                    digits[digits.len() - 2..].parse::<i32>().ok()?,
-                )
-            } else {
-                (
-                    digits[..digits.len() - 2].parse::<i32>().ok()?,
-                    digits[digits.len() - 2..].parse::<i32>().ok()?,
-                    0,
-                )
-            }
-        };
-        // Ruby date_core's zone_to_diff leaves invalid civil offset fields nil;
-        // TimeZone#parse then interprets the clock in the viewer's zone.
-        if hour > 23 || minute > 59 || second > 59 {
-            return None;
-        }
-        return Some(
-            (hour * 3600 + minute * 60 + second) * if number.starts_with('-') { -1 } else { 1 },
-        );
-    }
-    static OFFSETS: OnceLock<std::collections::HashMap<String, i32>> = OnceLock::new();
-    OFFSETS
-        .get_or_init(|| {
-            serde_json::from_str(include_str!("../tests/ws8_slash_offsets.json")).unwrap()
-        })
-        .get(&token.split_whitespace().collect::<Vec<_>>().join(" "))
-        .copied()
 }

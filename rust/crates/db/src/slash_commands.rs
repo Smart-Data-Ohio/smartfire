@@ -1,6 +1,6 @@
 //! Chat commands from app/services/slash_commands, including registered agent invocations.
 //! Call in the request's write transaction; the HTTP membership boundary belongs to WS8b.
-use crate::broadcasts::{self, Broadcast, Partial, Streamable, TurboAction, TurboStream};
+use crate::broadcasts::{self, Broadcast, Partial};
 use crate::{
     ChannelThread, Error, Errors, Event, Membership, Message, NewMessage, Result, Room, SavedItem,
     Timestamp, Tx,
@@ -8,12 +8,12 @@ use crate::{
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-pub mod time_parser;
 mod calendar;
-pub(crate) mod user_settings;
+pub mod time_parser;
 #[cfg(test)]
 #[path = "tests/time_zone_writer_test.rs"]
 mod time_zone_writer_tests;
+pub(crate) mod user_settings;
 use time_parser::{WEEKDAYS, date_end_of_day, end_of_day, present, re, strip, zone};
 
 pub const SHRUG: &str = "¯\\_(ツ)_/¯";
@@ -152,7 +152,10 @@ pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<Comman
     let name = c["name"].to_ascii_lowercase();
     let args = strip(c.name("args").map(|m| m.as_str()).unwrap_or(""));
     let Some(command) = lookup(&name) else {
-        if let Some(result)=crate::models::agent_slash_command::invoke(tx,context,&name,args)? {return Ok(result)};
+        if let Some(result) = crate::models::agent_slash_command::invoke(tx, context, &name, args)?
+        {
+            return Ok(result);
+        };
         let mut names = available(context.thread_id.is_some())
             .iter()
             .map(|c| format!("/{}", c.name))
@@ -307,7 +310,7 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
             )))
         }
         "dnd" => {
-            let Some((action, time)) = dnd_action(args, &zone_name, tx.now()) else {
+            let Some((action, time)) = dnd_action(args, &zone_name, tx.now())? else {
                 return Ok(CommandResult::error(
                     "Usage: /dnd [30m|2h|until 5pm|off] — bare /dnd toggles.",
                 ));
@@ -511,32 +514,34 @@ fn elapsed(now: Timestamp, n: i64, unit: &str) -> Option<Timestamp> {
             .ok()?,
     ))
 }
-fn dnd_action(args: &str, zone: &str, now: Timestamp) -> Option<(&'static str, Option<Timestamp>)> {
+fn dnd_action(
+    args: &str,
+    zone: &str,
+    now: Timestamp,
+) -> Result<Option<(&'static str, Option<Timestamp>)>> {
     if present(args).is_none() {
-        return Some(("toggle", None));
+        return Ok(Some(("toggle", None)));
     }
     if args.eq_ignore_ascii_case("off") {
-        return Some(("off", None));
+        return Ok(Some(("off", None)));
     }
     if args.eq_ignore_ascii_case("on") {
-        return Some(("on", None));
+        return Ok(Some(("on", None)));
     }
     if let Some(c) =
         re(r"(?i)\A(?P<n>[0-9]+)\s*(?P<unit>m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\z")
             .captures(args)
     {
-        return Some((
-            "on",
-            Some(elapsed(
-                now,
-                c["n"].parse().ok()?,
-                &c["unit"].to_ascii_lowercase(),
-            )?),
-        ));
+        return Ok(c["n"]
+            .parse()
+            .ok()
+            .and_then(|n| elapsed(now, n, &c["unit"].to_ascii_lowercase()))
+            .map(|time| ("on", Some(time))));
     }
     let text = re(r"(?i)\Auntil\s+").replace(args, "");
-    let time = time_parser::parse(&text, zone, now)?;
-    (time > now).then_some(("on", Some(time)))
+    Ok(time_parser::parse_checked(&text, zone, now)?
+        .filter(|time| *time > now)
+        .map(|time| ("on", Some(time))))
 }
 fn ooo_time_and_note(
     args: &str,
@@ -654,25 +659,8 @@ fn claim_ooo(tx: &Tx<'_>, user: i64, active: bool) -> Result<()> {
     Ok(())
 }
 fn broadcast_ooo(tx: &mut Tx<'_>, user: i64) -> Result<()> {
-    for (name, target, partial) in [
-        (
-            "status",
-            format!("status_badge_user_{user}"),
-            Partial::UserStatus { user_id: user },
-        ),
-        (
-            "ooo_notice",
-            format!("ooo_notice_user_{user}"),
-            Partial::OooNotice { user_id: user },
-        ),
-    ] {
-        tx.emit_after_commit(Event::broadcast(&Broadcast::Turbo(TurboStream {
-            streamables: vec![Streamable::User(user), Streamable::Name(name.into())],
-            action: TurboAction::Update,
-            target,
-            partial: Some(partial),
-            maintain_scroll: false,
-        })));
-    }
-    Ok(())
+    let settings = crate::UserStatusSettings::for_ids(tx.conn(), &[user])?
+        .remove(&user)
+        .ok_or(Error::RecordNotFound("User"))?;
+    settings.announce_ooo(tx)
 }

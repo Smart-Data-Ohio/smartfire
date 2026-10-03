@@ -106,18 +106,23 @@ pub async fn create(c: &mut Ctx) -> Result {
     let zone = features::user_zone(c).await?;
     let remind_at = match raw {
         None => None,
-        Some(raw) => match features::parse_time(&features::param_string(raw), &zone, c.now()) {
-            Ok(Some(time)) => Some(time),
-            _ => {
-                return invalid(
-                    c,
-                    &serde_json::json!({"errors":{"remind_at":["is invalid"]}}),
-                    "Reminder time is invalid",
-                    true,
-                )
-                .await;
+        Some(raw) => {
+            match features::parse_time_checked(&features::param_string(raw), &zone, c.now()) {
+                Ok(Some(time)) => Some(time),
+                Err(error) if !matches!(&error, campfire_db::Error::Other(message) if message.starts_with("ArgumentError:")) => {
+                    return Err(page::db_error(error));
+                }
+                _ => {
+                    return invalid(
+                        c,
+                        &serde_json::json!({"errors":{"remind_at":["is invalid"]}}),
+                        "Reminder time is invalid",
+                        true,
+                    )
+                    .await;
+                }
             }
-        },
+        }
     };
     let user_id = require_current_user(c)?.id;
     let saved = c

@@ -3240,9 +3240,162 @@
         "record_type": "Message",
         "updated_at": "2026-03-02 16:00:00"
       }
+    ],
+    "message_references": [
+      {
+        "id": 2,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962058,
+        "referenced_message_id": 309456473,
+        "updated_at": "2026-03-02 16:00:00"
+      }
     ]
   },
   "steps": [
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-05 2147483648:00"
+        }
+      },
+      "status": 500,
+      "content_type": "application/json; charset=UTF-8",
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "2026-03-05 2147483648:00",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 500,
+      "content_type": "application/json; charset=UTF-8",
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "2026-03-05 2147483648:00"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-05 14:60"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "2026-03-05 14:60",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"min out of range\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "2026-03-05 14:60"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "2026-03-05 14:30 +2500"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "2026-03-05 14:30 +2500",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"utc_offset out of range\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "2026-03-05 14:30 +2500"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/saved",
+      "params": {
+        "message_id": 935962058,
+        "saved_item": {
+          "remind_at": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"errors\":{\"remind_at\":[\"is invalid\"]}}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/scheduled_messages",
+      "params": {
+        "scheduled_message": {
+          "send_at": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "markdown_source": "exceptional scheduled"
+        }
+      },
+      "status": 422,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"error\":\"string length (129) exceeds the limit 128\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
     {
       "method": "POST",
       "path": "/saved",
@@ -3702,6 +3855,62 @@
       "status": 500,
       "content_type": "application/json; charset=UTF-8",
       "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd until 2026-03-05 2147483648:00"
+      },
+      "status": 500,
+      "content_type": "application/json; charset=UTF-8",
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd until 2026-03-05 14:60"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"error\",\"message\":\"Usage: /dnd [30m|2h|until 5pm|off] — bare /dnd toggles.\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?id[]=2",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?id[x]=2",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?room_id[]=699448326",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "GET",
+      "path": "/rooms/699448326/message_links/2?room_id[x]=699448326",
+      "accept": "text/html",
+      "marker": null,
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
     }
   ]
 }

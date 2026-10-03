@@ -6,7 +6,7 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 #[derive(Debug, Default)]
-pub(super) struct Parts {
+pub struct Parts {
     pub year: Option<I512>,
     pub mon: Option<I512>,
     pub mday: Option<I512>,
@@ -130,7 +130,7 @@ fn s3e(
     p.present = true;
 }
 
-pub(super) fn parse(input: &str) -> Option<Parts> {
+pub fn parse(input: &str) -> Option<Parts> {
     // date_core.c rb_date_s__parse's default limit is RSTRING_LEN, not chars.
     if input.len() > 128 {
         return None;

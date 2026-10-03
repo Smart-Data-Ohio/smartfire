@@ -22,7 +22,7 @@ request=ActionDispatch::Request.new(Rails.application.env_config.merge('HTTP_HOS
 request.cookie_jar.signed[:session_token]=user.sessions.where.not(two_factor_verified_at:nil).first!.token
 headers={'Cookie'=>"session_token=#{Rack::Utils.escape(request.cookie_jar[:session_token])}"}
 reset=MessagingOracleDatabase.scenarios(ARGV.fetch(0));steps=[]
-values=[[],['2026-03-05 14:30'],['2026-03-05 14:30','junk'],{}, {'at'=>'2026-03-05 14:30'},nil,false,true,17]
+values=['2026-03-05 2147483648:00','2026-03-05 14:60','2026-03-05 14:30 +2500','x'*129,[],['2026-03-05 14:30'],['2026-03-05 14:30','junk'],{}, {'at'=>'2026-03-05 14:30'},nil,false,true,17]
 values.each do |value|
  [[:post,'/saved',{message_id:message.id,saved_item:{remind_at:value}}],[:post,"/rooms/#{room.id}/scheduled_messages",{scheduled_message:{send_at:value,markdown_source:'exceptional scheduled'}}],[:post,"/rooms/#{room.id}/slash_commands",{text:value}]].each do |method,path,params|
   reset.call do
@@ -52,6 +52,21 @@ end
    body=body[start...finish]
   end;steps << {method:'GET',path:,accept:,marker:,status:browser.response.status,content_type:browser.response.headers['Content-Type'],body:}
  end
+end
+['until 2026-03-05 2147483648:00','until 2026-03-05 14:60'].each do |input|
+ reset.call do
+  browser=ActionDispatch::Integration::Session.new(Rails.application);browser.host! 'campfire.test'
+  params={text:"/dnd #{input}"};path="/rooms/#{room.id}/slash_commands"
+  browser.post(path,params:,headers:headers.dup,as: :json)
+  steps << {method:'POST',path:,params:,status:browser.response.status,content_type:browser.response.headers['Content-Type'],body:browser.response.body}
+ end
+end
+source=Room.find(654632876).messages.first!
+ref=MessageReference.create!(message:,referenced_message:source)
+rows['message_references']=ActiveRecord::Base.connection.select_all("SELECT * FROM message_references WHERE id=#{ref.id}").to_a
+["/rooms/#{room.id}/message_links/#{ref.id}?id[]=#{ref.id}","/rooms/#{room.id}/message_links/#{ref.id}?id[x]=#{ref.id}","/rooms/#{room.id}/message_links/#{ref.id}?room_id[]=#{room.id}","/rooms/#{room.id}/message_links/#{ref.id}?room_id[x]=#{room.id}"].each do |path|
+ browser=ActionDispatch::Integration::Session.new(Rails.application);browser.host! 'campfire.test';browser.get(path,headers:headers.merge('Accept'=>'text/html'))
+ steps << {method:'GET',path:,accept:'text/html',marker:nil,status:browser.response.status,content_type:browser.response.headers['Content-Type'],body:browser.response.body}
 end
 File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',cases:,rows:,steps:)+"\n")
 puts "WS8bm2 exceptional inputs Rails: #{cases.size} exact calendar/slash result pairs; #{steps.size} structured HTTP status/type/body comparisons"

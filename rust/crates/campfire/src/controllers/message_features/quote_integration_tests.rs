@@ -125,13 +125,16 @@ async fn preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms(
 }
 
 pub(super) async fn stream(app:&TestApp) -> (crate::channels::tests::support::Client,tokio::task::JoinHandle<()>) {
+    stream_with_cookie(app, &david_cookie()).await
+}
+pub(super) async fn stream_with_cookie(app: &TestApp, cookie: &str) -> (crate::channels::tests::support::Client, tokio::task::JoinHandle<()>) {
     use crate::channels::tests::support::{Client,bind_listener,identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     let listener=bind_listener().await; let address=listener.local_addr().unwrap();
     let router=app.booted.router.clone();
     let server=tokio::spawn(async move { axum::serve(listener,router).await.unwrap() });
     let mut ws=format!("ws://{address}/cable").into_client_request().unwrap();
-    for (key,value) in [("host","campfire.test"),("origin","http://campfire.test"),("cookie",david_cookie().as_str())] {
+    for (key,value) in [("host","campfire.test"),("origin","http://campfire.test"),("cookie",cookie)] {
         ws.headers_mut().insert(key,value.parse().unwrap());
     }
     let (socket,_)=tokio_tungstenite::connect_async(ws).await.unwrap();

@@ -152,8 +152,11 @@ pub(crate) fn parse_time(
     zone: &campfire_views::time::Zone,
     now: jiff::Timestamp,
 ) -> Result<Option<Timestamp>> {
+    parse_time_checked(raw, zone, now).map_err(db_error)
+}
+
+pub(crate) fn parse_time_checked(raw: &str, zone: &campfire_views::time::Zone, now: jiff::Timestamp) -> campfire_db::Result<Option<Timestamp>> {
     campfire_db::slash_commands::time_parser::parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))
-        .map_err(db_error)
 }
 
 pub(crate) fn poll_view(
@@ -244,3 +247,10 @@ mod older_owner_tests;
 mod older_calendar_tests;
 #[cfg(test)]
 mod older_embed_job_tests;
+
+#[cfg(test)]
+mod older_calendar_execution_tests;
+#[cfg(test)]
+mod older_embed_children_tests;
+#[cfg(test)]
+mod older_embed_failure_tests;
