@@ -15,7 +15,7 @@ const valid={ready:true,applied:1};
 test('every registered mutant names an existing intended assertion',()=>{
   let count=0;
   for(const name of mutationNames) for(const variant of mutationVariants(name)) {
-    for(const target of mutationTarget(name,variant)) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
+    for(const spec of mutationTarget(name,variant)) for(const target of [spec,...(spec.phase?[spec.phase]:[])]) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
     count++;
   }
   assert.equal(count,185);

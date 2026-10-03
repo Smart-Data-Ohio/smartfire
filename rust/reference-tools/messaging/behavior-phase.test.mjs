@@ -93,3 +93,8 @@ check(submitted,submittedVariant,{...submittedProbe,observed:[{messageText:'A di
   'Correct phase with unrelated hidden bold body is INVALID','INVALID',[
     bodyWait,frame('behavior.mjs',"await text(page,'First message stays exact.')"),
   ]);
+
+check(menu,'default',menuProbe,'Initial call but failure in the visible right-click lookup before acting is INVALID','INVALID',[
+  frame('behavior-actions.mjs',"await actOnVisible(row.locator('[data-reply-target=\"body\"]')",'export async function openMenu'),
+  frame('behavior-actions.mjs','await openMenu(page)',"if(caseName.startsWith('opens message actions'))"),
+]);

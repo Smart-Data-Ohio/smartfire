@@ -71,7 +71,10 @@ add(['reply and thread buttons drive the composer and the thread panel'],'toolba
 add(['the more button opens the shared menu for its message'],'actions',"page.locator('#message-actions-menu:not([hidden])')");
 // onContextMenu is used only by the initial right click. Keyboard and long
 // press call the same menu assertion through unaffected handlers.
-add(['opens message actions from context menu and keyboard, and cancels a moving long press'],'actions','await openMenu(page)');
+D.set('opens message actions from context menu and keyboard, and cancels a moving long press',[{
+  ...target('actions','await assertMenuOpen(page)'),
+  phase:target('actions','await openMenu(page)'),
+}]);
 add(['the picker shows category tabs and switches between them'],'toolbar',"await tab('people')");
 add(['the picker loads its emoji data only on first open'],'toolbar',"assert.equal((await resources()).some(url=>url.endsWith('.json')&&url.includes('emoji')),false)");
 add(['the picker Custom tab reacts with a workspace icon'],'toolbar',"option('Acme Corp').locator('img')");
@@ -218,7 +221,7 @@ export function mutationTarget(caseName,variant) {
 }
 export function rejectionEvidence(caseName,variant,probe,error) {
   const expected=mutationTarget(caseName,variant),frames=assertionFrames(error);
-  const matched=expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor)));
+  const matched=expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor))&&(!target.phase||frames.some(frame=>frame.module===target.phase.module&&frame.source.includes(target.phase.anchor))));
   const reasons=[];
   if(!probe.ready) reasons.push('startup failed');
   if(!probe.applied) reasons.push('mutation not served');
