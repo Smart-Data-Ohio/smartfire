@@ -1374,6 +1374,90 @@
           "rust": "ws11_work_payload_case_board_tags_run_and_links"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/campfire/src/concerns/bot_model_cases.rs",
+      "cases": [
+        {
+          "rails": "reply token authenticates its bot for its room only",
+          "rust": "ws11_next_bot_reply_room_binding_and_malformed_tokens"
+        },
+        {
+          "rails": "reply token expires",
+          "rust": "ws11_next_bot_reply_expiry"
+        },
+        {
+          "rails": "reply token is refused once the bot leaves or deactivates",
+          "rust": "ws11_next_bot_reply_membership_and_deactivation"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/delivery_job_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next_cases_test.rs",
+      "cases": [
+        {
+          "rails": "self-assigned work does not raise the agent's own hop count",
+          "rust": "ws11_next_delivery_self_assigned_work_does_not_raise_hop"
+        },
+        {
+          "rails": "rate check and insert run inside the agent lock",
+          "rust": "ws11_next_delivery_rate_check_and_insert_share_writer_lock"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_kill_switch_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next_cases_test.rs",
+      "cases": [
+        {
+          "rails": "kill switch leaves owned work assigned without reassigning it",
+          "rust": "ws11_next_kill_switch_preserves_owned_work_and_history"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_assignment_cases_test.rs",
+      "cases": [
+        {
+          "rails": "assignment writes one work_assigned row in the same transaction as the work event",
+          "rust": "ws11_next_assignment_records_ledger_and_history"
+        },
+        {
+          "rails": "unassignment writes one work_unassigned row",
+          "rust": "ws11_next_assignment_unassignment_records_one_row"
+        },
+        {
+          "rails": "unassignment after the agent left the room writes the ledger row but enqueues no webhook",
+          "rust": "ws11_next_assignment_departed_owner_has_no_webhook"
+        },
+        {
+          "rails": "assignment webhooks are enqueued after the outermost transaction commits",
+          "rust": "ws11_next_assignment_webhook_waits_for_outer_commit"
+        },
+        {
+          "rails": "reassignment to a human writes work_unassigned and no work_assigned",
+          "rust": "ws11_next_assignment_to_human_unassigns_agent"
+        },
+        {
+          "rails": "reassignment between agents notifies both",
+          "rust": "ws11_next_assignment_between_agents_notifies_both"
+        },
+        {
+          "rails": "status-only changes and human-to-human assignment write no agent rows",
+          "rust": "ws11_next_assignment_status_and_human_changes_emit_no_agent_rows"
+        },
+        {
+          "rails": "assignment rows roll back when the work event fails",
+          "rust": "ws11_next_assignment_history_failure_rolls_back_ledger"
+        },
+        {
+          "rails": "the work event rolls back when the assignment row fails",
+          "rust": "ws11_next_assignment_ledger_failure_rolls_back_history"
+        }
+      ]
     }
   ],
   "boundary_deferred": {

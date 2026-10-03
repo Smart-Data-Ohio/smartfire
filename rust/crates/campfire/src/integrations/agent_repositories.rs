@@ -265,22 +265,6 @@ fn requests(
     threads: &[i64],
     surface: Surface,
 ) -> Result<Vec<(RepositoryEntry, RepositoryRequest)>> {
-    let Some(user) = Agent::find(conn, agent)?.and_then(|a| a.owner_id) else {
-        return Ok(vec![]);
-    };
-    let account = conn
-        .query_row(
-            "SELECT id FROM github_connected_accounts WHERE user_id=?",
-            [user],
-            |r| r.get::<_, i64>(0),
-        )
-        .optional()?;
-    let Some(account) = account else {
-        return Ok(vec![]);
-    };
-    if !current(conn, agent, user, account)? {
-        return Ok(vec![]);
-    }
     if threads.is_empty() {
         return Ok(vec![]);
     }
@@ -316,6 +300,20 @@ fn requests(
             messages.entry(thread).or_insert((owner, repo));
         }
     }
+    // Plain/public work needs no repository identity. Keep owner/account facts
+    // current for actual private links, after loading their bounded candidate set.
+    if work.is_empty() && messages.is_empty() {
+        return Ok(vec![]);
+    }
+    let Some(user) = Agent::find(conn, agent)?.and_then(|a| a.owner_id) else {
+        return Ok(vec![]);
+    };
+    let account = conn.query_row(
+        "SELECT id FROM github_connected_accounts WHERE user_id=?",
+        [user], |r| r.get::<_, i64>(0),
+    ).optional()?;
+    let Some(account) = account else { return Ok(vec![]); };
+    if !current(conn, agent, user, account)? { return Ok(vec![]); }
     let mut result = vec![];
     let mut seen = HashSet::new();
     for &thread in threads {
