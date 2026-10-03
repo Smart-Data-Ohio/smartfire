@@ -10,8 +10,7 @@ fn oracle()->Value {serde_json::from_str(include_str!("../../../../../vectors/me
 #[tokio::test]
 async fn root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones() {
     let clock=Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let mut app=TestApp::boot_with_test_clock(clock.clone()).await.unwrap();
-    app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    let app=TestApp::boot_with_test_clock(clock.clone()).await.unwrap().without_job_runner().await;
     let ids=app.db().write(|tx| {
         let mut ids=Vec::new();
         for (index,input) in oracle()["inputs"].as_array().unwrap().iter().enumerate() {
@@ -57,7 +56,7 @@ async fn root_edit_markers_match_rails_for_noops_attachments_formatting_reaction
 async fn page_validators_change_for_off_page_replies_and_provider_fetches_without_message_touches() {
     let oracle:Value=serde_json::from_str(include_str!("../../../../../vectors/messaging/validator-declarations.json")).unwrap();
     let clock=Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let mut app=TestApp::boot_with_test_clock(clock.clone()).await.unwrap();app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    let app=TestApp::boot_with_test_clock(clock.clone()).await.unwrap().without_job_runner().await;
     let (source,card)=app.db().write(|tx| {
         let source=Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:DAVID,markdown_source:Some("Off-page source".into()),client_message_id:Some("validator-source".into()),..Default::default()})?;
         for i in 0..50 {Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:DAVID,markdown_source:Some(format!("Filler {i}")),client_message_id:Some(format!("validator-filler-{i}")),..Default::default()})?;}
@@ -86,7 +85,7 @@ async fn page_validators_change_for_off_page_replies_and_provider_fetches_withou
 #[tokio::test]
 async fn legacy_v2_fragment_and_page_validators_cannot_serve_the_vulnerable_autolink_render() {
     let oracle:Value=serde_json::from_str(include_str!("../../../../../vectors/messaging/legacy-cache.json")).unwrap();
-    let mut app=TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    let app=TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
     let payload=oracle["payload"].as_str().unwrap().to_owned();
     let id=app.db().write(move|tx|Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:DAVID,body:Some(payload),client_message_id:Some("legacy-cached-autolink".into()),..Default::default()}).map(|m|m.id)).await.unwrap();
     let runtime=app.booted.app.clone();let old=oracle["old_html"].as_str().unwrap().to_owned();let expected=oracle["html"].as_str().unwrap().to_owned();
