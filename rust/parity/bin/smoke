@@ -1,0 +1,237 @@
+#!/usr/bin/env bash
+# Human-reviewed Rails/Rust cutover captures; no pixel comparisons or gates.
+set -euo pipefail
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+PARITY=$ROOT/parity
+CHECKOUT=$(cd "$ROOT/.." && pwd)
+PIN=$(cat "$PARITY/reference.sha")
+SOURCE_SEEDS=${PARITY_SEED_DIR:-$PARITY/.seed}
+SEED=default
+PORTS=49701,49702
+OUT=$PARITY/smoke/shots
+SKIP_BUILD=""
+ONLY=""
+
+usage() {
+  cat <<'HELP'
+Usage: rust/parity/bin/smoke [--skip-build] [--seed NAME] [--ports RAILS,RUST]
+                             [--out ABSOLUTE_DIR] [--only PAGE_IDS]
+
+Default: prepare pinned Rails, build both images and the selected seed, validate
+the seed with Rails, boot fresh copies, capture desktop/phone, stop everything.
+--skip-build reuses existing images and PARITY_SEED_DIR (default parity/.seed).
+--only selects comma-separated ids in parity/smoke/pages.ts for investigation.
+
+Overrides: PARITY_IMAGE (default ws19b-ci-reference), PARITY_CANDIDATE_IMAGE,
+PARITY_CANDIDATE_APP_IMAGE, SMOKE_PLAYWRIGHT_IMAGE, PARITY_NAMESPACE,
+PARITY_OWNER, PARITY_SCRATCH, PARITY_CPUS. Namespace defaults to a unique name.
+All apps are local, frozen at the seed clock, with an internal Docker network;
+Chromium has --network none and reaches only loopback through the harness.
+Output: PNGs, per-cell JSON/HTML, manifest.json, CONTACT.md, run.json and logs.
+REPORT.md is never modified. Visual verdicts belong to the reviewer.
+HELP
+}
+die() { echo "smoke: $*" >&2; exit 1; }
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skip-build) SKIP_BUILD=1; shift ;;
+    --seed) SEED=${2:?}; shift 2 ;;
+    --ports) PORTS=${2:?}; shift 2 ;;
+    --out) OUT=${2:?}; shift 2 ;;
+    --only) ONLY=${2:?}; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) die "unknown option $1 (see --help)" ;;
+  esac
+done
+[[ $PIN =~ ^[0-9a-f]{40}$ ]] || die "invalid reference.sha"
+[[ $SEED =~ ^[a-zA-Z0-9_]+$ ]] || die "invalid seed name"
+[[ $PORTS =~ ^([0-9]+),([0-9]+)$ ]] || die "--ports needs RAILS,RUST"
+RAILS_PORT=${BASH_REMATCH[1]}
+RUST_PORT=${BASH_REMATCH[2]}
+[ "$RAILS_PORT" != "$RUST_PORT" ] || die "ports must differ"
+[[ $OUT = /* ]] || die "--out must be absolute"
+OUT=$(realpath -m "$OUT")
+HUDDLE_CONFIG=seed-environment
+APP_ENV=()
+if [ -z "$ONLY" ] || [[ ,$ONLY, = *,huddle-prejoin,* ]]; then
+  # Enable the existing pre-join UI with fixture endpoints, while capture.ts
+  # denies all real media. These are the live_rooms seed's synthetic settings.
+  HUDDLE_CONFIG=synthetic-offline
+  APP_ENV=(-e LIVEKIT_URL=ws://gateway.parity.invalid -e LIVEKIT_INTERNAL_URL=http://livekit.parity.invalid
+    -e LIVEKIT_API_KEY=parity-offline-key -e LIVEKIT_API_SECRET=parity-offline-secret-at-least-32-characters
+    -e LIVEKIT_GATEWAY_SECRET=parity-offline-gateway-secret)
+fi
+export PARITY_RUNTIME=docker
+export PARITY_NAMESPACE=${PARITY_NAMESPACE:-cutover-smoke-$(date -u +%Y%m%d%H%M%S)-$$}
+export PARITY_OWNER=${PARITY_OWNER:-$PARITY_NAMESPACE}
+export PARITY_NETWORK=$PARITY_NAMESPACE-parity-internal
+export PARITY_IMAGE=${PARITY_IMAGE:-ws19b-ci-reference}
+export PARITY_REFERENCE_APP_IMAGE=${PARITY_REFERENCE_APP_IMAGE:-ws19b-ci-reference:app}
+export PARITY_REFERENCE_REVISION=$PIN
+export PARITY_CANDIDATE_IMAGE=${PARITY_CANDIDATE_IMAGE:-$PARITY_NAMESPACE-candidate}
+export PARITY_CANDIDATE_APP_IMAGE=${PARITY_CANDIDATE_APP_IMAGE:-$PARITY_NAMESPACE-rust:app}
+export CAMPFIRE_REFERENCE=$PARITY/.ci/reference
+[[ $PARITY_NAMESPACE =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]+$ ]] || die "invalid namespace"
+docker info >/dev/null 2>&1 || die "Docker is required for canonical smoke captures"
+python3 - "$RAILS_PORT" "$RUST_PORT" <<'PY'
+import socket, sys
+held = []
+for value in sys.argv[1:]:
+    port = int(value)
+    if not 1024 <= port <= 65535:
+        raise SystemExit(f"smoke: invalid port {port}")
+    sock = socket.socket()
+    try:
+        sock.bind(("127.0.0.1", port))
+    except OSError as error:
+        raise SystemExit(f"smoke: port {port} is occupied: {error}")
+    held.append(sock)
+PY
+while IFS= read -r name; do
+  [[ $name != "$PARITY_NAMESPACE-"* ]] || die "namespace already has container $name"
+done < <(docker ps -a --format '{{.Names}}')
+if docker network inspect "$PARITY_NETWORK" >/dev/null 2>&1; then die "network $PARITY_NETWORK already exists"; fi
+
+SCRATCH=${PARITY_SCRATCH:-/home/riels/.cache/rust-port/cutover-smoke}
+mkdir -p "$SCRATCH" "$OUT"
+RUN_DIR=$(mktemp -d "$SCRATCH/run.XXXXXX")
+export PARITY_SEED_DIR=$RUN_DIR/seeds
+mkdir -p "$PARITY_SEED_DIR"
+REFERENCE_STARTED="" CANDIDATE_STARTED="" NETWORK_STARTED=""
+FORWARD_NAME=$PARITY_NAMESPACE-smoke-forward
+CAPTURE_NAME=$PARITY_NAMESPACE-smoke-capture
+FORWARD_STARTED="" CAPTURE_STARTED="" TASK_PID=""
+# The trap invokes this function indirectly.
+# shellcheck disable=SC2317
+cleanup() {
+  local status=$? failed=0 pidfile name
+  trap - EXIT INT TERM
+  if [ -n "$TASK_PID" ]; then kill -TERM -- "-$TASK_PID" 2>/dev/null || true; wait "$TASK_PID" 2>/dev/null || true; fi
+  local forward_pids=()
+  for pidfile in "$PARITY_SEED_DIR/.instances/$RAILS_PORT/forward.pid" "$PARITY_SEED_DIR/.candidates/$RUST_PORT/forward.pid"; do
+    [ ! -f "$pidfile" ] || forward_pids+=("$(cat "$pidfile")")
+  done
+  # Names were proved absent before this invocation. Never stop unrelated resources.
+  if [ -n "$CAPTURE_STARTED" ]; then docker rm -f "$CAPTURE_NAME" >/dev/null 2>&1 || true; fi
+  if [ -n "$FORWARD_STARTED" ]; then docker rm -f "$FORWARD_NAME" >/dev/null 2>&1 || true; fi
+  if [ -n "$CANDIDATE_STARTED" ]; then "$PARITY/bin/candidate" down --port "$RUST_PORT" >/dev/null 2>&1 || true; fi
+  if [ -n "$REFERENCE_STARTED" ]; then "$PARITY/bin/reference" down --port "$RAILS_PORT" >/dev/null 2>&1 || true; fi
+  # Seed building/validation uses short-lived --rm containers in the same namespace.
+  while IFS= read -r name; do
+    if [[ $name = "$PARITY_NAMESPACE-"* ]]; then docker rm -f "$name" >/dev/null 2>&1 || failed=1; fi
+  done < <(docker ps -a --format '{{.Names}}')
+  if [ -n "$NETWORK_STARTED" ]; then docker network rm "$PARITY_NETWORK" >/dev/null 2>&1 || failed=1; fi
+  {
+    for name in "$CAPTURE_NAME" "$FORWARD_NAME" "$PARITY_NAMESPACE-candidate-$RUST_PORT" "$PARITY_NAMESPACE-reference-$RAILS_PORT"; do
+      if docker inspect "$name" >/dev/null 2>&1; then echo "STILL PRESENT: $name"; failed=1
+      else echo "Gone: $name"; fi
+    done
+    if docker network inspect "$PARITY_NETWORK" >/dev/null 2>&1; then echo "STILL PRESENT: $PARITY_NETWORK"; failed=1
+    else echo "Gone: $PARITY_NETWORK"; fi
+    for pid in "${forward_pids[@]}"; do
+      for _ in $(seq 1 20); do
+        if [ ! -r "/proc/$pid/cmdline" ] || ! tr '\0' ' ' <"/proc/$pid/cmdline" | grep -Fq "$PARITY/bin/forward-port "; then break; fi
+        sleep 0.1
+      done
+      if [ -r "/proc/$pid/cmdline" ] && tr '\0' ' ' <"/proc/$pid/cmdline" | grep -Fq "$PARITY/bin/forward-port "; then echo "STILL PRESENT: app forwarder PID $pid"; failed=1
+      else echo "Gone: app forwarder PID $pid"; fi
+    done
+    echo "Gone: browser processes (capture container $CAPTURE_NAME is absent)."
+  } >"$OUT/cleanup.log"
+  rm -rf "$RUN_DIR"
+  cat "$OUT/cleanup.log"
+  [ "$failed" -eq 0 ] || status=1
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+run_stage() {
+  local log=$1 status=0; shift
+  setsid "$@" >"$log" 2>&1 &
+  TASK_PID=$!
+  wait "$TASK_PID" || status=$?
+  TASK_PID=""
+  return "$status"
+}
+
+if [ -z "$SKIP_BUILD" ]; then
+  run_stage "$OUT/prepare.log" "$PARITY/bin/ci-seed" prepare
+  run_stage "$OUT/reference-build.log" "$PARITY/bin/reference" build
+  # Candidate assets come from the current checkout; reference Rails stays pinned.
+  run_stage "$OUT/candidate-build.log" env CAMPFIRE_REFERENCE="$CHECKOUT" "$PARITY/bin/candidate" build
+  run_stage "$OUT/seed-build.log" "$PARITY/bin/seed" build "$SEED"
+else
+  [ -d "$CAMPFIRE_REFERENCE" ] || die "missing pinned archive: run parity/bin/ci-seed prepare first"
+  [ -s "$SOURCE_SEEDS/$SEED/db/production.sqlite3" ] || die "seed $SEED is not built in $SOURCE_SEEDS"
+  mkdir -p "$PARITY_SEED_DIR/$SEED"
+  cp -a --reflink=auto "$SOURCE_SEEDS/$SEED/." "$PARITY_SEED_DIR/$SEED/"
+fi
+REFERENCE_REVISION=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$PARITY_IMAGE" | sed -n 's/^GIT_REVISION=//p')
+[ "$REFERENCE_REVISION" = "$PIN" ] || die "reference image is $REFERENCE_REVISION; reference.sha is $PIN"
+docker image inspect "$PARITY_CANDIDATE_IMAGE" >"$OUT/candidate-image.json"
+docker image inspect "$PARITY_IMAGE" >"$OUT/reference-image.json"
+CLOCK=$(python3 - "$PARITY_SEED_DIR/$SEED/labels.json" <<'PY'
+import json, sys
+labels = json.load(open(sys.argv[1]))
+assert labels.get("session_cookies.david"), "seed needs a verified David session"
+print(labels["clock.now"])
+PY
+)
+run_stage "$OUT/seed-validation.log" "$PARITY/bin/reference" runner --seed "$SEED" --time "$CLOCK" --freeze \
+  "$ROOT/reference-tools/campfire/verify_parity_seed.rb" "$SEED"
+
+PLAYWRIGHT_HASH=$(cat "$PARITY/Dockerfile.playwright" "$PARITY/package-lock.json" | sha256sum | cut -c1-12)
+PLAYWRIGHT_IMAGE=${SMOKE_PLAYWRIGHT_IMAGE:-campfire-parity-playwright:$PLAYWRIGHT_HASH}
+if ! docker image inspect "$PLAYWRIGHT_IMAGE" >/dev/null 2>&1; then
+  [ -z "$SKIP_BUILD" ] || die "missing Playwright image $PLAYWRIGHT_IMAGE"
+  run_stage "$OUT/playwright-build.log" docker build -f "$PARITY/Dockerfile.playwright" -t "$PLAYWRIGHT_IMAGE" "$PARITY"
+fi
+python3 - "$OUT" "$PIN" "$SEED" "$PARITY_SEED_DIR/$SEED" "$PARITY_NAMESPACE" "$PORTS" "$PLAYWRIGHT_IMAGE" "$CHECKOUT" "$HUDDLE_CONFIG" <<'PY'
+import hashlib, json, pathlib, subprocess, sys
+out, pin, seed, seed_dir, namespace, ports, browser_image, checkout, huddle_config = sys.argv[1:]
+def image_metadata(filename):
+    image = json.load(open(pathlib.Path(out) / filename))[0]
+    env = dict(value.split("=", 1) for value in image["Config"]["Env"] if "=" in value)
+    return {"id": image["Id"], "tags": image["RepoTags"], "gitRevision": env.get("GIT_REVISION")}
+data = {"referencePin": pin, "seed": seed, "namespace": namespace, "ports": ports,
+        "candidateCheckoutRevision": subprocess.check_output(["git", "-C", checkout, "rev-parse", "HEAD"], text=True).strip(),
+        "railsImage": image_metadata("reference-image.json"), "rustImage": image_metadata("candidate-image.json"),
+        "playwrightImage": browser_image, "shots": str(pathlib.Path(out).resolve()), "pixelComparison": False,
+        "huddleConfig": huddle_config,
+        "seedFiles": {name: hashlib.sha256((pathlib.Path(seed_dir) / name).read_bytes()).hexdigest()
+                      for name in ["labels.json", "db/production.sqlite3"]}}
+(pathlib.Path(out) / "run.json").write_text(json.dumps(data, indent=2) + "\n")
+PY
+
+docker network create --internal --label "parity.owner=$PARITY_OWNER" "$PARITY_NETWORK" >/dev/null
+NETWORK_STARTED=1
+REFERENCE_STARTED=1
+run_stage "$OUT/reference-boot.log" "$PARITY/bin/reference" up --seed "$SEED" --port "$RAILS_PORT" --time "$CLOCK" --freeze "${APP_ENV[@]}"
+CANDIDATE_STARTED=1
+run_stage "$OUT/candidate-boot.log" "$PARITY/bin/candidate" up --seed "$SEED" --port "$RUST_PORT" --time "$CLOCK" --freeze "${APP_ENV[@]}"
+SOCKET=$RUN_DIR/upstream.sock
+[ ${#SOCKET} -lt 104 ] || die "PARITY_SCRATCH is too long for Unix sockets"
+FORWARD_STARTED=1
+docker run -d --rm --init --name "$FORWARD_NAME" --network host -u "$(id -u):$(id -g)" \
+  -v "$ROOT:$ROOT:ro" -v "$RUN_DIR:$RUN_DIR" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
+  "$PLAYWRIGHT_IMAGE" node capture/forward.ts "$SOCKET" >/dev/null
+for _ in $(seq 1 100); do [ -S "$SOCKET" ] && break; sleep 0.1; done
+[ -S "$SOCKET" ] || die "capture forwarder did not start"
+CAPTURE_STARTED=1
+EXTRA_ARGS=(); [ -z "$ONLY" ] || EXTRA_ARGS=(--only "$ONLY")
+docker run --rm --init --name "$CAPTURE_NAME" --network none --ipc host -u "$(id -u):$(id -g)" \
+  -e HOME="$RUN_DIR" -e TMPDIR="$RUN_DIR" -e TZ=UTC -e PARITY_UPSTREAM_SOCKET="$SOCKET" \
+  -v "$ROOT:$ROOT:ro" -v "$OUT:$OUT" -v "$RUN_DIR:$RUN_DIR" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
+  "$PLAYWRIGHT_IMAGE" node smoke/capture.ts --rails "http://127.0.0.1:$RAILS_PORT" \
+  --rust "http://127.0.0.1:$RUST_PORT" --out "$OUT" --labels "$PARITY_SEED_DIR/$SEED/labels.json" \
+  --reference-root "$CAMPFIRE_REFERENCE" "${EXTRA_ARGS[@]}" >"$OUT/capture.log" 2>&1 &
+CAPTURE_PID=$!
+STATUS=0
+wait "$CAPTURE_PID" || STATUS=$?
+"$PARITY/bin/reference" logs --port "$RAILS_PORT" >"$OUT/reference-server.log" 2>&1 || true
+"$PARITY/bin/candidate" logs --port "$RUST_PORT" >"$OUT/candidate-server.log" 2>&1 || true
+cat "$OUT/capture.log"
+echo "smoke: capture artifacts at $OUT; visually review CONTACT.md and record verdicts in smoke/REPORT.md"
+exit "$STATUS"
