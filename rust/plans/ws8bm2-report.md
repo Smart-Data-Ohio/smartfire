@@ -1,4 +1,141 @@
-# WS8b-m2 H merge checkpoint
+# WS8b-m2 H: #229 review fixes
+
+Both requested P2s are fixed. Source/fixtures tested: `b7bf9c579bd504c42ac8069ddca5a3ba928ea0ff`.
+Fresh clone: `.scratch/ws8bm2-h-review229/fresh`, with all three seeds rebuilt
+from pinned Rails. The later report and producer-control script add no runtime
+or fixture changes.
+
+Send-now carries the request's viewer zone through the scoped writer together
+with its origin. Fresh Rails captures compare real HTTP responses, full stored
+scheduled/message rows and ordered publications plus the exact receiver
+multiset in UTC, New York and Kolkata. The year-10000 draft is sent at frozen
+`2026-03-02T16:00:00Z`; New York's actual frame is `11:00:00-05:00`.
+Periodic jobs retain their existing default-zone behavior.
+
+Saved batches messages, rooms, direct-room names, creators, rich-text bodies and
+plain-text attachments/mentions. Scheduled batches rooms, names, threads, sent
+message links and sendability. Dispatch retains its transactional access recheck.
+The new sendability query and reused association loaders use JSON-bound ID
+lists; bind counts are independent of visible-row counts, including direct rooms.
+Original item ordering and status/access scopes are retained.
+
+## Failing-first and integrity evidence
+
+The unchanged `91cb61210` runtime fails both physical read-growth assertions.
+All twelve full page sections match fresh Rails before the fix, so those failures
+are specifically query growth. The separate send-now regression fails at the
+actual New York receiver frame: Rust `2026-03-02T16:00:00Z`, Rails
+`2026-03-02T11:00:00-05:00`. Full persisted rows are captured through raw SQL,
+avoiding Ruby model-attribute type casts. Timestamp storage spelling alone is
+normalized for row comparisons.
+
+Commands actually rerun before changing the runtime:
+
+```sh
+bash .scratch/ws8bm2-h/fresh-native.sh test --locked -p campfire review_229_tests -- --test-threads=4 --nocapture
+bash .scratch/ws8bm2-h/fresh-native.sh test --locked -p campfire send_now_preserves_viewer_zone_in_fresh_rails_frames_and_rows -- --test-threads=4 --nocapture
+```
+
+Logs: `failing-first-clean.log` (page growth) and `failing-first-zone.log`.
+The first capture initially exposed a Ruby boolean-versus-raw-SQL fixture shape
+mismatch; the raw-row generator was corrected before the failing zone witness.
+No runtime change was needed for that capture correction.
+
+`check_review_229_mutants.py` changes the real Saved and Scheduled room-label
+producers, preserving every fixture and comparator. Both are rejected at their
+whole-section byte assertions; send-now remains passing. Source bytes are
+restored in `finally`. The full fresh-clone suite is then run after restoration,
+with source mtimes advanced so no mutant compiler artifact can be reused.
+
+```sh
+python3 rust/reference-tools/messaging/check_review_229_mutants.py bash .scratch/ws8bm2-h/fresh-native.sh
+```
+
+```text
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 2755 filtered out; finished in 2.37s
+WS8bm2 review229 producer mutant: rejected at real feature section differs from fresh Rails: /saved
+WS8bm2 review229 producer mutant: rejected at real feature section differs from fresh Rails: /scheduled_messages
+```
+
+The three regression names are:
+
+- `review_229_tests::send_now_preserves_viewer_zone_in_fresh_rails_frames_and_rows`
+- `review_229_tests::saved_visible_row_growth_and_complete_sections_match_fresh_rails`
+- `review_229_tests::scheduled_visible_row_growth_and_complete_sections_match_fresh_rails`
+
+## Visible-row physical reads
+
+These are actual production HTTP requests, including page construction, at
+4 / 16 new visible rows plus the two seed rows. Mixed cases include done saves,
+a thread, sent/dropped drafts and inaccessible-room drafts. Each complete
+feature section remains identical. The existing per-request hidden authenticity
+input handling is unchanged; Rails' forgery-disabled oracle omits that input.
+No expected data constructs the observed HTML, response, stored row or frame.
+
+| Page / kind | Before Rust 4 / 16 | Fixed Rust 4 / 16 | Rails 4 / 16 |
+|---|---|---|---|
+| Saved / ordinary | 33 / 69 | 19 / 19 | 19 / 31 |
+| Saved / mixed | 33 / 69 | 19 / 19 | 19 / 31 |
+| Saved / direct | 37 / 85 | 20 / 20 | 20 / 32 |
+| Scheduled / ordinary | 35 / 83 | 16 / 16 | 12 / 12 |
+| Scheduled / mixed | 33 / 81 | 18 / 18 | 17 / 17 |
+| Scheduled / direct | 39 / 99 | 17 / 17 | 13 / 13 |
+
+## Fresh-clone verification
+
+The affected suite is the complete `controllers::message_features` module plus
+scheduled-message model tests. It includes Saved/Scheduled HTTP, wide-time and
+zone comparisons, periodic tasks, callbacks, jobs and the new regressions.
+One Cargo command runs at a time, with two build jobs and the configured rustc
+throttle. Four test threads reserve shared machine capacity; no concurrency or
+timing threshold was weakened. Owned Rails generators run one at a time.
+
+```sh
+bash rust/parity/bin/seed build default first_run agents_ui
+WS8BM2_ORACLE_SCRATCH=.scratch/ws8bm2-h-review229/logs/oracle-replays python3 rust/reference-tools/messaging/verify_oracles.py
+bash rust/ci/cargo.sh metadata --locked --format-version 1
+bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnings
+(cd rust && bash ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins)
+bash rust/ci/cargo.sh test --locked -p campfire_db scheduled_message_test -j2 -- --test-threads=4 --nocapture
+bash rust/ci/cargo.sh test --locked -p campfire --bin campfire controllers::message_features -j2 -- --test-threads=4 --nocapture
+```
+
+The wrappers are `.scratch/ws8bm2-h-review229/reference.sh` and `gates.sh`.
+Oracle scratch is the absolute log directory in the actual replay invocation.
+Raw summaries (ANSI colors removed only):
+
+```text
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 1343 filtered out; finished in 1.18s
+test result: ok. 254 passed; 0 failed; 0 ignored; 0 measured; 2504 filtered out; finished in 165.43s
+WS8bm2 oracle replay: 58/58 independently replayed fixtures byte-identical
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 58.34s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 04s
+cargo metadata --locked: exit 0
+```
+
+`origin/main` was fetched again at `b06d191142e555fa533de884ca925a2b8e4613a1`.
+`git merge-tree --write-tree HEAD origin/main` succeeds cleanly on the fixed
+source (tree `d856c54d38761fdee1c3ba347ac1c9319d6732d1`); the conditional main
+merge is unnecessary. There is no history rewrite or stash.
+Logs are under `.scratch/ws8bm2-h-review229/logs/`. No scratch target directory
+was created; the pre-existing compiler cache remains. Owned runners/containers
+are finished before handoff. No browsers, deployment or model-server operation.
+
+## Remaining and owners
+
+Both #229 P2s and the former visible-row batching flag are closed. Broader scope
+is unchanged: lead's cutover browser rerun; WS8 / WS11-UI values outside the
+existing I512 time representation; WS12's broader board/work parity. No
+WS12-owned file changed. Atomic durable enqueue rollback remains the approved
+decision-2 difference, not an owner block.
+
+---
+
+# Earlier H merge checkpoint (historical at 91cb61210)
+
+The following receipts and remaining lists are historical. The verification and
+remaining list above supersede them, including the now-closed batching flag.
+
 
 Both requested merge commits are complete, without rebase or stash:
 - `cebbd64f8`: G `b31d3d65e216fb1419589062613f99146be49f4c` into H.
