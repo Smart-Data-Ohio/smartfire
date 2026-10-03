@@ -25,22 +25,29 @@ pub async fn create(c: &mut Ctx) -> Result {
     }
     let user_id = concerns::require_current_user(c)?.id;
     let room_id = c.param_str("room_id").and_then(cast_integer).unwrap_or(0);
-    let pr_id = c
+    let raw_pr_id = c
         .params
         .get("pull_request_id")
-        .and_then(Param::to_s)
-        .as_deref()
-        .and_then(cast_integer);
+        .map(Param::to_json)
+        .unwrap_or(serde_json::Value::Null);
     let scope = c
         .app()
         .db
-        .read(move |conn| approval_requests::scope(conn, user_id, room_id, pr_id))
+        .read(move |conn| {
+            let pr_id=if raw_pr_id.is_array() {
+                use rusqlite::OptionalExtension;
+                let ids=super::super::agents::lookup_id_candidates(&raw_pr_id);
+                conn.query_row("SELECT id FROM github_pull_requests WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 1",[json!(ids).to_string()],|row|row.get(0)).optional()?
+            } else {super::super::agents::lookup_id_candidates(&raw_pr_id).first().copied()};
+            approval_requests::scope(conn,user_id,room_id,pr_id)
+        })
         .await
         .map_err(db_error)?;
     let scope = match scope {
         Ok(scope) => scope,
         Err(reply) => return Ok(render(c, reply)),
     };
+    let pr_id=Some(scope.pull_request.id);
     let Some(account) = c
         .app()
         .github_accounts

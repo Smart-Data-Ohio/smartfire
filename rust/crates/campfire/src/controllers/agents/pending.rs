@@ -53,6 +53,7 @@ async fn dispatch(
     args: Value,
     rest: bool,
 ) -> Result<ServiceResult> {
+    let args = super::id_args::normalize_request(c, agent_id, operation, args).await?;
     match operation {
         "react" => return super::reactions::operation(c,agent_id,args).await,
         "start_stream" | "append_stream" | "finalize_stream" => {

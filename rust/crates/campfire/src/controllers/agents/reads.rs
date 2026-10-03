@@ -4,7 +4,9 @@ use crate::{
     app::AppCtx,
     controllers::{messages, presenters::page::db_error},
 };
-use campfire_db::models::{agent_access, agent_payloads, agent_reading, agent_service::ServiceResult};
+use campfire_db::models::{
+    agent_access, agent_payloads, agent_reading, agent_service::ServiceResult,
+};
 use campfire_db::{Agent, AgentGrant, Room};
 use campfire_kit::{Ctx, Result};
 use serde_json::{Value, json};
@@ -30,23 +32,53 @@ pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<
         _ => work(c, agent_id, op, args).await,
     }
 }
-// Active Record find_by(id:) flattens IN lists. Other scalar shapes cannot match
-// an integer key; unlike Ruby to_i they are not page-limit conversion errors.
+// Active Record's ArrayHandler casts each top-level candidate separately.
+// After compacting nils, a singleton predicate delegates back to ArrayHandler;
+// nested values in a multi-candidate IN predicate serialize independently.
 pub(super) fn lookup_ids(value: &Value) -> Vec<i64> {
-    fn collect(value: &Value, ids: &mut Vec<i64>) {
+    fn cast(value: &Value) -> Option<i64> {
         match value {
-            Value::Array(values) => {
-                for value in values {
-                    collect(value, ids);
+            Value::Number(n) => n.as_i64().or_else(|| {
+                if n.is_u64() {
+                    return None;
+                }
+                n.as_f64()
+                    .filter(|n| *n >= i64::MIN as f64 && *n < i64::MAX as f64)
+                    .map(|n| n as i64)
+            }),
+            Value::String(s) => {
+                let s = s.trim_start();
+                let offset = usize::from(s.starts_with(['+', '-']));
+                let digits = s
+                    .get(offset..)?
+                    .bytes()
+                    .take_while(u8::is_ascii_digit)
+                    .count();
+                if digits == 0 {
+                    None
+                } else {
+                    s[..offset + digits].parse().ok()
                 }
             }
-            Value::Number(_) | Value::String(_) => ids.push(ruby_i64(value)),
-            Value::Bool(value) => ids.push(i64::from(*value)),
-            _ => {}
+            Value::Bool(value) => Some(i64::from(*value)),
+            _ => None,
         }
     }
-    let mut ids = Vec::new();
-    collect(value, &mut ids);
+    let mut value = value;
+    while let Value::Array(values) = value {
+        let mut present = values.iter().filter(|v| !v.is_null());
+        if let Some(first) = present.next()
+            && present.next().is_none()
+        {
+            value = first;
+        } else {
+            break;
+        }
+    }
+    let mut ids = match value {
+        Value::Array(values) => values.iter().filter_map(cast).collect(),
+        other => cast(other).into_iter().collect::<Vec<_>>(),
+    };
     ids.sort_unstable();
     ids.dedup();
     ids
@@ -109,22 +141,42 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
             let agent =
                 Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
             let threads = if single {
-                let ids=args.get("work_id").map(lookup_ids).unwrap_or_default();
-                agent_reading::thread_by_ids(conn,&ids)?.into_iter().collect()
+                let ids = args.get("work_id").map(lookup_ids).unwrap_or_default();
+                agent_reading::thread_by_ids(conn, &ids)?
+                    .into_iter()
+                    .collect()
             } else if op == "list_board_posts" {
-                let status=text(args.get("status")).unwrap_or_default();
-                let status=campfire_richtext::ruby::strip(&status);
-                let status=if status.is_empty(){"open"}else{status};
-                let owner=text(args.get("owner")).unwrap_or_default();
-                let owner=campfire_richtext::ruby::strip(&owner);
-                let tag=text(args.get("tag")).unwrap_or_default();
-                let tag=campfire_richtext::ruby::strip(&tag).to_lowercase();
-                agent_reading::board_posts(conn,args.get("room_id").map_or(0,ruby_i64),agent.user_id,status,owner,&tag)?
+                let status = text(args.get("status")).unwrap_or_default();
+                let status = campfire_richtext::ruby::strip(&status);
+                let status = if status.is_empty() { "open" } else { status };
+                let owner = text(args.get("owner")).unwrap_or_default();
+                let owner = campfire_richtext::ruby::strip(&owner);
+                let tag = text(args.get("tag")).unwrap_or_default();
+                let tag = campfire_richtext::ruby::strip(&tag).to_lowercase();
+                agent_reading::board_posts(
+                    conn,
+                    args.get("room_id").map_or(0, ruby_i64),
+                    agent.user_id,
+                    status,
+                    owner,
+                    &tag,
+                )?
             } else {
-                let rooms=Room::for_user(conn,agent.user_id)?.into_iter().map(|r|r.id).collect::<Vec<_>>();
-                let allowed=agent_access::capabilities_for_users_in_rooms(conn,&[agent.user_id],&rooms,"read_messages")?;
-                let rooms=rooms.into_iter().filter(|room|allowed.contains(&(agent.user_id,*room))).collect::<Vec<_>>();
-                agent_reading::owned_work(conn,agent.user_id,&rooms)?
+                let rooms = Room::for_user(conn, agent.user_id)?
+                    .into_iter()
+                    .map(|r| r.id)
+                    .collect::<Vec<_>>();
+                let allowed = agent_access::capabilities_for_users_in_rooms(
+                    conn,
+                    &[agent.user_id],
+                    &rooms,
+                    "read_messages",
+                )?;
+                let rooms = rooms
+                    .into_iter()
+                    .filter(|room| allowed.contains(&(agent.user_id, *room)))
+                    .collect::<Vec<_>>();
+                agent_reading::owned_work(conn, agent.user_id, &rooms)?
             };
             Ok(threads)
         })
@@ -142,7 +194,7 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         .db
         .read(move |conn| {
             let owner = Agent::find(conn, agent_id)?.and_then(|agent| agent.owner_id);
-            let values = agent_payloads::work_payloads(conn,&records,owner,&access)?;
+            let values = agent_payloads::work_payloads(conn, &records, owner, &access)?;
             Ok(if single {
                 values.into_iter().next().unwrap_or(Value::Null)
             } else {
@@ -152,4 +204,24 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         .await
         .map_err(db_error)?;
     Ok(ServiceResult::ok(payload, 200))
+}
+
+#[cfg(test)]
+mod id_cast_tests {
+    use serde_json::{Value, json};
+
+    #[test]
+    fn ws11_next3_active_record_integer_candidates() {
+        let vector: Value =
+            serde_json::from_str(include_str!("../../../../../vectors/agent_id_casting.json"))
+                .unwrap();
+        for case in vector["cases"].as_array().unwrap() {
+            assert_eq!(
+                json!(super::lookup_ids(&case["input"])),
+                case["candidates"],
+                "{}",
+                case["input"]
+            );
+        }
+    }
 }

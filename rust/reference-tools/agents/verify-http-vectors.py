@@ -75,6 +75,14 @@ def main():
         if filename == 'agent_review192r3_attachment.json':
             check_approved_video_difference(json.loads(actual))
         print(f'WS11-api fresh {kind} oracle: {len(json.loads(actual)["cases"])} request/response pairs; byte-identical committed vectors')
+    for filename, key in [('agent_id_casting.json', 'cases'), ('agent_budget_notice_reader.json', 'results'), ('agent_array_shapes.json', 'cases')]:
+        actual = (scratch / filename).read_bytes()
+        compare_vectors(actual, (root / 'vectors' / filename).read_bytes(), filename)
+        value = json.loads(actual)
+        print(f'WS11-api fresh {filename}: {len(value[key])} groups; byte-identical committed vector')
+    array_reads = json.loads((scratch / 'agent_array_reads_http.json').read_bytes())
+    assert all(case['cache_hits'] == 0 for case in array_reads['cases'])
+    print('WS11-api uncached array oracle: 24 cases; zero query-cache hits')
     from proxy_headers import checked
     for filename in ['agent_review192r5_representations.json', 'agent_blob_proxy_headers.json']:
         value=json.loads((scratch / filename).read_bytes())

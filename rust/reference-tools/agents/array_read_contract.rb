@@ -2,6 +2,11 @@
 require "active_support/testing/time_helpers"
 extend ActiveSupport::Testing::TimeHelpers
 Rails.logger = ActiveSupport::Logger.new($stderr)
+# Integration requests reset the executor, which re-enables AR's query cache.
+# Register after AR's hook, and verify the actual notification boundary below.
+Rails.application.executor.to_run do
+  ActiveRecord::Base.connection_handler.each_connection_pool.each(&:disable_query_cache!)
+end
 secret = "ws11api-fixture-credential"
 room = 486777696
 thread = 1996000000
@@ -68,10 +73,17 @@ travel_to Time.utc(2026, 3, 2, 16) do
         send_request = -> { session.public_send(item[:method], item[:path], params: item[:body]&.to_json, headers: request_headers) }
         send_request.call
         selects = []
-        listener = ->(_name, _start, _finish, _id, payload) { selects << payload[:sql] if payload[:sql].lstrip.start_with?("SELECT") && payload[:name] != "SCHEMA" }
+        cached_events = []
+        listener = ->(_name, _start, _finish, _id, payload) do
+          if payload[:sql].lstrip.start_with?("SELECT") && payload[:name] != "SCHEMA"
+            cached_events << payload[:sql] if payload[:cached] || ActiveRecord::Base.connection.query_cache_enabled
+            selects << payload[:sql]
+          end
+        end
         ActiveRecord::Base.uncached { ActiveSupport::Notifications.subscribed(listener, "sql.active_record") { send_request.call } }
+        raise "Uncached recorder observed #{cached_events.size} cached/enabled SELECTs" unless cached_events.empty?
         response = session.response
-        result = item.merge(method: item[:method].to_s.upcase, body: item[:body]&.to_json, status: response.status, response: response.body, headers: response.headers.slice("cache-control", "content-type"), selects: selects.length)
+        result = item.merge(method: item[:method].to_s.upcase, body: item[:body]&.to_json, status: response.status, response: response.body, headers: response.headers.slice("cache-control", "content-type"), selects: selects.length, cache_hits: cached_events.length)
         raise ActiveRecord::Rollback
       end
     ensure
