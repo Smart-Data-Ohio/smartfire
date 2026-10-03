@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import sys
 import threading
@@ -16,9 +17,56 @@ from unittest.mock import patch
 spec = importlib.util.spec_from_file_location("audit", Path(__file__).with_name("ws12_assertion_mutations.py"))
 audit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(audit)
+pointer_spec = importlib.util.spec_from_file_location("ledger", Path(__file__).with_name("verify_ws12_reconciliation.py"))
+ledger = importlib.util.module_from_spec(pointer_spec)
+pointer_spec.loader.exec_module(ledger)
 
 
 class AuditGuards(unittest.TestCase):
+    def test_corrected_blocking_pointers_resolve_to_their_operation(self):
+        rows = json.loads((audit.ROOT / "rust/plans/ws12-assertion-reconciliation.json").read_text())["cases"]
+        corrected = [row for row in rows if row.get("blocking_operations")]
+        self.assertEqual(len(corrected), 18)
+        for row in corrected:
+            with self.subTest(declaration=row["test"]):
+                ledger.verify_blocking_operations(row)
+        # The reviewed handoff pointer used to resolve to the set_result sibling.
+        handoff = json.loads(json.dumps(rows[22]))
+        handoff["blocking_file_line"] = handoff["blocking_file_line"].replace(":85", ":84")
+        handoff["blocking_operations"][0]["line"] = 84
+        with self.assertRaisesRegex(AssertionError, "does not resolve to.*handoff_work"):
+            ledger.verify_blocking_operations(handoff)
+
+    def test_revoked_credential_catalog_credits_the_work_update_and_result_assertions(self):
+        catalog = json.loads(audit.CATALOG.read_text())
+        rows = json.loads((audit.ROOT / "rust/plans/ws12-assertion-reconciliation.json").read_text())["cases"]
+        intended = next(row for row in catalog["declarations"] if row["id"] == "c088")["intended_assertion"]
+        self.assertEqual(intended, rows[88]["mutation_control"]["intended_assertion"])
+        self.assertIn("rest_update_permission_7", intended)
+        self.assertIn("rest_result_permission_7", intended)
+        self.assertIn("422 vs required 401", intended)
+
+    def test_default_full_catalog_install_and_restore_are_byte_identical(self):
+        catalog = json.loads(audit.CATALOG.read_text())
+        files = {edit["file"] for mutation in catalog["mutations"] for edit in mutation["edits"]}
+        originals = {file: (audit.ROOT / file).read_bytes() for file in files}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for file in files:
+                path = root / file
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(audit.ROOT / file, path)
+            with patch.object(audit, "ROOT", root), contextlib.redirect_stdout(io.StringIO()):
+                # No --declaration filtering: this is the default full-catalog install.
+                audit.install(catalog, root / "scratch")
+                for mutation in catalog["mutations"]:
+                    self.assertTrue(any(mutation["key"] in (root / edit["file"]).read_text()
+                                        for edit in mutation["edits"]), mutation["key"])
+                audit.restore(root / "scratch")
+            self.assertEqual({file: (root / file).read_bytes() for file in files}, originals)
+        self.assertEqual({m["key"] for m in catalog["mutations"]},
+                         {row["mutation"] for row in catalog["declarations"]})
+
     def test_restore_refuses_every_write_if_a_later_file_has_newer_code(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

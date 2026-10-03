@@ -208,7 +208,7 @@
       "test": "handoff_work denies a thread the agent does not own",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The MCP handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus fails by an unwrapped RecordNotFound, not the named HTTP denial assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: The MCP handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus fails by an unwrapped RecordNotFound, not the named HTTP denial assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:85; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -256,7 +256,7 @@
       "test": "handoff_work shares its throttle bucket with the rest endpoint",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/mcp.rs:332; rust/crates/campfire/src/controllers/agents/pending.rs:679; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
@@ -656,7 +656,7 @@
       "test": "put result requires ownership and manage_threads",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The control exposes missing-markdown validation on a foreign-owner request. The valid result write still hits the model owner guard, not the declared ownership denial/state assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: The control exposes missing-markdown validation on a foreign-owner request. The valid result write still hits the model owner guard, not the declared ownership denial/state assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -664,7 +664,7 @@
       "test": "put result rejects missing markdown and overlong results with 422",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -672,7 +672,7 @@
       "test": "put result checks ownership and grants before markdown presence",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: Only the valid-owner missing-markdown case fails. Neither the foreign-owner nor forbidden-owner precedence assertion is exercised by that failure. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: Only the valid-owner missing-markdown case fails. Neither the foreign-owner nor forbidden-owner precedence assertion is exercised by that failure. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -680,7 +680,7 @@
       "test": "put result with blank markdown clears",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The rejected blank result starts with NULL. The credited fixtures do not perform the original successful set followed by clearing an existing nonempty result. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: The rejected blank result starts with NULL. The credited fixtures do not perform the original successful set followed by clearing an existing nonempty result. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -688,7 +688,7 @@
       "test": "put result with unchanged markdown writes nothing",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The first rejected no-op is NULL-to-NULL. The original successful nonempty PUT followed by an identical nonempty PUT is absent from the credited fixtures. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: The first rejected no-op is NULL-to-NULL. The original successful nonempty PUT followed by an identical nonempty PUT is absent from the credited fixtures. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
@@ -768,7 +768,7 @@
       "test": "ack works on work rows",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:182; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -776,7 +776,7 @@
       "test": "assignment enqueues the webhook instead of blocking on it",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_work_events.rs:25; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -784,7 +784,7 @@
       "test": "assignment posts no webhook without read_messages",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_work_events.rs:48; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
@@ -808,7 +808,7 @@
       "test": "work events do not count toward the message rate limit",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_delivery.rs:311; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -824,7 +824,7 @@
       "test": "the receiver polls the handoff with its context package",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -832,7 +832,7 @@
       "test": "the receiver acks the handoff row",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:182; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -840,7 +840,7 @@
       "test": "the handoff enqueues the receiver webhook with the package",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_work_events.rs:25; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -848,7 +848,7 @@
       "test": "a thread the agent does not own is 404",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The REST handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus stops at an unwrapped owner error, not the named HTTP denial assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: The REST handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus stops at an unwrapped owner error, not the named HTTP denial assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:85; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -864,7 +864,7 @@
       "test": "a human session is 403",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:314; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
@@ -912,7 +912,7 @@
       "test": "handoffs throttle at 60 a minute per credential",
       "status": "deferred",
       "owner": "WS11-API",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:679; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -3712,7 +3712,7 @@
       "test": "filters by type and saves a notification switch",
       "status": "deferred",
       "owner": "WS11-UI",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/views/src/activity.rs:110; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/views/src/activity.rs:114; rust/crates/campfire/src/controllers/users/profiles.rs:189; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/system/agent_work_assignment_test.rb",

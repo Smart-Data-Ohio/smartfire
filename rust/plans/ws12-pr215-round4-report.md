@@ -43,8 +43,8 @@ Recorder comparisons include persisted source IDs. The booted Rails seed contain
 
 | ID | Original Rails declaration | Owner | Blocking seam |
 |---|---|---|---|
-| c022 | `test/controllers/agents/mcp_handoff_test.rb:40` — handoff_work denies a thread the agent does not own | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
-| c028 | `test/controllers/agents/mcp_handoff_test.rb:100` — handoff_work shares its throttle bucket with the rest endpoint | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
+| c022 | `test/controllers/agents/mcp_handoff_test.rb:40` — handoff_work denies a thread the agent does not own | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:85` |
+| c028 | `test/controllers/agents/mcp_handoff_test.rb:100` — handoff_work shares its throttle bucket with the rest endpoint | WS11-API | `rust/crates/campfire/src/controllers/agents/mcp.rs:332; rust/crates/campfire/src/controllers/agents/pending.rs:679` |
 | c039 | `test/controllers/agents/posts_controller_test.rb:241` — is 404 for rooms the agent is not a member of | WS11-API | `rust/crates/campfire/src/controllers/agents/pending.rs:583` |
 | c041 | `test/controllers/agents/posts_controller_test.rb:272` — rejects session and bot-key requests | WS11-API | `rust/crates/campfire/src/controllers/agents/pending.rs:583` |
 | c042 | `test/controllers/agents/posts_controller_test.rb:288` — lists the board's open posts newest activity first | WS11-API | `rust/crates/campfire/src/controllers/agents/pending.rs:583` |
@@ -69,31 +69,31 @@ Recorder comparisons include persisted source IDs. The booted Rails seed contain
 | c074 | `test/controllers/agents/work_controller_test.rb:413` — patch cannot stop tracking with a blank status | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
 | c075 | `test/controllers/agents/work_controller_test.rb:426` — patch with only a note and no field is 422 | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
 | c076 | `test/controllers/agents/work_controller_test.rb:438` — patch tags without manage_threads is 403 | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
-| c078 | `test/controllers/agents/work_controller_test.rb:476` — put result requires ownership and manage_threads | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
-| c079 | `test/controllers/agents/work_controller_test.rb:499` — put result rejects missing markdown and overlong results with 422 | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
-| c080 | `test/controllers/agents/work_controller_test.rb:522` — put result checks ownership and grants before markdown presence | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
-| c081 | `test/controllers/agents/work_controller_test.rb:543` — put result with blank markdown clears | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
-| c082 | `test/controllers/agents/work_controller_test.rb:560` — put result with unchanged markdown writes nothing | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
+| c078 | `test/controllers/agents/work_controller_test.rb:476` — put result requires ownership and manage_threads | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
+| c079 | `test/controllers/agents/work_controller_test.rb:499` — put result rejects missing markdown and overlong results with 422 | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
+| c080 | `test/controllers/agents/work_controller_test.rb:522` — put result checks ownership and grants before markdown presence | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
+| c081 | `test/controllers/agents/work_controller_test.rb:543` — put result with blank markdown clears | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
+| c082 | `test/controllers/agents/work_controller_test.rb:560` — put result with unchanged markdown writes nothing | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
 | c084 | `test/controllers/agents/work_controller_test.rb:595` — patch and put result are Bearer-only | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:80` |
 | c086 | `test/controllers/agents/work_controller_test.rb:637` — a read grant for another room does not unlock an owned thread | WS11-API | `rust/crates/campfire/src/controllers/agents/reads.rs:215` |
 | c089 | `test/controllers/agents/work_delivery_test.rb:14` — assignment appears in event polling with the work payload | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
 | c090 | `test/controllers/agents/work_delivery_test.rb:34` — assignment work payload includes links | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
 | c091 | `test/controllers/agents/work_delivery_test.rb:51` — unassignment appears in event polling | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
-| c092 | `test/controllers/agents/work_delivery_test.rb:64` — ack works on work rows | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
-| c093 | `test/controllers/agents/work_delivery_test.rb:75` — assignment enqueues the webhook instead of blocking on it | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
-| c094 | `test/controllers/agents/work_delivery_test.rb:97` — assignment posts no webhook without read_messages | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
+| c092 | `test/controllers/agents/work_delivery_test.rb:64` — ack works on work rows | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:182` |
+| c093 | `test/controllers/agents/work_delivery_test.rb:75` — assignment enqueues the webhook instead of blocking on it | WS11-API | `rust/crates/db/src/models/agent_work_events.rs:25` |
+| c094 | `test/controllers/agents/work_delivery_test.rb:97` — assignment posts no webhook without read_messages | WS11-API | `rust/crates/db/src/models/agent_work_events.rs:48` |
 | c095 | `test/controllers/agents/work_delivery_test.rb:113` — polling omits work rows for rooms the agent lost read_messages in | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
 | c096 | `test/controllers/agents/work_delivery_test.rb:128` — polling omits work rows after membership removal | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
-| c097 | `test/controllers/agents/work_delivery_test.rb:142` — work events do not count toward the message rate limit | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
-| c099 | `test/controllers/agents/work_handoff_test.rb:45` — the receiver polls the handoff with its context package | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
-| c100 | `test/controllers/agents/work_handoff_test.rb:64` — the receiver acks the handoff row | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
-| c101 | `test/controllers/agents/work_handoff_test.rb:76` — the handoff enqueues the receiver webhook with the package | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
-| c102 | `test/controllers/agents/work_handoff_test.rb:92` — a thread the agent does not own is 404 | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
-| c104 | `test/controllers/agents/work_handoff_test.rb:114` — a human session is 403 | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
-| c110 | `test/controllers/agents/work_handoff_test.rb:176` — handoffs throttle at 60 a minute per credential | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:84` |
+| c097 | `test/controllers/agents/work_delivery_test.rb:142` — work events do not count toward the message rate limit | WS11-API | `rust/crates/db/src/models/agent_delivery.rs:311` |
+| c099 | `test/controllers/agents/work_handoff_test.rb:45` — the receiver polls the handoff with its context package | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:125` |
+| c100 | `test/controllers/agents/work_handoff_test.rb:64` — the receiver acks the handoff row | WS11-API | `rust/crates/campfire/src/controllers/agents.rs:182` |
+| c101 | `test/controllers/agents/work_handoff_test.rb:76` — the handoff enqueues the receiver webhook with the package | WS11-API | `rust/crates/db/src/models/agent_work_events.rs:25` |
+| c102 | `test/controllers/agents/work_handoff_test.rb:92` — a thread the agent does not own is 404 | WS11-API | `rust/crates/campfire/src/controllers/agents/work_writes.rs:85` |
+| c104 | `test/controllers/agents/work_handoff_test.rb:114` — a human session is 403 | WS11-API | `rust/crates/campfire/src/controllers/agents/pending.rs:314` |
+| c110 | `test/controllers/agents/work_handoff_test.rb:176` — handoffs throttle at 60 a minute per credential | WS11-API | `rust/crates/campfire/src/controllers/agents/pending.rs:679` |
 | c133 | `test/integration/agent_boards_test.rb:17` — an agent post flows from creation through reply to result | WS11-API | `rust/crates/campfire/src/controllers/agents/pending.rs:583` |
 | c218 | `test/system/activity_inbox_test.rb:13` — handles an item, clears the badge, and receives a later activity | WS11-UI | `rust/crates/campfire/src/controllers/activity_items.rs:212` |
-| c219 | `test/system/activity_inbox_test.rb:42` — filters by type and saves a notification switch | WS11-UI | `rust/crates/views/src/activity.rs:110` |
+| c219 | `test/system/activity_inbox_test.rb:42` — filters by type and saves a notification switch | WS11-UI | `rust/crates/views/src/activity.rs:114; rust/crates/campfire/src/controllers/users/profiles.rs:189` |
 | c220 | `test/system/agent_work_assignment_test.rb:19` — assigns an agent from the update dialog and renders its API status change after refresh | WS11-UI | `rust/crates/campfire/src/controllers/channel_threads.rs:83` |
 
 A separate shared message HTTP header difference was observed in the c114 member-reply request: Rails sends Pragma: no-cache; Rust does not. The complete body, status, membership/source facts and other selected headers match. The work comparison does not credit Pragma parity for the shared message surface. That fix belongs to WS8b-m (`crates/campfire/src/controllers/messages.rs:93` / shared JSON response setup); WS12's owned thread/work no-store routes now supply the Rails header. This is outside the 231-declaration tally and is an owner-blocked runtime follow-up.
@@ -305,3 +305,45 @@ test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 2739 filtered out; 
 ```
 
 The scoped Cargo target was removed after verification.
+
+
+## PR #225 replay and pointer corrections
+
+At the reviewed head `226439c686730632975d1eb83413435833803526`, the default install fails at the indented type-filter anchor with `incompatible overlapping recipes`; it fails before backup creation or production writes. The new full-catalog install/restore unit test also fails there against that catalog. Removing 15 obsolete recipes fixes the default path. All 201 declaration selectors/test lists and all 164 referenced recipes are retained unchanged. Only c088's catalog assertion attribution changes, to the ledger's work update/result credential denials (422 versus required 401).
+
+The 18 blocking pointers from the review audit are corrected in the ledger, inventory and owner table above. Their 20 operation references record an expected symbol on the pointed-to line. The reconciliation checker checks those symbols; the unit test rejects the old c022 pointer to the set-result sibling. Totals stay at 179 mapped / 52 flagged: WS12 137/0, WS11-API 42/49, WS11-UI 0/3. Only owner-blocked named comparisons remain.
+
+The default CLI install and replay build use a disposable checkout under `.scratch/pr225-fixes/replay-checkout`. Source backups and logs are retained there; its Cargo target is removed after verification. The replay sample is c000, c003, c016, c017, c057, c088, c111, c132, c171 and c212, including both declarations affected by the overlapping type-filter anchor and the corrected credential attribution. No product source or vector is changed in the submitted branch.
+
+Scoped commands run from the worktree, except the default install/restore CLI runs from the disposable checkout:
+
+```sh
+python3 rust/reference-tools/users/ws12_assertion_mutations_test.py AuditGuards.test_default_full_catalog_install_and_restore_are_byte_identical
+python3 rust/reference-tools/users/ws12_assertion_mutations_test.py
+python3 rust/reference-tools/users/ws12_assertion_mutations.py install --scratch .scratch/replay
+.scratch/pr225-fixes/run.sh cargo test --locked -p campfire -p campfire_db --no-run
+.scratch/pr225-fixes/replay-sample.sh
+python3 rust/reference-tools/users/verify_ws12_reconciliation.py --test-log .scratch/pr215-round4/logs/workspace-verified.log
+python3 rust/reference-tools/users/verify_ws12_mutation_controls.py --test-log .scratch/pr215-round4/logs/workspace-verified.log --scratch .scratch/pr225-fixes/ledger-controls
+python3 rust/reference-tools/users/ws12_assertion_mutations.py restore --scratch .scratch/replay
+```
+
+The reconciliation check uses the previously recorded workspace receipt, since submitted Rust product/test sources are unchanged. The current replay sample has fresh disabled-control baselines and producer-mutation runs from the default full-catalog build.
+
+Raw scoped summaries:
+
+```text
+AssertionError: incompatible overlapping recipes: '        if !types.is_empty() {'
+Ran 1 test in 0.017s
+FAILED (failures=1)
+Ran 10 tests in 0.100s
+OK
+WS12_COVERAGE_INSTALL 47 production inputs; 164 modes; vectors/assertions unchanged
+WS12_COVERAGE_CAMPAIGN 10 declarations; 0 activated; 0 rejected; 10 survived
+WS12_COVERAGE_CAMPAIGN 10 declarations; 10 activated; 10 rejected; 0 survived
+WS12_SAMPLE_ASSERTIONS 10 intended assertions rejected; c088 update/result each 422 vs 401
+WS12_COVERAGE_RESTORE 47 production inputs byte-identical
+WS12 assertion reconciliation: 231 declarations; 179 executed mutation-backed mappings; 52 explicitly flagged; 0 missing or non-running credited tests
+WS12 assertion reconciliation: 231 declarations; 179 executed mutation-backed mappings; 52 explicitly flagged; 0 missing or non-running credited tests
+WS12_LEDGER_NEGATIVE_CONTROLS 3 rejected; 0 false credits
+```

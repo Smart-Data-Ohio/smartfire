@@ -1611,7 +1611,7 @@
           "rust_test": "agent_permissions_rest_after_success"
         }
       ],
-      "intended_assertion": "crates/campfire/src/controllers/agent_reads_tests.rs:133:5 assertion `left == right` failed: permission_get_context_credential_revoked: {\"message\":{\"id\":1900700001,\"client_message_id\":\"read-source\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Source \u03b1 & \u03b2\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Source \u03b1 &amp; \u03b2</p></div>\",\"markdown_source\":\"Source \u03b1 & \u03b2\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"agent\":false,\"human\":true},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900700001\"},\"thread\":null,\"root_message\":null,\"messages\":[{\"id\":9359620"
+      "intended_assertion": "rest_update_permission_7 and rest_result_permission_7: 422 vs required 401 for revoked credentials; get_context fails earlier in its own test, so folded list/show checks earn no credential credit."
     },
     {
       "id": "c098",
@@ -3830,18 +3830,6 @@
       ]
     },
     {
-      "key": "invalid_tags",
-      "behavior": "invalid tags",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/agent_service.rs",
-          "before": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        Self {",
-          "after": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        let error: String = error.into();\n        let status = if (error.contains(\"Tag\")) && ws12_coverage_mutant(\"invalid_tags\") { 418 } else { status };\n        Self {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "invalid_run",
       "behavior": "invalid run",
       "edits": [
@@ -4124,18 +4112,6 @@
       ]
     },
     {
-      "key": "work_follower",
-      "behavior": "work follower",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/work_thread_event.rs",
-          "before": ".filter(|m| m.involvement == crate::ThreadInvolvement::Everything)",
-          "after": ".filter(|m| m.involvement == crate::ThreadInvolvement::Everything && !ws12_coverage_mutant(\"work_follower\"))",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "work_nothing",
       "behavior": "work nothing",
       "edits": [
@@ -4286,18 +4262,6 @@
       ]
     },
     {
-      "key": "board_query_growth",
-      "behavior": "board query growth",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/channel_thread/board.rs",
-          "before": "        let capabilities = crate::Agent::capabilities_for_rooms(conn, \"post_messages\", &requests)?;",
-          "after": "        if ws12_coverage_mutant(\"board_query_growth\") { for &(agent,room) in &requests { let _ = crate::Agent::find(conn,agent)?; let _ = crate::Agent::find(conn,agent)?; let _ = room; } }\n        let capabilities = crate::Agent::capabilities_for_rooms(conn, \"post_messages\", &requests)?;",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "board_pagination",
       "behavior": "board pagination",
       "edits": [
@@ -4329,18 +4293,6 @@
           "file": "rust/crates/db/src/models/channel_thread/board.rs",
           "before": "            Some(if column {",
           "after": "            Some(if ws12_coverage_mutant(\"board_replace\") { \"wrong_row\" } else if column {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
-      "key": "board_unread",
-      "behavior": "board unread",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/channel_thread/board.rs",
-          "before": "payload: serde_json::json!({\"roomId\": room.id}),",
-          "after": "payload: serde_json::json!({\"roomId\": if ws12_coverage_mutant(\"board_unread\") { 0 } else { room.id }}),",
           "occurrences": 1
         }
       ]
@@ -4538,18 +4490,6 @@
       ]
     },
     {
-      "key": "missed_broadcast",
-      "behavior": "missed broadcast",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/activity_item.rs",
-          "before": "payload: serde_json::json!({ \"activityItemId\": item.id }),",
-          "after": "payload: serde_json::json!({ \"activityItemId\": if item.event_type==\"huddle_missed\" && ws12_coverage_mutant(\"missed_broadcast\") { 0 } else { item.id } }),",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "board_root",
       "behavior": "board root",
       "edits": [
@@ -4562,18 +4502,6 @@
       ]
     },
     {
-      "key": "keyword_boundary",
-      "behavior": "keyword boundary",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/keyword_alert.rs",
-          "before": "if rails_compat::keyword_regex::is_match(&phrase, text).map_err(crate::Error::Other)? {",
-          "after": "if (if ws12_coverage_mutant(\"keyword_boundary\") { text.to_lowercase().contains(&phrase) } else { rails_compat::keyword_regex::is_match(&phrase, text).map_err(crate::Error::Other)? }) {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "keyword_match",
       "behavior": "keyword match",
       "edits": [
@@ -4581,18 +4509,6 @@
           "file": "rust/crates/db/src/models/keyword_alert.rs",
           "before": "if rails_compat::keyword_regex::is_match(&phrase, text).map_err(crate::Error::Other)? {",
           "after": "if rails_compat::keyword_regex::is_match(&phrase, text).map_err(crate::Error::Other)? && !ws12_coverage_mutant(\"keyword_match\") {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
-      "key": "message_self",
-      "behavior": "message self",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
-          "before": "if id == message.creator_id {",
-          "after": "if id == message.creator_id && !ws12_coverage_mutant(\"message_self\") {",
           "occurrences": 1
         }
       ]
@@ -4658,18 +4574,6 @@
       ]
     },
     {
-      "key": "thread_muted",
-      "behavior": "thread muted",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/notification_policy.rs",
-          "before": "if self.thread_involvement? == ThreadInvolvement::Nothing {",
-          "after": "if self.thread_involvement? == ThreadInvolvement::Nothing && !ws12_coverage_mutant(\"thread_muted\") {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "thread_priority",
       "behavior": "thread priority",
       "edits": [
@@ -4689,18 +4593,6 @@
           "file": "rust/crates/db/src/models/notification_policy.rs",
           "before": "    fn room_replies(&self) -> bool {",
           "after": "    fn room_replies(&self) -> bool {\n        if self.room_involvement==Some(Some(Involvement::Nothing)) && ws12_coverage_mutant(\"room_nothing\") { return true; }",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
-      "key": "untouched_items",
-      "behavior": "untouched items",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/activity_item/recorder.rs",
-          "before": "        let inserted = tx.conn().execute(\"INSERT INTO activity_items",
-          "after": "        if ws12_coverage_mutant(\"untouched_items\") { tx.conn().execute(\"UPDATE activity_items SET read_at=NULL,handled_at=NULL,event_type='keyword_alert' WHERE user_id=? AND source_type=? AND source_id=?\",params![user_id,source_type,source_id])?; }\n        let inserted = tx.conn().execute(\"INSERT INTO activity_items",
           "occurrences": 1
         }
       ]
@@ -4730,30 +4622,6 @@
       ]
     },
     {
-      "key": "private_human_pr",
-      "behavior": "private human pr",
-      "edits": [
-        {
-          "file": "rust/crates/campfire/src/controllers/presenters/board_posts.rs",
-          "before": "if pr.private == Some(false) {",
-          "after": "if pr.private == Some(false) || (pr.private==Some(true) && ws12_coverage_mutant(\"private_human_pr\")) {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
-      "key": "link_controls",
-      "behavior": "link controls",
-      "edits": [
-        {
-          "file": "rust/crates/campfire/src/controllers/presenters/board_posts.rs",
-          "before": "link.remove_label = format!(\"Remove link to event {}\", event.title);",
-          "after": "link.remove_label = if ws12_coverage_mutant(\"link_controls\") { \"Wrong remove control\".into() } else { format!(\"Remove link to event {}\", event.title) };",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "drive_plain",
       "behavior": "drive plain",
       "edits": [
@@ -4773,18 +4641,6 @@
           "file": "rust/crates/db/src/models/calendar_event.rs",
           "before": "ORDER BY starts_at,id\",\n            params![room_id, now, thread_id],",
           "after": "ORDER BY starts_at,id\",\n            params![room_id, if ws12_coverage_mutant(\"event_picker\") { now.since(jiff::SignedDuration::from_secs(86400*365)) } else { now }, thread_id],",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
-      "key": "link_inbox",
-      "behavior": "link inbox",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/work_thread_link.rs",
-          "before": "        Self::find(tx.conn(), id)?.ok_or(crate::Error::RecordNotFound(\"WorkThreadLink\"))",
-          "after": "        if ws12_coverage_mutant(\"link_inbox\") { tx.conn().execute(\"INSERT INTO activity_items(user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(127326141,'Message',935962043,'mention',?,?) ON CONFLICT DO NOTHING\",[tx.now(),tx.now()])?; }\n        Self::find(tx.conn(), id)?.ok_or(crate::Error::RecordNotFound(\"WorkThreadLink\"))",
           "occurrences": 1
         }
       ]
@@ -4970,18 +4826,6 @@
       ]
     },
     {
-      "key": "ordinary_fields",
-      "behavior": "ordinary fields",
-      "edits": [
-        {
-          "file": "rust/crates/campfire/src/controllers/channel_threads/writes.rs",
-          "before": "        status: attributes.get(\"work_status\").map(|value| {",
-          "after": "        status: attributes.get(\"work_status\").or_else(|| attributes.get(\"name\").filter(|_| ws12_coverage_mutant(\"ordinary_fields\"))).map(|value| {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
       "key": "credential_revoked",
       "behavior": "credential revoked",
       "edits": [
@@ -5109,24 +4953,6 @@
           "file": "rust/crates/db/src/models/activity_item/recorder.rs",
           "before": "|| facts.creator_id == Some(user.id)",
           "after": "|| (facts.creator_id == Some(user.id) && !ws12_coverage_mutant(\"c192_author_inbox\"))",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
-      "key": "c201_author_inbox",
-      "behavior": "c201 author inbox",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
-          "before": "    let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;",
-          "after": "    let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;\n        let mut candidates = candidates;\n        if ws12_coverage_mutant(\"c201_author_inbox\") { candidates.recipients.push(MessageCandidate { user_id:message.creator_id, event_type:\"keyword_alert\" }); }",
-          "occurrences": 1
-        },
-        {
-          "file": "rust/crates/db/src/models/activity_item/recorder.rs",
-          "before": "|| facts.creator_id == Some(user.id)",
-          "after": "|| (facts.creator_id == Some(user.id) && !ws12_coverage_mutant(\"c201_author_inbox\"))",
           "occurrences": 1
         }
       ]
@@ -5313,18 +5139,6 @@
           "file": "rust/crates/db/src/models/activity_item/access.rs",
           "before": "        if !types.is_empty() {",
           "after": "        if !types.is_empty() && !ws12_coverage_mutant(\"c16_type_filter_disabled\") {",
-          "occurrences": 1
-        }
-      ]
-    },
-    {
-      "key": "c17_type_filter_disabled",
-      "behavior": "c17 type filter disabled",
-      "edits": [
-        {
-          "file": "rust/crates/db/src/models/activity_item/access.rs",
-          "before": "        if !types.is_empty() {",
-          "after": "        if !types.is_empty() && !ws12_coverage_mutant(\"c17_type_filter_disabled\") {",
           "occurrences": 1
         }
       ]
