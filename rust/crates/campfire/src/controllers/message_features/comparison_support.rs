@@ -55,6 +55,22 @@ pub(super) async fn embed_streams(
     }
     (client, server)
 }
+/// Rails publishes each callback/job batch in order even when Cable delivery reorders it.
+/// Observe actual Hub output under its publication lock, independently of the receiver.
+/// Negative control: reverse the real presenter batch (check_publication_mutants.py).
+pub(super) async fn published_frames(
+    app: &crate::controllers::presenters::test_support::TestApp,
+    client: &mut crate::channels::tests::support::Client,
+    expected: &Value,
+    context: &str,
+) {
+    let actual = app.publications().take().into_iter().map(|(stream, payload)| {
+        json!({"stream":stream,"html":serde_json::from_str::<Value>(&payload).unwrap()})
+    }).collect::<Vec<_>>();
+    assert_eq!(json!(actual), *expected, "ordered publication differs from Rails: {context}");
+    frames(app, client, expected, context).await;
+}
+
 /// Cable uses independent subscription callbacks. Rails' publication transcript is
 /// ordered, but live Redis/worker-pool delivery is not. Preserve every envelope,
 /// HTML byte and duplicate while allowing only arrival order to vary.

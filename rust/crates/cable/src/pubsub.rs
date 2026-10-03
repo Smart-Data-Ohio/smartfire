@@ -38,6 +38,23 @@ pub struct Hub {
 struct State {
     streams: HashMap<String, Vec<Group>>,
     sequence: u64,
+    #[cfg(feature = "test-support")]
+    publications: Option<std::sync::Weak<Publications>>,
+}
+
+/// Explicit test observer of real publications, before asynchronous socket delivery.
+/// The hub retains only a weak handle; dropping the capture stops recording.
+#[cfg(feature = "test-support")]
+pub struct PublicationCapture(Arc<Publications>);
+
+#[cfg(feature = "test-support")]
+type Publications = Mutex<Vec<(String, String)>>;
+
+#[cfg(feature = "test-support")]
+impl PublicationCapture {
+    pub fn take(&self) -> Vec<(String, String)> {
+        std::mem::take(&mut *self.0.lock().unwrap())
+    }
 }
 
 /// The subscribers of one broadcasting that receive identical frames: the payload wrapped for
@@ -73,6 +90,13 @@ impl Hub {
         let mut state = self.state.lock().unwrap();
         state.sequence += 1;
         let sequence = state.sequence;
+        #[cfg(feature = "test-support")]
+        if state.streams.contains_key(broadcasting)
+            && let Some(capture) = state.publications.as_ref().and_then(std::sync::Weak::upgrade)
+        {
+            // The same lock assigns sequence and sends to subscribers. Never sort this log.
+            capture.lock().unwrap().push((broadcasting.into(), payload.into()));
+        }
         let Some(groups) = state.streams.get_mut(broadcasting) else {
             return 0;
         };
@@ -109,6 +133,13 @@ impl Hub {
     /// Number of broadcastings with at least one live subscriber channel.
     pub fn stream_count(&self) -> usize {
         self.state.lock().unwrap().streams.len()
+    }
+
+    #[cfg(feature = "test-support")]
+    pub fn capture_publications(&self) -> PublicationCapture {
+        let capture = Arc::new(Mutex::new(Vec::new()));
+        self.state.lock().unwrap().publications = Some(Arc::downgrade(&capture));
+        PublicationCapture(capture)
     }
 
     fn release(&self, broadcasting: &str, identifier: &Option<Arc<str>>) {

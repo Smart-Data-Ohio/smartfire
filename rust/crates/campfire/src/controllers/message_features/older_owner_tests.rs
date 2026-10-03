@@ -53,7 +53,7 @@ async fn frames(
     client: &mut crate::channels::tests::support::Client,
     expected: &Value,
 ) {
-    super::comparison_support::frames(app, client, expected, "older_owner_tests.rs").await;
+    super::comparison_support::published_frames(app, client, expected, "older_owner_tests.rs").await;
     client.assert_silent().await;
 }
 

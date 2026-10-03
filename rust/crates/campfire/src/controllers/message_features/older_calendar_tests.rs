@@ -117,7 +117,7 @@ async fn callbacks(check_reads: bool) {
                 }
             }
             frame_count += step["frames"].as_array().unwrap().len();
-            super::comparison_support::frames(&app, &mut client, &step["frames"], &name).await;
+            super::comparison_support::published_frames(&app, &mut client, &step["frames"], &name).await;
             client.assert_silent().await;
         }
         let result: campfire_db::Result<()> = app
@@ -297,7 +297,7 @@ async fn older_calendar_meet_jobs_match_rails_frames_and_retry_or_noop_outcomes(
             } else {
                 drain.calendar(&app).await;
             }
-            super::comparison_support::frames(
+            super::comparison_support::published_frames(
                 &app,
                 &mut client,
                 &case["frames"],

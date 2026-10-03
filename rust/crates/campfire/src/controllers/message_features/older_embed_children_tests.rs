@@ -142,7 +142,7 @@ async fn queued_stale_generic_and_linkedin_children_execute_after_parent_with_fl
             assert_eq!(child_id, sibling);
             result.unwrap();
             runner.shutdown(Duration::from_secs(1)).await;
-            super::comparison_support::frames(
+            super::comparison_support::published_frames(
                 &app,
                 &mut client,
                 &job["frames"],
