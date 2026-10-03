@@ -115,6 +115,14 @@ pub async fn create(c: &mut Ctx) -> Result {
             ));
         }
     };
+    if method == "tools/call"
+        && params["name"] == "read_messages"
+        && params["arguments"].is_object()
+    {
+        c.set_current(
+            super::reads::ReaderCandidates::parse(&raw).map_err(campfire_kit::Error::internal)?,
+        );
+    }
     let modern = version == MODERN;
     if modern && let Some(message) = header_mismatch(c, method, &params) {
         return Ok(rpc_error(
