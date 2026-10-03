@@ -11410,7 +11410,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c143",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:316:9: assertion `left == right` failed: c143 exact committed activity stream frame for event-type conversion",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:317:9: assertion `left == right` failed: c143 exact committed activity stream frame for event-type conversion",
         "original_rails_assertions": [
           "assert_broadcasts stream, 1 do"
         ],
@@ -11421,10 +11421,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.34s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.26s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c143-db.log",
-            "raw_log_sha256": "b9fbe23a26d2a92d22a3f22a2772c890dce051e4b937d78a4e0cb64ba9d0d4fa"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c143-db.log",
+            "raw_log_sha256": "1c0e1e87cfd3eb0c54166b4ce4ff4f2d26c9d77f65b9cb6edbb1c9cd8d94d594"
           }
         ],
         "mutant": [
@@ -11434,12 +11434,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.11s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.10s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c143-db.log",
-            "raw_log_sha256": "d14c944230bf4a61696ffdc50fe2398f68abe3d18c91684aaec58c027c1d4cd9",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c143-db.log",
+            "raw_log_sha256": "726ce1592d9aeaa7e234f2b93ba67cb68026f0b41bd80a3e49780e37ab19bc6c",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:316:9",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:317:9",
             "assertion_message": "assertion `left == right` failed: c143 exact committed activity stream frame for event-type conversion"
           }
         ],
@@ -11768,7 +11768,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c148",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:218:9: assertion `left == right` failed: c148 original shared service set and clear payloads",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:219:9: assertion `left == right` failed: c148 original shared service set and clear payloads",
         "original_rails_assertions": [
           "assert result.ok?",
           "assert_equal \"Thinking\u2026\", result.payload[:working_presence]",
@@ -11782,10 +11782,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.27s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.27s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c148-db.log",
-            "raw_log_sha256": "5777b386777661c091766a0d96d8763ff3eb2a4742145ea55a90be4be248843e"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c148-db.log",
+            "raw_log_sha256": "22cbf8475b05d6a0888be00dec87e2f27ce69c5310a14764503b637746dead0e"
           }
         ],
         "mutant": [
@@ -11795,12 +11795,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.11s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.09s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c148-db.log",
-            "raw_log_sha256": "bd5fa7e06052306776e60e05b4c02f483ed30c78851952177fadc88bca4c897b",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c148-db.log",
+            "raw_log_sha256": "ba3226267272ee71b5fa14f17b27d35c89076867e12dea8bdd7706780bb4b52c",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:218:9",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:219:9",
             "assertion_message": "assertion `left == right` failed: c148 original shared service set and clear payloads"
           }
         ],
@@ -13908,7 +13908,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c177",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:267:9: assertion `left == right` failed: c177 agent filter preserves the same eligible work owner",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:268:9: assertion `left == right` failed: c177 agent filter preserves the same eligible work owner",
         "original_rails_assertions": [
           "assert_equal [ post.id ], ChannelThread.board_posts_for(@room, owner: \"agents\").pluck(:id)",
           "assert_includes humans.map(&:id), users(:kevin).id",
@@ -13921,10 +13921,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.36s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.28s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c177-db.log",
-            "raw_log_sha256": "8915fac644cb33fad3e3b55d53c8fca5a52620b6d08978443d1bb5aa3d587734"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c177-db.log",
+            "raw_log_sha256": "1922d14899e86b55f4e8150d4caadafc0f5758e9cc6a8495f675eeb88925e236"
           }
         ],
         "mutant": [
@@ -13934,12 +13934,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.13s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.10s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c177-db.log",
-            "raw_log_sha256": "7366bc62b9e7d81d05760c91f0992669bc2d30b7ff9787c4754fb0007163435a",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c177-db.log",
+            "raw_log_sha256": "a3a5ecb1f5f3d04d754ed0b079877a1b54b5c21c96c6ad679db55a605e86b615",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:267:9",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:268:9",
             "assertion_message": "assertion `left == right` failed: c177 agent filter preserves the same eligible work owner"
           }
         ],
@@ -14922,7 +14922,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c191",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c191 step 1: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c191 step 1: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_not ActivityItem.exists?(user: @recipient, source: message)"
         ],
@@ -14933,10 +14933,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.40s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.28s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c191-db.log",
-            "raw_log_sha256": "f3475d67261ab09a00a6a8f4349f9e9b09b9c05c8b8a48375cd8440009712560"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c191-db.log",
+            "raw_log_sha256": "4eb697c68887d5ea386dd4de2b14df101a76fd5a4cfe2fe40edac08abacfb1fc"
           }
         ],
         "mutant": [
@@ -14946,12 +14946,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.13s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.11s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c191-db.log",
-            "raw_log_sha256": "2d98fb05ee54ce12cf3d266f49977549b34a50d1f43198dbc2726543eee8ef75",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c191-db.log",
+            "raw_log_sha256": "663210c2246d98f8cd7fd46c14c39e5a78f43aaecd3139e6e6876664782308b9",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c191 step 1: complete original recorded recipients and state"
           }
         ],
@@ -15004,7 +15004,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c192",
         "hits": 2,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c192 step 1: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c192 step 1: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_not ActivityItem.exists?(user: @author, source: message)"
         ],
@@ -15015,10 +15015,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.55s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.18s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c192-db.log",
-            "raw_log_sha256": "2299a6fc6b0af96eea899677ddb14db03dfd56bcc5dc1af701b0b2a08a3fe167"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c192-db.log",
+            "raw_log_sha256": "2e53f7e73a94706bd6b0d1299067e78192d5f2cf76c76f046d7d4c9136d95bf8"
           }
         ],
         "mutant": [
@@ -15028,12 +15028,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.13s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.10s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c192-db.log",
-            "raw_log_sha256": "0e1dece1560f34cdc10f611e70ecef190173b80b9fdef77a103a417ff4187c4f",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c192-db.log",
+            "raw_log_sha256": "28e0cc6ec92fc54f8c6a75ee501d5715093aa0cb1eee7ddce94cfb593d255e6f",
             "hits": 2,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c192 step 1: complete original recorded recipients and state"
           }
         ],
@@ -15305,7 +15305,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c196",
         "hits": 2,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c196 step 2: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c196 step 2: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_not ActivityItem.exists?(user: @recipient, source: message)"
         ],
@@ -15316,10 +15316,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.62s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.21s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c196-db.log",
-            "raw_log_sha256": "67525d45a2082452741679a493238c6d4a6036b5ce28cb10685a3532ce8d9819"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c196-db.log",
+            "raw_log_sha256": "fb5d162233be9f87ee755be7114fdd175dd15ec0d106954f57426f0c29520cf4"
           }
         ],
         "mutant": [
@@ -15329,12 +15329,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.14s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.10s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c196-db.log",
-            "raw_log_sha256": "f1a5d7772f6c36e1899d14be79439fd2aabf5f4549d5ca56941ac2c58c489694",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c196-db.log",
+            "raw_log_sha256": "4a1dfe7335c9f3019725fcb7fb1dbe1b8e34ead01153dbcaadce61dac58e5eb8",
             "hits": 2,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c196 step 2: complete original recorded recipients and state"
           }
         ],
@@ -15522,7 +15522,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c199",
         "hits": 4,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:368:5: assertion `left == right` failed: c199 candidate reads do not amplify the room roster",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:371:5: assertion `left == right` failed: c199 candidate reads do not amplify the room roster",
         "original_rails_assertions": [
           "assert_equal small, large,",
           "assert_operator small, :>=, 1, \"the probe message should actually exercise the keyword path\""
@@ -15534,10 +15534,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.43s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.21s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c199-db.log",
-            "raw_log_sha256": "78119fa424b1820e5196840eecfdb27f4b3c2499a4199a4ff12d6644050a11e6"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c199-db.log",
+            "raw_log_sha256": "0e79478e49365726b8a14e51713cf0b588162cff93f6b49f93c25bee1055367c"
           }
         ],
         "mutant": [
@@ -15547,12 +15547,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.32s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.19s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c199-db.log",
-            "raw_log_sha256": "d2b6d455d07c73fca475406103df1aa239d0103ba50a37339081cf5bd9ac6644",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c199-db.log",
+            "raw_log_sha256": "ba7e58e18a3dedcc36a4fccca0c5400d91647a60f8b2b35f9fbce6a91ce69d2b",
             "hits": 4,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:368:5",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:371:5",
             "assertion_message": "assertion `left == right` failed: c199 candidate reads do not amplify the room roster"
           }
         ],
@@ -15676,7 +15676,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c201",
         "hits": 2,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c201 step 0: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c201 step 0: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_equal \"mention\", item.event_type",
           "assert_not ActivityItem.exists?(user: @author, source: message)",
@@ -15689,10 +15689,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.37s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.19s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c201-db.log",
-            "raw_log_sha256": "6db385e67c240f63047be99f042ea994c9e011315cf11b131f4a09245bf9609e"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c201-db.log",
+            "raw_log_sha256": "d70557e83c2fb43bb357a4829f89bca32754d33bd893361f63890428779707a8"
           }
         ],
         "mutant": [
@@ -15702,12 +15702,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.13s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.09s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c201-db.log",
-            "raw_log_sha256": "92a5f208ea4b43d211b367037d4db1857a508646842da5364f380a7281f52cf0",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c201-db.log",
+            "raw_log_sha256": "9ba4b5c3ccfa13d2463e289b1ddb32dfe9f5d57ee7aabd87b2ee0ddd5b256776",
             "hits": 2,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c201 step 0: complete original recorded recipients and state"
           }
         ],
@@ -15835,7 +15835,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c203",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c203 step 1: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c203 step 1: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_equal \"mention\", ActivityItem.find_by!(user: @recipient, source: reply).event_type",
           "assert_equal 1, ActivityItem.where(user: @recipient, source: reply).count"
@@ -15847,10 +15847,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.30s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.19s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c203-db.log",
-            "raw_log_sha256": "74bb46fa5cc46dd4b06553e189dec4634b8b3bfa303d2453282be57414b16183"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c203-db.log",
+            "raw_log_sha256": "f269c529e6be85b9f4d75ad373694bec9f9c750ae4fba2ff82d01bf5c436f4cc"
           }
         ],
         "mutant": [
@@ -15860,12 +15860,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.20s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.09s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c203-db.log",
-            "raw_log_sha256": "52d12d34799488f46fc447175d72e6af08c4c9fc96d042c831c755e30e094619",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c203-db.log",
+            "raw_log_sha256": "047c8563d1443347b46f3c617350f6dae08436a7c6b667325229f4ffbe59d93f",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c203 step 1: complete original recorded recipients and state"
           }
         ],
@@ -15912,7 +15912,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c204",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c204 step 1: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c204 step 1: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_not ActivityItem.exists?(user: @recipient, source: without_follow)",
           "assert_equal \"thread_activity\", ActivityItem.find_by!(user: @recipient, source: followed).event_type"
@@ -15924,10 +15924,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.48s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.20s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c204-db.log",
-            "raw_log_sha256": "744d3e83ee189b9ff13a8779ab314907779216bb32ae15a3e071f5932a184e0c"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c204-db.log",
+            "raw_log_sha256": "82156a83fe65c5a87894bdb283ef3449b7bcd316582a6b79f7e1e4504c96db26"
           }
         ],
         "mutant": [
@@ -15937,12 +15937,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.21s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.10s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c204-db.log",
-            "raw_log_sha256": "215ca2633331770f321d7925efd8b33233a5cfcd93bd709bf5009affd3805da9",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c204-db.log",
+            "raw_log_sha256": "6f700b60015960f0775ec9cb0a31ef398c87798f2f768ccd93b4096dff0593ac",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c204 step 1: complete original recorded recipients and state"
           }
         ],
@@ -15993,7 +15993,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c205",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c205 step 0: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c205 step 0: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_equal \"work_update\", event.event_type",
           "assert_equal \"work_update\", ActivityItem.find_by!(user: @recipient, source: event).event_type"
@@ -16005,10 +16005,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.51s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.19s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c205-db.log",
-            "raw_log_sha256": "7c151a54c964dd5e90d981fb6241789b4073578313b258565d0d472ad4c391a7"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c205-db.log",
+            "raw_log_sha256": "1fe84c96ffac5d310166696402dd8fe789c29bbb042c0bd1ad1e12c02f4b6925"
           }
         ],
         "mutant": [
@@ -16018,12 +16018,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.24s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.08s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c205-db.log",
-            "raw_log_sha256": "840878edd08e56948934283fdef8f459ff9d2333c8f1329d96425ca5484fda0d",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c205-db.log",
+            "raw_log_sha256": "29ad83fbc7f257024479d2520cbc2ee1bf40d07b8cbee687ffe09e7078d1d89c",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c205 step 0: complete original recorded recipients and state"
           }
         ],
@@ -16212,7 +16212,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c208",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c208 step 1: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c208 step 1: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_not ActivityItem.exists?(user: @recipient, source: suppressed)",
           "assert_equal \"thread_activity\", ActivityItem.find_by!(user: @recipient, source: notified).event_type"
@@ -16224,10 +16224,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.45s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.20s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c208-db.log",
-            "raw_log_sha256": "38914f8b0d32d563db399bdf2b02ee0c72e478c6b0e65e139b092097fc9b1c6f"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c208-db.log",
+            "raw_log_sha256": "12239b38d1d13633bfddaaddf04b38bab6e95b02874fcd00c7f8458a0029eb9d"
           }
         ],
         "mutant": [
@@ -16237,12 +16237,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.19s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.10s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c208-db.log",
-            "raw_log_sha256": "403ee1d1ec9db843732e31599b98e96a9d09e306572a40347c1a3f4ec5a4885b",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c208-db.log",
+            "raw_log_sha256": "124f2734c091121453dd1c7dfb83a26627284b5fa1e10215250486f7199da1c5",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c208 step 1: complete original recorded recipients and state"
           }
         ],
@@ -16360,7 +16360,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c210",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c210 step 1: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c210 step 1: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_predicate item.reload, :unread?",
           "assert_equal \"mention\", item.event_type",
@@ -16374,10 +16374,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.57s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.17s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c210-db.log",
-            "raw_log_sha256": "d6c165459915690951d9a3018de1ac54ff313050c13602f718533f393e04d290"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c210-db.log",
+            "raw_log_sha256": "da7b5350be8ef5e023d541a8af9777d692f05cd6de82c84c9aeb75f12bb1798e"
           }
         ],
         "mutant": [
@@ -16387,12 +16387,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.18s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.10s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c210-db.log",
-            "raw_log_sha256": "28452d51c29a4a79aa0a6153c40fd9637f4db855866e2307e16c8d12b2c0c6a8",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c210-db.log",
+            "raw_log_sha256": "cafabe7e74a67980e6ead800b2bfe0bd8e07f2e774a70bd0b655fee7c4b3660b",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c210 step 1: complete original recorded recipients and state"
           }
         ],
@@ -16593,7 +16593,7 @@
         "replay": "python3 rust/reference-tools/users/ws12_assertion_mutations.py run --scratch .scratch/ws12-assertion-replay --target .scratch/ws12-assertion-replay/target --workers 1 --declaration c213",
         "hits": 1,
         "outcome": "rejected_at_declared_assertion",
-        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13: assertion `left == right` failed: c213 step 1: complete original recorded recipients and state",
+        "intended_assertion": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13: assertion `left == right` failed: c213 step 1: complete original recorded recipients and state",
         "original_rails_assertions": [
           "assert_equal \"mention\", ActivityItem.find_by!(user: @recipient, source: reply).event_type",
           "assert_equal 1, ActivityItem.where(user: @recipient, source: reply).count"
@@ -16605,10 +16605,10 @@
             ],
             "exit": 0,
             "summary": [
-              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 1.86s"
+              "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.17s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/baseline/c213-db.log",
-            "raw_log_sha256": "049cbe331e51cb8f7f39ab1eb456d7b65cd49120d67c79f1dfd5f6e8dcc5eddd"
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/baseline/c213-db.log",
+            "raw_log_sha256": "e50c6523be2c8965aa9a68b1f31369e6ec4c726daec64f5481b198379b6001bd"
           }
         ],
         "mutant": [
@@ -16618,12 +16618,12 @@
             ],
             "exit": 101,
             "summary": [
-              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1373 filtered out; finished in 0.14s"
+              "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 0.08s"
             ],
-            "raw_log": ".scratch/pr215-round4/final-controls/logs/run/c213-db.log",
-            "raw_log_sha256": "12068bdc3ec448d4c68ca20dd8e33d1fe1d0b6ef20c5058ec7b17177c62ff5ca",
+            "raw_log": ".scratch/pr215-round4/source-controls/logs/run/c213-db.log",
+            "raw_log_sha256": "760418fb5f5afd1bf19ecfa968d793d7654bb0c6fc7c7fa2ea663478de8788d8",
             "hits": 1,
-            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:126:13",
+            "assertion_site": "crates/db/src/tests/ws12_recorder_remaining_test.rs:127:13",
             "assertion_message": "assertion `left == right` failed: c213 step 1: complete original recorded recipients and state"
           }
         ],
