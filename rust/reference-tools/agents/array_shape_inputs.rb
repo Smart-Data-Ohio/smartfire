@@ -156,5 +156,14 @@ pr_setup=setup+"INSERT INTO github_pull_requests(id,owner,repo,number,created_at
 [['nested_only',[[2106760001]]],['object_valid',[{bad:true},2106760001]]].each do |shape,value|
  cases << {name:"rest_github_pr_#{shape}",surface:'rest_github',method:'POST',path:"/rooms/#{room}/agents/github/pull_request_actions",body:JSON.generate(pull_request_id:value,kind:'invalid'),setup_sql:pr_setup,repeat:1}
 end
+# PR214 compatibility regressions and empty-parent validation (no source/job writes).
+["\v#{ta}", "0d#{ta}", "0D#{ta}", "+0d#{ta}", "-0D#{ta}", "0x#{ta}", "0b#{ta}", "0o#{ta}"].each_with_index do |value,i|
+ add.call("pr214_scalar_#{i}",'read_messages',{thread_id:value,limit:3})
+ add.call("pr214_position_#{i}",'read_messages',{thread_id:[tb,value],limit:3})
+end
+['message_id','thread_id'].each do |key|
+ add.call("pr214_step_empty_#{key}",'add_step',{name:'Probe',key=>[]})
+ cases << {name:"pr214_rest_step_empty_#{key}",surface:'rest_step',method:'POST',path:'/agents/steps',body:JSON.generate(name:'Probe',key=>[]),setup_sql:'',repeat:1}
+end
 manifest={frozen_at:'2026-03-02T16:00:00Z',request_headers:{'Accept'=>'application/json','Content-Type'=>'application/json','X-Forwarded-For'=>'203.0.113.210','X-Array-Fixture'=>'ws11api-next3'},secret:secret,projection_tables:%w[agents agent_credentials agent_grants users rooms memberships channel_threads messages action_text_rich_texts boosts thread_memberships agent_events audit_logs activity_items agent_steps agent_approvals polls message_pins github_pull_requests github_pull_request_threads],cases:cases}
 [sql,manifest]

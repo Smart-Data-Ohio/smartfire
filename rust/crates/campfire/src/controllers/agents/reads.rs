@@ -234,4 +234,46 @@ mod id_cast_tests {
             );
         }
     }
+    #[test]
+    fn pr214_scalar_array_corpus_matches_rails_predicates() {
+        let vector: Value =
+            serde_json::from_str(include_str!("../../../../../vectors/pr214_id_corpus.json"))
+                .unwrap();
+        let allowed = vector["allowed"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_i64().unwrap())
+            .collect::<Vec<_>>();
+        let mut mismatches = Vec::new();
+        for case in vector["cases"].as_array().unwrap() {
+            let selected = super::lookup_ids(&case["input"])
+                .into_iter()
+                .filter(|id| allowed.contains(id))
+                .collect::<Vec<_>>();
+            if json!(selected) != case["selected"] {
+                mismatches.push(format!(
+                    "form={} position={} input={} actual={:?} expected={}",
+                    case["form"], case["position"], case["input"], selected, case["selected"]
+                ));
+            }
+        }
+        println!(
+            "PR214 ID corpus: {} scalar forms; {} positions; {} cases; {} mismatches",
+            vector["scalar_forms"],
+            vector["positions"],
+            vector["cases"].as_array().unwrap().len(),
+            mismatches.len()
+        );
+        assert!(
+            mismatches.is_empty(),
+            "{}",
+            mismatches
+                .iter()
+                .take(12)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
 }
