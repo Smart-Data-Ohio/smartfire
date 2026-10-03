@@ -337,6 +337,9 @@ for(const [name,variants] of literalAttributeMutations) {
   if(!reviewMutations.has(name)) reviewMutations.set(name,new Map());
   for(const [variant,mutation] of variants) reviewMutations.get(name).set(variant,mutation);
 }
+reviewMutations.set(WORKSPACE_CASE,new Map([
+  ['slow-workspace-animation',['messages-','.message__quick-reaction {','@keyframes ws8bm-slow-settle { from { opacity: .99; } to { opacity: 1; } }\n.message:last-child { animation: ws8bm-slow-settle 4s linear !important; }\n.message__quick-reaction {']],
+]));
 export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
   const variants=[...(mutations.has(caseName)?['default']:[]),...(reviewMutations.get(caseName)?.keys()||[])];

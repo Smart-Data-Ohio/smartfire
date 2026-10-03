@@ -215,6 +215,7 @@ variant(['transparent-device-text'],'attach-menu',"menu.locator('[role=\"menuite
 variant(['transparent-drive-text','transparent-phone-drive-text'],'attach-menu',"menu.locator('[role=\"menuitem\"]'),'From Google Drive'");
 variant(['transparent-boost-delete-text'],'boosts',"boost.locator('button'),'Delete this boost'");
 variant(['wrong-permission-status','wrong-validation-status'],'work-controllers','assert.equal(response.status,expected');
+variant(['slow-workspace-animation'],'workspace','await settled()');
 for(const specs of V.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 for(const [name,label] of [
   ['missing-thumb-aria-label','React with thumbs up'],['missing-picker-aria-label','Add reaction'],
