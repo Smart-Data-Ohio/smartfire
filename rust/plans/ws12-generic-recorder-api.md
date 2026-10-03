@@ -44,9 +44,11 @@ operation-snapshot broadcasts. Rollback discards rows and commit broadcasts toge
 Existing reminder, event, huddle, approval, budget, scheduled-message and security writers
 retain their original callbacks and failure boundaries.
 
-Evidence: `users/generic_recorder.rb` and `vectors/ws12_generic_recorder.json`: 133 complete
+Evidence: `users/generic_recorder.rb` and `vectors/ws12_generic_recorder.json`: 135 complete
 source/recipient/authorization vectors, caller-authorized message grouping/idempotency,
-and handled-source idempotency; source SHA checks, no response masks. Six Rust regressions
+and handled-source idempotency; source SHA checks, no response masks. Seven Rust regressions
 in `ws12_generic_recorder_test.rs`, including 10/100-recipient source/user preload counts.
 The initial runtime control records nothing for the newly supported sources; a second
 control authorizes all sources and overwrites existing read/handled/event facts. Both fail.
+
+Nullable direct-room involvement remains eligible, matching Rails: only explicit nothing/invisible values silence the source hook. The dedicated nullable-involvement regression fails against the original NOT IN predicate and passes with the explicit NULL clause.

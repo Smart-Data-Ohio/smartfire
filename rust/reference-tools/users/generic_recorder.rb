@@ -68,14 +68,14 @@ travel_to Time.utc(2026, 3, 2, 16) do
     rows << { name: "#{source.class.base_class.name}_missing_recipient", source_type: source.class.base_class.name,
       source_id: source.id, recipient: -1, event: "work_update", skip: true, expected: call.call(source, nil, "work_update", true) }
   end
-  %w[nothing invisible mentions].each do |involvement|
+  [nil, "nothing", "invisible", "mentions"].each do |involvement|
     membership = room.memberships.find_by!(user: users[0])
     membership.update_columns(involvement: involvement)
     [false, true].each do |skip|
       ActivityItem.delete_all
-      rows << { name: "HuddleGrant_#{involvement}_#{skip}", source_type: "HuddleGrant", source_id: grant.id,
+      rows << { name: "HuddleGrant_#{involvement || 'null'}_#{skip}", source_type: "HuddleGrant", source_id: grant.id,
         recipient: users[0].id, event: "huddle_started", skip: skip,
-        sql: ["UPDATE memberships SET involvement='#{involvement}' WHERE room_id=#{room.id} AND user_id=#{users[0].id}"],
+        sql: ["UPDATE memberships SET involvement=#{involvement ? "'#{involvement}'" : 'NULL'} WHERE room_id=#{room.id} AND user_id=#{users[0].id}"],
         expected: call.call(grant, users[0], "huddle_started", skip) }
     end
   end

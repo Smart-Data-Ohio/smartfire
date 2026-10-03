@@ -210,6 +210,34 @@ fn ws12_generic_recorder_preserves_handled_source_event_and_timestamps() {
 }
 
 #[test]
+fn ws12_generic_recorder_nullable_huddle_involvement_matches_rails() {
+    let vector = oracle();
+    for name in ["HuddleGrant_null_false", "HuddleGrant_null_true"] {
+        let row = vector["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["name"] == name)
+            .unwrap();
+        let t = prepare(&vector["setup"]);
+        let changes = row["sql"].as_array().unwrap().clone();
+        t.write(move |tx| {
+            for sql in changes {
+                tx.conn().execute(sql.as_str().unwrap(), [])?;
+            }
+            Ok(())
+        });
+        let input = row.clone();
+        let recorded = t.write(move |tx| record(tx, &input)).is_some();
+        assert_eq!(
+            json!({"recorded": recorded, "items": t.read(items)}),
+            row["expected"],
+            "nullable involvement excludes only explicit nothing/invisible: {name}"
+        );
+    }
+}
+
+#[test]
 fn ws12_generic_recorder_rolls_back_rows_and_commit_broadcasts_together() {
     let vector = oracle();
     let t = prepare(&vector["setup"]);
