@@ -10,6 +10,8 @@ def rust_ports(source):
     # This committed macro emits one #[test] function for each identifier.
     for invocation in re.findall(r'named_cases!\s*\{([^}]+)\}', source, re.S):
         ports.update(re.findall(r'^\s*(\w+)\s*=>\s*"', invocation, re.M))
+    # WS8's named!(identifier, vector_index) emits a #[tokio::test] per case.
+    ports.update(re.findall(r'\bnamed!\s*\(\s*(\w+)\s*,\s*\d+\s*\)', source))
     return ports
 
 

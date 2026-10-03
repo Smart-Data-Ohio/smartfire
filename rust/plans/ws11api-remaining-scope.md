@@ -1,8 +1,7 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-4`, starting from merged main `0d8da877e`.
-#206, #209, #212 and #214 are included. Open #215/#216 branches were not merged
-or used as dependencies. The pinned Rails reference remains `d7c7de92`. This is an implementation audit
+Updated on `rust/ws11api-next-4` after merging main `699ea1c4a`, including #216.
+#206, #209, #212 and #214 are also included. Open #215 was not merged or used as a dependency. The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
 ## Implementation status
@@ -72,21 +71,22 @@ exact byte comparisons; sizes/checksums are never masked.
 
 ## Broader named-case evidence still partial
 
-The pinned domain inventory has 378 cases in 26 files. The prior ledger was
-325 comparisons / 53 deferred. This round rechecks every deferred name against main:
+The pinned domain inventory has 378 cases in 26 files. The previous ledger was
+328 comparisons / 50 deferred. This round replays the newly merged #216 corpus:
 
 | Previously deferred group | Fresh evidence on main | Still deferred |
 | --- | --- | --- |
-| 2 agent badge/directory/no-secret cases | 2 complete rendered socket comparisons from #209/#212 | 0 |
-| 35 WS8 built-in commands | 1 complete OOO badge/notice socket comparison from #209/#212 | 34, owner WS8, PR #216 |
+| 34 WS8 built-in commands | All 35 built-in cases freshly executed in Rails; 63 observations byte-identical to the owner vectors; 34 newly mapped names | 0 |
 | 16 WS12 owner eligibility/work mutation cases | Named-case integration remains in review | 16, owner WS12, PR #215 |
 
-The ledger is now **328 comparisons, 50 deferred**. The three newly mapped names
-run the merged owner tests against a freshly regenerated pinned Rails oracle;
-wrong actions, targets, status content and injected secrets are rejected. Runtime
-pass counts are recorded separately in the next-4 report. No new WS11-API behavior
-difference was found in those merged comparisons. Domain implementations already
-exist; the remaining items are peer-owned named-case evidence, not API service seams.
+The ledger is now **362 comparisons, 16 deferred**. The already mapped OOO
+badge/notice case is replayed but counted only once. The 34 newly mapped names
+use #216's real app-adapter tests, including actual attachment processing and
+committed webhook hooks. The named-case checker discovers their generated test
+functions; removing the macro invocations makes its new regression fail. Runtime
+pass counts are recorded separately in ws11api-next-4-ws8-report.md. No WS11-API
+behavior difference was found. These are peer-owned named-case comparisons,
+not formerly missing API service seams.
 
 Streaming uses real model callbacks, actual WebSocket frames and both human
 subscribers' unread broadcasts, activity/ledger/index projections and logical
@@ -103,48 +103,7 @@ The array lookup sweep additionally fixes thread/cursor/reaction N+1 lookups,
 preserves Rails' global/scoped selection and permission order, and handles
 40,000 candidates with one JSON bind. All WS11-owned named comparisons are now
 closed. **Only peer-owned evidence remains**; none is called an unmerged service
-blocker. The remaining owner test integrations await #215 and #216. The exact remaining names follow.
-
-### test/services/slash_commands/dispatcher_test.rb
-
-Owner: WS8 built-in commands, open PR #216; WS11 agent dispatch comparisons are complete.
-
-Reason: WS8 owns the named-case integration in #216. The merged OOO badge/notice comparison is now mapped; the other 34 names await that owner PR. WS11 custom agent registration/invocation comparisons are complete.
-
-- registry holds every shipped command with metadata
-- command_text? matches slash commands but not escapes or play passthrough
-- huddle starts a call when configured
-- huddle errors when unconfigured
-- event opens the prefilled form url
-- event without a time prefills the title only
-- event rejects past times
-- bare event opens the blank form
-- poll opens the builder in channels but not threads
-- remind posts and saves with a reminder
-- remind rejects unusable input without posting
-- status sets emoji and text until end of day
-- status rejects blank arguments
-- dnd toggles, takes durations, and turns off
-- dnd rejects garbage durations
-- ooo sets an end with a note, and off clears it
-- ooo takes week durations, dates, and datetimes
-- ooo bare tomorrow and weekdays run to the end of the day
-- ooo bare dates run to the end of the day
-- ooo bare month dates roll to next year when this year's passed
-- ooo day durations stay exact
-- ooo off while calendar OOO covers says the calendar still shows it
-- ooo rejects blank arguments, garbage, past times, and long notes
-- shrug posts with the shrug
-- posting commands in a board answer an error without posting
-- posting commands in a board thread still post
-- slash posts in threads skip the legacy webhook fanout
-- slash posts in channels fan out to legacy webhooks
-- slash posts in threads process attachments once
-- me posts an action line
-- me requires an action
-- play posts through the normal message path
-- slash posts never start a stream
-- unknown commands error with the available list
+blocker. The remaining owner test integration awaits #215. The exact remaining names follow.
 
 ### test/models/channel_thread_agent_assignment_test.rb
 
