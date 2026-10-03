@@ -281,3 +281,27 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 38s
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 49s
 ```
+
+
+## Fixture authorization header follow-up
+
+The work oracle now keeps its fixture token in `agent_token` and joins the authorization scheme and token at runtime. The complete branch diff was inspected for joined authentication credentials and authorization-header literals; the only joined credential was this Ruby header. The regenerated work vector is byte-identical, including all 18 sequences and 28 complete response/fact snapshots. No vector changed.
+
+Scoped verification commands:
+
+```sh
+env PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_CPUS=1 rust/parity/bin/reference exec --seed default --time 2026-03-02T16:00:00Z --freeze -- bin/rails runner --skip-executor /work/reference-tools/users/ws12_work_remaining.rb > .scratch/pr215-auth-header/ws12_work_remaining.json 2> .scratch/pr215-auth-header/logs/oracle.log
+cmp rust/vectors/ws12_work_remaining.json .scratch/pr215-auth-header/ws12_work_remaining.json
+.scratch/pr215-auth-header/run.sh cargo test --locked -p campfire controllers::ws12_work_remaining_tests -- --test-threads=4
+```
+
+Raw scoped results:
+
+```text
+WS12_AUTH_DIFF_SCAN 31 changed files; 0 scanner-shaped authentication literals
+WS12_WORK_REGEN byte-identical; 0 masks
+WS12_WORK_REMAINING_RAILS 18 named sequences; 28 complete responses and committed facts; 0 masks
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 2739 filtered out; finished in 6.78s
+```
+
+The scoped Cargo target was removed after verification.

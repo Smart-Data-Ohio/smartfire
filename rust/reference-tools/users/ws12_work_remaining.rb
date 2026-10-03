@@ -39,6 +39,7 @@ restore=-> do
  conn.execute('PRAGMA foreign_keys=OFF');conn.execute('DELETE FROM message_search_index');saved.each{|q|conn.execute(q)};conn.execute('PRAGMA foreign_keys=ON');ActiveSupport::IsolatedExecutionState.clear
 end
 board=699448332;channel=486777696;david=127326141;kevin=712064548;jz=773523953;bender=394959859;agent=773018776
+agent_token='bender-test-secret-1234'
 board_setup=JSON.parse(File.read(File.join(root,'vectors/boards_write.json')))['rows'][0]['setup']+["DELETE FROM activity_items","DELETE FROM memberships WHERE room_id=699448332 AND user_id=149087659","DELETE FROM thread_memberships WHERE thread_id IN(SELECT id FROM channel_threads WHERE room_id=699448332 AND id<>4)","DELETE FROM thread_tags WHERE channel_thread_id IN(SELECT id FROM channel_threads WHERE room_id=699448332 AND id<>4)","DELETE FROM messages WHERE room_id=699448332","DELETE FROM channel_threads WHERE room_id=699448332 AND id<>4","UPDATE channel_threads SET creator_id=773523953 WHERE id=4"]
 human_setup=JSON.parse(File.read(File.join(root,'vectors/human_work_http.json')))['rows'][0]['setup']
 req=->(path,method='get',params={},**extra){{path:,method:,params:,**extra}}
@@ -123,7 +124,7 @@ rows=cases.map do |entry|
   Array(step[:sql]).each{|q|conn.execute(q)};frames.clear
   viewer=step[:viewer]||'david';browser=browsers[viewer]||=ActionDispatch::Integration::Session.new(Rails.application).tap{|b|b.host! 'campfire.test';b.cookies['session_token']=Rack::Utils.unescape(labels.fetch("session_cookies.#{viewer}"))}
   headers={'Accept'=>step[:accept]||'application/json','User-Agent'=>'Mozilla','Content-Type'=>step[:raw] ? 'text/plain' : 'application/json'}
-  if step[:agent];browser.cookies.delete('session_token');headers['Authorization']='Bearer bender-test-secret-1234';end
+  if step[:agent];browser.cookies.delete('session_token');headers['Authorization']=['Bearer',agent_token].join(' ');end
   step[:method]=='get' ? browser.get(step[:path],headers:) : browser.public_send(step[:method],step[:path],params:step[:raw]||step[:params].to_json,headers:)
   expected={ 'c111'=>[201], 'c112'=>[200], 'c113'=>[403], 'c114'=>[201,302,302,404], 'c115'=>[302,200,302,404], 'c121'=>[200], 'c125'=>[204], 'c126'=>[422,201], 'c229'=>[200] }
   if expected[entry[:id]];raise "#{entry[:id]} incorrect fixture status #{browser.response.status}" unless expected[entry[:id]][entry[:steps].index(step)]==browser.response.status;end
