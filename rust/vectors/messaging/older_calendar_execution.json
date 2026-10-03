@@ -2994,6 +2994,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -3030,6 +3041,8 @@
           "retry": false,
           "response": "declined",
           "entry_present": false,
+          "entry_row": null,
+          "error": null,
           "reads": 12,
           "frames": []
         },
@@ -3066,6 +3079,8 @@
           "retry": false,
           "response": "declined",
           "entry_present": false,
+          "entry_row": null,
+          "error": null,
           "reads": 12,
           "frames": []
         },
@@ -3091,6 +3106,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -3116,6 +3142,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -3126,6 +3163,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 2,
           "frames": []
         },
@@ -3136,6 +3184,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 2,
           "frames": []
         },
@@ -3146,6 +3205,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 6,
           "frames": []
         },
@@ -3171,6 +3241,17 @@
           "retry": false,
           "response": "declined",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -3210,6 +3291,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -3276,6 +3368,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 8,
           "frames": []
         },
@@ -3315,6 +3418,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": "Error: Google Calendar request failed (503)",
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -3325,7 +3439,170 @@
           "retry": false,
           "response": null,
           "entry_present": false,
+          "entry_row": null,
+          "error": null,
           "reads": 2,
+          "frames": []
+        },
+        {
+          "name": "sync_write_failed",
+          "routes": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "status": 409,
+              "body": {}
+            },
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-4",
+              "status": 200,
+              "body": {
+                "id": "fixture-google-execution-4"
+              }
+            }
+          ],
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Calendar execution <&>",
+                "description": "From Smartfire: http://campfire.test/rooms/699448326/events/439674038",
+                "start": {
+                  "dateTime": "2026-03-03T16:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-03-03T17:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "fixture-google-execution-4"
+              }
+            },
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-4",
+              "body": {
+                "summary": "Calendar execution <&>",
+                "description": "From Smartfire: http://campfire.test/rooms/699448326/events/439674038",
+                "start": {
+                  "dateTime": "2026-03-03T16:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-03-03T17:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "status": "confirmed"
+              }
+            }
+          ],
+          "retry": false,
+          "response": "going",
+          "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": "fixture prior calendar failure",
+            "synced_at": null,
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": "ActiveRecord::StatementInvalid",
+          "reads": 8,
+          "frames": []
+        },
+        {
+          "name": "sync_error_write_failed",
+          "routes": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-4",
+              "status": 503,
+              "body": {
+                "id": "fixture-google-execution-4"
+              }
+            }
+          ],
+          "calls": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-4",
+              "body": {
+                "summary": "Calendar execution <&>",
+                "description": "From Smartfire: http://campfire.test/rooms/699448326/events/439674038",
+                "start": {
+                  "dateTime": "2026-03-03T16:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-03-03T17:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "reminders": {
+                  "useDefault": true
+                }
+              }
+            }
+          ],
+          "retry": false,
+          "response": "going",
+          "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": "ActiveRecord::StatementInvalid",
+          "reads": 8,
+          "frames": []
+        },
+        {
+          "name": "sync_delete_failed",
+          "routes": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-4",
+              "status": 204,
+              "body": {}
+            }
+          ],
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-4",
+              "body": null
+            }
+          ],
+          "retry": false,
+          "response": "declined",
+          "entry_present": true,
+          "entry_row": {
+            "id": 1,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674038,
+            "google_event_id": "fixture-google-execution-4",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": "ActiveRecord::StatementInvalid",
+          "reads": 5,
           "frames": []
         }
       ]
@@ -6827,6 +7104,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -6863,6 +7151,8 @@
           "retry": false,
           "response": "declined",
           "entry_present": false,
+          "entry_row": null,
+          "error": null,
           "reads": 12,
           "frames": []
         },
@@ -6899,6 +7189,8 @@
           "retry": false,
           "response": "declined",
           "entry_present": false,
+          "entry_row": null,
+          "error": null,
           "reads": 12,
           "frames": []
         },
@@ -6924,6 +7216,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -6949,6 +7252,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -6959,6 +7273,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 2,
           "frames": []
         },
@@ -6969,6 +7294,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 2,
           "frames": []
         },
@@ -6979,6 +7315,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 6,
           "frames": []
         },
@@ -7004,6 +7351,17 @@
           "retry": false,
           "response": "declined",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -7043,6 +7401,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -7109,6 +7478,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 8,
           "frames": []
         },
@@ -7148,6 +7528,17 @@
           "retry": false,
           "response": "going",
           "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": "Error: Google Calendar request failed (503)",
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": null,
           "reads": 7,
           "frames": []
         },
@@ -7158,7 +7549,170 @@
           "retry": false,
           "response": null,
           "entry_present": false,
+          "entry_row": null,
+          "error": null,
           "reads": 2,
+          "frames": []
+        },
+        {
+          "name": "sync_write_failed",
+          "routes": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "status": 409,
+              "body": {}
+            },
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-16",
+              "status": 200,
+              "body": {
+                "id": "fixture-google-execution-16"
+              }
+            }
+          ],
+          "calls": [
+            {
+              "method": "POST",
+              "path": "/calendar/v3/calendars/primary/events",
+              "body": {
+                "summary": "Calendar execution <&>",
+                "description": "From Smartfire: http://campfire.test/rooms/699448326/events/439674039",
+                "start": {
+                  "dateTime": "2026-03-03T16:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-03-03T17:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "id": "fixture-google-execution-16"
+              }
+            },
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-16",
+              "body": {
+                "summary": "Calendar execution <&>",
+                "description": "From Smartfire: http://campfire.test/rooms/699448326/events/439674039",
+                "start": {
+                  "dateTime": "2026-03-03T16:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-03-03T17:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "reminders": {
+                  "useDefault": true
+                },
+                "status": "confirmed"
+              }
+            }
+          ],
+          "retry": false,
+          "response": "going",
+          "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": "fixture prior calendar failure",
+            "synced_at": null,
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": "ActiveRecord::StatementInvalid",
+          "reads": 8,
+          "frames": []
+        },
+        {
+          "name": "sync_error_write_failed",
+          "routes": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-16",
+              "status": 503,
+              "body": {
+                "id": "fixture-google-execution-16"
+              }
+            }
+          ],
+          "calls": [
+            {
+              "method": "PUT",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-16",
+              "body": {
+                "summary": "Calendar execution <&>",
+                "description": "From Smartfire: http://campfire.test/rooms/699448326/events/439674039",
+                "start": {
+                  "dateTime": "2026-03-03T16:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "end": {
+                  "dateTime": "2026-03-03T17:00:00Z",
+                  "timeZone": "UTC"
+                },
+                "reminders": {
+                  "useDefault": true
+                }
+              }
+            }
+          ],
+          "retry": false,
+          "response": "going",
+          "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": "ActiveRecord::StatementInvalid",
+          "reads": 8,
+          "frames": []
+        },
+        {
+          "name": "sync_delete_failed",
+          "routes": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-16",
+              "status": 204,
+              "body": {}
+            }
+          ],
+          "calls": [
+            {
+              "method": "DELETE",
+              "path": "/calendar/v3/calendars/primary/events/fixture-google-execution-16",
+              "body": null
+            }
+          ],
+          "retry": false,
+          "response": "declined",
+          "entry_present": true,
+          "entry_row": {
+            "id": 2,
+            "created_at": "2026-03-02 16:00:00",
+            "event_id": 439674039,
+            "google_event_id": "fixture-google-execution-16",
+            "last_error": null,
+            "synced_at": "2026-03-02 16:00:00",
+            "updated_at": "2026-03-02 16:00:00",
+            "user_id": 127326141
+          },
+          "error": "ActiveRecord::StatementInvalid",
+          "reads": 5,
           "frames": []
         }
       ]

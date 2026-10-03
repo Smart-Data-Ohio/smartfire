@@ -254,3 +254,8 @@ mod older_calendar_execution_tests;
 mod older_embed_children_tests;
 #[cfg(test)]
 mod older_embed_failure_tests;
+
+#[cfg(test)]
+mod comparison_support;
+#[cfg(test)]
+mod final_state_sibling_tests;

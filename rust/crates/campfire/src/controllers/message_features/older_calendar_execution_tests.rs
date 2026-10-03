@@ -56,14 +56,26 @@ fn reads(sql: &[String]) -> usize {
 }
 #[tokio::test]
 async fn older_calendar_inbound_and_sync_jobs_execute_queued_children_like_rails_with_flat_reads() {
+    run_matrix(false).await;
+}
+#[tokio::test]
+async fn calendar_fatal_writes_reach_queue_outcomes() {
+    run_matrix(true).await;
+}
+async fn run_matrix(fatal_only: bool) {
     let vector: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/older_calendar_execution.json"
     ))
     .unwrap();
     let mut counts = HashMap::new();
     let mut children = 0;
+    let mut parents = 0;
     for group in vector["groups"].as_array().unwrap() {
         for case in group["cases"].as_array().unwrap() {
+            if case["error"].is_null() == fatal_only {
+                continue;
+            }
+            parents += 1;
             let app = TestApp::boot_frozen_with_env(&[("APP_URL", "http://campfire.test")])
                 .await
                 .unwrap()
@@ -97,8 +109,13 @@ async fn older_calendar_inbound_and_sync_jobs_execute_queued_children_like_rails
     "inbound_disconnected"=>{tx.conn().execute("UPDATE google_accounts SET disconnected_reason='fixture-disconnected' WHERE user_id=?",[DAVID])?;},
     "inbound_departed"=>{tx.conn().execute("DELETE FROM memberships WHERE user_id=? AND room_id=?",[DAVID,QUIET_CORNER])?;},
     "inbound_local_declined"=>{tx.conn().execute("UPDATE event_attendances SET response='declined' WHERE event_id=? AND user_id=?",[id,DAVID])?;},
-    "sync_conflict"=>{tx.conn().execute("UPDATE event_calendar_entries SET synced_at=NULL WHERE id=?",[entry])?;},
+    "sync_conflict" | "sync_write_failed"=>{tx.conn().execute("UPDATE event_calendar_entries SET synced_at=NULL,last_error='fixture prior calendar failure' WHERE id=?",[entry])?;},
+    "sync_delete_failed"=>{tx.conn().execute("UPDATE event_attendances SET response='declined' WHERE event_id=? AND user_id=?",[id,DAVID])?;},
     "sync_deleted"=>CalendarEvent::find(tx.conn(),id)?.destroy(tx)?,_=>(),
+   }
+   if setup.ends_with("_failed") {
+    let operation=if setup=="sync_delete_failed" {"DELETE"}else{"UPDATE"};
+    tx.conn().execute_batch(&format!("CREATE TRIGGER ws8_calendar_failure BEFORE {operation} ON event_calendar_entries WHEN OLD.id={entry} BEGIN SELECT RAISE(ABORT,'fixture calendar writer failure'); END"))?;
    }
    tx.conn().execute("DELETE FROM background_jobs",[])?;Ok(())
   }).await.unwrap();
@@ -132,12 +149,19 @@ async fn older_calendar_inbound_and_sync_jobs_execute_queued_children_like_rails
                 },
             );
             let observed = metrics.clone();
+            let (send, received) = tokio::sync::oneshot::channel();
+            let send = Arc::new(Mutex::new(Some(send)));
             registry.register(
                 move |app: crate::app::App, job: Sync, execution: Execution| {
                     let observed = observed.clone();
+                    let send = send.clone();
                     async move {
                         let queries = app.db.capture_queries();
                         let result = entry_sync::sync(&app, job.0.event_id, job.0.user_id).await;
+                        if let Some(send) = send.lock().unwrap().take() {
+                            let _ =
+                                send.send(result.as_ref().map(|_| ()).map_err(ToString::to_string));
+                        }
                         app.db.stop_capturing_queries();
                         observed
                             .lock()
@@ -173,8 +197,38 @@ async fn older_calendar_inbound_and_sync_jobs_execute_queued_children_like_rails
                 .await
                 .unwrap();
             assert!(!case["retry"].as_bool().unwrap());
-            drain.calendar(&app).await;
+            if !case["error"].is_null() {
+                let error = received
+                    .await
+                    .unwrap()
+                    .expect_err("Calendar write failure reaches the consumer");
+                assert!(error.contains("fixture calendar writer failure"), "{error}");
+            } else {
+                drain.calendar(&app).await;
+            }
             runner.shutdown(Duration::from_secs(1)).await;
+            if !case["error"].is_null() {
+                app.db()
+                    .read(|c| {
+                        let jobs = c
+                            .prepare("SELECT status,attempts,last_error FROM background_jobs")?
+                            .query_map([], |r| {
+                                Ok((
+                                    r.get::<_, String>(0)?,
+                                    r.get::<_, i64>(1)?,
+                                    r.get::<_, String>(2)?,
+                                ))
+                            })?
+                            .collect::<rusqlite::Result<Vec<_>>>()?;
+                        assert_eq!(jobs.len(), 1);
+                        assert_eq!(jobs[0].0, "failed");
+                        assert_eq!(jobs[0].1, 1);
+                        assert!(jobs[0].2.contains("fixture calendar writer failure"));
+                        Ok(())
+                    })
+                    .await
+                    .unwrap();
+            }
             client.assert_silent().await;
             assert!(case["frames"].as_array().unwrap().is_empty());
             let calls=recorded.calls.lock().unwrap().iter().map(|c|{assert_eq!(c["access_token"],FIXTURE_TOKEN);let body=c["body"].as_str().unwrap();json!({"method":c["method"],"path":c["path"],"body":if body.is_empty(){Value::Null}else{serde_json::from_str::<Value>(body).unwrap()}})}).collect::<Vec<_>>();
@@ -194,17 +248,14 @@ async fn older_calendar_inbound_and_sync_jobs_execute_queued_children_like_rails
                             |r| r.get::<_, String>(0),
                         )
                         .optional()?,
-                        c.query_row(
-                            "SELECT EXISTS(SELECT 1 FROM event_calendar_entries WHERE id=?)",
-                            [entry],
-                            |r| r.get::<_, bool>(0),
-                        )?,
+                        super::comparison_support::row(c, "event_calendar_entries", entry)?,
                     ))
                 })
                 .await
                 .unwrap();
             assert_eq!(json!(actual.0), case["response"], "{name}");
-            assert_eq!(json!(actual.1), case["entry_present"], "{name}");
+            assert_eq!(json!(!actual.1.is_null()), case["entry_present"], "{name}");
+            super::comparison_support::same_row(&actual.1, &case["entry_row"], &name);
             let metrics = metrics.lock().unwrap();
             let expected_children = usize::from(matches!(
                 name.as_str(),
@@ -228,6 +279,6 @@ async fn older_calendar_inbound_and_sync_jobs_execute_queued_children_like_rails
         }
     }
     println!(
-        "WS8bm2 Calendar execution Rust: 26 parent jobs; {children} queued SyncEntry children executed; exact exchanges, states and silent old-window streams; flat consumer reads"
+        "WS8bm2 Calendar execution Rust: {parents} parent jobs; {children} queued SyncEntry children executed; exact exchanges, complete persisted entries, states and silent old-window streams; flat consumer reads"
     );
 }

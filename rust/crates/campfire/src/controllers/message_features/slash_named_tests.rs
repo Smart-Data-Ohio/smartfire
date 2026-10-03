@@ -60,6 +60,7 @@ async fn run(index: usize) {
     .await;
     insert_rows(&app, case["rows"].clone()).await;
     let mut socket = None;
+    let mut streams = std::collections::HashMap::new();
     if index == 21 {
         let cookie = app.sign_in(DAVID).await.cookie_header();
         let (mut client, server) = stream_with_cookie(&app, &cookie).await;
@@ -67,11 +68,11 @@ async fn run(index: usize) {
             let gid = campfire_views::helpers::gid_param("User", DAVID);
             let signed =
                 rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&gid, suffix]);
-            client
-                .confirm(&crate::channels::tests::support::identifier(
-                    json!({"channel":"Turbo::StreamsChannel","signed_stream_name":signed}),
-                ))
-                .await;
+            let identifier = crate::channels::tests::support::identifier(
+                json!({"channel":"Turbo::StreamsChannel","signed_stream_name":signed}),
+            );
+            streams.insert(identifier.clone(), format!("{gid}:{suffix}"));
+            client.confirm(&identifier).await;
         }
         socket = Some((client, server));
     }
@@ -129,12 +130,9 @@ async fn run(index: usize) {
             })
             .count();
         let id = result.message_id;
+        let payload = result.payload();
         let mut result = serde_json::to_value(&result).unwrap();
-        result["payload"] = result_payload(
-            id,
-            result["kind"].as_str().unwrap(),
-            case["room_id"].as_i64().unwrap(),
-        );
+        result["payload"] = payload;
         let runtime = app.booted.app.clone();
         let mut actual=app.db().read(move |conn| {
    let p=Presenter::new(conn,&runtime,None);let mut state=serde_json::Map::new();
@@ -149,9 +147,13 @@ async fn run(index: usize) {
   }).await.unwrap();
         if let Some((client, _)) = &mut socket {
             let mut frames = vec![];
-            for frame in row["frames"].as_array().unwrap() {
+            for _ in row["frames"].as_array().unwrap() {
                 let wire: Value = serde_json::from_str(&client.next_text().await).unwrap();
-                frames.push(json!({"stream":frame["stream"],"html":wire["message"]}));
+                assert_eq!(wire.as_object().unwrap().len(), 2);
+                let stream = streams
+                    .get(wire["identifier"].as_str().unwrap())
+                    .expect("subscribed status stream");
+                frames.push(json!({"stream":stream,"html":wire["message"]}));
             }
             client.assert_silent().await;
             actual["frames"] = json!(frames);
@@ -164,15 +166,6 @@ async fn run(index: usize) {
         server.abort();
     }
     println!("WS8bm2 named slash: {name} matched Rails");
-}
-fn result_payload(id: Option<i64>, kind: &str, room: i64) -> Value {
-    if let Some(id) = id {
-        json!({"message_id":id})
-    } else if kind == "start_huddle" {
-        json!({"room_id":room})
-    } else {
-        json!({})
-    }
 }
 macro_rules! named {
     ($name:ident,$index:literal) => {
