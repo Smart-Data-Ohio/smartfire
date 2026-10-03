@@ -105,6 +105,11 @@ when /^composer-/
   pets.memberships.grant_to(User.find(773523953))
   User.find_by!(name: "Kevin").update!(name: "David") if kind == "composer-typing"
   File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(pets_id: pets.id))
+when "attach-share"
+  User.find(773523953).google_account&.destroy!
+  eval(File.read(Rails.root.join("storage/db/drive-share-mocks.rb")),TOPLEVEL_BINDING,"test/support/drive_share_mocks.rb")
+  scenario=Object.new.extend(DriveShareMocks).drive_scenario
+  File.write(Rails.root.join("storage/db/browser-fixture.json"),JSON.generate(drive_mock_js:DriveShareMocks::MOCK_JS,drive_scenario:scenario))
 when "attach-menu"
   user = User.find(773523953)
   user.google_account&.destroy!

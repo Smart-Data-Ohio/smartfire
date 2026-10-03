@@ -12,6 +12,7 @@ const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
   ...actionMutations,
+  ['From Google Drive starts the enhanced share flow when sharing is configured',['messages-','.message__quick-reaction {','.drive-share-dialog__file { opacity: 0 !important; }\n.message__quick-reaction {']],
   [WORKSPACE_CASE,['messages-','.message__quick-reaction {','#sidebar .sidebar__tools { margin-left: 20px !important; }\n.message__quick-reaction {']],
   [motionCases[0],['messages-','.message__quick-reaction {','#sidebar .sidebar__container { transition-duration: 0s !important; }\n.message__quick-reaction {']],
   [motionCases[1],['messages-','.message__quick-reaction {','#channel-members .is-selecting .member-panel__avatar { transform: translateX(10px) !important; }\n.message__quick-reaction {']],

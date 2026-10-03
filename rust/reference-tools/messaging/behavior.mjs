@@ -142,7 +142,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       return;
     }
     if(file==='composer_attach_menu') {
-      await attachMenu({author,recipient,caseName});
+      await attachMenu({author,recipient,caseName,fixture});
       return;
     }
     if(file==='boosting_messages') {

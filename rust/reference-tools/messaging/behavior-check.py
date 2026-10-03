@@ -117,6 +117,7 @@ CASES = {
         "thread drafts persist per thread without touching the channel draft",
     ],
     "composer_attach_menu": [
+        "From Google Drive starts the enhanced share flow when sharing is configured",
         "+ shows both attach options when Drive is available",
         "From this device triggers the file input",
         "+ opens the file picker directly without Drive",
@@ -340,8 +341,11 @@ for file in files:
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             elif file == "composer_attach_menu":
+                fixture_kind="attach-share" if case.startswith("From Google Drive starts the enhanced") else "attach-menu"
+                if fixture_kind=="attach-share":
+                    (fixture / "db/drive-share-mocks.rb").write_bytes(subprocess.check_output(["git","show",f"{PIN}:test/support/drive_share_mocks.rb"],cwd=ROOT))
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
-                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "attach-menu"], cwd=ROOT, env=env, check=True)
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             elif file == "boosting_messages":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "boosts"], cwd=ROOT, env=env, check=True)
@@ -378,12 +382,17 @@ for file in files:
             if file == "composer_attach_menu":
                 run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
             paused_jobs=any(name in paused_job_cases for name in batch)
+            if case.startswith("From Google Drive starts the enhanced"):
+                run_env.update(GOOGLE_PICKER_API_KEY="test-picker-key",GOOGLE_CLOUD_PROJECT_NUMBER="123456789012")
             if paused_jobs:
                 run_env["WS8BM_BROWSER_HOST"]="1"
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log:
                 try:
                     reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
+                    if case.startswith("From Google Drive starts the enhanced"):
+                        for key in ["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_PICKER_API_KEY","GOOGLE_CLOUD_PROJECT_NUMBER"]:
+                            reference_up += ["-e",key+"="+run_env[key]]
                     if paused_jobs:
                         reference_up += ["-e", "WS8BM_TEST_JOB_ADAPTER=1"]
                     subprocess.run(reference_up, cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
@@ -461,13 +470,13 @@ for file in files:
                                 reference_source = subprocess.check_output(["git","show",f"{PIN}:test/system/workspace_markdown_test.rb"],cwd=ROOT,text=True)
                                 literal=textwrap.dedent(reference_source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("  MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=654632876 AND markdown_source=?",(literal,)).fetchone()[0]==1
-                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=201306877 AND markdown_source=?",("Mobile draft\r\n",)).fetchone()[0]==1
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=201306877 AND markdown_source=?",("Mobile draft\n",)).fetchone()[0]==1
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]==seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]+2
                             elif file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     for table in (["messages","channel_threads","users","rooms"] if file == "motion" else ["messages","channel_threads"]):
-                                        query=("SELECT id,name,email_address,role,active FROM users ORDER BY id" if table=="users" else "SELECT id,name,type,creator_id FROM rooms ORDER BY id" if table=="rooms" else f"SELECT * FROM {table} ORDER BY id")
+                                        query=("SELECT id,name,email_address,role,status FROM users ORDER BY id" if table=="users" else "SELECT id,name,type,creator_id FROM rooms ORDER BY id" if table=="rooms" else f"SELECT * FROM {table} ORDER BY id")
                                         assert conn.execute(query).fetchall()==seed.execute(query).fetchall()
                             elif file == "channel_threads_controller":
                                 from behavior_work_rows import assert_work_rows

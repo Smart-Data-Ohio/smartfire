@@ -26,6 +26,7 @@ export function assertionFrames(error) {
 const target=(module,anchor,message)=>({module:`behavior-${module}.mjs`,anchor,message});
 const D=new Map();
 const add=(names,module,anchor,message)=>{for(const name of names) D.set(name,[target(module,anchor,message)]);};
+add(['From Google Drive starts the enhanced share flow when sharing is configured'],'attach-menu',"page.locator('.drive-share-dialog .drive-share-dialog__file')");
 add([WORKSPACE_CASE],'workspace',"'workspace: profile inside navigation'");
 for(const [index,anchor] of [
   [0,"'motion: drawer starts off-canvas'"],
