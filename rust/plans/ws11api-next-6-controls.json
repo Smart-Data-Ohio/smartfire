@@ -1,5 +1,6 @@
 {
   "baseline": "491b9425e7d3190072f833690e285f2d6dbdfb2e",
+  "producer_snapshot": "886425ef0574d7df5d19acf4c14e2222b53b9294",
   "fresh_reference": "d7c7de92",
   "named_api": [
     {
@@ -13,10 +14,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.77s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/posts_order.log",
-      "log_sha256": "06bda3fda07a71839fa1b542f77372bbd3cb10b1ebc63d1a5ad1a4a3d8373ae8"
+      "log_sha256": "e6b3414296a39cfffb7d9a92eddd4ae66b384cd190b4a129d2193f804e1c92f2"
     },
     {
       "key": "posts_reply",
@@ -29,10 +30,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.80s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.79s"
       ],
       "log": "logs/posts_reply.log",
-      "log_sha256": "33f9de25a3bf52432f318e86721552ec1aaf557ce4fd033e106b3cf4805d0842"
+      "log_sha256": "e0f68cb8c967f87b1b2947c5c8c2b5d35221a6c477061181831522c587e79a27"
     },
     {
       "key": "posts_status",
@@ -45,10 +46,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.80s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/posts_status.log",
-      "log_sha256": "bcecd82f78db53f90ada428612d4c3135818182f8fe15baedae807e966c6d61e"
+      "log_sha256": "8f00229f4ced4118e00212ffccecd84cefee9e7d0e881f859c9f06c598f9b62a"
     },
     {
       "key": "posts_owner",
@@ -61,10 +62,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.78s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.82s"
       ],
       "log": "logs/posts_owner.log",
-      "log_sha256": "ebc84a4d73c3a9b93cfa6960cdc3063880298690a6eb10a426356b86e8b32dea"
+      "log_sha256": "9207453e6588f0bc67b69becb13bab41c6f8574f532b53ff91694bf6b0dbb7f7"
     },
     {
       "key": "posts_cap",
@@ -77,10 +78,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.15s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 1.11s"
       ],
       "log": "logs/posts_cap.log",
-      "log_sha256": "e860017bc89fba9007a41777dc0a6134cf81bcd002b1f8b06ecdfcd8f1f2f56e"
+      "log_sha256": "19d56530d6e8d6b5cd85b361a9af32d9ba83d89c965d1f81305e7a4b40af2120"
     },
     {
       "key": "posts_legacy",
@@ -93,10 +94,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.87s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.76s"
       ],
       "log": "logs/posts_legacy.log",
-      "log_sha256": "84cef396db06a1ec22ac53a4f69bb4c7de3943ecd951d656a3fcd9ea6f63d308"
+      "log_sha256": "194c9d67cc06a80fc0364a3d79410b81a2bcab19c13ffe72e28f7a7cebc24978"
     },
     {
       "key": "posts_left",
@@ -109,10 +110,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.90s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/posts_left.log",
-      "log_sha256": "13e95133bd2ad1be78cf3b26c2543c5609aeb3de16699920c5b2ca2780b7fa38"
+      "log_sha256": "4cfe0f785f0ab9faa99e4887ed9e99aa221cefbb659e1bb5dc19986781f8f631"
     },
     {
       "key": "shared_payload",
@@ -125,10 +126,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.86s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.79s"
       ],
       "log": "logs/shared_payload.log",
-      "log_sha256": "0496f30548c88e71f6d85a030ce56df2b5dc716bfc6b62d27f2ed69c81b48fff"
+      "log_sha256": "8321b1ddf82c77a6a6ee0931ec70b26854a50a59509005db9105751ef4f662a3"
     },
     {
       "key": "work_order",
@@ -141,10 +142,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.82s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.80s"
       ],
       "log": "logs/work_order.log",
-      "log_sha256": "5cebdf82458d3dc9109bc5f388be9756099a688bc628cddaa50870112dcfca1d"
+      "log_sha256": "a8d904fb5051544e7a975c089e172421a5e083d88e92df0150d1c300aadb5dff"
     },
     {
       "key": "work_empty",
@@ -157,10 +158,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.90s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.86s"
       ],
       "log": "logs/work_empty.log",
-      "log_sha256": "3bf5992b84e00df5ec183fa7884da6766ea0eeff1fb023d4d5db69a4692ded6e"
+      "log_sha256": "b363dd3ce14ead7e882bdc53995dde5d84ef8a1aa8c2ea39872e4e4f5b202657"
     },
     {
       "key": "work_links_show",
@@ -173,10 +174,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.88s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.76s"
       ],
       "log": "logs/work_links_show.log",
-      "log_sha256": "ddb7ede200ee0ece7e425268d6aeb13ab025b53d0f8ab2f17a6fb301db7406ac"
+      "log_sha256": "ec78ccbe43145e6d4fc1dc87da2b968b61fc1231ddf3d124d5098be0ed4d4dfd"
     },
     {
       "key": "work_links_list",
@@ -189,10 +190,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.79s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.77s"
       ],
       "log": "logs/work_links_list.log",
-      "log_sha256": "eaeffdf518cb009f20aacbe97c7c55da7e297e17e87ce30e557d4fd11b048e70"
+      "log_sha256": "02bdc83f82a47be2e0545e3f315f5e05ca4aa2273cb659e9a5785acf0e974a04"
     },
     {
       "key": "work_note_history",
@@ -205,10 +206,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.92s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.90s"
       ],
       "log": "logs/work_note_history.log",
-      "log_sha256": "903148830b307771eca4995032954a5b88230c975a86e59268af2c55757c2329"
+      "log_sha256": "363ee3781459825d69160c20f027090f87457735d10391a05c81193fd0d5b0e1"
     },
     {
       "key": "work_orphaned",
@@ -221,10 +222,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.87s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.76s"
       ],
       "log": "logs/work_orphaned.log",
-      "log_sha256": "7a3e07dfa8f67f06aee0df46b2ba8d2aaa9836b628f7de376ed5e6f92b49c216"
+      "log_sha256": "6d70ac9b9ae51d8f8d5f2fb8eb3a11fcdcc4be12ee77a5614f013c12f4d2c2db"
     },
     {
       "key": "result_permissions",
@@ -237,10 +238,10 @@
       "hits": 2,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.77s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/result_permissions.log",
-      "log_sha256": "cb959fa259d5fee0de5e0d956be27e79fc42add394dac89c6060488c2b7d1f31"
+      "log_sha256": "81fa2e0923891e6c79fd2c0e80ffc964bd4cc88f49333a2725db1bb97d586da4"
     },
     {
       "key": "result_precedence",
@@ -253,10 +254,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.77s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/result_precedence.log",
-      "log_sha256": "9692137745d6a50ed76c0cda961332926dcc6f9e01fad1baee6159740b9784cf"
+      "log_sha256": "94f0b444a792977d53c0055f3f802865ce4bf632b62bf9ceca4b6e2399e08b59"
     },
     {
       "key": "assignment_poll",
@@ -269,10 +270,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.81s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.77s"
       ],
       "log": "logs/assignment_poll.log",
-      "log_sha256": "e8355bb550ceffcac1bf036df13b72239d7df2ff7e6a48706e60954257818e85"
+      "log_sha256": "ea5803bdeb1b8d3fa83cc715b79882c8ae5bc4b3d939f959383233b44ac94624"
     },
     {
       "key": "assignment_links",
@@ -285,10 +286,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.90s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.79s"
       ],
       "log": "logs/assignment_links.log",
-      "log_sha256": "b15ae5ed7c0ab9316e5f7d3c3904a24a9bf98eaebcacade70a7f88ebee5183fd"
+      "log_sha256": "fa0936bafe1bc66d194b2a55802ff660831464e67c68e8a13efc9d1c8ba3aaed"
     },
     {
       "key": "unassignment_poll",
@@ -301,10 +302,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.82s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/unassignment_poll.log",
-      "log_sha256": "32aaf3dd00169a6bc2f0300ed1d8cd945abe3b323fef1ce81eab97a6ce3ead4f"
+      "log_sha256": "25fdf5cb097b276d5b31ad3b9a8bf00f837f20e9a7270d394ce58ea5a1f58796"
     },
     {
       "key": "assignment_ack",
@@ -317,10 +318,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.85s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.86s"
       ],
       "log": "logs/assignment_ack.log",
-      "log_sha256": "4cd6495c5299e5288d609b81988b284252ed51b779b24787db6f373a07f08fbf"
+      "log_sha256": "03b251bf4a0e1f2df99b6bf2e6b4c29794c219f2eb25a65c6bbfeeebc8fc9199"
     },
     {
       "key": "assignment_webhook",
@@ -333,10 +334,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.62s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.53s"
       ],
       "log": "logs/assignment_webhook.log",
-      "log_sha256": "19e705b2af1b0ebf768f11d5b4887956210bfe8e6293462e768665c3c60bf37d"
+      "log_sha256": "42b5d98329418160086af8b03ec1832fab30670915e6a9fe27732bcc04278f15"
     },
     {
       "key": "assignment_no_read",
@@ -349,10 +350,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.64s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.56s"
       ],
       "log": "logs/assignment_no_read.log",
-      "log_sha256": "06e05b4967e6e7ea03679e52e5d3b9f58537b3ea796e7e3d68430ac7038e4225"
+      "log_sha256": "1e0e2aadcb6d4c1794eafea0f8f73155b3c3bfac874ca2008a9e40b2379a2bdf"
     },
     {
       "key": "assignment_revoked",
@@ -365,10 +366,10 @@
       "hits": 6,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.80s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.82s"
       ],
       "log": "logs/assignment_revoked.log",
-      "log_sha256": "afb6e895ec90c7269eb7bf41aa9669d619cb5bf4eee7c3f7a7ecdde1000dcc46"
+      "log_sha256": "65a5aff85ff66bd82433f1e5c7109587281c1262da7a4c8ecdfad5c4366df543"
     },
     {
       "key": "assignment_left",
@@ -381,10 +382,10 @@
       "hits": 6,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.87s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/assignment_left.log",
-      "log_sha256": "d901dfc211a34b7469d2b2f75362f48e62052fa77e00865297dbfd85d5100e0c"
+      "log_sha256": "76b75b32f389cc08fd5956467c5e83f21b5e61687ad32c158e58db09895b9ecd"
     },
     {
       "key": "work_message_rate",
@@ -397,10 +398,10 @@
       "hits": 42,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.18s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 1.01s"
       ],
       "log": "logs/work_message_rate.log",
-      "log_sha256": "abc3dbd7038ada51414b3f0abe3635fee073c5bb23c7328db1d55d0c2b1578d0"
+      "log_sha256": "a48aef8349549f2c0f976a37ab396166c36b1a90b8eb2ebd520986631ac92c83"
     },
     {
       "key": "handoff_poll",
@@ -413,10 +414,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.86s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.77s"
       ],
       "log": "logs/handoff_poll.log",
-      "log_sha256": "b47fded1837c1652a408d3ecad265442bc50d046e1a845dd97d20485049613d3"
+      "log_sha256": "d82a7c1b346df529773765505aff73cf0cf5cd2bf8558828717b116d3272e6f2"
     },
     {
       "key": "handoff_ack",
@@ -429,10 +430,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.35s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.78s"
       ],
       "log": "logs/handoff_ack.log",
-      "log_sha256": "0d5b7e1be47aecb935c75899a4ff895a1c392927db79d48fb288474b7b6f048f"
+      "log_sha256": "89205e914c66108f8561f966564fb3c7eee929c6bc0e738cdca5c69c4099ab91"
     },
     {
       "key": "handoff_webhook",
@@ -445,10 +446,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 0.91s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 0.81s"
       ],
       "log": "logs/handoff_webhook.log",
-      "log_sha256": "489bfd0d9a20f1804d79dabbc5fb772121318fc808f478bf43a75dd83ff30524"
+      "log_sha256": "ce07fe7d45d251c0cbbf7a02eecefcc1a618ce37c146f5146149b811924ca848"
     },
     {
       "key": "handoff_throttle",
@@ -461,10 +462,10 @@
       "hits": 61,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.77s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 1.54s"
       ],
       "log": "logs/handoff_throttle.log",
-      "log_sha256": "d5ff562e77dad3414dfb3d20585d8c5b1e18e1f8a07b9fc0f920f460b0fdef03"
+      "log_sha256": "69a202f8616ef51bb496d1fbd6fed76f9acd82c8c809e2248841ec2f4b291688"
     },
     {
       "key": "handoff_shared_throttle",
@@ -477,10 +478,10 @@
       "hits": 61,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.68s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 1.52s"
       ],
       "log": "logs/handoff_shared_throttle.log",
-      "log_sha256": "11b408b1ba3704b3dbe653441abc349a9fdabb3167ea4c089cd8ce215c1e5933"
+      "log_sha256": "8d17b71ac3d48036d9b28ac34f1873195316d6aa679a6ef086d1b12fa2e52a53"
     },
     {
       "key": "board_flow",
@@ -493,10 +494,10 @@
       "hits": 1,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 1.15s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 1.02s"
       ],
       "log": "logs/board_flow.log",
-      "log_sha256": "0262e7a1a53894bcb9e17913eba7b0623e1b532c1147ec8d50773bc87798b561"
+      "log_sha256": "5123f6347d082a83941c8df47bc1f2239ef326876217f20c72d8cb653955879e"
     }
   ],
   "queries": [
@@ -509,10 +510,10 @@
       "hits": 110,
       "intended_assertion_rejected": true,
       "summaries": [
-        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2774 filtered out; finished in 2.99s"
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2775 filtered out; finished in 2.80s"
       ],
       "log": "logs/polling_reads.log",
-      "log_sha256": "51d2a665688bc338f4967b481a3e804442ff4df526de77f055c8451fb27f8535"
+      "log_sha256": "8ffe4537511ff264f35e76e6606c521fdf7217368a547a8f43e76d92431b6fe6"
     }
   ]
 }
