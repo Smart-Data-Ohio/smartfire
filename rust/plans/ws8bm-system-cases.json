@@ -197,8 +197,8 @@
           "status": "deferred",
           "evidence": "",
           "previous_evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels",
-          "diagnostic": "Before: attachment-control3.log has 0 passed / 3 failed pairs and final-controls.log still fails at the unchanged 10 s preview. After restoring the immediate persisted-parent lookup and Message#to_key scope: attachment-final-controls.log has 3 passed / 0 failed pairs, with actual source/attachment/blob-byte rows verified. attachment-final-mutants.log has 3 paired intended rejections and 1 invalid filename variant: it fails at the earlier preview on both apps and earns no filename credit.",
-          "remaining_reason": "Pinned workspace_markdown_test.rb:143-173, especially :146-149 and :165-168: the exact persisted-parent lookup and client_message_id DOM scope are restored, and three fresh controls pass. The filename probe still intermittently encounters no reply preview at the unchanged 10 s deadline before its intended filename assertion. Keep this declaration deferred while tracing the actual response/broadcast/context sequence; do not add a wait or credit that invalid probe. Own unresolved harness/client behaviour, no owner block.",
+          "diagnostic": "Round -4 executes the literal pinned Capybara 3.40.0/Selenium 4.35.0 body at workspace_markdown_test.rb:143-173 with only the shared upload path adapted. Both hosts reproduce failures at :165/:166; translated traces show a late XHR progress event overwriting the committed row. Persisted reply/attachment identity remains correct. No longer deadline or client change.",
+          "remaining_reason": "Shared pinned-client upload progress race: composer_controller.js:331-333 -> messages_controller.js:178-180 -> models/client_message.js:42-50 updates a delivered message body without a pending-state guard. The filename mutant can fail at the earlier unchanged 10 s preview assertion; no intended rejection credit. Literal Rails Capybara body also fails at workspace_markdown_test.rb:165/166 on this headless machine. Needs lead disposition of the shared Rails client bug or a deterministic original test sequence; no demonstrated Rust-only write/render difference, no owner block.",
           "uncredited_evidence": "Paired controls and three served probes remain implemented, with original visibility and deadlines. Successful 8d4302d96 isolation is diagnostic only; no positive declaration credit at the final merged checkpoint."
         },
         {
@@ -301,9 +301,8 @@
         },
         {
           "name": "From Google Drive starts the legacy picker flow",
-          "status": "deferred",
-          "evidence": null,
-          "remaining_reason": "Needs the pinned server-side WebMock Drive list response and actual Google connection fixture, then visible Q3 Planning through the real picker route (composer_attach_menu_test.rb:34-44). Current harness does not yet provide that server-side transport; no owner block."
+          "status": "passed",
+          "evidence": "WS8bm -4: pinned Rails/Rust paired browser control and intended served rejection, real test-environment hosts, pinned external Drive stubs/existing Rust Google Client seam, exact persisted rows; rust/plans/ws8bm-pr4-review.md. Original predicates and deadlines retained; no pixels."
         },
         {
           "name": "From Google Drive starts the enhanced share flow when sharing is configured",
@@ -639,21 +638,18 @@
       "cases": [
         {
           "name": "attach Drive files from the picker, send textless, and remove through edit",
-          "status": "deferred",
-          "evidence": null,
-          "remaining_reason": "Needs server-side Drive list/file WebMock fixtures, the two actual picker selections, chip geometry/removal, textless persisted file-ID set, and edit-frame replacement before final empty attachment rows (drive_attachments_test.rb:10-76). Current harness lacks those external transports; no owner block."
+          "status": "passed",
+          "evidence": "WS8bm -4: pinned Rails/Rust paired browser control and intended served rejection, real test-environment hosts, pinned external Drive stubs/existing Rust Google Client seam, exact persisted rows; rust/plans/ws8bm-pr4-review.md. Original predicates and deadlines retained; no pixels."
         },
         {
           "name": "edit a room message in the composer and remove one of two attachments",
-          "status": "deferred",
-          "evidence": null,
-          "remaining_reason": "Needs two Drive metadata/list responses followed by real root composer edit, removal, one remaining visible link and exact persisted FILE_ID, plus hidden context DOM assertion (drive_attachments_test.rb:79-113). Own server-side mock transport remains unported."
+          "status": "passed",
+          "evidence": "WS8bm -4: pinned Rails/Rust paired browser control and intended served rejection, real test-environment hosts, pinned external Drive stubs/existing Rust Google Client seam, exact persisted rows; rust/plans/ws8bm-pr4-review.md. Original predicates and deadlines retained; no pixels."
         },
         {
           "name": "attach a Drive file from the thread composer",
-          "status": "deferred",
-          "evidence": null,
-          "remaining_reason": "Needs pinned Drive list/file transport, real joined-thread fixture and the original 10 s settled drawer transform/picker/link assertions, followed by thread-message attachment IDs (drive_attachments_test.rb:116-140,151-164). Own harness work; merged WS12/#201/automations are not prerequisites."
+          "status": "passed",
+          "evidence": "WS8bm -4: pinned Rails/Rust paired browser control and intended served rejection, real test-environment hosts, pinned external Drive stubs/existing Rust Google Client seam, exact persisted rows; rust/plans/ws8bm-pr4-review.md. Original predicates and deadlines retained; no pixels."
         }
       ]
     },
@@ -716,9 +712,8 @@
       "cases": [
         {
           "name": "motion is off by default in the test environment",
-          "status": "deferred",
-          "evidence": null,
-          "remaining_reason": "Asserts server-emitted data-test-motion=off and all three 0ms tokens (motion_test.rb:19-23). Both live harnesses boot production, where the Rails layout intentionally omits that attribute. Supplying the test-only input for other cases cannot earn credit for this server-emission declaration; a real test-environment host contract is still needed."
+          "status": "passed",
+          "evidence": "WS8bm -4: pinned Rails/Rust paired browser control and intended served rejection, real test-environment hosts, pinned external Drive stubs/existing Rust Google Client seam, exact persisted rows; rust/plans/ws8bm-pr4-review.md. Original predicates and deadlines retained; no pixels."
         },
         {
           "name": "mobile drawer animates in, lands in place, and returns focus with motion on",

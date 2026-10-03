@@ -8,6 +8,7 @@ require "minitest/autorun"
 location = JSON.parse(File.read("/proof/native-location.json"))
 if location.fetch("label") == "attachment"
   require "/rails/config/environment"
+  require "active_support/testing/assertions"
   ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ENV.fetch("WS8BM_NATIVE_DATABASE"), flags: SQLite3::Constants::Open::READONLY)
 end
 require "/proof/system_test_helper"
@@ -28,6 +29,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
   include Capybara::DSL
   include Capybara::Minitest::Assertions
   include SystemTestHelper
+  include ActiveSupport::Testing::Assertions if defined?(ActiveSupport::Testing::Assertions)
   include ActionView::RecordIdentifier if defined?(ActionView::RecordIdentifier)
   def setup
     visit Capybara.app_host + "/up"
@@ -67,7 +69,19 @@ class Ws8bmNativePhoneTest < Minitest::Test
     JS
   end
   def teardown
+    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "attachment"
+      puts "WS8bm native attachment DOM readback: #{JSON.generate(page.evaluate_script(<<~'JS'))}"
+        [...document.querySelectorAll('.message[data-message-id]')].map(row=>({
+          id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,
+          body:row.querySelector('.message__body')?.textContent,
+          content:row.querySelector('.message__body-content')?.innerHTML
+        }))
+      JS
+      puts "WS8bm native attachment saved readback: #{JSON.generate(Message.where("id > ?", 908005739).order(:id).pluck(:id, :reply_to_message_id, :reply_notify_author))}"
+    end
     puts "WS8bm native phone event trace #{Capybara.app_host}: #{JSON.generate(page.evaluate_script('window.__ws8bmPhoneTrace||[]'))}"
+  rescue => error
+    warn "WS8bm native diagnostic failed: #{error.class}: #{error.message}"
   ensure
     Capybara.reset_sessions!
   end
