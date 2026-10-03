@@ -79,14 +79,16 @@ Native/host-browser modes are conveniences, not acceptance runs.
 
 The Rust test workflow builds `default`, `first_run` and `agents_ui` from the full Rails SHA in
 `parity/reference.sha` (currently `d7c7de92`). `parity/bin/ci-seed prepare` archives that commit
-into ignored `parity/.ci/reference`; it never builds Rails from the changing Rust branch.
+into ignored `parity/.ci/reference`, then overlays the checkout's `db/schema.rb` and
+`db/migrate/` so seeds match the schema required by the Rust build. Rails behavior,
+fixtures and bundle stay pinned; migrations still run only through Rails.
 `ci-seed image` builds or loads the canonical reference image, `ci-seed build` creates all three
 seeds, and `ci-seed validate` runs the Rails validator at the frozen seed clock every time.
 The same four commands can be run locally from any directory.
 
 The image cache holds a Docker archive. Its exact identity includes the Rails pin (covering
-all reference code, fixtures, schema, Dockerfile and bundle inputs), parity Docker inputs and
-the build/cache tooling. The seed identity also includes all seed scripts, the fixed environment
+reference code, fixtures, Dockerfile and bundle inputs), the checkout's schema and migrations,
+parity Docker inputs and the build/cache tooling. The seed identity also includes all seed scripts, the fixed environment
 and the Rails validator. There are no fallback keys. The image's embedded Rails revision is
 checked after load, and cached seeds still undergo Rails validation before tests run.
 Only pushes to main save caches; PRs read them and use no application secrets.

@@ -38,7 +38,7 @@ class CacheIdentityTests(unittest.TestCase):
     def setUp(self):
         self.scratch = tempfile.TemporaryDirectory()
         self.addCleanup(self.scratch.cleanup)
-        self.root = Path(self.scratch.name)
+        self.root = Path(self.scratch.name) / "rust"
         for name in SEED_INPUTS:
             source = ROOT / name
             target = self.root / name
@@ -67,6 +67,18 @@ class CacheIdentityTests(unittest.TestCase):
                     else:
                         self.assertEqual(before["image_key"], after["image_key"])
                     file.write_bytes(content)
+
+    def test_checkout_schema_and_migrations_invalidate_both_caches(self):
+        self.assertIn("../db/schema.rb", IMAGE_INPUTS)
+        self.assertIn("../db/migrate", IMAGE_INPUTS)
+        before = cache_keys(self.root)
+        migration = self.root.parent / "db/migrate/20990101000000_added_nullable_column.rb"
+        migration.write_text("# a new Rails migration\n")
+        after = cache_keys(self.root)
+        self.assertNotEqual(before["image_key"], after["image_key"])
+        self.assertNotEqual(before["seed_key"], after["seed_key"])
+        migration.unlink()
+        self.assertEqual(before, cache_keys(self.root))
 
     def test_added_and_removed_seed_files_invalidate(self):
         before = cache_keys(self.root)

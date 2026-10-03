@@ -7,6 +7,8 @@ import re
 
 IMAGE_INPUTS = (
     "parity/reference.sha",
+    "../db/schema.rb",
+    "../db/migrate",
     "parity/docker",
     "parity/bin/reference",
     "parity/bin/ci-seed",
@@ -42,8 +44,8 @@ def cache_keys(root):
     pin = (root / "parity/reference.sha").read_text().strip()
     if not re.fullmatch(r"[0-9a-f]{40}", pin):
         raise ValueError("parity/reference.sha must contain a full Rails commit SHA")
-    # The pin covers ALL Rails inputs, including Dockerfile, .dockerignore, bundle,
-    # app code, schema and fixtures: CI archives that commit, never the checkout.
+    # The pin covers Rails behavior, fixtures and build inputs. The checkout's
+    # schema/migrations are overlaid so seeds match the generated Rust schema.
     return {
         "pin": pin,
         "image_key": "rust-parity-image-v1-" + fingerprint(root, IMAGE_INPUTS),

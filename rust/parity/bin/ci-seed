@@ -27,6 +27,11 @@ case "${1:-}" in
     rm -rf "$CAMPFIRE_REFERENCE"
     mkdir -p "$CAMPFIRE_REFERENCE"
     git -C "$ROOT/.." archive "$PIN" | tar -x -C "$CAMPFIRE_REFERENCE"
+    # Keep the behavior oracle pinned, but prepare seeds with the schema this
+    # Rust build requires. Rails owns migrations; the port never applies them.
+    cp "$ROOT/../db/schema.rb" "$CAMPFIRE_REFERENCE/db/schema.rb"
+    rm -rf "$CAMPFIRE_REFERENCE/db/migrate"
+    cp -a "$ROOT/../db/migrate" "$CAMPFIRE_REFERENCE/db/migrate"
     python3 "$ROOT/reference-tools/agents/check-case-ports.py" >&2
     python3 "$ROOT/reference-tools/agents/test-case-ports.py" >&2
     python3 "$ROOT/parity/ci_seed.py"
