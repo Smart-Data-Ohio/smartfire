@@ -8,7 +8,7 @@ use tokio_tungstenite::{
 };
 type Socket = WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>;
 
-async fn activity_socket(test: &Test, address: std::net::SocketAddr, viewer: i64) -> Socket {
+pub(super) async fn human_socket(test: &Test, address: std::net::SocketAddr, viewer: i64) -> Socket {
     use campfire_kit::Crypto;
     let session = test
         .booted
@@ -46,6 +46,11 @@ async fn activity_socket(test: &Test, address: std::net::SocketAddr, viewer: i64
     );
     let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
     assert_eq!(receive(&mut socket).await["type"], "welcome");
+    socket
+}
+
+pub(super) async fn activity_socket(test: &Test, address: std::net::SocketAddr, viewer: i64) -> Socket {
+    let mut socket = human_socket(test, address, viewer).await;
     let identifier = json!({"channel":"ActivityChannel"}).to_string();
     socket
         .send(Message::Text(
@@ -212,7 +217,7 @@ async fn approval_silence_filters_heartbeats_without_hiding_private_activity() {
     assert_eq!(receive(&mut activity).await, private);
 }
 
-async fn receive<S, E>(socket: &mut S) -> Value
+pub(super) async fn receive<S, E>(socket: &mut S) -> Value
 where
     S: Stream<Item = Result<Message, E>> + Unpin,
     E: std::fmt::Debug,
