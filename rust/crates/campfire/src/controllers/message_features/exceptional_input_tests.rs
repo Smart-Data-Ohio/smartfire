@@ -89,6 +89,7 @@ fn exceptional_slash_fallback_and_dst_match_rails() {
 async fn exceptional_structured_http_parameters_match_rails_status_type_and_bytes() {
     let data = oracle();
     let mut failures = vec![];
+    let sections = regex::Regex::new(r"<section\b[^>]*>|</section>").unwrap();
     for step in data["steps"].as_array().unwrap() {
         let app = app_rows(data["rows"].clone()).await;
         let method: hyper::Method = step["method"].as_str().unwrap().parse().unwrap();
@@ -109,26 +110,23 @@ async fn exceptional_structured_http_parameters_match_rails_status_type_and_byte
             browser.write(req).await
         };
         let mut body = response.text().to_owned();
-        if let Some(marker) = step["marker"].as_str() {
-            if let Some(start) = body.find(marker) {
-                let mut depth = 0;
-                let mut finish = None;
-                for tag in regex::Regex::new(r"<section\b[^>]*>|</section>")
-                    .unwrap()
-                    .find_iter(&body[start..])
-                {
-                    depth += if tag.as_str().starts_with("</") {
-                        -1
-                    } else {
-                        1
-                    };
-                    if depth == 0 {
-                        finish = Some(start + tag.end());
-                        break;
-                    }
+        if let Some(marker) = step["marker"].as_str()
+            && let Some(start) = body.find(marker)
+        {
+            let mut depth = 0;
+            let mut finish = None;
+            for tag in sections.find_iter(&body[start..]) {
+                depth += if tag.as_str().starts_with("</") {
+                    -1
+                } else {
+                    1
+                };
+                if depth == 0 {
+                    finish = Some(start + tag.end());
+                    break;
                 }
-                body = body[start..finish.expect("balanced owned section")].into();
             }
+            body = body[start..finish.expect("balanced owned section")].into();
         }
         let actual = json!({"status":response.status.as_u16(),"content_type":response.header("content-type"),"body":body});
         let expected = json!({"status":step["status"],"content_type":step["content_type"],"body":step["body"]});
