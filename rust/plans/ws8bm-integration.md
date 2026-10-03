@@ -102,9 +102,12 @@ WS14e's callback is exercised by the enabled real legacy PATCH event-reference p
 
 ## Remaining seams and historical aids
 
-WS12 activity, work and board show/pane seams remain authorized, flagged 501 responses.
-Ten named work-controller declarations are owner-blocked. JSON reads keep their
-existing behavior. No work/board control policy is implemented here.
+WS12 activity, work, board and agent work services are merged from main. The prior
+501 owner seams are no longer blockers for this scope: the continuation tools cover
+all ten work-controller declarations and the formerly blocked system flows. WS12
+retains production control-policy ownership. Neither #201 work API JSON reads nor
+board automations is a prerequisite for these pinned declarations. The public list
+and composer entry points above are unchanged; use the actual merged owner children.
 
 `owner-integration-check.py`, `owner-schedule-integration.patch` and
 `owner-current-integration.patch` are historical aids for earlier unpublished owner

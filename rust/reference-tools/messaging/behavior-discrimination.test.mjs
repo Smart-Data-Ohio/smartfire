@@ -15,10 +15,10 @@ const valid={ready:true,applied:1};
 test('every registered mutant names an existing intended assertion',()=>{
   let count=0;
   for(const name of mutationNames) for(const variant of mutationVariants(name)) {
-    for(const target of mutationTarget(name,variant)) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
+    for(const spec of mutationTarget(name,variant)) for(const target of [spec,...(spec.phase?[spec.phase]:[])]) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
     count++;
   }
-  assert.equal(count,159);
+  assert.equal(count,185);
 });
 test('earlier Loading timeout earns no delayed-marker rejection credit',()=>{
   const early=failure('behavior-search-forward.mjs',"waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post')");
@@ -62,6 +62,14 @@ test('the redelivery flag names its original visible checkpoint, not a later act
   const later=failure('behavior-actions.mjs',"actOnVisible(page.getByRole('menuitem',{name:'Edit message'");
   assert.equal(rejectionEvidence(name,'transparent-redelivery-flag',valid,checkpoint).valid,true);
   assert.equal(rejectionEvidence(name,'transparent-redelivery-flag',valid,later).valid,false);
+});
+
+test('the profile width probe targets main content overflow, not the earlier document check',()=>{
+  const name='the profile page fits phone widths without scrolling sideways';
+  const content=failure('behavior-mobile-continuation.mjs','assert.ok(result.mainOverflow<=0');
+  const document=failure('behavior-mobile-continuation.mjs','assert.ok(result.documentOverflow<=0');
+  assert.equal(rejectionEvidence(name,'default',valid,content).valid,true);
+  assert.equal(rejectionEvidence(name,'default',valid,document).valid,false);
 });
 
 test('initial Recent-tab setup cannot credit the post-click people assertion',()=>{
