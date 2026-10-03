@@ -8,7 +8,7 @@ JSON.parse(File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/work/h
   raise "source drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest == hash
 end
 identify = ->(name) { ActiveRecord::FixtureSet.identify(name) }
-keys = %w[history ledger unassign audit webhook current_owner stale_agent stale_human untracked package receiver_access]
+keys = %w[history ledger unassign audit webhook current_owner stale_agent stale_human untracked package receiver_access stale_sender_profile]
 rows = []
 travel_to Time.utc(2026, 3, 2, 16) do
   keys.each do |key|
@@ -43,6 +43,9 @@ travel_to Time.utc(2026, 3, 2, 16) do
       sender = jz
     when "untracked" then thread = ChannelThread.create!(room: Room.find(identify.call("designers")), creator: david, name: "Chat")
     when "package" then summary = "x" * 2001
+    when "stale_sender_profile"
+      sender = User.find(david.id)
+      User.where(id: david.id).update_all(name: "Renamed sender")
     when "receiver_access" then AgentGrant.where(agent: agent, room: board, capability: "post_messages").update_all(revoked_at: Time.current)
     end
     before_event = thread.work_thread_events.maximum(:id).to_i
@@ -67,7 +70,7 @@ travel_to Time.utc(2026, 3, 2, 16) do
       {receiver: event.agent_id == agent.id, kind: event.event_type, outcome: event.outcome, room_matches: event.room_id == board.id, actor: event.actor_id,
        thread_matches: event.metadata["thread_id"] == thread.id, summary: event.metadata.dig("handoff", "summary"), links: event.metadata.dig("handoff", "links"), questions: event.metadata.dig("handoff", "open_questions"), webhook: event.webhook_status}
     end
-    audit = AuditLog.where(action: "work.handoff", target_id: thread.id).map { |row| {actor: row.actor_id, target_type: row.target_type, target_matches: row.target_id == thread.id, to_owner: row.details["to_owner"]} }
+    audit = AuditLog.where(action: "work.handoff", target_id: thread.id).map { |row| {actor: row.actor_id, target_type: row.target_type, target_matches: row.target_id == thread.id, to_owner: row.details["to_owner"], from_owner: row.details["from_owner"]} }
     jobs = ApplicationJob.queue_adapter.enqueued_jobs.count { |job| job[:job].name == "Agent::EventWebhookJob" }
     rows << {key: key, facts: {error: error, owner: thread.reload.work_owner_id, handoff_count: WorkHandoff.where(channel_thread_id: thread.id).count, handoff_thread_matches: handoff && handoff.channel_thread_id == thread.id, history: history, ledger: ledger, audit: audit, webhook_jobs: jobs}}
   end

@@ -42,7 +42,8 @@
             "actor": 127326141,
             "target_type": "ChannelThread",
             "target_matches": true,
-            "to_owner": "Bender Bot"
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
           }
         ],
         "webhook_jobs": 1
@@ -90,7 +91,8 @@
             "actor": 127326141,
             "target_type": "ChannelThread",
             "target_matches": true,
-            "to_owner": "Bender Bot"
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
           }
         ],
         "webhook_jobs": 1
@@ -146,7 +148,8 @@
             "actor": 127326141,
             "target_type": "ChannelThread",
             "target_matches": true,
-            "to_owner": "Bender Bot"
+            "to_owner": "Bender Bot",
+            "from_owner": "Clippy"
           }
         ],
         "webhook_jobs": 1
@@ -190,7 +193,8 @@
             "actor": 127326141,
             "target_type": "ChannelThread",
             "target_matches": true,
-            "to_owner": "Bender Bot"
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
           }
         ],
         "webhook_jobs": 1
@@ -234,7 +238,8 @@
             "actor": 127326141,
             "target_type": "ChannelThread",
             "target_matches": true,
-            "to_owner": "Bender Bot"
+            "to_owner": "Bender Bot",
+            "from_owner": "David"
           }
         ],
         "webhook_jobs": 1
@@ -337,6 +342,51 @@
         "ledger": [],
         "audit": [],
         "webhook_jobs": 0
+      }
+    },
+    {
+      "key": "stale_sender_profile",
+      "facts": {
+        "error": null,
+        "owner": 394959859,
+        "handoff_count": 1,
+        "handoff_thread_matches": true,
+        "history": [
+          {
+            "kind": "work_handoff",
+            "actor": 127326141,
+            "from_owner_is_previous": true,
+            "to_owner": 394959859,
+            "handoff_matches": true,
+            "summary": "Yours now",
+            "links_count": 0,
+            "questions_count": 0
+          }
+        ],
+        "ledger": [
+          {
+            "receiver": true,
+            "kind": "work_handed_off",
+            "outcome": "delivered",
+            "room_matches": true,
+            "actor": 127326141,
+            "thread_matches": true,
+            "summary": "Yours now",
+            "links": [],
+            "questions": [],
+            "webhook": "pending"
+          }
+        ],
+        "audit": [
+          {
+            "actor": 127326141,
+            "target_type": "ChannelThread",
+            "target_matches": true,
+            "to_owner": "Bender Bot",
+            "from_owner": "Renamed sender"
+          }
+        ],
+        "webhook_jobs": 1
       }
     }
   ]
