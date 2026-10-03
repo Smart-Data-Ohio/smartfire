@@ -199,7 +199,7 @@
       "line": 24,
       "test": "handoff_work hands off through the shared service",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -215,7 +215,7 @@
       "line": 51,
       "test": "handoff_work denies a missing manage_threads grant",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -223,7 +223,7 @@
       "line": 61,
       "test": "handoff_work denies an ineligible receiver",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -231,7 +231,7 @@
       "line": 71,
       "test": "handoff_work denies a receiver missing read_messages",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -247,7 +247,7 @@
       "line": 93,
       "test": "handoff_work rejects missing arguments",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -263,7 +263,7 @@
       "line": 14,
       "test": "creates a post with defaults and returns the work payload",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -271,7 +271,7 @@
       "line": 53,
       "test": "creates a post with tags, status, run_url, and a human owner",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -279,7 +279,7 @@
       "line": 83,
       "test": "creates a post with an array of tags",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -287,7 +287,7 @@
       "line": 96,
       "test": "creates a post owned by another agent through the assignment path",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -295,7 +295,7 @@
       "line": 115,
       "test": "owner defaults to the agent itself, like a blank owner_id",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -303,7 +303,7 @@
       "line": 139,
       "test": "a first message writes the posted ledger row and notifies the board",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/channel_threads/board_write_tests.rs::opening_message_notifies_room_followers_and_assignee_with_notifications_off"
     },
     {
@@ -311,7 +311,7 @@
       "line": 157,
       "test": "a messageless post still assigns the owner without a posted row",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/channel_threads/board_write_tests.rs::opening_message_notifies_room_followers_and_assignee_with_notifications_off"
     },
     {
@@ -319,7 +319,7 @@
       "line": 176,
       "test": "rejects invalid posts with 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -327,7 +327,7 @@
       "line": 207,
       "test": "requires post_messages and manage_threads in the board",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -335,7 +335,7 @@
       "line": 229,
       "test": "requires post_messages even with manage_threads",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -351,7 +351,7 @@
       "line": 256,
       "test": "is 422 for non-board rooms",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -391,7 +391,7 @@
       "line": 350,
       "test": "rejects invalid list filters with 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_board_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -407,7 +407,7 @@
       "line": 382,
       "test": "lists by tag",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_board_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -423,7 +423,7 @@
       "line": 406,
       "test": "listing requires read_messages",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_board_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -463,7 +463,7 @@
       "line": 33,
       "test": "list is capped at 100 threads",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_work_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -471,7 +471,7 @@
       "line": 44,
       "test": "list only includes rooms where the agent holds read_messages",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_work_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -495,7 +495,7 @@
       "line": 88,
       "test": "work links omit a private pull request's title and branches unless the owner can read it",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "ws12_private_pr_owner.json: complete disconnected redaction response, then connected-owner response with title/head/base branch visible through the real AgentRepositories reader API; hiding those positive fields fails connected response bytes. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_private_pr_owner_tests.rs::ws12_private_pr_redacts_then_exposes_title_and_branch_for_connected_owner"
     },
     {
@@ -551,7 +551,7 @@
       "line": 247,
       "test": "show and patch are 404 once the agent is no longer a room member",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -559,7 +559,7 @@
       "line": 262,
       "test": "patch is 403 without manage_threads in the thread room",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -575,7 +575,7 @@
       "line": 289,
       "test": "patch rejects invalid statuses and long notes with 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -591,7 +591,7 @@
       "line": 326,
       "test": "patch updates tags and run_url alongside the status",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -607,7 +607,7 @@
       "line": 371,
       "test": "patch updates run_url alone and blank clears it",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -615,7 +615,7 @@
       "line": 390,
       "test": "patch rejects invalid tags and run_url with 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -647,7 +647,7 @@
       "line": 451,
       "test": "put replaces the pinned result and records the event",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_result_event_agent_actor"
     },
     {
@@ -695,7 +695,7 @@
       "line": 579,
       "test": "put result reaches the human inbox as work_update",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_result_event_agent_actor"
     },
     {
@@ -711,7 +711,7 @@
       "line": 613,
       "test": "a revoked read grant hides an owned thread from show, update, and result",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -727,7 +727,7 @@
       "line": 647,
       "test": "a workspace-wide read grant still reads an owned thread",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -735,7 +735,7 @@
       "line": 658,
       "test": "a revoked credential is 401",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -815,7 +815,7 @@
       "line": 25,
       "test": "an agent hands off its thread with a context package",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -855,7 +855,7 @@
       "line": 103,
       "test": "a missing manage_threads grant is 403",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -871,7 +871,7 @@
       "line": 124,
       "test": "an ineligible receiver is 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -879,7 +879,7 @@
       "line": 135,
       "test": "a receiver missing manage_threads is 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -887,7 +887,7 @@
       "line": 146,
       "test": "a receiver missing read_messages is 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -895,7 +895,7 @@
       "line": 158,
       "test": "handing off to the current owner is 422",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -903,7 +903,7 @@
       "line": 167,
       "test": "an over-capped package is 422 and keeps the owner",
       "status": "ported",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {

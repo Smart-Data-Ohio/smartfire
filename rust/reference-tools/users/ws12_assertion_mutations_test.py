@@ -23,6 +23,23 @@ pointer_spec.loader.exec_module(ledger)
 
 
 class AuditGuards(unittest.TestCase):
+    def test_api_owned_inventory_matches_the_named_api_ledger(self):
+        rows = json.loads((audit.ROOT / "rust/plans/ws12-assertion-reconciliation.json").read_text())["cases"]
+        api = json.loads((audit.ROOT / "rust/plans/ws11api-named-api-cases.json").read_text())
+        declared = {(row["rails_file"], row["rails_test"]) for row in api["cases"]}
+        owned = {(row["file"], row["test"]) for row in rows if row["owner"].startswith("WS11-API")}
+        self.assertEqual(owned, declared)
+        flags = [row for row in rows if row["reconciliation"] == "flagged" and row["owner"] == "WS11-API"]
+        self.assertEqual(len(flags), 49)
+        for row in flags:
+            self.assertTrue(row["blocking_file_line"])
+        peer_evidence = [row for row in rows if row["owner"] == "WS12 using WS11-API evidence"]
+        self.assertEqual(len(peer_evidence), 40)
+        for row in peer_evidence:
+            self.assertEqual(row["reconciliation"], "mapped")
+            self.assertTrue(row["mutation_control"]["intended_assertion"])
+            self.assertNotIn((row["file"], row["test"]), declared)
+
     def test_corrected_blocking_pointers_resolve_to_their_operation(self):
         rows = json.loads((audit.ROOT / "rust/plans/ws12-assertion-reconciliation.json").read_text())["cases"]
         corrected = [row for row in rows if row.get("blocking_operations")]

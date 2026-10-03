@@ -1,6 +1,6 @@
 # WS12 round 4 checkpoint
 
-The 231-declaration ledger has **179 mapped / 52 flagged** entries. All 48 WS12-owned flags are closed. WS12 has 137 mapped / 0 flagged; WS11-API has 42 mapped / 49 flagged; WS11-UI has 0 mapped / 3 flagged. Only owner-blocked named comparisons remain. The 52 peer flags below identify their blocking file:line; they are coverage gaps, not unsupported claims that their runtime implementations are missing.
+The 231-declaration ledger has **179 mapped / 52 flagged** entries. All 48 WS12-owned flags are closed. Coverage ownership is WS12 177 mapped / 0 flagged (137 own comparisons and 40 mappings using WS11-API evidence); WS11-API 2 mapped / 49 flagged; WS11-UI 0 mapped / 3 flagged. Only owner-blocked named comparisons remain. The 52 peer flags below identify their blocking file:line; they are coverage gaps, not unsupported claims that their runtime implementations are missing.
 
 The work includes the cached-Future exception fix; narrow controls restoring c007, c026 and c057; corrected c088 attribution; 47 new named comparisons; the generic AgentBudgetNotice adapter; and batched owner-picker profiles/icons. Frozen/injected clocks drive eligibility. Real browser forms, reloads and Cable interactions run the seven original WS12 system declarations; there is no pixel work.
 
@@ -346,4 +346,67 @@ WS12_COVERAGE_RESTORE 47 production inputs byte-identical
 WS12 assertion reconciliation: 231 declarations; 179 executed mutation-backed mappings; 52 explicitly flagged; 0 missing or non-running credited tests
 WS12 assertion reconciliation: 231 declarations; 179 executed mutation-backed mappings; 52 explicitly flagged; 0 missing or non-running credited tests
 WS12_LEDGER_NEGATIVE_CONTROLS 3 rejected; 0 false credits
+```
+
+
+## PR #225 ownership contract and CI merge checks
+
+Merged `origin/main` at `7e35a5fd6bb64de2e14c3f0e11725f0d1bd0a22a` with merge commit `17496ea60986b110cc7ee068d3272003354dbe84`. Before the fix, the API checker fails with `audited inventory mismatch`: 40 approved mapped declarations were assigned plain `WS11-API` even though they are WS12 mappings of peer evidence, rather than members of WS11-API's 51-case named ledger. The new owner-contract unit regression also fails against those labels.
+
+`owner` records responsibility for the named declaration's coverage accounting, distinct from the implementation and evidence provider. Those 40 entries now use `WS12 using WS11-API evidence`. Their mapped tests, assertions, receipts and coverage status are retained. The 49 API-owned flags stay plain `WS11-API`, with their blocking pointers. The two mapped entries already in the named API ledger retain that ownership. Thus the exact 51-case API-owned inventory contract is preserved without weakening its checker or editing the API ledger. No new API declaration is needed for any of the 40 entries. The WS12 inventory generator reads these labels unchanged, and the new regression checks both inventory equality and all 49 flag owners.
+
+CI's wrapping step is `rust/parity/bin/ci-seed prepare` (the workflow's “Prepare pinned Rails reference” step). It runs both the case-port checker and its 14 Python guards before generating parity cache identities. Both the direct checker and this complete wrapping script pass on:
+
+- `.scratch/pr225-owner-fix/main-check`: this branch plus main, with the owner fix applied.
+- `.scratch/pr225-owner-fix/merge-check`: that merge plus `origin/rust/ws11api-next-6` at `dbab9218a6bd3cad971372a50c9ce955c863ad68`, merged only in the detached scratch worktree; nothing from #227 is pushed.
+
+The WS12 full-catalog regression caught a whitespace-only private-PR anchor drift in #227. Narrowing c058's anchor to the unique ` || allowed` disjunct works on both sources. Its current-main instrumentation is byte-identical to the prior recipe, and the corresponding recorded recipe is synchronized. Product code, test assertions and vector bytes are unchanged by this fix.
+
+Scoped commands rerun in each scratch merge:
+
+```sh
+python3 rust/reference-tools/agents/check-case-ports.py
+rust/parity/bin/ci-seed prepare
+```
+
+Additional WS12 checks:
+
+```sh
+python3 rust/reference-tools/users/ws12_assertion_mutations_test.py
+python3 rust/reference-tools/users/verify_ws12_mutation_controls.py --test-log .scratch/pr215-round4/logs/workspace-verified.log --scratch .scratch/pr225-owner-fix/ledger-controls
+```
+
+The WS12 checks also pass in the #227 scratch merge, using the same existing workspace receipt for unchanged credited test names. Overall reconciliation remains 179 mapped / 52 flagged; only owner-blocked comparisons remain. No Cargo targets were created in this round.
+
+Branch plus main — raw direct-checker and CI-prepare summaries:
+
+```text
+WS11 broader named API assertions: 20 passed; 31 pending; owner WS11-API (unblocked)
+WS11 source case files: 26 pinned Git files matched; 0 checkout mismatches
+WS11 broader named API assertions: 20 passed; 31 pending; owner WS11-API (unblocked)
+WS11 source case files: 26 pinned Git files matched; 0 checkout mismatches
+Ran 14 tests in 0.410s
+OK
+```
+
+Branch plus main plus #227 — raw direct-checker and CI-prepare summaries:
+
+```text
+WS11 broader named API assertions: 51 passed; 0 pending; owner WS11-API (unblocked)
+WS11 source case files: 26 pinned Git files matched; 0 checkout mismatches
+WS11 broader named API assertions: 51 passed; 0 pending; owner WS11-API (unblocked)
+WS11 source case files: 26 pinned Git files matched; 0 checkout mismatches
+Ran 14 tests in 2.442s
+OK
+```
+
+Raw WS12 check summaries (main, then #227 unit guards):
+
+```text
+Ran 11 tests in 0.141s
+OK
+WS12 assertion reconciliation: 231 declarations; 179 executed mutation-backed mappings; 52 explicitly flagged; 0 missing or non-running credited tests
+WS12_LEDGER_NEGATIVE_CONTROLS 3 rejected; 0 false credits
+Ran 11 tests in 0.110s
+OK
 ```

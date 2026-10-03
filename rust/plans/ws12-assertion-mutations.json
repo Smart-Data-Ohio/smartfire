@@ -3601,8 +3601,8 @@
         },
         {
           "file": "rust/crates/db/src/models/agent_payloads.rs",
-          "before": "r.get::<_,Option<bool>>(\"private\")?==Some(false) || allowed",
-          "after": "r.get::<_,Option<bool>>(\"private\")?==Some(false) || (allowed && !ws12_coverage_mutant(\"private_owner_positive\"))",
+          "before": " || allowed",
+          "after": " || (allowed && !ws12_coverage_mutant(\"private_owner_positive\"))",
           "occurrences": 1
         }
       ]

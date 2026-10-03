@@ -1629,7 +1629,7 @@
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 24,
       "test": "handoff_work hands off through the shared service",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited.",
       "rails_sha256": "b3b3ea0de1fca181a285d95a2bd4277381bd5e61ee027e0f81a70db8f746b58d",
       "tests": [
@@ -1853,7 +1853,7 @@
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 51,
       "test": "handoff_work denies a missing manage_threads grant",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited.",
       "rails_sha256": "b3b3ea0de1fca181a285d95a2bd4277381bd5e61ee027e0f81a70db8f746b58d",
       "tests": [
@@ -1958,7 +1958,7 @@
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 61,
       "test": "handoff_work denies an ineligible receiver",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited.",
       "rails_sha256": "b3b3ea0de1fca181a285d95a2bd4277381bd5e61ee027e0f81a70db8f746b58d",
       "tests": [
@@ -2063,7 +2063,7 @@
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 71,
       "test": "handoff_work denies a receiver missing read_messages",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited.",
       "rails_sha256": "b3b3ea0de1fca181a285d95a2bd4277381bd5e61ee027e0f81a70db8f746b58d",
       "tests": [
@@ -2254,7 +2254,7 @@
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 93,
       "test": "handoff_work rejects missing arguments",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited.",
       "rails_sha256": "b3b3ea0de1fca181a285d95a2bd4277381bd5e61ee027e0f81a70db8f746b58d",
       "tests": [
@@ -2389,7 +2389,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 14,
       "test": "creates a post with defaults and returns the work payload",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -2516,7 +2516,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 53,
       "test": "creates a post with tags, status, run_url, and a human owner",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -2633,7 +2633,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 83,
       "test": "creates a post with an array of tags",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -2739,7 +2739,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 96,
       "test": "creates a post owned by another agent through the assignment path",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -2847,7 +2847,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 115,
       "test": "owner defaults to the agent itself, like a blank owner_id",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -2957,7 +2957,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 139,
       "test": "a first message writes the posted ledger row and notifies the board",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -3065,7 +3065,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 157,
       "test": "a messageless post still assigns the owner without a posted row",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -3181,7 +3181,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 176,
       "test": "rejects invalid posts with 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -3288,7 +3288,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 207,
       "test": "requires post_messages and manage_threads in the board",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -3397,7 +3397,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 229,
       "test": "requires post_messages even with manage_threads",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -3611,7 +3611,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 256,
       "test": "is 422 for non-board rooms",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -3862,7 +3862,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 350,
       "test": "rejects invalid list filters with 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -3979,7 +3979,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 382,
       "test": "lists by tag",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -4102,7 +4102,7 @@
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 406,
       "test": "listing requires read_messages",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately.",
       "rails_sha256": "04a8c66ecf3bb7dbdcf7159b206affcb77e80c0e0ce73bb834e60b173ee0d568",
       "tests": [
@@ -4366,7 +4366,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 33,
       "test": "list is capped at 100 threads",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -4472,7 +4472,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 44,
       "test": "list only includes rooms where the agent holds read_messages",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -4695,7 +4695,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 88,
       "test": "work links omit a private pull request's title and branches unless the owner can read it",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "ws12_private_pr_owner.json: complete disconnected redaction response, then connected-owner response with title/head/base branch visible through the real AgentRepositories reader API; hiding those positive fields fails connected response bytes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -4719,8 +4719,8 @@
             },
             {
               "file": "rust/crates/db/src/models/agent_payloads.rs",
-              "before": "r.get::<_,Option<bool>>(\"private\")?==Some(false) || allowed",
-              "after": "r.get::<_,Option<bool>>(\"private\")?==Some(false) || (allowed && !ws12_coverage_mutant(\"private_owner_positive\"))",
+              "before": " || allowed",
+              "after": " || (allowed && !ws12_coverage_mutant(\"private_owner_positive\"))",
               "occurrences": 1
             }
           ]
@@ -5141,7 +5141,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 247,
       "test": "show and patch are 404 once the agent is no longer a room member",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -5254,7 +5254,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 262,
       "test": "patch is 403 without manage_threads in the thread room",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -5480,7 +5480,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 289,
       "test": "patch rejects invalid statuses and long notes with 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -5709,7 +5709,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 326,
       "test": "patch updates tags and run_url alongside the status",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -5944,7 +5944,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 371,
       "test": "patch updates run_url alone and blank clears it",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -6058,7 +6058,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 390,
       "test": "patch rejects invalid tags and run_url with 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -6512,7 +6512,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 451,
       "test": "put replaces the pinned result and records the event",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -7209,7 +7209,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 579,
       "test": "put result reaches the human inbox as work_update",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -7431,7 +7431,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 613,
       "test": "a revoked read grant hides an owned thread from show, update, and result",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -7696,7 +7696,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 647,
       "test": "a workspace-wide read grant still reads an owned thread",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -7808,7 +7808,7 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 658,
       "test": "a revoked credential is 401",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised.",
       "rails_sha256": "86dd265c9cad2304af7fb32e3e2c376183387e3edb164e989258cd11704f5771",
       "tests": [
@@ -8063,7 +8063,7 @@
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 25,
       "test": "an agent hands off its thread with a context package",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases.",
       "rails_sha256": "5841ac9c374ef1b41df4cb643f20fe0ed2cfd6f48be9a3b661d34f0463f3dc68",
       "tests": [
@@ -8332,7 +8332,7 @@
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 103,
       "test": "a missing manage_threads grant is 403",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases.",
       "rails_sha256": "5841ac9c374ef1b41df4cb643f20fe0ed2cfd6f48be9a3b661d34f0463f3dc68",
       "tests": [
@@ -8540,7 +8540,7 @@
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 124,
       "test": "an ineligible receiver is 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases.",
       "rails_sha256": "5841ac9c374ef1b41df4cb643f20fe0ed2cfd6f48be9a3b661d34f0463f3dc68",
       "tests": [
@@ -8640,7 +8640,7 @@
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 135,
       "test": "a receiver missing manage_threads is 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases.",
       "rails_sha256": "5841ac9c374ef1b41df4cb643f20fe0ed2cfd6f48be9a3b661d34f0463f3dc68",
       "tests": [
@@ -8740,7 +8740,7 @@
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 146,
       "test": "a receiver missing read_messages is 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases.",
       "rails_sha256": "5841ac9c374ef1b41df4cb643f20fe0ed2cfd6f48be9a3b661d34f0463f3dc68",
       "tests": [
@@ -8841,7 +8841,7 @@
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 158,
       "test": "handing off to the current owner is 422",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases.",
       "rails_sha256": "5841ac9c374ef1b41df4cb643f20fe0ed2cfd6f48be9a3b661d34f0463f3dc68",
       "tests": [
@@ -8941,7 +8941,7 @@
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 167,
       "test": "an over-capped package is 422 and keeps the owner",
-      "owner": "WS11-API",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases.",
       "rails_sha256": "5841ac9c374ef1b41df4cb643f20fe0ed2cfd6f48be9a3b661d34f0463f3dc68",
       "tests": [
