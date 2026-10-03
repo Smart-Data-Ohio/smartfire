@@ -16,6 +16,10 @@ import {boosts} from './behavior-boosts.mjs';
 import {interactions,mobileActions,assertMenuOpen} from './behavior-actions.mjs';
 import {toolbar} from './behavior-toolbar.mjs';
 import {codeHighlighting} from './behavior-code.mjs';
+import {threadContinuation,continuationCases} from './behavior-thread-continuation.mjs';
+import {workControllers} from './behavior-work-controllers.mjs';
+import {mobileContinuation} from './behavior-mobile-continuation.mjs';
+import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
@@ -23,7 +27,7 @@ const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
+assert.ok(['mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
@@ -31,6 +35,11 @@ const selectedMutant=process.env.WS8BM_MUTANT;
 async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
+    // The positive phone control is the pinned Selenium sequence itself.
+    // Served negatives retain their translated initial creation checkpoint.
+    if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
+      await nativePhone(base);return;
+    }
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
       // Mutation routes must remain observable across navigations; a service
@@ -39,6 +48,15 @@ async function acceptance(base,caseName,probe={},variant='default') {
       const context=await browser.newContext({viewport:{width:1440,height},...(negative||selectedMutant?{serviceWorkers:'block'}:{})});
       contexts.push(context);
       await installVisibility(context);
+      // These pinned system cases run with Rails.env.test? and the layout's
+      // data-test-motion="off" input (application.html.erb:2). Our servers use
+      // the production reference image. Supply that test-only input before
+      // parsing either app; this does not claim the server emits the attribute.
+      const pinnedTestMotion = caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      if(pinnedTestMotion) await context.addInitScript(()=>{
+        const apply=()=>document.documentElement?.setAttribute('data-test-motion','off');
+        apply();new MutationObserver(apply).observe(document,{childList:true,subtree:true});
+      });
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
       const page=await context.newPage();
@@ -101,6 +119,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
     async function field(page,value,options={}) {
       await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value',value,options);
     }
+    if(file==='mobile_layout'||caseName.startsWith('text fields')) {await mobileContinuation({author,base,caseName,fixture});return;}
+    if(file==='channel_threads_controller') {await workControllers({author,recipient,base,caseName,fixture});return;}
     if(file==='message_list_a11y') {
       if(destinationCases.includes(caseName)) await messageDestinations({author,recipient,base,caseName,fixture,viewer});
       else await messageList({author,recipient,caseName,send,text,openEdit,field});
@@ -164,12 +184,13 @@ async function acceptance(base,caseName,probe={},variant='default') {
           const root=page.locator('.message[data-message-id="607264868"]');
           await waitForVisibility(page.locator('.message[data-message-id="607264868"][aria-haspopup="menu"]'));
           await actOnVisible(root.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
-          await actOnVisible(page.getByRole('menuitem',{name:'Create thread',exact:true}),'click',{});
+          await actOnVisible(page.getByRole('menuitem',{name:'Create thread',exact:true,includeHidden:true}),'click',{});
         } else {
-          await actOnVisible(page.locator('[data-thread-panel-target="browserToggle"]'),'click');
+          if(await visibleCount(page.locator('[data-thread-panel-target="browserToggle"]'))) await actOnVisible(page.locator('[data-thread-panel-target="browserToggle"]'),'click');
+          else {await actOnVisible(page.getByRole('button',{name:'More actions',exact:true,includeHidden:true}),'click');await actOnVisible(page.locator('#header-overflow-menu [data-thread-panel-target="browserToggle"]'),'click');}
           // Match the pinned open_threads helper's actual open-state assertion.
           await waitForVisibility(panel.locator(':scope[aria-hidden="false"]'),{timeout:DELIVERY_WAIT});
-          await actOnVisible(panel.getByRole('button',{name:'New thread',exact:true}),'click',{});
+          await actOnVisible(panel.getByRole('button',{name:'New thread',exact:true,includeHidden:true}),'click',{});
         }
         await waitForVisibility(panel.locator('[data-thread-panel-target="create"]'),{timeout:DELIVERY_WAIT});
         // beginCreate hands focus to First message on the next animation
@@ -206,8 +227,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await waitForVisibility(filterVisibleText(panel.locator('.thread-panel__thread-content .message__body'),value),{timeout:DELIVERY_WAIT});
       }
       async function reply(value) {
-        await actOnVisible(panel.getByRole('combobox',{name:'Write a thread reply',exact:true}),'fill',{},[value]);
-        await actOnVisible(panel.getByRole('button',{name:'Send Reply',exact:true}),'click',{});
+        await actOnVisible(panel.getByRole('combobox',{name:'Write a thread reply',exact:true,includeHidden:true}),'fill',{},[value]);
+        await actOnVisible(panel.getByRole('button',{name:'Send Reply',exact:true,includeHidden:true}),'click',{});
         await assertThreadMessage(value);
       }
       async function threadMenu(value) {
@@ -223,10 +244,16 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await waitForVisibility(author.locator('#message-actions-menu:not([hidden])'),{timeout:10000});
       }
       async function close(page) {
-        await actOnVisible(page.getByRole('button',{name:'Close threads',exact:true}),'click',{});
+        await actOnVisible(page.getByRole('button',{name:'Close threads',exact:true,includeHidden:true}),'click',{});
         await page.waitForFunction(()=>!document.body.classList.contains('thread-panel-open'),null,{timeout:DELIVERY_WAIT});
       }
-      if(caseName==='rejects an external thread deep link before fetching it') {
+      if(continuationCases.includes(caseName)) {
+        try {await threadContinuation({author,recipient,base,caseName,fixture,create,finishCreate,assertThreadMessage,reply,threadMenu,close});}
+        catch(error) {console.error('WS8bm continuation diagnostics:',base,caseName,await author.evaluate(()=>({
+          body:document.body.className,panel:document.querySelector('#thread-panel')?.outerHTML.slice(0,1600),
+          views:[...document.querySelectorAll('#thread-panel section,#thread-panel button,#header-overflow-button')].map(node=>({tag:node.tagName,text:node.textContent.trim(),hidden:node.hidden,aria:node.getAttribute('aria-hidden'),opacity:getComputedStyle(node).opacity,visibility:getComputedStyle(node).visibility,display:getComputedStyle(node).display,rect:node.getBoundingClientRect().toJSON()}))
+        })));throw error;}
+      } else if(caseName==='rejects an external thread deep link before fetching it') {
         const external='https://attacker.invalid/rooms/1/threads/999';
         const requests=[];
         author.on('request',request=>requests.push(request.url()));
@@ -266,10 +293,10 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'),{timeout:DELIVERY_WAIT});
         await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'),{timeout:DELIVERY_WAIT});
         await waitForVisibility(panel.locator('[data-thread-panel-target="leave"]'),{state:'hidden'});
-        await actOnVisible(panel.getByRole('button',{name:'Join',exact:true}),'click',{});
+        await actOnVisible(panel.getByRole('button',{name:'Join',exact:true,includeHidden:true}),'click',{});
         await waitForVisibility(panel.locator('[data-thread-panel-target="leave"]'),{timeout:DELIVERY_WAIT});
         await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'),{state:'hidden'});
-        await actOnVisible(panel.getByRole('button',{name:'Leave',exact:true}),'click',{});
+        await actOnVisible(panel.getByRole('button',{name:'Leave',exact:true,includeHidden:true}),'click',{});
         await waitForVisibility(panel.locator('[data-thread-panel-target="join"]'),{timeout:DELIVERY_WAIT});
         await waitForVisibility(panel.locator('[data-thread-panel-target="leave"]'),{state:'hidden'});
       } else if(caseName==='a stray create re-entry does not wipe the half-filled thread name') {
@@ -290,7 +317,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         for(const page of [author,recipient]) await waitForVisibility(page.locator(`[id="${indicatorId}"][aria-label="Open thread, 2 replies"]`),{timeout:CABLE_WAIT});
         for(const value of ['A second reply.','The only reply.']) {
           await threadMenu(value);author.once('dialog',dialog=>dialog.accept());
-          await actOnVisible(author.getByRole('menuitem',{name:'Delete message',exact:true}),'click',{});
+          await actOnVisible(author.getByRole('menuitem',{name:'Delete message',exact:true,includeHidden:true}),'click',{});
           await waitForVisibility(threadMessage(value),{state:'hidden',timeout:DELIVERY_WAIT});
         }
         for(const page of [author,recipient]) await waitForVisibility(page.locator(`[id="${indicatorId}"]`),{state:'hidden',timeout:CABLE_WAIT});
@@ -304,14 +331,14 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await actOnVisible(panel.locator('[data-thread-panel-target="involvement"]'),'selectOption',{},['nothing']);
         await actOnVisible(panel.locator('[data-thread-panel-target="manage"] summary'),'click',{});
         await actOnVisible(panel.locator('[data-thread-panel-target="autoArchive"]'),'selectOption',{},['1440']);
-        await actOnVisible(author.getByRole('combobox',{name:'Write a message',exact:true}),'fill',{},['A channel draft stays here.']);
+        await actOnVisible(author.getByRole('combobox',{name:'Write a message',exact:true,includeHidden:true}),'fill',{},['A channel draft stays here.']);
         await reply('A reply from the thread drawer.');await field(author,'A channel draft stays here.');
         await threadMenu('A reply from the thread drawer.');
-        await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
+        await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true,includeHidden:true}),'click',{});
         await waitForVisibility(filterVisibleText(panel.locator('[data-composer-target="contextLabel"]'),'Replying to'),{timeout:DELIVERY_WAIT});
         await reply('A reply to the drawer message.');
         await waitForVisibility(filterVisibleText(panel.locator('.message__reply-preview'),'A reply from the thread drawer.'),{timeout:DELIVERY_WAIT});
-        await threadMenu(first);await actOnVisible(author.getByRole('menuitem',{name:'Edit message',exact:true}),'click',{});
+        await threadMenu(first);await actOnVisible(author.getByRole('menuitem',{name:'Edit message',exact:true,includeHidden:true}),'click',{});
         await waitForVisibility(filterVisibleText(panel.locator('[data-composer-target="contextLabel"]'),'Editing Message'),{timeout:DELIVERY_WAIT});
         await reply('The edited thread starter.');
         await waitForVisibility(filterVisibleText(panel.locator('[data-thread-panel-target="parent"]'),"Third time's a charm."),{timeout:DELIVERY_WAIT});

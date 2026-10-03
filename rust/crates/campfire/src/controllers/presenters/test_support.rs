@@ -791,3 +791,40 @@ pub fn masked_session_token(
     let real = session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?;
     Some(campfire_kit::csrf::RealToken::decode(real)?.masked(None))
 }
+
+/// Browser parity host for cases whose pinned Rails test leaves jobs enqueued.
+/// This is compiled only in the test binary. It serves the caller's freshly
+/// generated fixture, keeping the real router, durable enqueue and front server.
+#[tokio::test]
+#[ignore = "external browser host; invoked explicitly by messaging/behavior-check.py"]
+async fn ws8bm_browser_host_without_jobs() {
+    assert_eq!(std::env::var("WS8BM_BROWSER_HOST").as_deref(), Ok("1"));
+    let config = Config::from_env().unwrap();
+    let clock = campfire_kit::clock::from_env().unwrap();
+    let booted = boot_with_services(
+        config,
+        clock,
+        crate::integrations::net::Network::system(),
+        crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        },
+    )
+    .await
+    .unwrap();
+    let app = TestApp {
+        booted,
+        _dir: tempfile::tempdir().unwrap(),
+    }
+    .without_job_runner()
+    .await;
+    let front = campfire_kit::front::FrontConfig::from_env();
+    println!("WS8bm browser host: TestApp::without_job_runner; real router and durable enqueue");
+    campfire_kit::front::serve(
+        front,
+        app.booted.router.clone(),
+        campfire_kit::server::shutdown_signal(),
+    )
+    .await
+    .unwrap();
+}

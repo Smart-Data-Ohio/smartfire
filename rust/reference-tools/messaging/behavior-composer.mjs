@@ -133,7 +133,12 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
     await actOnVisible(panel.locator('[data-thread-panel-target="createMessage"]'),'fill',{},['The thread for draft persistence.']);
     assert.equal(await panel.locator('[data-thread-panel-target="createName"]').inputValue(),'Composer draft thread');
     await actOnVisible(panel.locator('[data-thread-panel-target="createSubmit"]'),'click',{});
-    await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'),{timeout:DELIVERY_WAIT});
+    // Keep the original conversation assertion/deadline, with a distinct
+    // creation call site: the one-shot mutant does not act on later reopens.
+    async function initialConversationAfterCreate() {
+      await waitForVisibility(panel.locator('[data-thread-panel-target="conversation"]'),{timeout:DELIVERY_WAIT});
+    }
+    await initialConversationAfterCreate();
     await waitForVisibility(filterVisibleText(panel.locator('[data-thread-panel-target="conversationTitle"]'),'Composer draft thread'));
     await actOnVisible(panel.getByRole('combobox',{name:'Write a thread reply',exact:true}),'fill',{},['Thread draft']);await actOnVisible(editor,'fill',{},['Channel draft']);
     await room(fixture.pets_id);await room(654632876);await field(page,'Channel draft');await thread();
