@@ -1,0 +1,185 @@
+{
+  "reference": "d7c7de92",
+  "expiry": [],
+  "github_tokens": [
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "1e309",
+      "token": "Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "-1e309",
+      "token": "-Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "18446744073709551617",
+      "token": "18446744073709551617",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "[18446744073709551617]",
+      "token": "[18446744073709551617]",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "[null,1e309,null]",
+      "token": "[Infinity]",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection/",
+      "raw": "1e309",
+      "token": "Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection/",
+      "raw": "-1e309",
+      "token": "-Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection/",
+      "raw": "18446744073709551617",
+      "token": "18446744073709551617",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection/",
+      "raw": "[18446744073709551617]",
+      "token": "[18446744073709551617]",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection/",
+      "raw": "[null,1e309,null]",
+      "token": "[Infinity]",
+      "status": 302
+    },
+    {
+      "path": "/account//bots/394959859//github_connection",
+      "raw": "1e309",
+      "token": "Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account//bots/394959859//github_connection",
+      "raw": "-1e309",
+      "token": "-Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account//bots/394959859//github_connection",
+      "raw": "18446744073709551617",
+      "token": "18446744073709551617",
+      "status": 302
+    },
+    {
+      "path": "/account//bots/394959859//github_connection",
+      "raw": "[18446744073709551617]",
+      "token": "[18446744073709551617]",
+      "status": 302
+    },
+    {
+      "path": "/account//bots/394959859//github_connection",
+      "raw": "[null,1e309,null]",
+      "token": "[Infinity]",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "\"valid-token\"",
+      "body": "{\"access_token\":\"valid-token\",\"unused\":1e309}",
+      "token": "valid-token",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "\"valid-token\"",
+      "body": "{\"access_token\":\"valid-token\",\"unused\":-1e309}",
+      "token": "valid-token",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "\"valid-token\"",
+      "body": "{\"access_token\":\"valid-token\",\"unused\":2e308}",
+      "token": "valid-token",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "\"valid-token\"",
+      "body": "{\"access_token\":\"valid-token\",\"unused\":1e999999}",
+      "token": "valid-token",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "0e309",
+      "token": "0.0",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "-0e309",
+      "token": "-0.0",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "0e999",
+      "token": "0.0",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "-0e999",
+      "token": "-0.0",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "0e2147483647",
+      "token": "0.0",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "0e2147483648",
+      "token": "Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "0e9223372036854775807",
+      "token": "Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "0e9223372036854775808",
+      "token": "Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "0e99999999999999999999999",
+      "token": "Infinity",
+      "status": 302
+    },
+    {
+      "path": "/account/bots/394959859/github_connection",
+      "raw": "-0e99999999999999999999999",
+      "token": "-Infinity",
+      "status": 302
+    }
+  ],
+  "errors": {}
+}

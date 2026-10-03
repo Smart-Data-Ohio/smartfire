@@ -29,7 +29,14 @@ pub async fn create(c: &mut Ctx) -> Result {
         .permit(&permit_keys(&["name", "expires_at"]));
     let name = params.get("name").and_then(Param::to_s).unwrap_or_default();
     let zone = super::viewer_zone(c).await?;
-    let expires_at = super::parse_datetime(params.get("expires_at"), &zone);
+    let raw_expires_at = params.get("expires_at");
+    let expires_at = super::input_casts::datetime(
+        raw_expires_at,
+        &zone,
+        campfire_db::Timestamp::from_jiff(c.now()),
+    )
+    .map_err(Error::internal)?;
+    let non_time = matches!(raw_expires_at, Some(Param::Number(_) | Param::Bool(true)));
     let actor = concerns::require_current_user(c)?.id;
     let context = super::audit_context(c)?;
     let form_name = name.clone();
@@ -63,6 +70,13 @@ pub async fn create(c: &mut Ctx) -> Result {
             })
             .await
         }
+        Err(campfire_db::Error::RecordInvalid(_)) if non_time => {
+            // Rails retains a numeric/true value after validation fails, then the
+            // datetime_local_field calls strftime on it. The unsaved form raises.
+            Err(Error::internal(anyhow::anyhow!(
+                "non-time expires_at has no strftime"
+            )))
+        }
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             render_index(
                 c,
@@ -70,7 +84,8 @@ pub async fn create(c: &mut Ctx) -> Result {
                 agent.id,
                 CredentialForm {
                     name: Some(form_name),
-                    expires_at: expires_at.map(|t| zone.format(t.jiff(), "%Y-%m-%dT%H:%M:%S")),
+                    expires_at: expires_at
+                        .map(|t| super::input_casts::extended_datetime(t, &zone, false)),
                     errors: Some(super::error_sentence(&errors)),
                     error_fields: errors.0.iter().map(|(f, _)| f.to_string()).collect(),
                 },
@@ -140,10 +155,11 @@ async fn render_index(
     status: StatusCode,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
+    let zone = super::viewer_zone(c).await?;
     let credentials = c
         .app()
         .db
-        .read(move |conn| presenters::accounts::bot_access::credentials(conn, agent_id))
+        .read(move |conn| presenters::accounts::bot_access::credentials(conn, agent_id, &zone))
         .await
         .map_err(Error::internal)?;
     let (bot_id, bot_name, now) = (bot.id, bot.name.clone(), c.now());

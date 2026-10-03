@@ -1,0 +1,3692 @@
+{
+  "Africa/Abidjan": {
+    "first_at": -1830383032,
+    "first_offset": -968,
+    "first_next_offset": 0,
+    "last_at": -1830383032,
+    "last_offset": 0,
+    "last_previous_offset": -968
+  },
+  "Africa/Accra": {
+    "first_at": -1709337548,
+    "first_offset": -52,
+    "first_next_offset": 0,
+    "last_at": -441844200,
+    "last_offset": 0,
+    "last_previous_offset": 1800
+  },
+  "Africa/Addis_Ababa": {
+    "first_at": -3155682888,
+    "first_offset": 9288,
+    "first_next_offset": 9320,
+    "last_at": -1062210920,
+    "last_offset": 10800,
+    "last_previous_offset": 9320
+  },
+  "Africa/Algiers": {
+    "first_at": -2486592732,
+    "first_offset": 732,
+    "first_next_offset": 561,
+    "last_at": 357523200,
+    "last_offset": 3600,
+    "last_previous_offset": 0
+  },
+  "Africa/Asmara": {
+    "first_at": -3155682932,
+    "first_offset": 9332,
+    "first_next_offset": 9332,
+    "last_at": -1062210920,
+    "last_offset": 10800,
+    "last_previous_offset": 9320
+  },
+  "Africa/Bamako": {
+    "first_at": -1830382080,
+    "first_offset": -1920,
+    "first_next_offset": 0,
+    "last_at": -300841200,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Bangui": {
+    "first_at": -1830388460,
+    "first_offset": 4460,
+    "first_next_offset": 3600,
+    "last_at": -1830388460,
+    "last_offset": 3600,
+    "last_previous_offset": 4460
+  },
+  "Africa/Banjul": {
+    "first_at": -1830380004,
+    "first_offset": -3996,
+    "first_next_offset": -3996,
+    "last_at": -880930800,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Bissau": {
+    "first_at": -1830380400,
+    "first_offset": -3740,
+    "first_next_offset": -3600,
+    "last_at": 157770000,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Blantyre": {
+    "first_at": -1844302800,
+    "first_offset": 8400,
+    "first_next_offset": 8470,
+    "last_at": -1404440460,
+    "last_offset": 7200,
+    "last_previous_offset": 8460
+  },
+  "Africa/Brazzaville": {
+    "first_at": -1830387668,
+    "first_offset": 3668,
+    "first_next_offset": 3600,
+    "last_at": -1830387668,
+    "last_offset": 3600,
+    "last_previous_offset": 3668
+  },
+  "Africa/Bujumbura": {
+    "first_at": -2524528648,
+    "first_offset": 7048,
+    "first_next_offset": 7200,
+    "last_at": -2524528648,
+    "last_offset": 7200,
+    "last_previous_offset": 7048
+  },
+  "Africa/Cairo": {
+    "first_at": -2185409109,
+    "first_offset": 7509,
+    "first_next_offset": 7200,
+    "last_at": 4949154000,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Africa/Casablanca": {
+    "first_at": -1773012580,
+    "first_offset": -1820,
+    "first_next_offset": 0,
+    "last_at": 1789866000,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Africa/Ceuta": {
+    "first_at": -2177452800,
+    "first_offset": -1276,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Africa/Conakry": {
+    "first_at": -1830380708,
+    "first_offset": -3292,
+    "first_next_offset": 0,
+    "last_at": -315615600,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Dakar": {
+    "first_at": -1830379816,
+    "first_offset": -4184,
+    "first_next_offset": -3600,
+    "last_at": -902098800,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Dar_es_Salaam": {
+    "first_at": -1230777428,
+    "first_offset": 9428,
+    "first_next_offset": 10800,
+    "last_at": -284006700,
+    "last_offset": 10800,
+    "last_previous_offset": 9900
+  },
+  "Africa/Djibouti": {
+    "first_at": -1846291956,
+    "first_offset": 10356,
+    "first_next_offset": 10800,
+    "last_at": -1846291956,
+    "last_offset": 10800,
+    "last_previous_offset": 10356
+  },
+  "Africa/Douala": {
+    "first_at": -1830386328,
+    "first_offset": 2328,
+    "first_next_offset": 3600,
+    "last_at": -1830386328,
+    "last_offset": 3600,
+    "last_previous_offset": 2328
+  },
+  "Africa/El_Aaiun": {
+    "first_at": -1136070432,
+    "first_offset": -3168,
+    "first_next_offset": -3600,
+    "last_at": 1789866000,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Africa/Freetown": {
+    "first_at": -2776979220,
+    "first_offset": -3180,
+    "first_next_offset": -3180,
+    "last_at": -885769200,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Gaborone": {
+    "first_at": -2682294220,
+    "first_offset": 6220,
+    "first_next_offset": 5400,
+    "last_at": -813805200,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Africa/Harare": {
+    "first_at": -2109290652,
+    "first_offset": 7452,
+    "first_next_offset": 7200,
+    "last_at": -2109290652,
+    "last_offset": 7200,
+    "last_previous_offset": 7452
+  },
+  "Africa/Johannesburg": {
+    "first_at": -2458173120,
+    "first_offset": 6720,
+    "first_next_offset": 5400,
+    "last_at": -813805200,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Africa/Juba": {
+    "first_at": -1230775588,
+    "first_offset": 7588,
+    "first_next_offset": 7200,
+    "last_at": 1612126800,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Africa/Kampala": {
+    "first_at": -1309745380,
+    "first_offset": 7780,
+    "first_next_offset": 10800,
+    "last_at": -410237100,
+    "last_offset": 10800,
+    "last_previous_offset": 9900
+  },
+  "Africa/Khartoum": {
+    "first_at": -1230775808,
+    "first_offset": 7808,
+    "first_next_offset": 7200,
+    "last_at": 1509483600,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Africa/Kigali": {
+    "first_at": -1091498416,
+    "first_offset": 7216,
+    "first_next_offset": 7200,
+    "last_at": -1091498416,
+    "last_offset": 7200,
+    "last_previous_offset": 7216
+  },
+  "Africa/Kinshasa": {
+    "first_at": -2276643672,
+    "first_offset": 3672,
+    "first_next_offset": 3600,
+    "last_at": -2276643672,
+    "last_offset": 3600,
+    "last_previous_offset": 3672
+  },
+  "Africa/Lagos": {
+    "first_at": -2035584815,
+    "first_offset": 815,
+    "first_next_offset": 0,
+    "last_at": -1588465800,
+    "last_offset": 3600,
+    "last_previous_offset": 1800
+  },
+  "Africa/Libreville": {
+    "first_at": -1830386268,
+    "first_offset": 2268,
+    "first_next_offset": 3600,
+    "last_at": -1830386268,
+    "last_offset": 3600,
+    "last_previous_offset": 2268
+  },
+  "Africa/Lome": {
+    "first_at": -2429827492,
+    "first_offset": 292,
+    "first_next_offset": 0,
+    "last_at": -2429827492,
+    "last_offset": 0,
+    "last_previous_offset": 292
+  },
+  "Africa/Luanda": {
+    "first_at": -2461452776,
+    "first_offset": 3176,
+    "first_next_offset": 3124,
+    "last_at": -1830387600,
+    "last_offset": 3600,
+    "last_previous_offset": 3124
+  },
+  "Africa/Lubumbashi": {
+    "first_at": -2276646592,
+    "first_offset": 6592,
+    "first_next_offset": 3600,
+    "last_at": -1567990800,
+    "last_offset": 7200,
+    "last_previous_offset": 3600
+  },
+  "Africa/Lusaka": {
+    "first_at": -2109289988,
+    "first_offset": 6788,
+    "first_next_offset": 7200,
+    "last_at": -2109289988,
+    "last_offset": 7200,
+    "last_previous_offset": 6788
+  },
+  "Africa/Malabo": {
+    "first_at": -1830386108,
+    "first_offset": 2108,
+    "first_next_offset": 0,
+    "last_at": -190857600,
+    "last_offset": 3600,
+    "last_previous_offset": 0
+  },
+  "Africa/Maputo": {
+    "first_at": -1924999818,
+    "first_offset": 7818,
+    "first_next_offset": 7200,
+    "last_at": -1924999818,
+    "last_offset": 7200,
+    "last_previous_offset": 7818
+  },
+  "Africa/Maseru": {
+    "first_at": -2109289800,
+    "first_offset": 6600,
+    "first_next_offset": 7200,
+    "last_at": -813805200,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Africa/Mbabane": {
+    "first_at": -2109290664,
+    "first_offset": 7464,
+    "first_next_offset": 7200,
+    "last_at": -2109290664,
+    "last_offset": 7200,
+    "last_previous_offset": 7464
+  },
+  "Africa/Mogadishu": {
+    "first_at": -2403572488,
+    "first_offset": 10888,
+    "first_next_offset": 10800,
+    "last_at": -410236200,
+    "last_offset": 10800,
+    "last_previous_offset": 9000
+  },
+  "Africa/Monrovia": {
+    "first_at": -2776979812,
+    "first_offset": -2588,
+    "first_next_offset": -2588,
+    "last_at": 63593070,
+    "last_offset": 0,
+    "last_previous_offset": -2670
+  },
+  "Africa/Nairobi": {
+    "first_at": -1946168836,
+    "first_offset": 8836,
+    "first_next_offset": 9000,
+    "last_at": -865305900,
+    "last_offset": 10800,
+    "last_previous_offset": 9900
+  },
+  "Africa/Ndjamena": {
+    "first_at": -1830387612,
+    "first_offset": 3612,
+    "first_next_offset": 3600,
+    "last_at": 321314400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Africa/Niamey": {
+    "first_at": -1830384508,
+    "first_offset": 508,
+    "first_next_offset": -3600,
+    "last_at": -315619200,
+    "last_offset": 3600,
+    "last_previous_offset": 0
+  },
+  "Africa/Nouakchott": {
+    "first_at": -1830380172,
+    "first_offset": -3828,
+    "first_next_offset": 0,
+    "last_at": -286930800,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Ouagadougou": {
+    "first_at": -1830383636,
+    "first_offset": -364,
+    "first_next_offset": 0,
+    "last_at": -1830383636,
+    "last_offset": 0,
+    "last_previous_offset": -364
+  },
+  "Africa/Porto-Novo": {
+    "first_at": -1830384628,
+    "first_offset": 628,
+    "first_next_offset": 0,
+    "last_at": -1131235200,
+    "last_offset": 3600,
+    "last_previous_offset": 0
+  },
+  "Africa/Sao_Tome": {
+    "first_at": -2713912016,
+    "first_offset": 1616,
+    "first_next_offset": -2205,
+    "last_at": 1546304400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Africa/Timbuktu": {
+    "first_at": -1830382080,
+    "first_offset": -1920,
+    "first_next_offset": 0,
+    "last_at": -300841200,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Africa/Tripoli": {
+    "first_at": -1577926364,
+    "first_offset": 3164,
+    "first_next_offset": 3600,
+    "last_at": 1382659200,
+    "last_offset": 7200,
+    "last_previous_offset": 7200
+  },
+  "Africa/Tunis": {
+    "first_at": -2797202444,
+    "first_offset": 2444,
+    "first_next_offset": 561,
+    "last_at": 1224982800,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Africa/Windhoek": {
+    "first_at": -2458170504,
+    "first_offset": 4104,
+    "first_next_offset": 5400,
+    "last_at": 1504400400,
+    "last_offset": 7200,
+    "last_previous_offset": 3600
+  },
+  "America/Adak": {
+    "first_at": -3225223727,
+    "first_offset": 44002,
+    "first_next_offset": -42398,
+    "last_at": 4949377200,
+    "last_offset": -36000,
+    "last_previous_offset": -32400
+  },
+  "America/Anchorage": {
+    "first_at": -3225223727,
+    "first_offset": 50424,
+    "first_next_offset": -35976,
+    "last_at": 4949373600,
+    "last_offset": -32400,
+    "last_previous_offset": -28800
+  },
+  "America/Anguilla": {
+    "first_at": -1825098464,
+    "first_offset": -15136,
+    "first_next_offset": -14400,
+    "last_at": -1825098464,
+    "last_offset": -14400,
+    "last_previous_offset": -15136
+  },
+  "America/Antigua": {
+    "first_at": -1825098768,
+    "first_offset": -14832,
+    "first_next_offset": -18000,
+    "last_at": -599598000,
+    "last_offset": -14400,
+    "last_previous_offset": -18000
+  },
+  "America/Araguaina": {
+    "first_at": -1767214032,
+    "first_offset": -11568,
+    "first_next_offset": -10800,
+    "last_at": 1361066400,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Buenos_Aires": {
+    "first_at": -2372097972,
+    "first_offset": -14028,
+    "first_next_offset": -15408,
+    "last_at": 1237082400,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Catamarca": {
+    "first_at": -2372096212,
+    "first_offset": -15788,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Cordoba": {
+    "first_at": -2372096592,
+    "first_offset": -15408,
+    "first_next_offset": -15408,
+    "last_at": 1237082400,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Jujuy": {
+    "first_at": -2372096328,
+    "first_offset": -15672,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/La_Rioja": {
+    "first_at": -2372095956,
+    "first_offset": -16044,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Mendoza": {
+    "first_at": -2372095484,
+    "first_offset": -16516,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Rio_Gallegos": {
+    "first_at": -2372095388,
+    "first_offset": -16612,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Salta": {
+    "first_at": -2372096300,
+    "first_offset": -15700,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/San_Juan": {
+    "first_at": -2372095556,
+    "first_offset": -16444,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/San_Luis": {
+    "first_at": -2372096076,
+    "first_offset": -15924,
+    "first_next_offset": -15408,
+    "last_at": 1255233600,
+    "last_offset": -10800,
+    "last_previous_offset": -14400
+  },
+  "America/Argentina/Tucuman": {
+    "first_at": -2372096348,
+    "first_offset": -15652,
+    "first_next_offset": -15408,
+    "last_at": 1237082400,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Argentina/Ushuaia": {
+    "first_at": -2372095608,
+    "first_offset": -16392,
+    "first_next_offset": -15408,
+    "last_at": 1205632800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Aruba": {
+    "first_at": -1826738376,
+    "first_offset": -16824,
+    "first_next_offset": -16200,
+    "last_at": -157750200,
+    "last_offset": -14400,
+    "last_previous_offset": -16200
+  },
+  "America/Asuncion": {
+    "first_at": -2524507760,
+    "first_offset": -13840,
+    "first_next_offset": -13840,
+    "last_at": 1728961200,
+    "last_offset": -10800,
+    "last_previous_offset": -10800
+  },
+  "America/Atikokan": {
+    "first_at": -2366733212,
+    "first_offset": -21988,
+    "first_next_offset": -21600,
+    "last_at": -765392400,
+    "last_offset": -18000,
+    "last_previous_offset": -18000
+  },
+  "America/Atka": {
+    "first_at": -3225223727,
+    "first_offset": 44002,
+    "first_next_offset": -42398,
+    "last_at": 4949377200,
+    "last_offset": -36000,
+    "last_previous_offset": -32400
+  },
+  "America/Bahia": {
+    "first_at": -1767216356,
+    "first_offset": -9244,
+    "first_next_offset": -10800,
+    "last_at": 1330221600,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Bahia_Banderas": {
+    "first_at": -1514739600,
+    "first_offset": -25260,
+    "first_next_offset": -25200,
+    "last_at": 1667113200,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Barbados": {
+    "first_at": -1841256091,
+    "first_offset": -14309,
+    "first_next_offset": -14400,
+    "last_at": 338706000,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Belem": {
+    "first_at": -1767213964,
+    "first_offset": -11636,
+    "first_next_offset": -10800,
+    "last_at": 571197600,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Belize": {
+    "first_at": -1822500432,
+    "first_offset": -21168,
+    "first_next_offset": -21600,
+    "last_at": 413874000,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Blanc-Sablon": {
+    "first_at": -2713896692,
+    "first_offset": -13708,
+    "first_next_offset": -14400,
+    "last_at": -765399600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Boa_Vista": {
+    "first_at": -1767211040,
+    "first_offset": -14560,
+    "first_next_offset": -14400,
+    "last_at": 971578800,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Bogota": {
+    "first_at": -2707671824,
+    "first_offset": -17776,
+    "first_next_offset": -17776,
+    "last_at": 729057600,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Boise": {
+    "first_at": -2717640000,
+    "first_offset": -27889,
+    "first_next_offset": -28800,
+    "last_at": 4949366400,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Cambridge_Bay": {
+    "first_at": -1577923200,
+    "first_offset": 0,
+    "first_next_offset": -25200,
+    "last_at": 4949366400,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Campo_Grande": {
+    "first_at": -1767212492,
+    "first_offset": -13108,
+    "first_next_offset": -14400,
+    "last_at": 1550372400,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Cancun": {
+    "first_at": -1514743200,
+    "first_offset": -20824,
+    "first_next_offset": -21600,
+    "last_at": 1422777600,
+    "last_offset": -18000,
+    "last_previous_offset": -21600
+  },
+  "America/Caracas": {
+    "first_at": -2524505536,
+    "first_offset": -16064,
+    "first_next_offset": -16060,
+    "last_at": 1462086000,
+    "last_offset": -14400,
+    "last_previous_offset": -16200
+  },
+  "America/Cayenne": {
+    "first_at": -1846269040,
+    "first_offset": -12560,
+    "first_next_offset": -14400,
+    "last_at": -71092800,
+    "last_offset": -10800,
+    "last_previous_offset": -14400
+  },
+  "America/Cayman": {
+    "first_at": -2524502068,
+    "first_offset": -19532,
+    "first_next_offset": -18430,
+    "last_at": -1827687170,
+    "last_offset": -18000,
+    "last_previous_offset": -18430
+  },
+  "America/Chicago": {
+    "first_at": -2717647200,
+    "first_offset": -21036,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Chihuahua": {
+    "first_at": -1514739600,
+    "first_offset": -25460,
+    "first_next_offset": -25200,
+    "last_at": 1667116800,
+    "last_offset": -21600,
+    "last_previous_offset": -21600
+  },
+  "America/Ciudad_Juarez": {
+    "first_at": -1514739600,
+    "first_offset": -25556,
+    "first_next_offset": -25200,
+    "last_at": 4949366400,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Coral_Harbour": {
+    "first_at": -2366733212,
+    "first_offset": -21988,
+    "first_next_offset": -21600,
+    "last_at": -765392400,
+    "last_offset": -18000,
+    "last_previous_offset": -18000
+  },
+  "America/Costa_Rica": {
+    "first_at": -2524501427,
+    "first_offset": -20173,
+    "first_next_offset": -20173,
+    "last_at": 700635600,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Coyhaique": {
+    "first_at": -2524504304,
+    "first_offset": -17296,
+    "first_next_offset": -16965,
+    "last_at": 1742439600,
+    "last_offset": -10800,
+    "last_previous_offset": -10800
+  },
+  "America/Creston": {
+    "first_at": -2713882436,
+    "first_offset": -27964,
+    "first_next_offset": -25200,
+    "last_at": -1627833600,
+    "last_offset": -25200,
+    "last_previous_offset": -28800
+  },
+  "America/Cuiaba": {
+    "first_at": -1767212140,
+    "first_offset": -13460,
+    "first_next_offset": -14400,
+    "last_at": 1550372400,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Curacao": {
+    "first_at": -1826738653,
+    "first_offset": -16547,
+    "first_next_offset": -16200,
+    "last_at": -157750200,
+    "last_offset": -14400,
+    "last_previous_offset": -16200
+  },
+  "America/Danmarkshavn": {
+    "first_at": -1686091520,
+    "first_offset": -4480,
+    "first_next_offset": -10800,
+    "last_at": 820465200,
+    "last_offset": 0,
+    "last_previous_offset": -10800
+  },
+  "America/Dawson": {
+    "first_at": -2188996940,
+    "first_offset": -33460,
+    "first_next_offset": -32400,
+    "last_at": 1604214000,
+    "last_offset": -25200,
+    "last_previous_offset": -25200
+  },
+  "America/Dawson_Creek": {
+    "first_at": -2713881544,
+    "first_offset": -28856,
+    "first_next_offset": -28800,
+    "last_at": 84013200,
+    "last_offset": -25200,
+    "last_previous_offset": -25200
+  },
+  "America/Denver": {
+    "first_at": -2717643600,
+    "first_offset": -25196,
+    "first_next_offset": -25200,
+    "last_at": 4949366400,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Detroit": {
+    "first_at": -2051202469,
+    "first_offset": -19931,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Dominica": {
+    "first_at": -1846266804,
+    "first_offset": -14736,
+    "first_next_offset": -14400,
+    "last_at": -1846266804,
+    "last_offset": -14400,
+    "last_previous_offset": -14736
+  },
+  "America/Edmonton": {
+    "first_at": -1998663968,
+    "first_offset": -27232,
+    "first_next_offset": -25200,
+    "last_at": 1793520000,
+    "last_offset": -21600,
+    "last_previous_offset": -21600
+  },
+  "America/Eirunepe": {
+    "first_at": -1767208832,
+    "first_offset": -16768,
+    "first_next_offset": -18000,
+    "last_at": 1384056000,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/El_Salvador": {
+    "first_at": -1546279392,
+    "first_offset": -21408,
+    "first_next_offset": -21600,
+    "last_at": 591166800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Ensenada": {
+    "first_at": -1514739600,
+    "first_offset": -28084,
+    "first_next_offset": -25200,
+    "last_at": 4949370000,
+    "last_offset": -28800,
+    "last_previous_offset": -25200
+  },
+  "America/Fort_Nelson": {
+    "first_at": -2713880953,
+    "first_offset": -29447,
+    "first_next_offset": -28800,
+    "last_at": 1425808800,
+    "last_offset": -25200,
+    "last_previous_offset": -28800
+  },
+  "America/Fortaleza": {
+    "first_at": -1767216360,
+    "first_offset": -9240,
+    "first_next_offset": -10800,
+    "last_at": 1013911200,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Glace_Bay": {
+    "first_at": -2131646412,
+    "first_offset": -14388,
+    "first_next_offset": -14400,
+    "last_at": 4949355600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Goose_Bay": {
+    "first_at": -2713895900,
+    "first_offset": -14500,
+    "first_next_offset": -12652,
+    "last_at": 4949355600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Grand_Turk": {
+    "first_at": -2524504528,
+    "first_offset": -17072,
+    "first_next_offset": -18430,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Grenada": {
+    "first_at": -1846266780,
+    "first_offset": -14820,
+    "first_next_offset": -14400,
+    "last_at": -1846266780,
+    "last_offset": -14400,
+    "last_previous_offset": -14820
+  },
+  "America/Guadeloupe": {
+    "first_at": -1848254032,
+    "first_offset": -14768,
+    "first_next_offset": -14400,
+    "last_at": -1848254032,
+    "last_offset": -14400,
+    "last_previous_offset": -14768
+  },
+  "America/Guatemala": {
+    "first_at": -1617040676,
+    "first_offset": -21724,
+    "first_next_offset": -21600,
+    "last_at": 1159678800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Guayaquil": {
+    "first_at": -2524502440,
+    "first_offset": -19160,
+    "first_next_offset": -18840,
+    "last_at": 728884800,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Guyana": {
+    "first_at": -1843589241,
+    "first_offset": -13959,
+    "first_next_offset": -14400,
+    "last_at": 701841600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Halifax": {
+    "first_at": -2131645536,
+    "first_offset": -15264,
+    "first_next_offset": -14400,
+    "last_at": 4949355600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Havana": {
+    "first_at": -2524501832,
+    "first_offset": -19768,
+    "first_next_offset": -19776,
+    "last_at": 4949355600,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Hermosillo": {
+    "first_at": -1514739600,
+    "first_offset": -26632,
+    "first_next_offset": -25200,
+    "last_at": 909302400,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Indiana/Indianapolis": {
+    "first_at": -2717647200,
+    "first_offset": -20678,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Indiana/Knox": {
+    "first_at": -2717647200,
+    "first_offset": -20790,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Indiana/Marengo": {
+    "first_at": -2717647200,
+    "first_offset": -20723,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Indiana/Petersburg": {
+    "first_at": -2717647200,
+    "first_offset": -20947,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Indiana/Tell_City": {
+    "first_at": -2717647200,
+    "first_offset": -20823,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Indiana/Vevay": {
+    "first_at": -2717647200,
+    "first_offset": -20416,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Indiana/Vincennes": {
+    "first_at": -2717647200,
+    "first_offset": -21007,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Indiana/Winamac": {
+    "first_at": -2717647200,
+    "first_offset": -20785,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Inuvik": {
+    "first_at": -536457600,
+    "first_offset": 0,
+    "first_next_offset": -28800,
+    "last_at": 4949366400,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Iqaluit": {
+    "first_at": -865296000,
+    "first_offset": 0,
+    "first_next_offset": -14400,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Jamaica": {
+    "first_at": -2524503170,
+    "first_offset": -18430,
+    "first_next_offset": -18430,
+    "last_at": 436341600,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Juneau": {
+    "first_at": -3225223727,
+    "first_offset": 54139,
+    "first_next_offset": -32261,
+    "last_at": 4949373600,
+    "last_offset": -32400,
+    "last_previous_offset": -28800
+  },
+  "America/Kentucky/Louisville": {
+    "first_at": -2717647200,
+    "first_offset": -20582,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Kentucky/Monticello": {
+    "first_at": -2717647200,
+    "first_offset": -20364,
+    "first_next_offset": -21600,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Kralendijk": {
+    "first_at": -1826738653,
+    "first_offset": -16547,
+    "first_next_offset": -16200,
+    "last_at": -157750200,
+    "last_offset": -14400,
+    "last_previous_offset": -16200
+  },
+  "America/La_Paz": {
+    "first_at": -2524505244,
+    "first_offset": -16356,
+    "first_next_offset": -16356,
+    "last_at": -1192307244,
+    "last_offset": -14400,
+    "last_previous_offset": -12756
+  },
+  "America/Lima": {
+    "first_at": -2524503108,
+    "first_offset": -18492,
+    "first_next_offset": -18516,
+    "last_at": 765172800,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Los_Angeles": {
+    "first_at": -2717640000,
+    "first_offset": -28378,
+    "first_next_offset": -28800,
+    "last_at": 4949370000,
+    "last_offset": -28800,
+    "last_previous_offset": -25200
+  },
+  "America/Lower_Princes": {
+    "first_at": -1826738653,
+    "first_offset": -16547,
+    "first_next_offset": -16200,
+    "last_at": -157750200,
+    "last_offset": -14400,
+    "last_previous_offset": -16200
+  },
+  "America/Maceio": {
+    "first_at": -1767217028,
+    "first_offset": -8572,
+    "first_next_offset": -10800,
+    "last_at": 1013911200,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Managua": {
+    "first_at": -2524500892,
+    "first_offset": -20708,
+    "first_next_offset": -20712,
+    "last_at": 1159682400,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Manaus": {
+    "first_at": -1767211196,
+    "first_offset": -14404,
+    "first_next_offset": -14400,
+    "last_at": 761713200,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Marigot": {
+    "first_at": -1825098836,
+    "first_offset": -14764,
+    "first_next_offset": -14400,
+    "last_at": -1825098836,
+    "last_offset": -14400,
+    "last_previous_offset": -14764
+  },
+  "America/Martinique": {
+    "first_at": -2524506940,
+    "first_offset": -14660,
+    "first_next_offset": -14660,
+    "last_at": 338958000,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Matamoros": {
+    "first_at": -1514743200,
+    "first_offset": -23400,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Mazatlan": {
+    "first_at": -1514739600,
+    "first_offset": -25540,
+    "first_next_offset": -25200,
+    "last_at": 1667116800,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Menominee": {
+    "first_at": -2659759773,
+    "first_offset": -21027,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Merida": {
+    "first_at": -1514743200,
+    "first_offset": -21508,
+    "first_next_offset": -21600,
+    "last_at": 1667113200,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Metlakatla": {
+    "first_at": -3225223727,
+    "first_offset": 54822,
+    "first_next_offset": -31578,
+    "last_at": 4949373600,
+    "last_offset": -32400,
+    "last_previous_offset": -28800
+  },
+  "America/Mexico_City": {
+    "first_at": -1514739600,
+    "first_offset": -23796,
+    "first_next_offset": -25200,
+    "last_at": 1667113200,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Miquelon": {
+    "first_at": -1847650520,
+    "first_offset": -13480,
+    "first_next_offset": -14400,
+    "last_at": 4949352000,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Moncton": {
+    "first_at": -2715882052,
+    "first_offset": -15548,
+    "first_next_offset": -18000,
+    "last_at": 4949355600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Monterrey": {
+    "first_at": -1514743200,
+    "first_offset": -24076,
+    "first_next_offset": -25200,
+    "last_at": 1667113200,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Montevideo": {
+    "first_at": -1942690509,
+    "first_offset": -13491,
+    "first_next_offset": -13491,
+    "last_at": 1425787200,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Montreal": {
+    "first_at": -2366736148,
+    "first_offset": -19052,
+    "first_next_offset": -18000,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Montserrat": {
+    "first_at": -1846266608,
+    "first_offset": -14932,
+    "first_next_offset": -14400,
+    "last_at": -1846266608,
+    "last_offset": -14400,
+    "last_previous_offset": -14932
+  },
+  "America/Nassau": {
+    "first_at": -1825095030,
+    "first_offset": -18570,
+    "first_next_offset": -18000,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/New_York": {
+    "first_at": -2717650800,
+    "first_offset": -17762,
+    "first_next_offset": -18000,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Nipigon": {
+    "first_at": -2366736148,
+    "first_offset": -19052,
+    "first_next_offset": -18000,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Nome": {
+    "first_at": -3225223727,
+    "first_offset": 46702,
+    "first_next_offset": -39698,
+    "last_at": 4949373600,
+    "last_offset": -32400,
+    "last_previous_offset": -28800
+  },
+  "America/Noronha": {
+    "first_at": -1767217820,
+    "first_offset": -7780,
+    "first_next_offset": -7200,
+    "last_at": 1013907600,
+    "last_offset": -7200,
+    "last_previous_offset": -3600
+  },
+  "America/North_Dakota/Beulah": {
+    "first_at": -2717643600,
+    "first_offset": -24427,
+    "first_next_offset": -25200,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/North_Dakota/Center": {
+    "first_at": -2717643600,
+    "first_offset": -24312,
+    "first_next_offset": -25200,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/North_Dakota/New_Salem": {
+    "first_at": -2717643600,
+    "first_offset": -24339,
+    "first_next_offset": -25200,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Nuuk": {
+    "first_at": -1686083584,
+    "first_offset": -12416,
+    "first_next_offset": -10800,
+    "last_at": 4948736400,
+    "last_offset": -7200,
+    "last_previous_offset": -3600
+  },
+  "America/Ojinaga": {
+    "first_at": -1514739600,
+    "first_offset": -25060,
+    "first_next_offset": -25200,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Panama": {
+    "first_at": -2524502512,
+    "first_offset": -19088,
+    "first_next_offset": -19176,
+    "last_at": -1946918424,
+    "last_offset": -18000,
+    "last_previous_offset": -19176
+  },
+  "America/Pangnirtung": {
+    "first_at": -865296000,
+    "first_offset": 0,
+    "first_next_offset": -14400,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Paramaribo": {
+    "first_at": -1861906760,
+    "first_offset": -13240,
+    "first_next_offset": -13252,
+    "last_at": 465449400,
+    "last_offset": -10800,
+    "last_previous_offset": -12600
+  },
+  "America/Phoenix": {
+    "first_at": -2717643600,
+    "first_offset": -26898,
+    "first_next_offset": -25200,
+    "last_at": -68659200,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Port-au-Prince": {
+    "first_at": -2524504240,
+    "first_offset": -17360,
+    "first_next_offset": -17340,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Port_of_Spain": {
+    "first_at": -1825098836,
+    "first_offset": -14764,
+    "first_next_offset": -14400,
+    "last_at": -1825098836,
+    "last_offset": -14400,
+    "last_previous_offset": -14764
+  },
+  "America/Porto_Acre": {
+    "first_at": -1767209328,
+    "first_offset": -16272,
+    "first_next_offset": -18000,
+    "last_at": 1384056000,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Porto_Velho": {
+    "first_at": -1767210264,
+    "first_offset": -15336,
+    "first_next_offset": -14400,
+    "last_at": 571201200,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Puerto_Rico": {
+    "first_at": -2233035335,
+    "first_offset": -15865,
+    "first_next_offset": -14400,
+    "last_at": -765399600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Punta_Arenas": {
+    "first_at": -2524504580,
+    "first_offset": -17020,
+    "first_next_offset": -16965,
+    "last_at": 1480820400,
+    "last_offset": -10800,
+    "last_previous_offset": -10800
+  },
+  "America/Rainy_River": {
+    "first_at": -2602258284,
+    "first_offset": -23316,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Rankin_Inlet": {
+    "first_at": -410227200,
+    "first_offset": 0,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Recife": {
+    "first_at": -1767217224,
+    "first_offset": -8376,
+    "first_next_offset": -10800,
+    "last_at": 1013911200,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Regina": {
+    "first_at": -2030202084,
+    "first_offset": -25116,
+    "first_next_offset": -25200,
+    "last_at": -305737200,
+    "last_offset": -21600,
+    "last_previous_offset": -25200
+  },
+  "America/Resolute": {
+    "first_at": -704937600,
+    "first_offset": 0,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Rio_Branco": {
+    "first_at": -1767209328,
+    "first_offset": -16272,
+    "first_next_offset": -18000,
+    "last_at": 1384056000,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Santa_Isabel": {
+    "first_at": -1514739600,
+    "first_offset": -28084,
+    "first_next_offset": -25200,
+    "last_at": 4949370000,
+    "last_offset": -28800,
+    "last_previous_offset": -25200
+  },
+  "America/Santarem": {
+    "first_at": -1767212472,
+    "first_offset": -13128,
+    "first_next_offset": -14400,
+    "last_at": 1214280000,
+    "last_offset": -10800,
+    "last_previous_offset": -14400
+  },
+  "America/Santiago": {
+    "first_at": -2524504635,
+    "first_offset": -16965,
+    "first_next_offset": -16965,
+    "last_at": 4944513600,
+    "last_offset": -10800,
+    "last_previous_offset": -14400
+  },
+  "America/Santo_Domingo": {
+    "first_at": -2524504824,
+    "first_offset": -16776,
+    "first_next_offset": -16800,
+    "last_at": 975823200,
+    "last_offset": -14400,
+    "last_previous_offset": -18000
+  },
+  "America/Sao_Paulo": {
+    "first_at": -1767214412,
+    "first_offset": -11188,
+    "first_next_offset": -10800,
+    "last_at": 1550368800,
+    "last_offset": -10800,
+    "last_previous_offset": -7200
+  },
+  "America/Scoresbysund": {
+    "first_at": -1686090728,
+    "first_offset": -5272,
+    "first_next_offset": -7200,
+    "last_at": 4948736400,
+    "last_offset": -7200,
+    "last_previous_offset": -3600
+  },
+  "America/Shiprock": {
+    "first_at": -2717643600,
+    "first_offset": -25196,
+    "first_next_offset": -25200,
+    "last_at": 4949366400,
+    "last_offset": -25200,
+    "last_previous_offset": -21600
+  },
+  "America/Sitka": {
+    "first_at": -3225223727,
+    "first_offset": 53927,
+    "first_next_offset": -32473,
+    "last_at": 4949373600,
+    "last_offset": -32400,
+    "last_previous_offset": -28800
+  },
+  "America/St_Barthelemy": {
+    "first_at": -1825098836,
+    "first_offset": -14764,
+    "first_next_offset": -14400,
+    "last_at": -1825098836,
+    "last_offset": -14400,
+    "last_previous_offset": -14764
+  },
+  "America/St_Johns": {
+    "first_at": -2713897748,
+    "first_offset": -12652,
+    "first_next_offset": -12652,
+    "last_at": 4949353800,
+    "last_offset": -12600,
+    "last_previous_offset": -9000
+  },
+  "America/St_Kitts": {
+    "first_at": -1825098548,
+    "first_offset": -15052,
+    "first_next_offset": -14400,
+    "last_at": -1825098548,
+    "last_offset": -14400,
+    "last_previous_offset": -15052
+  },
+  "America/St_Lucia": {
+    "first_at": -2524506960,
+    "first_offset": -14640,
+    "first_next_offset": -14640,
+    "last_at": -1830369360,
+    "last_offset": -14400,
+    "last_previous_offset": -14640
+  },
+  "America/St_Thomas": {
+    "first_at": -1846266016,
+    "first_offset": -15584,
+    "first_next_offset": -14400,
+    "last_at": -1846266016,
+    "last_offset": -14400,
+    "last_previous_offset": -15584
+  },
+  "America/St_Vincent": {
+    "first_at": -2524506904,
+    "first_offset": -14696,
+    "first_next_offset": -14696,
+    "last_at": -1830369304,
+    "last_offset": -14400,
+    "last_previous_offset": -14696
+  },
+  "America/Swift_Current": {
+    "first_at": -2030201320,
+    "first_offset": -25880,
+    "first_next_offset": -25200,
+    "last_at": 73472400,
+    "last_offset": -21600,
+    "last_previous_offset": -25200
+  },
+  "America/Tegucigalpa": {
+    "first_at": -1538503868,
+    "first_offset": -20932,
+    "first_next_offset": -21600,
+    "last_at": 1154926800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Thule": {
+    "first_at": -1686079492,
+    "first_offset": -16508,
+    "first_next_offset": -14400,
+    "last_at": 4949355600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "America/Thunder_Bay": {
+    "first_at": -2366736148,
+    "first_offset": -19052,
+    "first_next_offset": -18000,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Tijuana": {
+    "first_at": -1514739600,
+    "first_offset": -28084,
+    "first_next_offset": -25200,
+    "last_at": 4949370000,
+    "last_offset": -28800,
+    "last_previous_offset": -25200
+  },
+  "America/Toronto": {
+    "first_at": -2366736148,
+    "first_offset": -19052,
+    "first_next_offset": -18000,
+    "last_at": 4949359200,
+    "last_offset": -18000,
+    "last_previous_offset": -14400
+  },
+  "America/Tortola": {
+    "first_at": -1846266092,
+    "first_offset": -15508,
+    "first_next_offset": -14400,
+    "last_at": -1846266092,
+    "last_offset": -14400,
+    "last_previous_offset": -15508
+  },
+  "America/Vancouver": {
+    "first_at": -2713880852,
+    "first_offset": -29548,
+    "first_next_offset": -28800,
+    "last_at": 1793523600,
+    "last_offset": -25200,
+    "last_previous_offset": -25200
+  },
+  "America/Virgin": {
+    "first_at": -1846266016,
+    "first_offset": -15584,
+    "first_next_offset": -14400,
+    "last_at": -1846266016,
+    "last_offset": -14400,
+    "last_previous_offset": -15584
+  },
+  "America/Whitehorse": {
+    "first_at": -2188997988,
+    "first_offset": -32412,
+    "first_next_offset": -32400,
+    "last_at": 1604214000,
+    "last_offset": -25200,
+    "last_previous_offset": -25200
+  },
+  "America/Winnipeg": {
+    "first_at": -2602258284,
+    "first_offset": -23316,
+    "first_next_offset": -21600,
+    "last_at": 4949362800,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "America/Yakutat": {
+    "first_at": -3225223727,
+    "first_offset": 52865,
+    "first_next_offset": -33535,
+    "last_at": 4949373600,
+    "last_offset": -32400,
+    "last_previous_offset": -28800
+  },
+  "America/Yellowknife": {
+    "first_at": -1998663968,
+    "first_offset": -27232,
+    "first_next_offset": -25200,
+    "last_at": 1793520000,
+    "last_offset": -21600,
+    "last_previous_offset": -21600
+  },
+  "Antarctica/Casey": {
+    "first_at": -31536000,
+    "first_offset": 0,
+    "first_next_offset": 28800,
+    "last_at": 1678291200,
+    "last_offset": 28800,
+    "last_previous_offset": 39600
+  },
+  "Antarctica/Davis": {
+    "first_at": -409190400,
+    "first_offset": 0,
+    "first_next_offset": 25200,
+    "last_at": 1329854400,
+    "last_offset": 25200,
+    "last_previous_offset": 18000
+  },
+  "Antarctica/DumontDUrville": {
+    "first_at": -725846400,
+    "first_offset": 0,
+    "first_next_offset": 36000,
+    "last_at": -415497600,
+    "last_offset": 36000,
+    "last_previous_offset": 0
+  },
+  "Antarctica/Macquarie": {
+    "first_at": -2214259200,
+    "first_offset": 0,
+    "first_next_offset": 36000,
+    "last_at": 4946889600,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Antarctica/Mawson": {
+    "first_at": -501206400,
+    "first_offset": 0,
+    "first_next_offset": 21600,
+    "last_at": 1255809600,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Antarctica/McMurdo": {
+    "first_at": -441849600,
+    "first_offset": 0,
+    "first_next_offset": 43200,
+    "last_at": 4946277600,
+    "last_offset": 46800,
+    "last_previous_offset": 43200
+  },
+  "Antarctica/Palmer": {
+    "first_at": -157766400,
+    "first_offset": 0,
+    "first_next_offset": -10800,
+    "last_at": 1480820400,
+    "last_offset": -10800,
+    "last_previous_offset": -10800
+  },
+  "Antarctica/Rothera": {
+    "first_at": 218246400,
+    "first_offset": 0,
+    "first_next_offset": -10800,
+    "last_at": 218246400,
+    "last_offset": -10800,
+    "last_previous_offset": 0
+  },
+  "Antarctica/Syowa": {
+    "first_at": -407808000,
+    "first_offset": 0,
+    "first_next_offset": 10800,
+    "last_at": -407808000,
+    "last_offset": 10800,
+    "last_previous_offset": 0
+  },
+  "Antarctica/Troll": {
+    "first_at": 1108166400,
+    "first_offset": 0,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 7200
+  },
+  "Antarctica/Vostok": {
+    "first_at": -380073600,
+    "first_offset": 0,
+    "first_next_offset": 25200,
+    "last_at": 1702839600,
+    "last_offset": 18000,
+    "last_previous_offset": 25200
+  },
+  "Arctic/Longyearbyen": {
+    "first_at": -2366757780,
+    "first_offset": 2580,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Asia/Aden": {
+    "first_at": -631162794,
+    "first_offset": 10794,
+    "first_next_offset": 10800,
+    "last_at": -631162794,
+    "last_offset": 10800,
+    "last_previous_offset": 10794
+  },
+  "Asia/Almaty": {
+    "first_at": -1441170468,
+    "first_offset": 18468,
+    "first_next_offset": 18000,
+    "last_at": 1709229600,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Amman": {
+    "first_at": -1230776624,
+    "first_offset": 8624,
+    "first_next_offset": 7200,
+    "last_at": 1666908000,
+    "last_offset": 10800,
+    "last_previous_offset": 10800
+  },
+  "Asia/Anadyr": {
+    "first_at": -1441194596,
+    "first_offset": 42596,
+    "first_next_offset": 43200,
+    "last_at": 1301151600,
+    "last_offset": 43200,
+    "last_previous_offset": 39600
+  },
+  "Asia/Aqtau": {
+    "first_at": -1441164064,
+    "first_offset": 12064,
+    "first_next_offset": 14400,
+    "last_at": 1099173600,
+    "last_offset": 18000,
+    "last_previous_offset": 18000
+  },
+  "Asia/Aqtobe": {
+    "first_at": -1441165720,
+    "first_offset": 13720,
+    "first_next_offset": 14400,
+    "last_at": 1099170000,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Ashgabat": {
+    "first_at": -1441166012,
+    "first_offset": 14012,
+    "first_next_offset": 14400,
+    "last_at": 695772000,
+    "last_offset": 18000,
+    "last_previous_offset": 14400
+  },
+  "Asia/Atyrau": {
+    "first_at": -1441164464,
+    "first_offset": 12464,
+    "first_next_offset": 10800,
+    "last_at": 1099173600,
+    "last_offset": 18000,
+    "last_previous_offset": 18000
+  },
+  "Asia/Baghdad": {
+    "first_at": -2524532260,
+    "first_offset": 10660,
+    "first_next_offset": 10656,
+    "last_at": 1191196800,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Asia/Bahrain": {
+    "first_at": -897880940,
+    "first_offset": 12140,
+    "first_next_offset": 12600,
+    "last_at": 76190400,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Asia/Baku": {
+    "first_at": -1441163964,
+    "first_offset": 11964,
+    "first_next_offset": 10800,
+    "last_at": 1445731200,
+    "last_offset": 14400,
+    "last_previous_offset": 18000
+  },
+  "Asia/Bangkok": {
+    "first_at": -2840164924,
+    "first_offset": 24124,
+    "first_next_offset": 24124,
+    "last_at": -1570084924,
+    "last_offset": 25200,
+    "last_previous_offset": 24124
+  },
+  "Asia/Barnaul": {
+    "first_at": -1579844100,
+    "first_offset": 20100,
+    "first_next_offset": 21600,
+    "last_at": 1459022400,
+    "last_offset": 25200,
+    "last_previous_offset": 21600
+  },
+  "Asia/Beirut": {
+    "first_at": -2840149320,
+    "first_offset": 8520,
+    "first_next_offset": 7200,
+    "last_at": 4948722000,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Asia/Bishkek": {
+    "first_at": -1441169904,
+    "first_offset": 17904,
+    "first_next_offset": 18000,
+    "last_at": 1123783200,
+    "last_offset": 21600,
+    "last_previous_offset": 21600
+  },
+  "Asia/Brunei": {
+    "first_at": -1383464380,
+    "first_offset": 27580,
+    "first_next_offset": 27000,
+    "last_at": -1167636600,
+    "last_offset": 28800,
+    "last_previous_offset": 27000
+  },
+  "Asia/Chita": {
+    "first_at": -1579419232,
+    "first_offset": 27232,
+    "first_next_offset": 28800,
+    "last_at": 1459015200,
+    "last_offset": 32400,
+    "last_previous_offset": 28800
+  },
+  "Asia/Chongqing": {
+    "first_at": -2177481943,
+    "first_offset": 29143,
+    "first_next_offset": 28800,
+    "last_at": 684867600,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Colombo": {
+    "first_at": -2840159964,
+    "first_offset": 19164,
+    "first_next_offset": 19172,
+    "last_at": 1145039400,
+    "last_offset": 19800,
+    "last_previous_offset": 21600
+  },
+  "Asia/Damascus": {
+    "first_at": -1577931912,
+    "first_offset": 8712,
+    "first_next_offset": 7200,
+    "last_at": 1666904400,
+    "last_offset": 10800,
+    "last_previous_offset": 10800
+  },
+  "Asia/Dhaka": {
+    "first_at": -2524543300,
+    "first_offset": 21700,
+    "first_next_offset": 21200,
+    "last_at": 1262278800,
+    "last_offset": 21600,
+    "last_previous_offset": 25200
+  },
+  "Asia/Dili": {
+    "first_at": -1830412800,
+    "first_offset": 30140,
+    "first_next_offset": 28800,
+    "last_at": 969120000,
+    "last_offset": 32400,
+    "last_previous_offset": 28800
+  },
+  "Asia/Dubai": {
+    "first_at": -1577936472,
+    "first_offset": 13272,
+    "first_next_offset": 14400,
+    "last_at": -1577936472,
+    "last_offset": 14400,
+    "last_previous_offset": 13272
+  },
+  "Asia/Dushanbe": {
+    "first_at": -1441168512,
+    "first_offset": 16512,
+    "first_next_offset": 18000,
+    "last_at": 684363600,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Famagusta": {
+    "first_at": -1518920148,
+    "first_offset": 8148,
+    "first_next_offset": 7200,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Asia/Gaza": {
+    "first_at": -2185409872,
+    "first_offset": 8272,
+    "first_next_offset": 7200,
+    "last_at": 4948642800,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Asia/Harbin": {
+    "first_at": -2177481943,
+    "first_offset": 29143,
+    "first_next_offset": 28800,
+    "last_at": 684867600,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Hebron": {
+    "first_at": -2185410023,
+    "first_offset": 8423,
+    "first_next_offset": 7200,
+    "last_at": 4948642800,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Asia/Ho_Chi_Minh": {
+    "first_at": -2004073590,
+    "first_offset": 25590,
+    "first_next_offset": 25590,
+    "last_at": 171820800,
+    "last_offset": 25200,
+    "last_previous_offset": 28800
+  },
+  "Asia/Hong_Kong": {
+    "first_at": -2056690800,
+    "first_offset": 27402,
+    "first_next_offset": 28800,
+    "last_at": 309292200,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Hovd": {
+    "first_at": -2032927596,
+    "first_offset": 21996,
+    "first_next_offset": 21600,
+    "last_at": 1474646400,
+    "last_offset": 25200,
+    "last_previous_offset": 28800
+  },
+  "Asia/Irkutsk": {
+    "first_at": -2840165825,
+    "first_offset": 25025,
+    "first_next_offset": 25025,
+    "last_at": 1414256400,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Istanbul": {
+    "first_at": -2840147752,
+    "first_offset": 6952,
+    "first_next_offset": 7016,
+    "last_at": 1473195600,
+    "last_offset": 10800,
+    "last_previous_offset": 10800
+  },
+  "Asia/Jakarta": {
+    "first_at": -3231299232,
+    "first_offset": 25632,
+    "first_next_offset": 25632,
+    "last_at": -189415800,
+    "last_offset": 25200,
+    "last_previous_offset": 27000
+  },
+  "Asia/Jayapura": {
+    "first_at": -1172913768,
+    "first_offset": 33768,
+    "first_next_offset": 32400,
+    "last_at": -189423000,
+    "last_offset": 32400,
+    "last_previous_offset": 34200
+  },
+  "Asia/Jerusalem": {
+    "first_at": -2840149254,
+    "first_offset": 8454,
+    "first_next_offset": 8440,
+    "last_at": 4948729200,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Asia/Kabul": {
+    "first_at": -2524538208,
+    "first_offset": 16608,
+    "first_next_offset": 14400,
+    "last_at": -788932800,
+    "last_offset": 16200,
+    "last_previous_offset": 14400
+  },
+  "Asia/Kamchatka": {
+    "first_at": -1487759676,
+    "first_offset": 38076,
+    "first_next_offset": 39600,
+    "last_at": 1301151600,
+    "last_offset": 43200,
+    "last_previous_offset": 39600
+  },
+  "Asia/Karachi": {
+    "first_at": -1988166492,
+    "first_offset": 16092,
+    "first_next_offset": 19800,
+    "last_at": 1257012000,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Kashgar": {
+    "first_at": -1325483420,
+    "first_offset": 21020,
+    "first_next_offset": 21600,
+    "last_at": -1325483420,
+    "last_offset": 21600,
+    "last_previous_offset": 21020
+  },
+  "Asia/Kathmandu": {
+    "first_at": -1577943676,
+    "first_offset": 20476,
+    "first_next_offset": 19800,
+    "last_at": 504901800,
+    "last_offset": 20700,
+    "last_previous_offset": 19800
+  },
+  "Asia/Khandyga": {
+    "first_at": -1579424533,
+    "first_offset": 32533,
+    "first_next_offset": 28800,
+    "last_at": 1414252800,
+    "last_offset": 32400,
+    "last_previous_offset": 36000
+  },
+  "Asia/Kolkata": {
+    "first_at": -3645237208,
+    "first_offset": 21208,
+    "first_next_offset": 21200,
+    "last_at": -764145000,
+    "last_offset": 19800,
+    "last_previous_offset": 23400
+  },
+  "Asia/Krasnoyarsk": {
+    "first_at": -1577513486,
+    "first_offset": 22286,
+    "first_next_offset": 21600,
+    "last_at": 1414260000,
+    "last_offset": 25200,
+    "last_previous_offset": 28800
+  },
+  "Asia/Kuala_Lumpur": {
+    "first_at": -2177477206,
+    "first_offset": 24406,
+    "first_next_offset": 24925,
+    "last_at": 378662400,
+    "last_offset": 28800,
+    "last_previous_offset": 27000
+  },
+  "Asia/Kuching": {
+    "first_at": -1383463280,
+    "first_offset": 26480,
+    "first_next_offset": 27000,
+    "last_at": -767005200,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Kuwait": {
+    "first_at": -631163516,
+    "first_offset": 11516,
+    "first_next_offset": 10800,
+    "last_at": -631163516,
+    "last_offset": 10800,
+    "last_previous_offset": 11516
+  },
+  "Asia/Macau": {
+    "first_at": -2056692850,
+    "first_offset": 27250,
+    "first_next_offset": 28800,
+    "last_at": 309292200,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Magadan": {
+    "first_at": -1441188192,
+    "first_offset": 36192,
+    "first_next_offset": 36000,
+    "last_at": 1461427200,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Asia/Makassar": {
+    "first_at": -1577951856,
+    "first_offset": 28656,
+    "first_next_offset": 28656,
+    "last_at": -766054800,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Manila": {
+    "first_at": -3944621032,
+    "first_offset": -57368,
+    "first_next_offset": 29032,
+    "last_at": 649177200,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Muscat": {
+    "first_at": -1577937264,
+    "first_offset": 14064,
+    "first_next_offset": 14400,
+    "last_at": -1577937264,
+    "last_offset": 14400,
+    "last_previous_offset": 14064
+  },
+  "Asia/Nicosia": {
+    "first_at": -1518920008,
+    "first_offset": 8008,
+    "first_next_offset": 7200,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Asia/Novokuznetsk": {
+    "first_at": -1441259328,
+    "first_offset": 20928,
+    "first_next_offset": 21600,
+    "last_at": 1301169600,
+    "last_offset": 25200,
+    "last_previous_offset": 21600
+  },
+  "Asia/Novosibirsk": {
+    "first_at": -1579476700,
+    "first_offset": 19900,
+    "first_next_offset": 21600,
+    "last_at": 1469304000,
+    "last_offset": 25200,
+    "last_previous_offset": 21600
+  },
+  "Asia/Omsk": {
+    "first_at": -1582088010,
+    "first_offset": 17610,
+    "first_next_offset": 18000,
+    "last_at": 1414263600,
+    "last_offset": 21600,
+    "last_previous_offset": 25200
+  },
+  "Asia/Oral": {
+    "first_at": -1441164324,
+    "first_offset": 12324,
+    "first_next_offset": 10800,
+    "last_at": 1099173600,
+    "last_offset": 18000,
+    "last_previous_offset": 18000
+  },
+  "Asia/Phnom_Penh": {
+    "first_at": -2004073180,
+    "first_offset": 25180,
+    "first_next_offset": 25590,
+    "last_at": -767869200,
+    "last_offset": 25200,
+    "last_previous_offset": 32400
+  },
+  "Asia/Pontianak": {
+    "first_at": -1946186240,
+    "first_offset": 26240,
+    "first_next_offset": 26240,
+    "last_at": 567964800,
+    "last_offset": 25200,
+    "last_previous_offset": 28800
+  },
+  "Asia/Pyongyang": {
+    "first_at": -1948782180,
+    "first_offset": 30180,
+    "first_next_offset": 30600,
+    "last_at": 1525446000,
+    "last_offset": 32400,
+    "last_previous_offset": 30600
+  },
+  "Asia/Qatar": {
+    "first_at": -1577935568,
+    "first_offset": 12368,
+    "first_next_offset": 14400,
+    "last_at": 76190400,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Asia/Qostanay": {
+    "first_at": -1441167268,
+    "first_offset": 15268,
+    "first_next_offset": 14400,
+    "last_at": 1709229600,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Qyzylorda": {
+    "first_at": -1441167712,
+    "first_offset": 15712,
+    "first_next_offset": 14400,
+    "last_at": 1545328800,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Riyadh": {
+    "first_at": -719636812,
+    "first_offset": 11212,
+    "first_next_offset": 10800,
+    "last_at": -719636812,
+    "last_offset": 10800,
+    "last_previous_offset": 11212
+  },
+  "Asia/Sakhalin": {
+    "first_at": -2031039048,
+    "first_offset": 34248,
+    "first_next_offset": 32400,
+    "last_at": 1459008000,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Asia/Samarkand": {
+    "first_at": -1441168073,
+    "first_offset": 16073,
+    "first_next_offset": 14400,
+    "last_at": 686091600,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Seoul": {
+    "first_at": -1948782472,
+    "first_offset": 30472,
+    "first_next_offset": 30600,
+    "last_at": 592333200,
+    "last_offset": 32400,
+    "last_previous_offset": 36000
+  },
+  "Asia/Shanghai": {
+    "first_at": -2177481943,
+    "first_offset": 29143,
+    "first_next_offset": 28800,
+    "last_at": 684867600,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Singapore": {
+    "first_at": -2177477725,
+    "first_offset": 24925,
+    "first_next_offset": 24925,
+    "last_at": 378662400,
+    "last_offset": 28800,
+    "last_previous_offset": 27000
+  },
+  "Asia/Srednekolymsk": {
+    "first_at": -1441188892,
+    "first_offset": 36892,
+    "first_next_offset": 36000,
+    "last_at": 1414245600,
+    "last_offset": 39600,
+    "last_previous_offset": 43200
+  },
+  "Asia/Taipei": {
+    "first_at": -2335248360,
+    "first_offset": 29160,
+    "first_next_offset": 28800,
+    "last_at": 307551600,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Tashkent": {
+    "first_at": -1441168631,
+    "first_offset": 16631,
+    "first_next_offset": 18000,
+    "last_at": 686091600,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Tbilisi": {
+    "first_at": -2840151551,
+    "first_offset": 10751,
+    "first_next_offset": 10751,
+    "last_at": 1111878000,
+    "last_offset": 14400,
+    "last_previous_offset": 10800
+  },
+  "Asia/Tehran": {
+    "first_at": -1704165944,
+    "first_offset": 12344,
+    "first_next_offset": 12344,
+    "last_at": 1663788600,
+    "last_offset": 12600,
+    "last_previous_offset": 16200
+  },
+  "Asia/Tel_Aviv": {
+    "first_at": -2840149254,
+    "first_offset": 8454,
+    "first_next_offset": 8440,
+    "last_at": 4948729200,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Asia/Thimphu": {
+    "first_at": -706341516,
+    "first_offset": 21516,
+    "first_next_offset": 19800,
+    "last_at": 560025000,
+    "last_offset": 21600,
+    "last_previous_offset": 19800
+  },
+  "Asia/Tokyo": {
+    "first_at": -2587712400,
+    "first_offset": 33539,
+    "first_next_offset": 32400,
+    "last_at": -577962000,
+    "last_offset": 32400,
+    "last_previous_offset": 36000
+  },
+  "Asia/Tomsk": {
+    "first_at": -1578807591,
+    "first_offset": 20391,
+    "first_next_offset": 21600,
+    "last_at": 1464465600,
+    "last_offset": 25200,
+    "last_previous_offset": 21600
+  },
+  "Asia/Ulaanbaatar": {
+    "first_at": -2032931252,
+    "first_offset": 25652,
+    "first_next_offset": 25200,
+    "last_at": 1474642800,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Asia/Urumqi": {
+    "first_at": -1325483420,
+    "first_offset": 21020,
+    "first_next_offset": 21600,
+    "last_at": -1325483420,
+    "last_offset": 21600,
+    "last_previous_offset": 21020
+  },
+  "Asia/Ust-Nera": {
+    "first_at": -1579426374,
+    "first_offset": 34374,
+    "first_next_offset": 28800,
+    "last_at": 1414249200,
+    "last_offset": 36000,
+    "last_previous_offset": 39600
+  },
+  "Asia/Vientiane": {
+    "first_at": -2004072624,
+    "first_offset": 24624,
+    "first_next_offset": 25590,
+    "last_at": -464428800,
+    "last_offset": 25200,
+    "last_previous_offset": 28800
+  },
+  "Asia/Vladivostok": {
+    "first_at": -1487321251,
+    "first_offset": 31651,
+    "first_next_offset": 32400,
+    "last_at": 1414249200,
+    "last_offset": 36000,
+    "last_previous_offset": 39600
+  },
+  "Asia/Yakutsk": {
+    "first_at": -1579423138,
+    "first_offset": 31138,
+    "first_next_offset": 28800,
+    "last_at": 1414252800,
+    "last_offset": 32400,
+    "last_previous_offset": 36000
+  },
+  "Asia/Yangon": {
+    "first_at": -2840163887,
+    "first_offset": 23087,
+    "first_next_offset": 23087,
+    "last_at": -778410000,
+    "last_offset": 23400,
+    "last_previous_offset": 32400
+  },
+  "Asia/Yekaterinburg": {
+    "first_at": -1688270553,
+    "first_offset": 14553,
+    "first_next_offset": 13505,
+    "last_at": 1414267200,
+    "last_offset": 18000,
+    "last_previous_offset": 21600
+  },
+  "Asia/Yerevan": {
+    "first_at": -1441162680,
+    "first_offset": 10680,
+    "first_next_offset": 10800,
+    "last_at": 1319925600,
+    "last_offset": 14400,
+    "last_previous_offset": 18000
+  },
+  "Atlantic/Azores": {
+    "first_at": -2713904240,
+    "first_offset": -6160,
+    "first_next_offset": -6872,
+    "last_at": 4948736400,
+    "last_offset": -3600,
+    "last_previous_offset": 0
+  },
+  "Atlantic/Bermuda": {
+    "first_at": -2524506042,
+    "first_offset": -15558,
+    "first_next_offset": -15558,
+    "last_at": 4949355600,
+    "last_offset": -14400,
+    "last_previous_offset": -10800
+  },
+  "Atlantic/Canary": {
+    "first_at": -1509663504,
+    "first_offset": -3696,
+    "first_next_offset": -3600,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Atlantic/Cape_Verde": {
+    "first_at": -1830376800,
+    "first_offset": -5644,
+    "first_next_offset": -7200,
+    "last_at": 186120000,
+    "last_offset": -3600,
+    "last_previous_offset": -7200
+  },
+  "Atlantic/Faroe": {
+    "first_at": -1955748776,
+    "first_offset": -1624,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Atlantic/Jan_Mayen": {
+    "first_at": -2366757780,
+    "first_offset": 2580,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Atlantic/Madeira": {
+    "first_at": -2713906344,
+    "first_offset": -4056,
+    "first_next_offset": -4056,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Atlantic/Reykjavik": {
+    "first_at": -1956609120,
+    "first_offset": -5280,
+    "first_next_offset": -3600,
+    "last_at": -54770400,
+    "last_offset": 0,
+    "last_previous_offset": -3600
+  },
+  "Atlantic/South_Georgia": {
+    "first_at": -2524512832,
+    "first_offset": -8768,
+    "first_next_offset": -7200,
+    "last_at": -2524512832,
+    "last_offset": -7200,
+    "last_previous_offset": -8768
+  },
+  "Atlantic/St_Helena": {
+    "first_at": -2524520232,
+    "first_offset": -1368,
+    "first_next_offset": -1368,
+    "last_at": -599614632,
+    "last_offset": 0,
+    "last_previous_offset": -1368
+  },
+  "Atlantic/Stanley": {
+    "first_at": -2524507716,
+    "first_offset": -13884,
+    "first_next_offset": -13884,
+    "last_at": 1283666400,
+    "last_offset": -10800,
+    "last_previous_offset": -14400
+  },
+  "Australia/Adelaide": {
+    "first_at": -2364110060,
+    "first_offset": 33260,
+    "first_next_offset": 32400,
+    "last_at": 4946891400,
+    "last_offset": 37800,
+    "last_previous_offset": 34200
+  },
+  "Australia/Brisbane": {
+    "first_at": -2366791928,
+    "first_offset": 36728,
+    "first_next_offset": 36000,
+    "last_at": 699379200,
+    "last_offset": 36000,
+    "last_previous_offset": 39600
+  },
+  "Australia/Broken_Hill": {
+    "first_at": -2364110748,
+    "first_offset": 33948,
+    "first_next_offset": 36000,
+    "last_at": 4946891400,
+    "last_offset": 37800,
+    "last_previous_offset": 34200
+  },
+  "Australia/Canberra": {
+    "first_at": -2364113092,
+    "first_offset": 36292,
+    "first_next_offset": 36000,
+    "last_at": 4946889600,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Australia/Currie": {
+    "first_at": -2345795356,
+    "first_offset": 35356,
+    "first_next_offset": 36000,
+    "last_at": 4946889600,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Australia/Darwin": {
+    "first_at": -2364108200,
+    "first_offset": 31400,
+    "first_next_offset": 32400,
+    "last_at": -813223800,
+    "last_offset": 34200,
+    "last_previous_offset": 37800
+  },
+  "Australia/Eucla": {
+    "first_at": -2337928528,
+    "first_offset": 30928,
+    "first_next_offset": 31500,
+    "last_at": 1238260500,
+    "last_offset": 31500,
+    "last_previous_offset": 35100
+  },
+  "Australia/Hobart": {
+    "first_at": -2345795356,
+    "first_offset": 35356,
+    "first_next_offset": 36000,
+    "last_at": 4946889600,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Australia/Lindeman": {
+    "first_at": -2366790956,
+    "first_offset": 35756,
+    "first_next_offset": 36000,
+    "last_at": 762883200,
+    "last_offset": 36000,
+    "last_previous_offset": 39600
+  },
+  "Australia/Lord_Howe": {
+    "first_at": -2364114980,
+    "first_offset": 38180,
+    "first_next_offset": 36000,
+    "last_at": 4946887800,
+    "last_offset": 39600,
+    "last_previous_offset": 37800
+  },
+  "Australia/Melbourne": {
+    "first_at": -2364111592,
+    "first_offset": 34792,
+    "first_next_offset": 36000,
+    "last_at": 4946889600,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Australia/Perth": {
+    "first_at": -2337925404,
+    "first_offset": 27804,
+    "first_next_offset": 28800,
+    "last_at": 1238263200,
+    "last_offset": 28800,
+    "last_previous_offset": 32400
+  },
+  "Australia/Sydney": {
+    "first_at": -2364113092,
+    "first_offset": 36292,
+    "first_next_offset": 36000,
+    "last_at": 4946889600,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Australia/Yancowinna": {
+    "first_at": -2364110748,
+    "first_offset": 33948,
+    "first_next_offset": 36000,
+    "last_at": 4946891400,
+    "last_offset": 37800,
+    "last_previous_offset": 34200
+  },
+  "Etc/GMT": {
+    "offset": 0
+  },
+  "Etc/GMT+0": {
+    "offset": 0
+  },
+  "Etc/GMT+1": {
+    "offset": -3600
+  },
+  "Etc/GMT+10": {
+    "offset": -36000
+  },
+  "Etc/GMT+11": {
+    "offset": -39600
+  },
+  "Etc/GMT+12": {
+    "offset": -43200
+  },
+  "Etc/GMT+2": {
+    "offset": -7200
+  },
+  "Etc/GMT+3": {
+    "offset": -10800
+  },
+  "Etc/GMT+4": {
+    "offset": -14400
+  },
+  "Etc/GMT+5": {
+    "offset": -18000
+  },
+  "Etc/GMT+6": {
+    "offset": -21600
+  },
+  "Etc/GMT+7": {
+    "offset": -25200
+  },
+  "Etc/GMT+8": {
+    "offset": -28800
+  },
+  "Etc/GMT+9": {
+    "offset": -32400
+  },
+  "Etc/GMT-0": {
+    "offset": 0
+  },
+  "Etc/GMT-1": {
+    "offset": 3600
+  },
+  "Etc/GMT-10": {
+    "offset": 36000
+  },
+  "Etc/GMT-11": {
+    "offset": 39600
+  },
+  "Etc/GMT-12": {
+    "offset": 43200
+  },
+  "Etc/GMT-13": {
+    "offset": 46800
+  },
+  "Etc/GMT-14": {
+    "offset": 50400
+  },
+  "Etc/GMT-2": {
+    "offset": 7200
+  },
+  "Etc/GMT-3": {
+    "offset": 10800
+  },
+  "Etc/GMT-4": {
+    "offset": 14400
+  },
+  "Etc/GMT-5": {
+    "offset": 18000
+  },
+  "Etc/GMT-6": {
+    "offset": 21600
+  },
+  "Etc/GMT-7": {
+    "offset": 25200
+  },
+  "Etc/GMT-8": {
+    "offset": 28800
+  },
+  "Etc/GMT-9": {
+    "offset": 32400
+  },
+  "Etc/GMT0": {
+    "offset": 0
+  },
+  "Etc/Greenwich": {
+    "offset": 0
+  },
+  "Etc/UCT": {
+    "offset": 0
+  },
+  "Etc/UTC": {
+    "offset": 0
+  },
+  "Etc/Universal": {
+    "offset": 0
+  },
+  "Etc/Zulu": {
+    "offset": 0
+  },
+  "Europe/Amsterdam": {
+    "first_at": -4260212372,
+    "first_offset": 1172,
+    "first_next_offset": 1172,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Andorra": {
+    "first_at": -2177453164,
+    "first_offset": 364,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Astrakhan": {
+    "first_at": -1441249932,
+    "first_offset": 11532,
+    "first_next_offset": 10800,
+    "last_at": 1459033200,
+    "last_offset": 14400,
+    "last_previous_offset": 10800
+  },
+  "Europe/Athens": {
+    "first_at": -2344642492,
+    "first_offset": 5692,
+    "first_next_offset": 5692,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Belfast": {
+    "first_at": -3852662325,
+    "first_offset": -75,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Europe/Belgrade": {
+    "first_at": -2713915320,
+    "first_offset": 4920,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Berlin": {
+    "first_at": -2422054408,
+    "first_offset": 3208,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Bratislava": {
+    "first_at": -3786829064,
+    "first_offset": 3464,
+    "first_next_offset": 3464,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Brussels": {
+    "first_at": -2840141850,
+    "first_offset": 1050,
+    "first_next_offset": 1050,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Bucharest": {
+    "first_at": -2469404664,
+    "first_offset": 6264,
+    "first_next_offset": 6264,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Budapest": {
+    "first_at": -2498260580,
+    "first_offset": 4580,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Busingen": {
+    "first_at": -3675198848,
+    "first_offset": 2048,
+    "first_next_offset": 1786,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Chisinau": {
+    "first_at": -2840147720,
+    "first_offset": 6920,
+    "first_next_offset": 6900,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Copenhagen": {
+    "first_at": -2524524620,
+    "first_offset": 3020,
+    "first_next_offset": 3020,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Dublin": {
+    "first_at": -2821649679,
+    "first_offset": -1521,
+    "first_next_offset": -1521,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Europe/Gibraltar": {
+    "first_at": -2821649916,
+    "first_offset": -1284,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Guernsey": {
+    "first_at": -1784245791,
+    "first_offset": -609,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Europe/Helsinki": {
+    "first_at": -2890258789,
+    "first_offset": 5989,
+    "first_next_offset": 5989,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Isle_of_Man": {
+    "first_at": -2737842125,
+    "first_offset": -1075,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Europe/Istanbul": {
+    "first_at": -2840147752,
+    "first_offset": 6952,
+    "first_next_offset": 7016,
+    "last_at": 1473195600,
+    "last_offset": 10800,
+    "last_previous_offset": 10800
+  },
+  "Europe/Jersey": {
+    "first_at": -2258092800,
+    "first_offset": -506,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Europe/Kaliningrad": {
+    "first_at": -2422056120,
+    "first_offset": 4920,
+    "first_next_offset": 3600,
+    "last_at": 1414278000,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Kirov": {
+    "first_at": -1593820800,
+    "first_offset": 11928,
+    "first_next_offset": 10800,
+    "last_at": 1414274400,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Europe/Kyiv": {
+    "first_at": -2840148124,
+    "first_offset": 7324,
+    "first_next_offset": 7324,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Lisbon": {
+    "first_at": -2713908195,
+    "first_offset": -2205,
+    "first_next_offset": -2205,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Europe/Ljubljana": {
+    "first_at": -2713913884,
+    "first_offset": 3484,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/London": {
+    "first_at": -3852662325,
+    "first_offset": -75,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 0,
+    "last_previous_offset": 3600
+  },
+  "Europe/Luxembourg": {
+    "first_at": -2069713476,
+    "first_offset": 1476,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Madrid": {
+    "first_at": -2177452800,
+    "first_offset": -884,
+    "first_next_offset": 0,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Malta": {
+    "first_at": -2403478684,
+    "first_offset": 3484,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Mariehamn": {
+    "first_at": -2890258789,
+    "first_offset": 5989,
+    "first_next_offset": 5989,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Minsk": {
+    "first_at": -2840147416,
+    "first_offset": 6616,
+    "first_next_offset": 6600,
+    "last_at": 1301184000,
+    "last_offset": 10800,
+    "last_previous_offset": 7200
+  },
+  "Europe/Monaco": {
+    "first_at": -2448318572,
+    "first_offset": 1772,
+    "first_next_offset": 561,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Moscow": {
+    "first_at": -2840149817,
+    "first_offset": 9017,
+    "first_next_offset": 9017,
+    "last_at": 1414274400,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Europe/Nicosia": {
+    "first_at": -1518920008,
+    "first_offset": 8008,
+    "first_next_offset": 7200,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Oslo": {
+    "first_at": -2366757780,
+    "first_offset": 2580,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Paris": {
+    "first_at": -2486592561,
+    "first_offset": 561,
+    "first_next_offset": 561,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Podgorica": {
+    "first_at": -2713915320,
+    "first_offset": 4920,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Prague": {
+    "first_at": -3786829064,
+    "first_offset": 3464,
+    "first_next_offset": 3464,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Riga": {
+    "first_at": -2840146594,
+    "first_offset": 5794,
+    "first_next_offset": 5794,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Rome": {
+    "first_at": -3252098996,
+    "first_offset": 2996,
+    "first_next_offset": 2996,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Samara": {
+    "first_at": -1593820800,
+    "first_offset": 12020,
+    "first_next_offset": 10800,
+    "last_at": 1301180400,
+    "last_offset": 14400,
+    "last_previous_offset": 10800
+  },
+  "Europe/San_Marino": {
+    "first_at": -3252098996,
+    "first_offset": 2996,
+    "first_next_offset": 2996,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Sarajevo": {
+    "first_at": -2713914820,
+    "first_offset": 4420,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Saratov": {
+    "first_at": -1593820800,
+    "first_offset": 11058,
+    "first_next_offset": 10800,
+    "last_at": 1480806000,
+    "last_offset": 14400,
+    "last_previous_offset": 10800
+  },
+  "Europe/Simferopol": {
+    "first_at": -2840148984,
+    "first_offset": 8184,
+    "first_next_offset": 8160,
+    "last_at": 1414274400,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Europe/Skopje": {
+    "first_at": -2713915544,
+    "first_offset": 5144,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Sofia": {
+    "first_at": -2840146396,
+    "first_offset": 5596,
+    "first_next_offset": 7016,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Stockholm": {
+    "first_at": -2871681132,
+    "first_offset": 4332,
+    "first_next_offset": 3614,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Tallinn": {
+    "first_at": -2840146740,
+    "first_offset": 5940,
+    "first_next_offset": 5940,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Tirane": {
+    "first_at": -1767230360,
+    "first_offset": 4760,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Tiraspol": {
+    "first_at": -2840147720,
+    "first_offset": 6920,
+    "first_next_offset": 6900,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Ulyanovsk": {
+    "first_at": -1593820800,
+    "first_offset": 11616,
+    "first_next_offset": 10800,
+    "last_at": 1459033200,
+    "last_offset": 14400,
+    "last_previous_offset": 10800
+  },
+  "Europe/Vaduz": {
+    "first_at": -2385247084,
+    "first_offset": 2284,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Vatican": {
+    "first_at": -3252098996,
+    "first_offset": 2996,
+    "first_next_offset": 2996,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Vienna": {
+    "first_at": -2422055121,
+    "first_offset": 3921,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Vilnius": {
+    "first_at": -2840146876,
+    "first_offset": 6076,
+    "first_next_offset": 5040,
+    "last_at": 4948736400,
+    "last_offset": 7200,
+    "last_previous_offset": 10800
+  },
+  "Europe/Volgograd": {
+    "first_at": -1577761060,
+    "first_offset": 10660,
+    "first_next_offset": 10800,
+    "last_at": 1609020000,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Europe/Warsaw": {
+    "first_at": -2840145840,
+    "first_offset": 5040,
+    "first_next_offset": 5040,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Zagreb": {
+    "first_at": -2713914232,
+    "first_offset": 3832,
+    "first_next_offset": 3600,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Europe/Zurich": {
+    "first_at": -3675198848,
+    "first_offset": 2048,
+    "first_next_offset": 1786,
+    "last_at": 4948736400,
+    "last_offset": 3600,
+    "last_previous_offset": 7200
+  },
+  "Factory": {
+    "offset": 0
+  },
+  "GMT": {
+    "offset": 0
+  },
+  "Indian/Antananarivo": {
+    "first_at": -1846293004,
+    "first_offset": 11404,
+    "first_next_offset": 10800,
+    "last_at": -492062400,
+    "last_offset": 10800,
+    "last_previous_offset": 14400
+  },
+  "Indian/Chagos": {
+    "first_at": -1988167780,
+    "first_offset": 17380,
+    "first_next_offset": 18000,
+    "last_at": 820436400,
+    "last_offset": 21600,
+    "last_previous_offset": 18000
+  },
+  "Indian/Christmas": {
+    "first_at": -2364102172,
+    "first_offset": 25372,
+    "first_next_offset": 25200,
+    "last_at": -2364102172,
+    "last_offset": 25200,
+    "last_previous_offset": 25372
+  },
+  "Indian/Cocos": {
+    "first_at": -2209012060,
+    "first_offset": 23260,
+    "first_next_offset": 23400,
+    "last_at": -2209012060,
+    "last_offset": 23400,
+    "last_previous_offset": 23260
+  },
+  "Indian/Comoro": {
+    "first_at": -1846291984,
+    "first_offset": 10384,
+    "first_next_offset": 10800,
+    "last_at": -1846291984,
+    "last_offset": 10800,
+    "last_previous_offset": 10384
+  },
+  "Indian/Kerguelen": {
+    "first_at": -631152000,
+    "first_offset": 0,
+    "first_next_offset": 18000,
+    "last_at": -631152000,
+    "last_offset": 18000,
+    "last_previous_offset": 0
+  },
+  "Indian/Mahe": {
+    "first_at": -1988163708,
+    "first_offset": 13308,
+    "first_next_offset": 14400,
+    "last_at": -1988163708,
+    "last_offset": 14400,
+    "last_previous_offset": 13308
+  },
+  "Indian/Maldives": {
+    "first_at": -2840158440,
+    "first_offset": 17640,
+    "first_next_offset": 17640,
+    "last_at": -315636840,
+    "last_offset": 18000,
+    "last_previous_offset": 17640
+  },
+  "Indian/Mauritius": {
+    "first_at": -1988164200,
+    "first_offset": 13800,
+    "first_next_offset": 14400,
+    "last_at": 1238274000,
+    "last_offset": 14400,
+    "last_previous_offset": 18000
+  },
+  "Indian/Mayotte": {
+    "first_at": -1846292456,
+    "first_offset": 10856,
+    "first_next_offset": 10800,
+    "last_at": -1846292456,
+    "last_offset": 10800,
+    "last_previous_offset": 10856
+  },
+  "Indian/Reunion": {
+    "first_at": -1848886912,
+    "first_offset": 13312,
+    "first_next_offset": 14400,
+    "last_at": -1848886912,
+    "last_offset": 14400,
+    "last_previous_offset": 13312
+  },
+  "Pacific/Apia": {
+    "first_at": -2445424384,
+    "first_offset": 45184,
+    "first_next_offset": -41216,
+    "last_at": 1617458400,
+    "last_offset": 46800,
+    "last_previous_offset": 50400
+  },
+  "Pacific/Auckland": {
+    "first_at": -3192435544,
+    "first_offset": 41944,
+    "first_next_offset": 41400,
+    "last_at": 4946277600,
+    "last_offset": 46800,
+    "last_previous_offset": 43200
+  },
+  "Pacific/Bougainville": {
+    "first_at": -2840178136,
+    "first_offset": 37336,
+    "first_next_offset": 35312,
+    "last_at": 1419696000,
+    "last_offset": 39600,
+    "last_previous_offset": 36000
+  },
+  "Pacific/Chatham": {
+    "first_at": -3192437628,
+    "first_offset": 44028,
+    "first_next_offset": 44100,
+    "last_at": 4946277600,
+    "last_offset": 49500,
+    "last_previous_offset": 45900
+  },
+  "Pacific/Chuuk": {
+    "first_at": -3944628428,
+    "first_offset": -49972,
+    "first_next_offset": 36428,
+    "last_at": -770634000,
+    "last_offset": 36000,
+    "last_previous_offset": 32400
+  },
+  "Pacific/Easter": {
+    "first_at": -2524495352,
+    "first_offset": -26248,
+    "first_next_offset": -26248,
+    "last_at": 4944513600,
+    "last_offset": -18000,
+    "last_previous_offset": -21600
+  },
+  "Pacific/Efate": {
+    "first_at": -1829387596,
+    "first_offset": 40396,
+    "first_next_offset": 39600,
+    "last_at": 727790400,
+    "last_offset": 39600,
+    "last_previous_offset": 43200
+  },
+  "Pacific/Fakaofo": {
+    "first_at": -2177411704,
+    "first_offset": -41096,
+    "first_next_offset": -39600,
+    "last_at": 1325242800,
+    "last_offset": 46800,
+    "last_previous_offset": -39600
+  },
+  "Pacific/Fiji": {
+    "first_at": -1709985344,
+    "first_offset": 42944,
+    "first_next_offset": 43200,
+    "last_at": 1610805600,
+    "last_offset": 43200,
+    "last_previous_offset": 46800
+  },
+  "Pacific/Funafuti": {
+    "first_at": -2177495812,
+    "first_offset": 43012,
+    "first_next_offset": 43200,
+    "last_at": -2177495812,
+    "last_offset": 43200,
+    "last_previous_offset": 43012
+  },
+  "Pacific/Galapagos": {
+    "first_at": -1230746496,
+    "first_offset": -21504,
+    "first_next_offset": -18000,
+    "last_at": 728888400,
+    "last_offset": -21600,
+    "last_previous_offset": -18000
+  },
+  "Pacific/Gambier": {
+    "first_at": -1806678012,
+    "first_offset": -32388,
+    "first_next_offset": -32400,
+    "last_at": -1806678012,
+    "last_offset": -32400,
+    "last_previous_offset": -32388
+  },
+  "Pacific/Guadalcanal": {
+    "first_at": -1806748788,
+    "first_offset": 38388,
+    "first_next_offset": 39600,
+    "last_at": -1806748788,
+    "last_offset": 39600,
+    "last_previous_offset": 38388
+  },
+  "Pacific/Guam": {
+    "first_at": -3944626740,
+    "first_offset": -51660,
+    "first_next_offset": 34740,
+    "last_at": 977493600,
+    "last_offset": 36000,
+    "last_previous_offset": 36000
+  },
+  "Pacific/Honolulu": {
+    "first_at": -2334101314,
+    "first_offset": -37886,
+    "first_next_offset": -37800,
+    "last_at": -712150200,
+    "last_offset": -36000,
+    "last_previous_offset": -37800
+  },
+  "Pacific/Johnston": {
+    "first_at": -2334101314,
+    "first_offset": -37886,
+    "first_next_offset": -37800,
+    "last_at": -712150200,
+    "last_offset": -36000,
+    "last_previous_offset": -37800
+  },
+  "Pacific/Kanton": {
+    "first_at": -1020470400,
+    "first_offset": 0,
+    "first_next_offset": -43200,
+    "last_at": 788871600,
+    "last_offset": 46800,
+    "last_previous_offset": -39600
+  },
+  "Pacific/Kiritimati": {
+    "first_at": -2177415040,
+    "first_offset": -37760,
+    "first_next_offset": -38400,
+    "last_at": 788868000,
+    "last_offset": 50400,
+    "last_previous_offset": -36000
+  },
+  "Pacific/Kosrae": {
+    "first_at": -3944631116,
+    "first_offset": -47284,
+    "first_next_offset": 39116,
+    "last_at": 915105600,
+    "last_offset": 39600,
+    "last_previous_offset": 43200
+  },
+  "Pacific/Kwajalein": {
+    "first_at": -2177492960,
+    "first_offset": 40160,
+    "first_next_offset": 39600,
+    "last_at": 745934400,
+    "last_offset": 43200,
+    "last_previous_offset": -43200
+  },
+  "Pacific/Majuro": {
+    "first_at": -2177493888,
+    "first_offset": 41088,
+    "first_next_offset": 39600,
+    "last_at": -7988400,
+    "last_offset": 43200,
+    "last_previous_offset": 39600
+  },
+  "Pacific/Marquesas": {
+    "first_at": -1806676920,
+    "first_offset": -33480,
+    "first_next_offset": -34200,
+    "last_at": -1806676920,
+    "last_offset": -34200,
+    "last_previous_offset": -33480
+  },
+  "Pacific/Midway": {
+    "first_at": -2177410232,
+    "first_offset": -42568,
+    "first_next_offset": -39600,
+    "last_at": -420645600,
+    "last_offset": -39600,
+    "last_previous_offset": -36000
+  },
+  "Pacific/Nauru": {
+    "first_at": -1545131260,
+    "first_offset": 40060,
+    "first_next_offset": 41400,
+    "last_at": 287418600,
+    "last_offset": 43200,
+    "last_previous_offset": 41400
+  },
+  "Pacific/Niue": {
+    "first_at": -543069620,
+    "first_offset": -40780,
+    "first_next_offset": -40800,
+    "last_at": -173623200,
+    "last_offset": -39600,
+    "last_previous_offset": -40800
+  },
+  "Pacific/Norfolk": {
+    "first_at": -2177493112,
+    "first_offset": 40312,
+    "first_next_offset": 40320,
+    "last_at": 4946886000,
+    "last_offset": 43200,
+    "last_previous_offset": 39600
+  },
+  "Pacific/Noumea": {
+    "first_at": -1829387148,
+    "first_offset": 39948,
+    "first_next_offset": 39600,
+    "last_at": 857228400,
+    "last_offset": 39600,
+    "last_previous_offset": 43200
+  },
+  "Pacific/Pago_Pago": {
+    "first_at": -2445424632,
+    "first_offset": 45432,
+    "first_next_offset": -40968,
+    "last_at": -1861879032,
+    "last_offset": -39600,
+    "last_previous_offset": -40968
+  },
+  "Pacific/Palau": {
+    "first_at": -3944624276,
+    "first_offset": -54124,
+    "first_next_offset": 32276,
+    "last_at": -2177485076,
+    "last_offset": 32400,
+    "last_previous_offset": 32276
+  },
+  "Pacific/Pitcairn": {
+    "first_at": -2177421580,
+    "first_offset": -31220,
+    "first_next_offset": -30600,
+    "last_at": 893665800,
+    "last_offset": -28800,
+    "last_previous_offset": -30600
+  },
+  "Pacific/Pohnpei": {
+    "first_at": -3944629972,
+    "first_offset": -48428,
+    "first_next_offset": 37972,
+    "last_at": -770634000,
+    "last_offset": 39600,
+    "last_previous_offset": 32400
+  },
+  "Pacific/Port_Moresby": {
+    "first_at": -2840176120,
+    "first_offset": 35320,
+    "first_next_offset": 35312,
+    "last_at": -2366790512,
+    "last_offset": 36000,
+    "last_previous_offset": 35312
+  },
+  "Pacific/Rarotonga": {
+    "first_at": -2209555256,
+    "first_offset": 48056,
+    "first_next_offset": -38344,
+    "last_at": 667992600,
+    "last_offset": -36000,
+    "last_previous_offset": -34200
+  },
+  "Pacific/Saipan": {
+    "first_at": -3944626980,
+    "first_offset": -51420,
+    "first_next_offset": 34980,
+    "last_at": 977493600,
+    "last_offset": 36000,
+    "last_previous_offset": 36000
+  },
+  "Pacific/Samoa": {
+    "first_at": -2445424632,
+    "first_offset": 45432,
+    "first_next_offset": -40968,
+    "last_at": -1861879032,
+    "last_offset": -39600,
+    "last_previous_offset": -40968
+  },
+  "Pacific/Tahiti": {
+    "first_at": -1806674504,
+    "first_offset": -35896,
+    "first_next_offset": -36000,
+    "last_at": -1806674504,
+    "last_offset": -36000,
+    "last_previous_offset": -35896
+  },
+  "Pacific/Tarawa": {
+    "first_at": -2177494324,
+    "first_offset": 41524,
+    "first_next_offset": 43200,
+    "last_at": -2177494324,
+    "last_offset": 43200,
+    "last_previous_offset": 41524
+  },
+  "Pacific/Tongatapu": {
+    "first_at": -767189952,
+    "first_offset": 44352,
+    "first_next_offset": 44400,
+    "last_at": 1484398800,
+    "last_offset": 46800,
+    "last_previous_offset": 50400
+  },
+  "Pacific/Wake": {
+    "first_at": -2177492788,
+    "first_offset": 39988,
+    "first_next_offset": 43200,
+    "last_at": -2177492788,
+    "last_offset": 43200,
+    "last_previous_offset": 39988
+  },
+  "Pacific/Wallis": {
+    "first_at": -2177496920,
+    "first_offset": 44120,
+    "first_next_offset": 43200,
+    "last_at": -2177496920,
+    "last_offset": 43200,
+    "last_previous_offset": 44120
+  },
+  "Pacific/Yap": {
+    "first_at": -3944628428,
+    "first_offset": -49972,
+    "first_next_offset": 36428,
+    "last_at": -770634000,
+    "last_offset": 36000,
+    "last_previous_offset": 32400
+  },
+  "UTC": {
+    "offset": 0
+  }
+}

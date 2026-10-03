@@ -84,11 +84,35 @@ async fn raw_cap_http_inputs_match_all_81_rails_casts_errors_and_strong_paramete
                 "{case}: {}",
                 response.text()
             );
-            assert_eq!(
-                snapshot(&test, bot).await,
-                before,
-                "rejected input wrote data: {case}"
-            );
+            let after = snapshot(&test, bot).await;
+            if out_of_range {
+                // Pinned HTTP oracle: invalid? succeeds, update_bot commits,
+                // then Agent#save! raises RangeError before either audit.
+                let boundaries: Value = serde_json::from_str(include_str!(
+                    "../../../../../../../vectors/bot-ui-mutation-boundaries.json"
+                ))
+                .unwrap();
+                let fault = boundaries["rows"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|row| row["cap_field"] == field)
+                    .unwrap();
+                assert_eq!(after[0], fault["bot"]["name"]);
+                assert_eq!(after[1], fault["bot"]["icon_name"]);
+                assert_eq!(
+                    after.as_array().unwrap()[3..],
+                    before.as_array().unwrap()[3..],
+                    "failed agent save changed agent or audits: {case}"
+                );
+                assert!(fault["audits"].as_array().unwrap().is_empty());
+                assert_eq!(
+                    response.text(),
+                    boundaries["errors"]["500"]["body"].as_str().unwrap()
+                );
+            } else {
+                assert_eq!(after, before, "invalid input wrote data: {case}");
+            }
             if invalid {
                 let label = match field {
                     "daily_message_cap" => "Daily message cap",
