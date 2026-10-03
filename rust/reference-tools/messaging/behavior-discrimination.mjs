@@ -62,7 +62,7 @@ add(['a tap outside closes the menu'],'attach-menu','aria-expanded=');
 add(['phone layout keeps the menu above the composer with no horizontal overflow'],'attach-menu','geometry.menu.bottom<=geometry.buttonTop');
 add(['device files, paste, and drag-and-drop still preview uploads'],'attach-menu',"'hello'");
 add(['boosting a message'],'boosts',"value)}");
-add(['deleting a boost'],'boosts',"boost,{state:'hidden'}");
+D.set('deleting a boost',[target('boosts',"boost,{state:'hidden'}"),target('boosts',"browser.locator('.boost[id]').filter")]);
 add(['message update preserves the input state','boost by another user preserves the input state'],'boosts',"'value','Hey!'");
 add(['the toolbar stays hidden until hover or focus and labels every action'],'toolbar',"page.locator('.message__toolbar'),0");
 add(['quick-react creates a boost from the toolbar','keyboard users reach the toolbar from a focused message','the emoji picker searches and reacts','the picker remembers recent reactions'],'toolbar','reaction-chip__count');
@@ -149,7 +149,10 @@ variant(['hidden-safety-body-visible-code'],'',"message.locator('.message__body'
 variant(['hidden-reply-body-visible-presentation'],'',"parent.locator('.message__body'),'A useful point'");
 variant(['transparent-attachment-reply-preview'],'','attachment.locator(\'.message__reply-preview\')');
 variant(['transparent-combobox-lookup'],'composer','waitForVisibility(editor,');
-variant(['transparent-restored-thread-draft','transparent-cleared-thread-draft'],'composer',"waitForVisibleProperty(reply,'value'");
+// Global field opacity also invalidates the original visible fill_in before
+// its later value assertion. Name that causal action, never a setup elsewhere.
+variant(['transparent-restored-thread-draft'],'composer',"actOnVisible(panel.getByRole('combobox',{name:'Write a thread reply'");
+variant(['transparent-cleared-thread-draft'],'composer',"waitForVisibleProperty(reply,'value'");
 variant(['transparent-boost-draft-after-edit','transparent-boost-draft-after-delivery'],'boosts',"locator('input[name=\"boost[content]\"]'),'fill'");
 variant(['transparent-older-search-text'],'search-forward',"'system paging alpha'");
 variant(['transparent-initial-url-text'],'search-forward',"'nothing linked yet'");
