@@ -45,6 +45,8 @@ end
   ['read_member_scoped_rooms','read_messages',{room_id:[foreign_room,room],limit:3}],
   ['read_member_room_reverse','read_messages',{room_id:[other_room,room],limit:3}],
   ['read_duplicate_nested_strings','read_messages',{thread_id:[tb,[ta.to_s,ta],-10,nil],limit:3}],
+  ['read_nonbreaking_space','read_messages',{thread_id:["\u00a0#{ta}",tb],limit:3}],
+  ['read_underscore_id','read_messages',{thread_id:'2_106_000_010',limit:3}],
   ['read_only_missing','read_messages',{thread_id:[-8,-1,nil,'bogus'],limit:3}],
   ['before_scope_multiple','read_messages',{thread_id:ta,before:[mf,ra,mb,ma+30,ma+10],limit:3}],
   ['after_scope_multiple','read_messages',{thread_id:ta,after:[mf,ra,mb,ma+20,ma],limit:3}],

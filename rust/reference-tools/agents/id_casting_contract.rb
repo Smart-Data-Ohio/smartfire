@@ -1,7 +1,7 @@
 # Integer ID serialization used by Active Record's ArrayHandler (one array level).
 require 'json'
 type=Message.type_for_attribute('id')
-values=[nil,false,true,0,-10,12,12.9,'','bad','  +12tail','-10tail','1e3','0x12',[],[12],['12',12],{'bad'=>true},[{'bad'=>true},12], [12,['1',1],-10,nil]]
+values=[nil,false,true,0,-10,12,12.9,'','bad','  +12tail','-10tail','1e3','0x12',[],[12],['12',12],{'bad'=>true},[{'bad'=>true},12], [12,['1',1],-10,nil], "\u00a012", "\u200312", "\t12", '12_3', '+1_2tail', '1__2', '1_2_', '_12', '00012', '+0tail', "\u000012"]
 rows=values.map do |value|
  predicate=value
  while predicate.is_a?(Array) && predicate.compact.length==1

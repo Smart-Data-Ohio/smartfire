@@ -47,18 +47,28 @@ pub(super) fn lookup_ids(value: &Value) -> Vec<i64> {
                     .map(|n| n as i64)
             }),
             Value::String(s) => {
-                let s = s.trim_start();
-                let offset = usize::from(s.starts_with(['+', '-']));
-                let digits = s
-                    .get(offset..)?
-                    .bytes()
-                    .take_while(u8::is_ascii_digit)
-                    .count();
-                if digits == 0 {
-                    None
-                } else {
-                    s[..offset + digits].parse().ok()
+                // Ruby's decimal to_i accepts ASCII leading whitespace and
+                // underscores between digits, but not Unicode whitespace.
+                let s = s.trim_start_matches(|c: char| c.is_ascii_whitespace());
+                let bytes = s.as_bytes();
+                let mut offset = usize::from(s.starts_with(['+', '-']));
+                let mut decimal = s[..offset].to_owned();
+                let mut digits = 0;
+                while let Some(byte) = bytes.get(offset) {
+                    if byte.is_ascii_digit() {
+                        decimal.push(char::from(*byte));
+                        digits += 1;
+                        offset += 1;
+                    } else if *byte == b'_'
+                        && digits > 0
+                        && bytes.get(offset + 1).is_some_and(u8::is_ascii_digit)
+                    {
+                        offset += 1;
+                    } else {
+                        break;
+                    }
                 }
+                (digits > 0).then(|| decimal.parse().ok()).flatten()
             }
             Value::Bool(value) => Some(i64::from(*value)),
             _ => None,

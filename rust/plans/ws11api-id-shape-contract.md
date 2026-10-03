@@ -8,7 +8,7 @@ float truncation and range rejection are pinned in `agent_id_casting.json`.
 Selection stays in the original global/association scope and primary-key order.
 One JSON bind keeps candidate lists below SQLite's parameter limit.
 
-The shared Rails matrix has 117 cases / 123 responses, including Alpha/Beta
+The shared Rails matrix has 119 cases / 125 responses, including Alpha/Beta
 selection, mixed objects followed by valid IDs, reaction replay, scoped cursors,
 context priority/constraints, revoked grants and inactive authentication. It
 sweeps room, thread, message, poll, approval, step, owned-work/post, receiver and
@@ -45,3 +45,10 @@ production code and the new oracle. It failed (`2 passed; 1 failed`) on all six
 soft-deleted candidate cases before the association-scope correction. The prior
 full workspace run was interrupted to incorporate this newly exposed edge; it
 is not reported as a passing full-suite run.
+
+The final string audit adds 30 direct cast vectors, including decimal underscores,
+ASCII whitespace and Unicode whitespace. Against `8f7f3bd8c`, the fresh-clone
+regression failed (`1 passed; 2 failed`): non-breaking space selected Alpha instead
+of Beta, and underscore IDs missed Alpha. Ruby accepts underscores only between
+digits and does not strip leading Unicode whitespace. The shared parser now
+matches both the direct cast oracle and the real request/state cases.
