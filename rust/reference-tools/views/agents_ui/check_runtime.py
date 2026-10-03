@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Compile real regressions; require HTTP/socket tests to reject each one."""
 import argparse
-import os
 from pathlib import Path
-import subprocess
+from discrimination import require_baseline, require_rejected, run_tests
 
 root = Path(__file__).resolve().parents[3]
 sink = root / "crates/campfire/src/channels/sink.rs"
@@ -51,19 +50,31 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", choices=[case[0] for case in cases])
 args = parser.parse_args()
 selected = [case for case in cases if args.only is None or case[0] == args.only]
+assertions = {
+    "activity": ("agent_broadcasts.rs", "committed approval must broadcast its activity item"),
+    "status": ("agent_broadcasts.rs", "committed agent status must broadcast both status fragments"),
+    "steps": ("agent_broadcasts.rs", "committed thread step must broadcast ordered steps"),
+    "message-steps": ("agent_broadcasts.rs", "committed message step must broadcast the current message"),
+    "message-cache": ("agent_broadcasts.rs", "message step callback must render current uncached steps"),
+    "presence-broadcast": ("agent_broadcasts.rs", "working presence incorrectly broadcast a status callback"),
+    "presence-status-note": ("agent_broadcasts.rs", "committed status note must broadcast both status fragments"),
+    "ledger": ("agent_histories.rs", "ledger content requires the agent's read_messages grant"),
+    "external-owner": ("approval_decisions.rs", "external write approvals require an administrator"),
+}
+for test in dict.fromkeys(case[-1] for case in selected):
+    require_baseline(test)
 originals = {path: path.read_text() for _, path, *_ in selected}
 try:
     for name, path, needle, replacement, test in selected:
         original = originals[path]
         assert original.count(needle) == 1, f"{name}: source changed; review mutation"
         path.write_text(original.replace(needle, replacement))
-        result = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
-             "-p", "campfire", test, "--", "--nocapture", "--test-threads=8"],
-            cwd=root, env={**os.environ, "CI": "1", "CARGO_BUILD_JOBS": "2"}, capture_output=True, text=True)
-        output = result.stdout + result.stderr
-        assert result.returncode != 0 and "test result: FAILED." in output and "panicked at" in output, f"{name}: mutation escaped test\n{output}"
-        print(name + ": " + next(line for line in output.splitlines() if line.startswith("test result:")), flush=True)
+        result = run_tests(test)
+        filename, message = assertions[name]
+        require_rejected(result, {
+            test: ("crates/campfire/src/controllers/presenters/accounts/tests/" + filename, message)
+        })
+        print(f"{name}: rejected at {message}", flush=True)
         path.write_text(original)
     print(f"Agent runtime discrimination: {len(selected)} regressions detected; sources restored")
 finally:

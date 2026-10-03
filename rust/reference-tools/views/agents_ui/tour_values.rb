@@ -66,8 +66,46 @@ inputs={
  'original_normalized_day'=>'2026-02-31 12:00:00',
  'original_date'=>'2026-01-01'
 }.merge(inputs)
-cases=inputs.map do |name,value|
- sql="UPDATE users SET tour_completed_at=#{conn.quote(value)} WHERE id=127326141"
+# Additional review-209 values, then BLOB variants of every string input.
+inputs.merge!({
+ 'null_byte'=>"2026-01-01\0", 'empty_spaces'=>'   ', 'ascii_whitespace'=>"\t\n\r ",
+ 'nonbreaking_spaces'=>"\u00a0", 'padded_tabs'=>"\t2026-01-01\n", 'thin_space'=>"2026\u2009Jan\u20091",
+ 'fraction_12'=>'2026-01-01T12:34:56.123456789012Z', 'fraction_zero'=>'2026-01-01 00:00:00.0000001',
+ 'fraction_comma'=>'2026-01-01 12:34:56,123456', 'offset_seconds'=>'2026-01-01T12:34:56+05:30:45',
+ 'offset_negative'=>'2026-01-01T12:34:56-03:30', 'offset_max'=>'2026-01-01T12:34:56+23:59',
+ 'offset_24'=>'2026-01-01T12:34:56+24:00', 'offset_fraction'=>'2026-01-01 12:34:56 +5.5',
+ 'two_digit_00'=>'00-01-02', 'two_digit_38'=>'38-12-31', 'two_digit_68'=>'68-12-31',
+ 'two_digit_69'=>'69-01-01', 'two_digit_99'=>'99-12-31', 'quoted_year'=>"'26", 'year_only'=>'2026',
+ 'feb_30'=>'2024-02-30', 'feb_29_nonleap'=>'2025-02-29', 'zero_month'=>'2026-00-01',
+ 'zero_day'=>'2026-01-00', 'negative_month'=>'2026--01-02', 'hour_25'=>'2026-01-01 25:00:00',
+ 'minute_60'=>'2026-01-01 12:60:00', 'second_61'=>'2026-01-01 12:00:61',
+ 'hour_24_fraction'=>'2026-01-01 24:00:00.5', 'year_min'=>'-9999-01-01', 'year_max'=>'9999-12-31',
+ 'huge_year'=>'12345678901234567890-01-01', 'date_128'=>'2026-01-01'+(' '*118),
+ 'date_129'=>'2026-01-01'+(' '*119), 'float_zero'=>0.0, 'negative_float'=>-12.5,
+ 'compact_date'=>'20261002', 'week_year'=>'2026-W53-7',
+ 'unicode_prefix'=>"é2026 Jan 1", 'unicode_suffix'=>"Jan 1 2026é"
+})
+specs=inputs.map do |name,value|
+ quoted=value.is_a?(String) && value.include?("\0") ? "CAST(X'#{value.unpack1('H*')}' AS TEXT)" : conn.quote(value)
+ {name:,value:,sql:"UPDATE users SET tour_completed_at=#{quoted} WHERE id=127326141"}
+end
+inputs.each do |name,value|
+ next unless value.is_a?(String)
+ specs << {name:"blob_#{name}",value:nil,sql:"UPDATE users SET tour_completed_at=X'#{value.unpack1('H*')}' WHERE id=127326141"}
+end
+{
+ 'valid'=>"2026-01-01 00:00:00", 'named'=>"Jan. 1, 2026", 'empty'=>"", 'invalid'=>"not-a-date",
+ 'invalid_utf8_only'=>"\xff".b, 'invalid_utf8_prefix'=>"\xff2026-01-01".b,
+ 'invalid_utf8_suffix'=>"Jan. 1, 2026\xff".b, 'invalid_utf8_middle'=>"2026\xffJan\xff1".b,
+ 'invalid_utf8_nul'=>"2026-01-01\0\xff".b, 'invalid_utf8_overlong'=>"2026-01-01\xc0\xaf".b,
+ 'invalid_utf8_truncated'=>"2026-01-01\xe2\x82".b,
+ 'invalid_utf8_128'=>"2026-01-01".b+("\xff".b*118),
+ 'invalid_utf8_129'=>"2026-01-01".b+("\xff".b*119)
+}.each do |name,bytes|
+ specs << {name:"blob_#{name}",value:nil,sql:"UPDATE users SET tour_completed_at=X'#{bytes.unpack1('H*')}' WHERE id=127326141"}
+end
+cases=specs.map do |spec|
+ name,value,sql=spec.values_at(:name,:value,:sql)
  conn.execute(sql)
  responses=['/agents','/users/me/profile'].map do |path|
   b=ActionDispatch::Integration::Session.new(Rails.application);b.host! 'campfire.test'

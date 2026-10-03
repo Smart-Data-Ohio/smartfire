@@ -43,7 +43,10 @@ impl LoadedPreferences {
                     rusqlite::types::ValueRef::Integer(_) | rusqlite::types::ValueRef::Real(_) => {
                         true
                     }
-                    rusqlite::types::ValueRef::Blob(_) => false,
+                    rusqlite::types::ValueRef::Blob(value) => {
+                        rails_compat::datetime::deserialize_sqlite_blob::<Timestamp>(value)
+                            .is_some()
+                    }
                 },
                 voice_mode: row.get("voice_mode")?,
                 push_to_talk_key: row.get("push_to_talk_key")?,

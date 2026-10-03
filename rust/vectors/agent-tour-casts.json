@@ -265,6 +265,711 @@
       "name": "eastern_zone",
       "sql": "UPDATE users SET tour_completed_at='Thu, 1 Jan 2026 09:00:00 EST' WHERE id=127326141",
       "stored": "2026-01-01 14:00:00"
+    },
+    {
+      "name": "null_byte",
+      "sql": "UPDATE users SET tour_completed_at=CAST(X'323032362d30312d303100' AS TEXT) WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "empty_spaces",
+      "sql": "UPDATE users SET tour_completed_at='   ' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "ascii_whitespace",
+      "sql": "UPDATE users SET tour_completed_at='\t\n\r ' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "nonbreaking_spaces",
+      "sql": "UPDATE users SET tour_completed_at=' ' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "padded_tabs",
+      "sql": "UPDATE users SET tour_completed_at='\t2026-01-01\n' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "thin_space",
+      "sql": "UPDATE users SET tour_completed_at='2026 Jan 1' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "fraction_12",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T12:34:56.123456789012Z' WHERE id=127326141",
+      "stored": "2026-01-01 12:34:56.123456"
+    },
+    {
+      "name": "fraction_zero",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 00:00:00.0000001' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "fraction_comma",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 12:34:56,123456' WHERE id=127326141",
+      "stored": "2026-01-01 12:34:56.123456"
+    },
+    {
+      "name": "offset_seconds",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T12:34:56+05:30:45' WHERE id=127326141",
+      "stored": "2026-01-01 07:04:11"
+    },
+    {
+      "name": "offset_negative",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T12:34:56-03:30' WHERE id=127326141",
+      "stored": "2026-01-01 16:04:56"
+    },
+    {
+      "name": "offset_max",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T12:34:56+23:59' WHERE id=127326141",
+      "stored": "2025-12-31 12:35:56"
+    },
+    {
+      "name": "offset_24",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01T12:34:56+24:00' WHERE id=127326141",
+      "stored": "2026-01-01 12:34:56"
+    },
+    {
+      "name": "offset_fraction",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 12:34:56 +5.5' WHERE id=127326141",
+      "stored": "2026-01-01 07:04:56"
+    },
+    {
+      "name": "two_digit_00",
+      "sql": "UPDATE users SET tour_completed_at='00-01-02' WHERE id=127326141",
+      "stored": "2000-01-02 00:00:00"
+    },
+    {
+      "name": "two_digit_38",
+      "sql": "UPDATE users SET tour_completed_at='38-12-31' WHERE id=127326141",
+      "stored": "2038-12-31 00:00:00"
+    },
+    {
+      "name": "two_digit_68",
+      "sql": "UPDATE users SET tour_completed_at='68-12-31' WHERE id=127326141",
+      "stored": "2068-12-31 00:00:00"
+    },
+    {
+      "name": "two_digit_69",
+      "sql": "UPDATE users SET tour_completed_at='69-01-01' WHERE id=127326141",
+      "stored": "1969-01-01 00:00:00"
+    },
+    {
+      "name": "two_digit_99",
+      "sql": "UPDATE users SET tour_completed_at='99-12-31' WHERE id=127326141",
+      "stored": "1999-12-31 00:00:00"
+    },
+    {
+      "name": "quoted_year",
+      "sql": "UPDATE users SET tour_completed_at='''26' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "year_only",
+      "sql": "UPDATE users SET tour_completed_at='2026' WHERE id=127326141",
+      "stored": 2026
+    },
+    {
+      "name": "feb_30",
+      "sql": "UPDATE users SET tour_completed_at='2024-02-30' WHERE id=127326141",
+      "stored": "2024-03-01 00:00:00"
+    },
+    {
+      "name": "feb_29_nonleap",
+      "sql": "UPDATE users SET tour_completed_at='2025-02-29' WHERE id=127326141",
+      "stored": "2025-03-01 00:00:00"
+    },
+    {
+      "name": "zero_month",
+      "sql": "UPDATE users SET tour_completed_at='2026-00-01' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "zero_day",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-00' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "negative_month",
+      "sql": "UPDATE users SET tour_completed_at='2026--01-02' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "hour_25",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 25:00:00' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "minute_60",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 12:60:00' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "second_61",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 12:00:61' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "hour_24_fraction",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01 24:00:00.5' WHERE id=127326141",
+      "stored": "2026-01-02 00:00:00.500000"
+    },
+    {
+      "name": "year_min",
+      "sql": "UPDATE users SET tour_completed_at='-9999-01-01' WHERE id=127326141",
+      "stored": "-9999-01-01 00:00:00"
+    },
+    {
+      "name": "year_max",
+      "sql": "UPDATE users SET tour_completed_at='9999-12-31' WHERE id=127326141",
+      "stored": "9999-12-31 00:00:00"
+    },
+    {
+      "name": "huge_year",
+      "sql": "UPDATE users SET tour_completed_at='12345678901234567890-01-01' WHERE id=127326141",
+      "stored": "12345678901234567890-01-01 00:00:00"
+    },
+    {
+      "name": "date_128",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01                                                                                                                      ' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "date_129",
+      "sql": "UPDATE users SET tour_completed_at='2026-01-01                                                                                                                       ' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "float_zero",
+      "sql": "UPDATE users SET tour_completed_at=0.0 WHERE id=127326141",
+      "stored": 0
+    },
+    {
+      "name": "negative_float",
+      "sql": "UPDATE users SET tour_completed_at=-12.5 WHERE id=127326141",
+      "stored": -12.5
+    },
+    {
+      "name": "compact_date",
+      "sql": "UPDATE users SET tour_completed_at='20261002' WHERE id=127326141",
+      "stored": 20261002
+    },
+    {
+      "name": "week_year",
+      "sql": "UPDATE users SET tour_completed_at='2026-W53-7' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "unicode_prefix",
+      "sql": "UPDATE users SET tour_completed_at='é2026 Jan 1' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "unicode_suffix",
+      "sql": "UPDATE users SET tour_completed_at='Jan 1 2026é' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_original_valid_datetime",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312030303a30303a3030' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_original_empty",
+      "sql": "UPDATE users SET tour_completed_at=X'' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_original_invalid",
+      "sql": "UPDATE users SET tour_completed_at=X'6e6f742d612d64617465' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_original_string_zero",
+      "sql": "UPDATE users SET tour_completed_at=X'30' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_original_normalized_day",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30322d33312031323a30303a3030' WHERE id=127326141",
+      "stored": "2026-03-03 12:00:00"
+    },
+    {
+      "name": "blob_original_date",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d3031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_whitespace",
+      "sql": "UPDATE users SET tour_completed_at=X'205c745c6e' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_padded_valid",
+      "sql": "UPDATE users SET tour_completed_at=X'20323032362d30312d30312030303a30303a303020' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_long_leading_spaces",
+      "sql": "UPDATE users SET tour_completed_at=X'202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020323032362d30312d30312030303a30303a3030' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_long_trailing_spaces",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312030303a30303a3030202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_month_and_year",
+      "sql": "UPDATE users SET tour_completed_at=X'4a616e756172792032303236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_RFC_2822",
+      "sql": "UPDATE users SET tour_completed_at=X'4672692c203032204f637420323032362031323a30303a303020474d54' WHERE id=127326141",
+      "stored": "2026-10-02 12:00:00"
+    },
+    {
+      "name": "blob_offset",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30315432333a35393a35392b30353a3435' WHERE id=127326141",
+      "stored": "2026-01-01 18:14:59"
+    },
+    {
+      "name": "blob_fractional",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312030303a30303a30302e313233343536373839' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00.123456"
+    },
+    {
+      "name": "blob_ISO_week_date",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d5730312d31' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_ordinal_date",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d303031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_short_year",
+      "sql": "UPDATE users SET tour_completed_at=X'32362d30312d3031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_year_one",
+      "sql": "UPDATE users SET tour_completed_at=X'303030312d30312d3031' WHERE id=127326141",
+      "stored": "0001-01-01 00:00:00"
+    },
+    {
+      "name": "blob_year_10000",
+      "sql": "UPDATE users SET tour_completed_at=X'31303030302d30312d3031' WHERE id=127326141",
+      "stored": "10000-01-01 00:00:00"
+    },
+    {
+      "name": "blob_BC_date",
+      "sql": "UPDATE users SET tour_completed_at=X'2d303034342d30332d3135' WHERE id=127326141",
+      "stored": "-0044-03-15 00:00:00"
+    },
+    {
+      "name": "blob_invalid_month",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d31332d3031' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_invalid_day",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d3332' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_midnight_24",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312032343a30303a3030' WHERE id=127326141",
+      "stored": "2026-01-02 00:00:00"
+    },
+    {
+      "name": "blob_leap_second",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312032333a35393a3630' WHERE id=127326141",
+      "stored": "2026-01-02 00:00:00"
+    },
+    {
+      "name": "blob_date_slashes",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362f31302f3032' WHERE id=127326141",
+      "stored": "2026-10-02 00:00:00"
+    },
+    {
+      "name": "blob_US_date",
+      "sql": "UPDATE users SET tour_completed_at=X'31302f30322f32303236' WHERE id=127326141",
+      "stored": "2026-02-10 00:00:00"
+    },
+    {
+      "name": "blob_named_month",
+      "sql": "UPDATE users SET tour_completed_at=X'32204f63746f6265722032303236' WHERE id=127326141",
+      "stored": "2026-10-02 00:00:00"
+    },
+    {
+      "name": "blob_time_only",
+      "sql": "UPDATE users SET tour_completed_at=X'31323a33343a3536' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_month_day_only",
+      "sql": "UPDATE users SET tour_completed_at=X'4f63746f6265722032' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_very_long_invalid",
+      "sql": "UPDATE users SET tour_completed_at=X'78787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_datetime_suffix_junk",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312030303a30303a3030206e6f742d612d64617465' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_datetime_prefix_junk",
+      "sql": "UPDATE users SET tour_completed_at=X'6e6f742d612d6461746520323032362d30312d30312030303a30303a3030' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_year_month_name",
+      "sql": "UPDATE users SET tour_completed_at=X'32303236204a616e' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_year_month_full",
+      "sql": "UPDATE users SET tour_completed_at=X'32303236204a616e75617279' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_month_year_hyphen",
+      "sql": "UPDATE users SET tour_completed_at=X'4a616e2d32303236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_ISO_year_month",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d3031' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_slash_year_month",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362f3031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_year_first_words",
+      "sql": "UPDATE users SET tour_completed_at=X'32303236204a616e2031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_month_abbrev_dot",
+      "sql": "UPDATE users SET tour_completed_at=X'4a616e2e20312c2032303236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_day_month_abbrev_dot",
+      "sql": "UPDATE users SET tour_completed_at=X'31204a616e2e2032303236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_month_day_AD_year",
+      "sql": "UPDATE users SET tour_completed_at=X'4a616e7561727920312c2041442032303236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_asctime",
+      "sql": "UPDATE users SET tour_completed_at=X'546875204a616e20312030303a30303a30302032303236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_ISO_without_seconds",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30315430303a3030' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_hour",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312039393a3030' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_invalid_minute",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312030393a3939' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_year_1900_leap_day",
+      "sql": "UPDATE users SET tour_completed_at=X'313930302d30322d3239' WHERE id=127326141",
+      "stored": "1900-03-01 00:00:00"
+    },
+    {
+      "name": "blob_unsigned_extended_year",
+      "sql": "UPDATE users SET tour_completed_at=X'2b323032362d30312d3031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_eastern_zone",
+      "sql": "UPDATE users SET tour_completed_at=X'5468752c2031204a616e20323032362030393a30303a303020455354' WHERE id=127326141",
+      "stored": "2026-01-01 14:00:00"
+    },
+    {
+      "name": "blob_null_byte",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d303100' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_empty_spaces",
+      "sql": "UPDATE users SET tour_completed_at=X'202020' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_ascii_whitespace",
+      "sql": "UPDATE users SET tour_completed_at=X'090a0d20' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_nonbreaking_spaces",
+      "sql": "UPDATE users SET tour_completed_at=X'c2a0' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_padded_tabs",
+      "sql": "UPDATE users SET tour_completed_at=X'09323032362d30312d30310a' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_thin_space",
+      "sql": "UPDATE users SET tour_completed_at=X'32303236e280894a616ee2808931' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_fraction_12",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30315431323a33343a35362e3132333435363738393031325a' WHERE id=127326141",
+      "stored": "2026-01-01 12:34:56.123456"
+    },
+    {
+      "name": "blob_fraction_zero",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312030303a30303a30302e30303030303031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_fraction_comma",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312031323a33343a35362c313233343536' WHERE id=127326141",
+      "stored": "2026-01-01 12:34:56.123456"
+    },
+    {
+      "name": "blob_offset_seconds",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30315431323a33343a35362b30353a33303a3435' WHERE id=127326141",
+      "stored": "2026-01-01 07:04:11"
+    },
+    {
+      "name": "blob_offset_negative",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30315431323a33343a35362d30333a3330' WHERE id=127326141",
+      "stored": "2026-01-01 16:04:56"
+    },
+    {
+      "name": "blob_offset_max",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30315431323a33343a35362b32333a3539' WHERE id=127326141",
+      "stored": "2025-12-31 12:35:56"
+    },
+    {
+      "name": "blob_offset_24",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30315431323a33343a35362b32343a3030' WHERE id=127326141",
+      "stored": "2026-01-01 12:34:56"
+    },
+    {
+      "name": "blob_offset_fraction",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312031323a33343a3536202b352e35' WHERE id=127326141",
+      "stored": "2026-01-01 07:04:56"
+    },
+    {
+      "name": "blob_two_digit_00",
+      "sql": "UPDATE users SET tour_completed_at=X'30302d30312d3032' WHERE id=127326141",
+      "stored": "2000-01-02 00:00:00"
+    },
+    {
+      "name": "blob_two_digit_38",
+      "sql": "UPDATE users SET tour_completed_at=X'33382d31322d3331' WHERE id=127326141",
+      "stored": "2038-12-31 00:00:00"
+    },
+    {
+      "name": "blob_two_digit_68",
+      "sql": "UPDATE users SET tour_completed_at=X'36382d31322d3331' WHERE id=127326141",
+      "stored": "2068-12-31 00:00:00"
+    },
+    {
+      "name": "blob_two_digit_69",
+      "sql": "UPDATE users SET tour_completed_at=X'36392d30312d3031' WHERE id=127326141",
+      "stored": "1969-01-01 00:00:00"
+    },
+    {
+      "name": "blob_two_digit_99",
+      "sql": "UPDATE users SET tour_completed_at=X'39392d31322d3331' WHERE id=127326141",
+      "stored": "1999-12-31 00:00:00"
+    },
+    {
+      "name": "blob_quoted_year",
+      "sql": "UPDATE users SET tour_completed_at=X'273236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_year_only",
+      "sql": "UPDATE users SET tour_completed_at=X'32303236' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_feb_30",
+      "sql": "UPDATE users SET tour_completed_at=X'323032342d30322d3330' WHERE id=127326141",
+      "stored": "2024-03-01 00:00:00"
+    },
+    {
+      "name": "blob_feb_29_nonleap",
+      "sql": "UPDATE users SET tour_completed_at=X'323032352d30322d3239' WHERE id=127326141",
+      "stored": "2025-03-01 00:00:00"
+    },
+    {
+      "name": "blob_zero_month",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30302d3031' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_zero_day",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d3030' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_negative_month",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d2d30312d3032' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_hour_25",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312032353a30303a3030' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_minute_60",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312031323a36303a3030' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_second_61",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312031323a30303a3631' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_hour_24_fraction",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312032343a30303a30302e35' WHERE id=127326141",
+      "stored": "2026-01-02 00:00:00.500000"
+    },
+    {
+      "name": "blob_year_min",
+      "sql": "UPDATE users SET tour_completed_at=X'2d393939392d30312d3031' WHERE id=127326141",
+      "stored": "-9999-01-01 00:00:00"
+    },
+    {
+      "name": "blob_year_max",
+      "sql": "UPDATE users SET tour_completed_at=X'393939392d31322d3331' WHERE id=127326141",
+      "stored": "9999-12-31 00:00:00"
+    },
+    {
+      "name": "blob_huge_year",
+      "sql": "UPDATE users SET tour_completed_at=X'31323334353637383930313233343536373839302d30312d3031' WHERE id=127326141",
+      "stored": "12345678901234567890-01-01 00:00:00"
+    },
+    {
+      "name": "blob_date_128",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d303120202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_date_129",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_compact_date",
+      "sql": "UPDATE users SET tour_completed_at=X'3230323631303032' WHERE id=127326141",
+      "stored": "2026-10-02 00:00:00"
+    },
+    {
+      "name": "blob_week_year",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d5735332d37' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_unicode_prefix",
+      "sql": "UPDATE users SET tour_completed_at=X'c3a932303236204a616e2031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_unicode_suffix",
+      "sql": "UPDATE users SET tour_completed_at=X'4a616e20312032303236c3a9' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_valid",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d30312030303a30303a3030' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_named",
+      "sql": "UPDATE users SET tour_completed_at=X'4a616e2e20312c2032303236' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_empty",
+      "sql": "UPDATE users SET tour_completed_at=X'' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_invalid",
+      "sql": "UPDATE users SET tour_completed_at=X'6e6f742d612d64617465' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_invalid_utf8_only",
+      "sql": "UPDATE users SET tour_completed_at=X'ff' WHERE id=127326141",
+      "stored": null
+    },
+    {
+      "name": "blob_invalid_utf8_prefix",
+      "sql": "UPDATE users SET tour_completed_at=X'ff323032362d30312d3031' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_utf8_suffix",
+      "sql": "UPDATE users SET tour_completed_at=X'4a616e2e20312c2032303236ff' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_utf8_middle",
+      "sql": "UPDATE users SET tour_completed_at=X'32303236ff4a616eff31' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_utf8_nul",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d303100ff' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_utf8_overlong",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d3031c0af' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_utf8_truncated",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d3031e282' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_utf8_128",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d3031ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' WHERE id=127326141",
+      "stored": "2026-01-01 00:00:00"
+    },
+    {
+      "name": "blob_invalid_utf8_129",
+      "sql": "UPDATE users SET tour_completed_at=X'323032362d30312d3031ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' WHERE id=127326141",
+      "stored": null
     }
   ]
 }

@@ -107,7 +107,7 @@ async fn ws11ui_human_github_decision_executes_real_transport_and_rechecks_later
             } else {
                 StatusCode::OK
             },
-            "{case}: {}",
+            "execution decision must use the negotiated HTML/JSON format: {case}: {}",
             response.text()
         );
         if html {
@@ -358,7 +358,7 @@ async fn ws11ui_human_fizzy_decision_executes_real_transport_and_rechecks_later_
             } else {
                 StatusCode::OK
             },
-            "{case}: {}",
+            "execution decision must use the negotiated HTML/JSON format: {case}: {}",
             response.text()
         );
         if html {

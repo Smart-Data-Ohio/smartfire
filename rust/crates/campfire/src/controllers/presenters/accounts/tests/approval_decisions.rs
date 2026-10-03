@@ -83,7 +83,7 @@ async fn owner_cannot_approve_github_or_fizzy_but_can_deny_each() {
         assert_eq!(
             response.status,
             StatusCode::FORBIDDEN,
-            "{}",
+            "external write approvals require an administrator: {}",
             response.text()
         );
         assert_eq!(

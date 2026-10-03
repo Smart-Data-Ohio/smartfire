@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Prove each inbox lifecycle branch catches a real writer defect."""
-from pathlib import Path
-import os,subprocess
-root=Path(__file__).resolve().parents[3]
-for defect in ['reminder','recurrence','deleted-source']:
- result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-p','campfire','ws11ui_next_inbox_lifecycle','--','--test-threads=8','--nocapture'],cwd=root,env={**os.environ,'CARGO_BUILD_JOBS':'2','WS11UI_INBOX_LIFECYCLE_DEFECT':defect},capture_output=True,text=True)
- output=result.stdout+result.stderr
- assert result.returncode and 'test result: FAILED. 0 passed; 1 failed;' in output, output
- print(next(line for line in output.splitlines() if line.startswith('test result:')))
- print(f'Inbox lifecycle discrimination: {defect} writer defect rejected; real producer and HTTP assertions unchanged')
+from discrimination import require_baseline, require_rejected, run_tests
+
+test = 'ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes'
+source = 'crates/campfire/src/controllers/activity_items/tests/lifecycle.rs'
+require_baseline(test)
+for defect, assertion in [
+    ('reminder', 'real reminder dispatch must persist an inbox item'),
+    ('recurrence', 'Inbox lifecycle response bytes must match Rails: recurrent reminder inbox'),
+    ('deleted-source', 'deleted source must actually be removed by the real writer'),
+]:
+    result = run_tests(test, {'WS11UI_INBOX_LIFECYCLE_DEFECT': defect})
+    require_rejected(result, {test: (source, assertion)})
+    print(f'Inbox lifecycle discrimination: {defect} writer defect rejected at "{assertion}"', flush=True)

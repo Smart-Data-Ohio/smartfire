@@ -49,16 +49,15 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
                         DAVID,
                         "SavedItem",
                         saved_id,
-                    )?
-                    .unwrap();
-                    Ok((ids, item.id))
+                    )?;
+                    Ok((ids, item.map(|item| item.id)))
                 })
                 .await
-                .expect("real reminder dispatch must persist an inbox item");
+                .expect("real reminder producer must execute successfully");
             assert_eq!(
                 outcome,
-                (vec![saved_id], expected_id),
-                "same-row reminder recurrence"
+                (vec![saved_id], Some(expected_id)),
+                "real reminder dispatch must persist an inbox item"
             );
             continue;
         }
@@ -89,7 +88,7 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
             if response.text() != body {
                 differences.push(format!(
                     "{}\nRust: {}\nRails: {body}",
-                    step["name"],
+                    step["name"].as_str().unwrap(),
                     response.text()
                 ));
             }
@@ -116,5 +115,9 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
         "Inbox lifecycle Rails differential: {checked} HTTP responses; 2 real reminder dispatches; {} byte mismatches",
         differences.len()
     );
-    assert!(differences.is_empty(), "{}", differences.join("\n"));
+    assert!(
+        differences.is_empty(),
+        "Inbox lifecycle response bytes must match Rails: {}",
+        differences.join(", ")
+    );
 }
