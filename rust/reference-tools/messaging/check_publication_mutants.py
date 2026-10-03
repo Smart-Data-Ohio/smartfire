@@ -38,7 +38,8 @@ try:
                 'messages.sort_by_key(|m| m.id); messages.reverse();')
         filters = ['older_embed_children_tests::queued_stale', 'older_embed_job_tests',
                    'mapped_provider_tests', 'older_provider_tests', 'older_owner_tests',
-                   'older_calendar_tests']
+                   'older_calendar_tests',
+                   'comparison_support::ordered_capture_waits_for_actual_callback']
     if a.expect == 'escape':
         replace('rust/crates/campfire/src/controllers/message_features/comparison_support.rs',
                 'assert_eq!(json!(actual), *expected, "ordered publication differs from Rails: {context}");',
