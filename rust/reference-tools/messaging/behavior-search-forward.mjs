@@ -1,5 +1,7 @@
 // Source: test/system/search_forward_edit_test.rb at d7c7de92.
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {join} from 'node:path';
 import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty,waitForVisibleText,actOnVisible,filterVisibleText,byVisibleText} from './behavior-visibility.mjs';
 export async function searchForward({author:page,recipient,base,caseName,fixture,openEdit,submit}) {
   if(caseName.startsWith('search tolerates')) {
@@ -21,36 +23,21 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
   } else if(caseName==='forwarded Markdown keeps tables and code blocks') {
     const source=page.locator('.message[data-message-id]').filter({has:filterVisibleText(page.locator('pre code'),'puts :forwarded')});
     await waitForVisibility(filterVisibleText(source.locator('pre code'),'puts :forwarded'),{timeout:10000});
+    const sourceId=await source.getAttribute('data-message-id');
     await actOnVisible(source.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
     await actOnVisible(page.getByRole('menuitem',{name:'Forward',exact:true}),'click',{});
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:10000});
     await actOnVisible(filterVisibleText(dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)'),'Designers'),'click',{timeout:10000});
-    // Observe the payload already parsed by the app. Playwright's external
-    // Response.json() can hang on an intercepted response after the app has
-    // consumed it; no second body read or extra wait belongs in this check.
-    await page.evaluate(()=>{
-      window.__ws8bmForwardResults=[];const originalFetch=window.fetch;
-      window.fetch=async function(...args) {
-        const response=await originalFetch.apply(this,args);
-        const request=args[0],options=args[1],url=new URL(typeof request==='string'?request:request.url,location.href);
-        if((options?.method||request?.method||'GET').toUpperCase()==='POST'&&/\/forwards(?:\.json)?$/.test(url.pathname)) {
-          const originalJson=response.json.bind(response);
-          response.json=async function(...jsonArgs) {
-            const payload=await originalJson(...jsonArgs);
-            window.__ws8bmForwardResults.push({status:response.status,payload});
-            return payload;
-          };
-        }
-        return response;
-      };
-    });
     await actOnVisible(dialog.getByRole('button',{name:'Forward',exact:true}),'click',{});
     await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),/Forwarded to 1 destination/),{timeout:10000});
-    // The original status assertion already observes the completed request.
-    // Read its identity without inserting another wait before that assertion.
-    const responses=await page.evaluate(()=>window.__ws8bmForwardResults);
-    assert.equal(responses.length,1);const response=responses[0];assert.equal(response.status,201);
-    const forwardedId=response.payload.forwards[0].message.id;
+    // Rails :57 queries the persisted copy after the original status gate.
+    // Read the same fixture DB here; a browser response body is not part of
+    // that assertion and can hang independently of the completed app request.
+    const port=new URL(base).port,storage=process.env.CAMPFIRE_STORAGE_PATH;
+    const database=join(storage,port===process.env.HTTP_PORT?'db/production.sqlite3':`.instances/${port}/db/production.sqlite3`);
+    const forwardedId=Number(execFileSync('python3',['-c',
+      'import sqlite3,sys; db=sqlite3.connect(sys.argv[1],timeout=5); row=db.execute("SELECT id FROM messages WHERE forwarded_from_message_id=? ORDER BY id DESC LIMIT 1",(int(sys.argv[2]),)).fetchone(); assert row is not None; print(row[0])',
+      database,sourceId],{encoding:'utf8',timeout:5000}).trim());
     for(const viewer of [page,recipient]) {
       // Rails :57-60 scopes to the persisted copy's identity. Its code's
       // visibility must not decide whether the preceding table lookup succeeds.
