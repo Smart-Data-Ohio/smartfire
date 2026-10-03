@@ -54,6 +54,22 @@ fn callbacks(t: &TestDb, rows: &[CalendarEvent]) -> (Value, Value) {
             };
             jobs.push(json!([job.class, args]));
         }
+        // The typed intent resolves its references after commit, like Rails.
+        // This model oracle checks routing metadata; app oracles compare real frame bytes.
+        if let Event::Broadcast(request) = &event
+            && let Some(update) = request.decode::<crate::models::calendar_event::CardUpdate>()
+        {
+            let id = update.unwrap().event_id;
+            cards.extend(t.read(|conn| {
+                let ids = conn.prepare("SELECT message_id FROM event_references WHERE event_id=? ORDER BY message_id")?
+                    .query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+                ids.into_iter().map(|id| {
+                    let m = crate::Message::find(conn, id)?;
+                    Ok(json!({"stream":crate::broadcasts::conversation_messages(conn,&m)?.iter().map(|s|s.to_param()).collect::<Vec<_>>().join(":"),
+                        "target":crate::broadcasts::message_dom_id(&m,Some("event_cards")),"action":"replace","maintain_scroll":true}))
+                }).collect::<Result<Vec<_>>>()
+            }));
+        }
         if let Some(crate::broadcasts::Broadcast::Turbo(frame)) = event.as_broadcast()
             && matches!(frame.partial, Some(Partial::EventCards { .. }))
         {

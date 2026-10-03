@@ -64,6 +64,10 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
         campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND =>
             decode(request).and_then(|broadcast| ooo_notice(cable, broadcast)),
+        campfire_db::models::calendar_event::CardUpdate::KIND => decode::<campfire_db::models::calendar_event::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            super::event_cards::publish(app, event.event_id)
+        }),
         crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
             .and_then(|event| {
                 let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;

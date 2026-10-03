@@ -34,6 +34,8 @@ New/repeat SLA and digest read growth is checked at 10 and 100 boards; the 100-b
 with SQLite's variable limit set to 64 on every reader and the writer. A further 32-note case
 loads 64 distinct quoted messages from permalink-containing titles under the same limit.
 Rails also verifies that this case creates all 64 quote references.
+The associated GitHub discussion loader is additionally checked with 96 IDs under the
+64-variable limit, comparing the batched results with individual loads.
 
 The settings probe measures the complete authenticated GET and rendering path with 10/100
 assignment choices. The deletion tests use two database handles and the normal Rust room

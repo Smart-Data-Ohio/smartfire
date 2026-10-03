@@ -1037,6 +1037,10 @@ fn ruby_strip(s: &str) -> &str {
 }
 
 #[cfg(test)]
+#[path = "concerns/bot_model_cases.rs"]
+mod bot_model_cases;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -8,9 +8,18 @@ still WS12-owned continuation work, so this is not an owner-blocked-only stop.
 ## PR #206 review corrections
 
 This section supersedes the earlier database-only performance measurements below. The review
-was reproduced from `ae99f082b` in the dedicated `ws12-fix206` worktree. No stacked branch or
-agent-controller/agent-work source was changed. The reviewer scratch directory was read-only;
+was reproduced from `ae99f082b` in the dedicated `ws12-fix206` worktree. The fix did not edit the
+stacked branch or agent-controller/agent-work source. The reviewer scratch directory was read-only;
 the producers and regressions use copies under this worktree.
+
+After the fix commit, the required final merge check found a conflict with `origin/main` in
+the calendar message-reference loader: both sides had independently replaced an IN-bind list
+with one JSON bind. Per the task's conflict exception, `origin/main` at
+`12b812796c53316480f9c861a71ae3144236b8d4` was merged; main's equivalent loader was retained.
+Upstream agent-owned changes were imported by that merge without manual edits to those files.
+All three verification gates were rerun on the merged tree. The GitHub discussion association
+loader also uses one JSON bind, with batched/individual equality checked for 96 IDs at a
+64-variable limit.
 
 | Finding | Result and regression |
 | --- | --- |
@@ -97,7 +106,8 @@ failures retain the same committed claims/notes and allow healthy boards to fini
 ### Review verification and cleanup
 
 All three required gates passed with Rust 1.98.1, `CI=1`, `CARGO_BUILD_JOBS=4`, and the existing
-`~/.cargo/config.toml` rustc throttle unchanged. Full workspace tests include `html5ever` and
+`~/.cargo/config.toml` rustc throttle unchanged. The merged-tree rebuild used
+`CARGO_INCREMENTAL=0` and line-table debug information for dev/test profiles. Full workspace tests include `html5ever` and
 use eight test threads. Pinned libvips/ffmpeg from the reference image were supplied through
 task-local `LD_LIBRARY_PATH`/`PATH`; `CI=1` requires media version equality. Tests ran in a
 bubblewrap network namespace, isolating their localhost services from other workers and the
@@ -118,21 +128,22 @@ Raw principal summary lines, with the complete 61 workspace summaries and full-a
 receipts preserved in [review-verification.txt](ws12-board-automations-2-review-verification.txt):
 
 ```text
-test result: ok. 2571 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 700.34s
-test result: ok. 1294 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 121.88s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2576 filtered out; finished in 19.89s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1295 filtered out; finished in 0.24s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 46s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 47.39s
+test result: ok. 2610 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 754.75s
+test result: ok. 1306 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 125.93s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2615 filtered out; finished in 23.61s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1307 filtered out; finished in 0.28s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 11m 45s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6m 31s
 ```
 
-The workspace aggregate is **4602 passed, 0 failed, 16 existing ignores**; this is an aggregate
+The merged workspace aggregate is **4654 passed, 0 failed, 16 existing ignores**; this is an aggregate
 of Cargo's raw summaries, not a Cargo-generated line. No new ignore was introduced. Full
 workspace, focused review replay, strict clippy and release-input checks each exited zero.
-Logs remain under `rust/.scratch/pr206-fixes/logs/`. The four test-export JSON files generated
-under `rust/target` were preserved in `rust/.scratch/pr206-fixes/test-exports/` before cleanup.
+Final logs use the `*-merged.log` names under `rust/.scratch/pr206-fixes/logs/`; the earlier
+pre-merge receipts remain preserved as historical evidence. The four test-export JSON files
+generated under `rust/target` were preserved in task-local `test-exports` directories before cleanup.
 
-Owned target cleanup removed exactly `rust/.scratch/pr206-fixes/target` (25G) and `rust/target`
+Owned target cleanup removed exactly `rust/.scratch/pr206-fixes/target` (5.1G) and `rust/target`
 (40K), after checking that no process used either. Zero owned target directories remain;
 no target in another worktree was touched.
 

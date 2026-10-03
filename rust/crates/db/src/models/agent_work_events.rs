@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 fn owner_agent(tx: &Tx<'_>, owner: Option<i64>) -> Result<Option<i64>> {
+    let Some(owner) = owner else {
+        return Ok(None);
+    };
     query_one(
         tx.conn(),
         "SELECT agents.id FROM agents JOIN users ON users.id=agents.user_id WHERE users.id=? AND users.role=2",
@@ -43,8 +46,9 @@ pub fn enqueue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<()> {
 }
 
 fn webhook_eligible(tx: &Tx<'_>, user_id: i64, agent_id: i64, room_id: i64) -> Result<bool> {
+    let request = (agent_id, Some(room_id));
     Ok(exists(tx.conn(), "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?", params![user_id,room_id])?
-        && agent_access::capability_for_agent(tx.conn(),agent_id,"read_messages",Some(room_id))?
+        && agent_access::capabilities_for_agents(tx.conn(),"read_messages",&[request])?[&request]
         && exists(tx.conn(),"SELECT 1 FROM webhooks WHERE user_id=?",[user_id])?)
 }
 

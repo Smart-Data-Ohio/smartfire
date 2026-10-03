@@ -14,6 +14,7 @@ pub(crate) mod board_digests;
 pub(crate) mod message_features;
 mod github_notifier;
 mod github_cards;
+mod event_cards;
 mod connection;
 pub mod huddle_notice;
 pub(crate) mod huddle_effects;

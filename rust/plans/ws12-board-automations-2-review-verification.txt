@@ -178,3 +178,184 @@ Deleted: rust/.scratch/pr206-fixes/target
 40K	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/ws12-fix206/rust/target
 Deleted: rust/target
 After: zero owned target directories remain
+
+FINAL MERGED-TREE VERIFICATION
+Merged origin/main: 12b812796c53316480f9c861a71ae3144236b8d4
+
+Full merged workspace, test threads=8
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13m 02s
+     Running unittests src/main.rs (.scratch/pr206-fixes/target/debug/deps/campfire-bfced197048c5cee)
+test result: ok. 2610 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 754.75s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_assets-fc74e27e2f162203)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/reference.rs (.scratch/pr206-fixes/target/debug/deps/reference-58dcfdd77bb8b89c)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.88s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_cable-41cb69f35f771121)
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/disconnect.rs (.scratch/pr206-fixes/target/debug/deps/disconnect-03c6d3296b0d2254)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 44.22s
+     Running tests/golden.rs (.scratch/pr206-fixes/target/debug/deps/golden-832a38074b346a0b)
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+     Running tests/protocol.rs (.scratch/pr206-fixes/target/debug/deps/protocol-46475923fd5ea801)
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_db-fc69fa66423ab305)
+test result: ok. 1306 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 125.93s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_jobs-00567affca4181f2)
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.36s
+     Running tests/crash.rs (.scratch/pr206-fixes/target/debug/deps/crash-e4a0c1c97f1269c0)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_kit-8af525a7ba2d9d10)
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+     Running tests/front.rs (.scratch/pr206-fixes/target/debug/deps/front-a1f5175727252ba3)
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+     Running tests/http.rs (.scratch/pr206-fixes/target/debug/deps/http-ab51180ce00546e5)
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+     Running tests/params_vectors.rs (.scratch/pr206-fixes/target/debug/deps/params_vectors-fe9e59132221b2f4)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+     Running tests/rails_vectors.rs (.scratch/pr206-fixes/target/debug/deps/rails_vectors-0e2dd1a31408e531)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_mail-646f02a2aec61fa7)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+     Running tests/config.rs (.scratch/pr206-fixes/target/debug/deps/config-f65cf7c00c828dc8)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/goldens.rs (.scratch/pr206-fixes/target/debug/deps/goldens-7a840fe4a0a529f3)
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+     Running tests/inbound.rs (.scratch/pr206-fixes/target/debug/deps/inbound-bbaed4f0573c09d1)
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.29s
+     Running tests/security.rs (.scratch/pr206-fixes/target/debug/deps/security-4b406905e9453fe3)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+     Running tests/smtp.rs (.scratch/pr206-fixes/target/debug/deps/smtp-2d617d97df79eedc)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.23s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_richtext-03342163e9b6ce75)
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+     Running tests/corpus.rs (.scratch/pr206-fixes/target/debug/deps/corpus-87be30a70790d869)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.02s
+     Running tests/fork_regressions.rs (.scratch/pr206-fixes/target/debug/deps/fork_regressions-dc81a5753cfe414d)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/hardening.rs (.scratch/pr206-fixes/target/debug/deps/hardening-1a291ea507054314)
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.82s
+     Running tests/markdown_corpus.rs (.scratch/pr206-fixes/target/debug/deps/markdown_corpus-f6948194a8952b9b)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.00s
+     Running tests/markdown_security.rs (.scratch/pr206-fixes/target/debug/deps/markdown_security-81e7e2c952de87e0)
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+     Running tests/reference_tests.rs (.scratch/pr206-fixes/target/debug/deps/reference_tests-c0ac5e0a7c65a02e)
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/sgid_json_corpus.rs (.scratch/pr206-fixes/target/debug/deps/sgid_json_corpus-9932103642452c64)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.24s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_routes-cac1cfe76c7af927)
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_storage-43f87360d3b0fca6)
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+     Running tests/vectors.rs (.scratch/pr206-fixes/target/debug/deps/vectors-2f7c6e8b0ad775da)
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.69s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_views-f2a36398a5cf97ac)
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+     Running tests/core.rs (.scratch/pr206-fixes/target/debug/deps/core-448c82e18bb3f721)
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s
+     Running tests/direct_forms.rs (.scratch/pr206-fixes/target/debug/deps/direct_forms-3c8a1347c2ee0287)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/event_pages.rs (.scratch/pr206-fixes/target/debug/deps/event_pages-288dc20aaf9ce5de)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+     Running tests/events.rs (.scratch/pr206-fixes/target/debug/deps/events-e11ba0e25c459b80)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/google.rs (.scratch/pr206-fixes/target/debug/deps/google-6465aa6627eafae8)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/room_access_forms.rs (.scratch/pr206-fixes/target/debug/deps/room_access_forms-2b84e742e5bb115e)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/room_forms.rs (.scratch/pr206-fixes/target/debug/deps/room_forms-c313861689c9dc98)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/room_header.rs (.scratch/pr206-fixes/target/debug/deps/room_header-52040ebabf55b268)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/room_inbound.rs (.scratch/pr206-fixes/target/debug/deps/room_inbound-3d9a4d505e17098f)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/room_join.rs (.scratch/pr206-fixes/target/debug/deps/room_join-53c2c801f9e18eb2)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/room_shell.rs (.scratch/pr206-fixes/target/debug/deps/room_shell-863384c575fca5ed)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/sidebar.rs (.scratch/pr206-fixes/target/debug/deps/sidebar-a2974aab00300a48)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/ws17_dm_profile.rs (.scratch/pr206-fixes/target/debug/deps/ws17_dm_profile-75adf1fb5fdccfd9)
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+     Running tests/ws17_settings.rs (.scratch/pr206-fixes/target/debug/deps/ws17_settings-ef52833bb967f29c)
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/html5ever-e33ae7d5d85dc9b6)
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/rails_compat-aad0baff70ca8563)
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.99s
+   Doc-tests campfire_assets
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_cable
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_db
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+   Doc-tests campfire_jobs
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_kit
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.35s
+   Doc-tests campfire_mail
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_richtext
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+   Doc-tests campfire_routes
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_storage
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_views
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests html5ever
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests rails_compat
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+Exit status: 0
+
+Merged review regressions, test threads=4
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.05s
+     Running unittests src/main.rs (.scratch/pr206-fixes/target/debug/deps/campfire-bfced197048c5cee)
+APP_DISPATCH mixed-sla-crossings run=0: fields_differ=[]; Rust_reads=103; Rails_reads=169; bound=32766
+APP_DISPATCH mixed-sla-crossings run=1: fields_differ=[]; Rust_reads=2; Rails_reads=42; bound=32766
+APP_DISPATCH mixed-sla-crossings run=2: fields_differ=[]; Rust_reads=35; Rails_reads=85; bound=32766
+APP_DISPATCH mixed-digest-25-utc-rollover run=0: fields_differ=[]; Rust_reads=28; Rails_reads=7; bound=32766
+APP_DISPATCH mixed-digest-25-utc-rollover run=1: fields_differ=[]; Rust_reads=1; Rails_reads=5; bound=32766
+APP_DISPATCH mixed-digest-25-utc-rollover run=2: fields_differ=[]; Rust_reads=28; Rails_reads=7; bound=32766
+APP_DISPATCH committed-post-failure-healthy-board run=0: fields_differ=[]; Rust_reads=28; Rails_reads=11; bound=32766
+APP_DISPATCH committed-post-failure-healthy-board run=1: fields_differ=[]; Rust_reads=1; Rails_reads=9; bound=32766
+APP_DISPATCH committed-attach-failure-healthy-board run=0: fields_differ=[]; Rust_reads=32; Rails_reads=13; bound=32766
+APP_DISPATCH committed-attach-failure-healthy-board run=1: fields_differ=[]; Rust_reads=1; Rails_reads=9; bound=32766
+APP_DISPATCH sla-mixed-10 run=0: fields_differ=[]; Rust_reads=163; Rails_reads=268; bound=32766
+APP_DISPATCH sla-mixed-10 run=1: fields_differ=[]; Rust_reads=2; Rails_reads=62; bound=32766
+APP_DISPATCH sla-mixed-100 run=0: fields_differ=[]; Rust_reads=1603; Rails_reads=2668; bound=64
+APP_DISPATCH sla-mixed-100 run=1: fields_differ=[]; Rust_reads=2; Rails_reads=602; bound=64
+APP_DISPATCH digest-mixed-10 run=0: fields_differ=[]; Rust_reads=64; Rails_reads=61; bound=32766
+APP_DISPATCH digest-mixed-10 run=1: fields_differ=[]; Rust_reads=1; Rails_reads=41; bound=32766
+APP_DISPATCH digest-mixed-100 run=0: fields_differ=[]; Rust_reads=487; Rails_reads=601; bound=64
+APP_DISPATCH digest-mixed-100 run=1: fields_differ=[]; Rust_reads=1; Rails_reads=401; bound=64
+APP_DISPATCH digest-quoted-titles-bind-limit run=0: fields_differ=[]; Rust_reads=473; Rails_reads=321; bound=64
+PR206 independent full-app dispatch: 19 runs; persisted/HTML/job differences=0; total differences=0; 100-board sweeps with SQLite bind limit=64
+WS12 settings choices-10: Rust 14 SELECTs; Rails 14
+WS12 settings choices-100: Rust 14 SELECTs; Rails 14
+WS12 settings: 45 complete responses and rule/tag/audit facts; 4 explicit approved malformed-array 400 responses
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2615 filtered out; finished in 23.61s
+     Running unittests src/lib.rs (.scratch/pr206-fixes/target/debug/deps/campfire_db-fc69fa66423ab305)
+REVIEW decimal casts: 48 inputs; 0 differences
+PR206 independent concurrent sweeps: 2 database handles; SLA claims=2 inbox=2; digest claims=1 notes=1; repeats=0; failures=0
+PR206 delete race digest before SELECT * FROM rooms WHERE id IN (SELECT value FROM json_each(: no panic; healthy claims=1
+PR206 delete race digest before SELECT * FROM users WHERE id IN (SELECT creator_id FROM rooms: no panic; healthy claims=1
+PR206 delete race sla before SELECT n.channel_thread_id: no panic; healthy claims=2
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1307 filtered out; finished in 0.28s
+Exit status: 0
+
+Strict merged clippy
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 11m 45s
+Exit status: 0
+
+Merged release-input check
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6m 31s
+Exit status: 0
+
+Aggregate (not a Cargo-generated line): 4654 passed; 0 failed; 16 ignored; 61 raw summaries
+Final merged target cleanup: 2 directories; zero active executable/cwd/mappings
+5.1G	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/ws12-fix206/rust/.scratch/pr206-fixes/target
+Deleted: rust/.scratch/pr206-fixes/target
+40K	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/ws12-fix206/rust/target
+Deleted: rust/target
+After: zero owned target directories remain

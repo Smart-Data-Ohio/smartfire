@@ -396,6 +396,19 @@ async fn review_pr206_dispatch_with_production_richtext_jobs_and_bind_limit() {
             if !is_sla {
                 assert_digest_broadcast_bytes(&app, row["rooms"].to_string()).await;
                 if row["bind_limit"] == 64 {
+                    app.db().read(|conn| {
+                        let ids = conn.prepare("SELECT id FROM messages ORDER BY id LIMIT 96")?
+                            .query_map([], |row| row.get::<_, i64>(0))?
+                            .collect::<rusqlite::Result<Vec<_>>>()?;
+                        assert_eq!(ids.len(), 96);
+                        let batch = crate::integrations::github::threads::PullRequestThread::for_messages(conn, &ids)?;
+                        let mut individual = std::collections::HashMap::new();
+                        for id in ids {
+                            individual.extend(crate::integrations::github::threads::PullRequestThread::for_messages(conn, &[id])?);
+                        }
+                        assert_eq!(batch, individual, "associated public-PR preloads also obey the 64-variable limit");
+                        Ok(())
+                    }).await.unwrap();
                     let quotes = app.db().read(|conn| Ok(conn.query_row(
                         "SELECT COUNT(DISTINCT referenced_message_id) FROM message_references r JOIN messages m ON m.id=r.message_id WHERE m.system_note=1", [], |row| row.get::<_,i64>(0))?)).await.unwrap();
                     assert_eq!(

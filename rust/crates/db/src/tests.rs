@@ -19,6 +19,8 @@ mod agent_record_test;
 mod agent_ui_owner_test;
 mod agent_cases_test;
 mod agent_bot_cases_test;
+mod agent_next_cases_test;
+mod agent_assignment_cases_test;
 mod agent_dispatcher_cases_test;
 mod agent_slash_command_test;
 mod agent_step_test;
