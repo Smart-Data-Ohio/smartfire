@@ -68,5 +68,17 @@ rows['message_references']=ActiveRecord::Base.connection.select_all("SELECT * FR
  browser=ActionDispatch::Integration::Session.new(Rails.application);browser.host! 'campfire.test';browser.get(path,headers:headers.merge('Accept'=>'text/html'))
  steps << {method:'GET',path:,accept:'text/html',marker:nil,status:browser.response.status,content_type:browser.response.headers['Content-Type'],body:browser.response.body}
 end
+[['America/New_York',7],['America/Chicago',7],['Australia/Lord_Howe',35],['UTC',7]].each do |zone,days|
+['dnd','ooo'].each do |command|
+ input="/#{command} #{days}d"
+ reset.call do
+  user.reload.update_columns(time_zone:zone)
+  browser=ActionDispatch::Integration::Session.new(Rails.application);browser.host! 'campfire.test'
+  params={text:input};path="/rooms/#{room.id}/slash_commands"
+  browser.post(path,params:,headers:headers.dup,as: :json)
+  state=user.reload.attributes.slice('dnd_until','ooo_until').transform_values{|time|time&.utc&.strftime('%Y-%m-%d %H:%M:%S.%6N')}
+  steps << {method:'POST',path:,params:,status:browser.response.status,content_type:browser.response.headers['Content-Type'],body:browser.response.body,state:,zone:}
+ end
+end;end
 File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',cases:,rows:,steps:)+"\n")
 puts "WS8bm2 exceptional inputs Rails: #{cases.size} exact calendar/slash result pairs; #{steps.size} structured HTTP status/type/body comparisons"

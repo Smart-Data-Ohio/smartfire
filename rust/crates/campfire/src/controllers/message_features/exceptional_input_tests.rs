@@ -103,6 +103,22 @@ async fn exceptional_structured_http_parameters_match_rails_status_type_and_byte
         if let Some(accept) = step["accept"].as_str() {
             req = req.header("accept", accept);
         }
+        if step.get("state").is_some() {
+            let zone = step["zone"]
+                .as_str()
+                .unwrap_or("America/New_York")
+                .to_owned();
+            app.db()
+                .write(move |tx| {
+                    tx.conn().execute(
+                        "UPDATE users SET time_zone=? WHERE id=?",
+                        rusqlite::params![zone, DAVID],
+                    )?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
         let mut browser = app.david();
         let response = if method == hyper::Method::GET {
             browser.send(req).await
@@ -130,6 +146,27 @@ async fn exceptional_structured_http_parameters_match_rails_status_type_and_byte
         }
         let actual = json!({"status":response.status.as_u16(),"content_type":response.header("content-type"),"body":body});
         let expected = json!({"status":step["status"],"content_type":step["content_type"],"body":step["body"]});
+        if let Some(expected_state) = step.get("state") {
+            let state = app
+                .db()
+                .read(|conn| {
+                    let (dnd, ooo): (
+                        Option<campfire_db::Timestamp>,
+                        Option<campfire_db::Timestamp>,
+                    ) = conn.query_row(
+                        "SELECT dnd_until,ooo_until FROM users WHERE id=?",
+                        [DAVID],
+                        |row| Ok((row.get(0)?, row.get(1)?)),
+                    )?;
+                    Ok(json!({"dnd_until":dnd.map(stamp),"ooo_until":ooo.map(stamp)}))
+                })
+                .await
+                .unwrap();
+            if &state != expected_state {
+                failures.push(json!({"step":step,"rust_state":state}));
+                continue;
+            }
+        }
         if actual != expected {
             failures.push(json!({"step":step,"rust":actual}));
         }

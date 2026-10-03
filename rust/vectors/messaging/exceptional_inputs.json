@@ -3911,6 +3911,126 @@
       "status": 200,
       "content_type": "text/html; charset=utf-8",
       "body": "<turbo-frame class=\"message-link-frame\" id=\"message_link_card_message_reference_2\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">Jason</span>\n    <span class=\"message-quote__room\">in Designers</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">First post!</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/654632876/@309456473\">Jump to message</a>\n</blockquote>\n\n</turbo-frame>"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until March 09, 2026 11:00.\"}",
+      "state": {
+        "dnd_until": "2026-03-09 15:00:00.000000",
+        "ooo_until": null
+      },
+      "zone": "America/New_York"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until March 09, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-03-09 15:00:00.000000"
+      },
+      "zone": "America/New_York"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until March 09, 2026 10:00.\"}",
+      "state": {
+        "dnd_until": "2026-03-09 15:00:00.000000",
+        "ooo_until": null
+      },
+      "zone": "America/Chicago"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until March 09, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-03-09 15:00:00.000000"
+      },
+      "zone": "America/Chicago"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 35d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until April 07, 2026 03:00.\"}",
+      "state": {
+        "dnd_until": "2026-04-06 16:30:00.000000",
+        "ooo_until": null
+      },
+      "zone": "Australia/Lord_Howe"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 35d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until April 07, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-04-06 16:30:00.000000"
+      },
+      "zone": "Australia/Lord_Howe"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/dnd 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until March 09, 2026 16:00.\"}",
+      "state": {
+        "dnd_until": "2026-03-09 16:00:00.000000",
+        "ooo_until": null
+      },
+      "zone": "UTC"
+    },
+    {
+      "method": "POST",
+      "path": "/rooms/699448326/slash_commands",
+      "params": {
+        "text": "/ooo 7d"
+      },
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until March 09, 2026.\"}",
+      "state": {
+        "dnd_until": null,
+        "ooo_until": "2026-03-09 16:00:00.000000"
+      },
+      "zone": "UTC"
     }
   ]
 }

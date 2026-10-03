@@ -514,6 +514,18 @@ fn elapsed(now: Timestamp, n: i64, unit: &str) -> Option<Timestamp> {
             .ok()?,
     ))
 }
+/// ActiveSupport durations in days/weeks preserve the invoker's local clock;
+/// minutes/hours remain elapsed time, including across DST boundaries.
+fn duration_expiry(now: Timestamp, n: i64, unit: &str, zone_name: &str) -> Option<Timestamp> {
+    if n <= 0 {
+        return None;
+    }
+    match unit.bytes().next()? {
+        b'd' => time_parser::add_days(now, n, &zone(zone_name)),
+        b'w' => time_parser::add_days(now, n.checked_mul(7)?, &zone(zone_name)),
+        _ => elapsed(now, n, unit),
+    }
+}
 fn dnd_action(
     args: &str,
     zone: &str,
@@ -535,7 +547,7 @@ fn dnd_action(
         return Ok(c["n"]
             .parse()
             .ok()
-            .and_then(|n| elapsed(now, n, &c["unit"].to_ascii_lowercase()))
+            .and_then(|n| duration_expiry(now, n, &c["unit"].to_ascii_lowercase(), zone))
             .map(|time| ("on", Some(time))));
     }
     let text = re(r"(?i)\Auntil\s+").replace(args, "");
@@ -548,7 +560,7 @@ fn ooo_time_and_note(
     zone_name: &str,
     now: Timestamp,
 ) -> Option<(Timestamp, Option<String>)> {
-    if let Some(c)=re(r"(?is)\A(?P<n>[0-9]+)\s*(?P<unit>w(?:eeks?)?|m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\b(?P<rest>.*)\z").captures(args){return Some((elapsed(now,c["n"].parse().ok()?,&c["unit"].to_ascii_lowercase())?,present(strip(&c["rest"]))));}
+    if let Some(c)=re(r"(?is)\A(?P<n>[0-9]+)\s*(?P<unit>w(?:eeks?)?|m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\b(?P<rest>.*)\z").captures(args){return Some((duration_expiry(now,c["n"].parse().ok()?,&c["unit"].to_ascii_lowercase(),zone_name)?,present(strip(&c["rest"]))));}
     ooo_bare_day(args, zone_name, now)
         .or_else(|| time_parser::split_leading_time(args, zone_name, now))
 }

@@ -51,7 +51,7 @@ observed_job!(Inbound, InboundSyncJob, "Calendar::InboundSyncJob");
 observed_job!(Sync, SyncEntryJob, "Calendar::SyncEntryJob");
 fn reads(sql: &[String]) -> usize {
     sql.iter()
-        .filter(|s| !s.contains("background_jobs") && (s.trim_start().starts_with("SELECT") || s.trim_start().starts_with("WITH")))
+        .filter(|s| !s.starts_with("SELECT job_class,status,attempts,last_error FROM background_jobs WHERE job_class IN (") && (s.trim_start().starts_with("SELECT") || s.trim_start().starts_with("WITH")))
         .count()
 }
 #[tokio::test]
