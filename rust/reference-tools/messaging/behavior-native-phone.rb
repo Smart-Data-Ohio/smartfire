@@ -77,6 +77,9 @@ class Ws8bmNativePhoneTest < Minitest::Test
           content:row.querySelector('.message__body-content')?.innerHTML
         }))
       JS
+      parent = Message.find_by(markdown_source: "**A useful point** with `inline code`.")
+      attached = parent ? Message.joins(:attachment_blob).where(reply_to_message_id: parent.id).pluck("messages.id", "messages.reply_to_message_id", "messages.reply_notify_author", "active_storage_blobs.filename", "active_storage_blobs.byte_size") : []
+      puts "WS8bm native attachment blob readback: #{JSON.generate(attached)}"
       puts "WS8bm native attachment saved readback: #{JSON.generate(Message.where("id > ?", 908005739).order(:id).pluck(:id, :reply_to_message_id, :reply_notify_author))}"
     end
     puts "WS8bm native phone event trace #{Capybara.app_host}: #{JSON.generate(page.evaluate_script('window.__ws8bmPhoneTrace||[]'))}"

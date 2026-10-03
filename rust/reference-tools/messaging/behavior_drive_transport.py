@@ -15,7 +15,9 @@ def drive_transport(payloads, port):
         def do_GET(self):
             path = urlsplit(self.path)
             query = parse_qs(path.query)
-            valid = self.headers.get("Host") == "www.googleapis.com" and self.headers.get("Authorization", "").startswith("Bearer ")
+            # The pinned WebMock stubs match URL/method/query, not auth headers.
+            # Forward the real headers, but do not add a stricter stub predicate.
+            valid = self.headers.get("Host") == "www.googleapis.com"
             if path.path == "/drive/v3/files":
                 valid &= query.get("pageSize") == ["10"]
                 body = payloads["list"]

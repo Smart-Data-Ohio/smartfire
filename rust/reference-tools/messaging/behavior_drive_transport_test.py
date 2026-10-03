@@ -14,11 +14,15 @@ class DriveTransportTests(unittest.TestCase):
                 headers = {'Host': 'www.googleapis.com', 'Authorization': 'Bearer fixture'}
                 with urlopen(Request(f'http://127.0.0.1:{port}/drive/v3/files?pageSize=10', headers=headers)) as reply:
                     self.assertEqual(reply.status, 200)
+                # Like the original WebMock stub, a matching URL/query is
+                # registered independently of its Authorization header.
+                with urlopen(Request(f'http://127.0.0.1:{port}/drive/v3/files?pageSize=10', headers={'Host': 'www.googleapis.com'})) as reply:
+                    self.assertEqual(reply.status, 200)
                 with self.assertRaises(HTTPError):
                     urlopen(Request(f'http://127.0.0.1:{port}/drive/v3/files?pageSize=11', headers=headers))
                 with urlopen(Request(f'http://127.0.0.1:{port}/drive/v3/files/fixture?supportsAllDrives=true', headers=headers)) as reply:
                     self.assertEqual(reply.status, 200)
-                self.assertEqual([row['valid'] for row in calls], [True, False, True])
+                self.assertEqual([row['valid'] for row in calls], [True, True, False, True])
                 raise RuntimeError('diagnostic failure')
         with socket.socket() as check:
             self.assertNotEqual(check.connect_ex(('127.0.0.1', port)), 0)

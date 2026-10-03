@@ -56,6 +56,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:ro`,'-v',`${temp}:${temp}`]:[];
     const result=spawnSync('docker',['run','--rm','--name',container,'--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'],{encoding:'utf8',timeout:120000,maxBuffer:8*1024*1024});
     process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');
+    if(label==='attachment') captureUploadReferenceLog(base,database);
     assert.equal(result.status,0,`native pinned ${label} failed: ${result.error||result.signal||result.status}`);
   } finally {
     // Even a Ruby diagnostic exception or subprocess timeout cannot retain
@@ -65,4 +66,17 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     if(log!==undefined) closeSync(log);
     rmSync(proof,{recursive:true,force:true});rmSync(temp,{recursive:true,force:true});
   }
+}
+
+export function captureUploadReferenceLog(base,database) {
+  // Test Rails logs normally live in its container. Preserve diagnostics
+  // without changing assertion credit or preventing any caller's cleanup.
+  try {
+    const port=new URL(base).port;
+    if(!database?.includes(`/.instances/${port}/`)) return;
+    const root=fileURLToPath(new URL('../../../',import.meta.url));
+    const scratch=root+'.scratch/ws8bm-native-phone';mkdirSync(scratch,{recursive:true});
+    const contents=execFileSync('docker',['exec',`ws8bm-behavior-reference-${port}`,'cat','/rails/log/test.log'],{timeout:10000,maxBuffer:8*1024*1024});
+    writeFileSync(scratch+`/attachment-${port}.log`,contents);
+  }catch(error){console.error('WS8bm upload log diagnostic failed:',error.message);}
 }

@@ -24,7 +24,7 @@ import {workspace,WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motionDefault,MOTION_DEFAULT} from './behavior-motion-default.mjs';
 import {motion,motionCases} from './behavior-motion.mjs';
 import {nativeAttachment,ATTACHMENT_CASE} from './behavior-native-attachment.mjs';
-import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
+import {nativePhone,PHONE_CASE,captureUploadReferenceLog} from './behavior-native-phone.mjs';
 import {nativeMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
@@ -565,6 +565,16 @@ async function acceptance(base,caseName,probe={},variant='default') {
   } catch(error) {
     console.error('WS8bm failed application:',base,caseName);
     probe.observed=(await Promise.all((probe.observers||[]).map(observe=>observe()))).flat();
+    if(caseName===ATTACHMENT_CASE) {
+      let database;
+      try {
+        database=JSON.parse(process.env.WS8BM_WORK_DATABASES||'{}')[base];
+        const rows=execFileSync('python3',['-c',
+          'import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); rows=c.execute("SELECT messages.id,messages.reply_to_message_id,messages.reply_notify_author,blobs.filename,blobs.byte_size,blobs.content_type,blobs.service_name,blobs.metadata FROM messages LEFT JOIN active_storage_attachments AS a ON a.record_type=\'Message\' AND a.record_id=messages.id LEFT JOIN active_storage_blobs AS blobs ON blobs.id=a.blob_id WHERE messages.markdown_source=? OR blobs.filename=? ORDER BY messages.id",("**A useful point** with `inline code`.","markdown-workspace-attachment.txt")).fetchall(); print(json.dumps(rows)); c.close()',database],{encoding:'utf8'});
+        console.error('WS8bm upload failure saved attachment rows:',base,rows.trim());
+      }catch(diagnostic){console.error('WS8bm upload row diagnostic failed:',diagnostic.message);}
+      captureUploadReferenceLog(base,database);
+    }
     if(caseName==='discusses a pull request from its card') {
       for(const context of contexts) for(const page of context.pages()) {
         console.error('WS8bm discussion diagnostic:',JSON.stringify({url:page.url(),threadResponses,
