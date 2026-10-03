@@ -1,4 +1,6 @@
 //! Named remaining root/cache declarations over the actual router and stored rows.
+//! check_rendering_mutants.py control 13 restores UTC edited datetime output;
+//! it must fail at the complete real HTTP viewer-zone meta comparison.
 use std::sync::Arc;
 use axum::http::{Method,StatusCode};
 use campfire_db::{Boost,Message,NewMessage,MessageChanges,Timestamp};
@@ -48,7 +50,11 @@ async fn root_edit_markers_match_rails_for_noops_attachments_formatting_reaction
     for row in oracle()["meta"].as_array().unwrap() {
         let zone=row["zone"].as_str().unwrap().to_owned();app.db().write(move|tx|{tx.conn().execute("UPDATE users SET time_zone=? WHERE id=?",(zone,DAVID))?;Ok(())}).await.unwrap();
         let response=viewer.get(&format!("/rooms/{ALL_TALK}/messages/{id}")).await;assert_eq!(response.status,StatusCode::OK);
-        let expected=row["html"].as_str().unwrap();assert!(response.text().contains(expected),"complete UTC meta independent of viewer zone");
+        let expected=row["html"].as_str().unwrap();
+        let body=response.text();
+        let meta=regex::Regex::new(r#"(?s)<div class="message__meta".*?</div>\n"#).unwrap();
+        let actual=meta.find(&body).expect("actual HTTP message meta missing").as_str();
+        assert_eq!(actual,expected,"actual viewer-zone meta differs from Rails: {}",row["zone"].as_str().unwrap());
     }
 }
 

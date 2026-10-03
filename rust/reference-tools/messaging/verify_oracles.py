@@ -16,7 +16,7 @@ NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links
          "ws12_consumers", "provider_batch", "private_provider_pages", "search_headers",
          "older_provider_callbacks", "bounded_provider_callbacks", "mapped_provider_callbacks",
          "older_owner_callbacks", "older_calendar_callbacks", "older_calendar_jobs", "older_embed_jobs", "pin_poll_scaling", "exceptional_inputs", "slash_named", "older_calendar_execution", "older_embed_children", "older_embed_failures", "final_state_siblings",
-         "calendar_retry_consumers", "relative_split_inputs", "container_inputs", "relative_consumers", "adapter_rejections", "wide_date_html", "wide_http_html", "periodic_delivery"]
+         "calendar_retry_consumers", "relative_split_inputs", "container_inputs", "relative_consumers", "adapter_rejections", "wide_date_html", "wide_http_html", "periodic_delivery", "root-declarations"]
 # Main's #213 adds a stored non-HTTP quote case. Its golden uses the exact
 # reviewed Rails template revision, while every other corpus keeps the shared pin.
 TWITTER_ENV = dict(ENV, PARITY_IMAGE="ws8bm2-reference:twitter-955af4c37",
