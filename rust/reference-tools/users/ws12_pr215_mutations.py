@@ -13,6 +13,7 @@ args=parser.parse_args()
 backup=ROOT/'.scratch/pr215-fixes/mutation-backups'
 files=['rust/crates/campfire/src/controllers/presenters/activity.rs','rust/crates/views/src/activity.rs','rust/crates/db/src/models/agent_work.rs','rust/crates/db/src/models/activity_item/recorder.rs']
 if args.action=='restore':
+    assert all('WS12_PR215_MUTATION' in (ROOT/name).read_text() for name in files), 'refuse restoring old backups over clean or newly merged production inputs'
     for i,name in enumerate(files): (ROOT/name).write_bytes((backup/str(i)).read_bytes())
     print('WS12_PR215_MUTATIONS restored all 4 production inputs')
     raise SystemExit
