@@ -130,10 +130,10 @@ fn lookup_json_ids(raw: &serde_json::value::RawValue) -> serde_json::Result<Vec<
         if text.starts_with(['[', '{']) || text == "null" {
             return Ok(None);
         }
-        if text.starts_with('-') || text.as_bytes()[0].is_ascii_digit() {
-            if !text.contains(['.', 'e', 'E']) {
-                return Ok(text.parse::<i64>().ok());
-            }
+        if (text.starts_with('-') || text.as_bytes()[0].is_ascii_digit())
+            && !text.contains(['.', 'e', 'E'])
+        {
+            return Ok(text.parse::<i64>().ok());
         }
         Ok(lookup_ids(&serde_json::from_str(text)?).first().copied())
     }
@@ -303,6 +303,13 @@ mod id_cast_tests {
                 "{}",
                 case["input"]
             );
+            let raw = serde_json::value::to_raw_value(&case["input"]).unwrap();
+            assert_eq!(
+                json!(super::lookup_json_ids(&raw).unwrap()),
+                case["candidates"],
+                "raw {}",
+                case["input"]
+            );
         }
     }
     #[test]
@@ -371,6 +378,18 @@ mod id_cast_tests {
                 .into_iter()
                 .filter(|id| allowed.contains(id))
                 .collect::<Vec<_>>();
+            let raw = serde_json::value::to_raw_value(&case["input"]).unwrap();
+            let raw_selected: Vec<_> = super::lookup_json_ids(&raw)
+                .unwrap()
+                .into_iter()
+                .filter(|id| allowed.contains(id))
+                .collect();
+            if json!(raw_selected) != case["selected"] {
+                mismatches.push(format!(
+                    "raw input={} actual={:?} expected={}",
+                    case["input"], raw_selected, case["selected"]
+                ));
+            }
             if json!(selected) != case["selected"] {
                 mismatches.push(format!(
                     "form={} position={} input={} actual={:?} expected={}",
