@@ -1,0 +1,359 @@
+{
+  "baseline": "f85fb420",
+  "declarations": [
+    {
+      "key": "mcp_not_owner",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_test": "handoff_work denies a thread the agent does not own",
+      "rust_test": "ws11_named_mcp_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "mcp_not_owner: named response sequence"
+    },
+    {
+      "key": "mcp_suspended_receiver",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_test": "handoff_work denies a kill-switched receiver",
+      "rust_test": "ws11_named_mcp_suspended_receiver",
+      "mutation": "receiver_denial",
+      "intended_assertion": "mcp_suspended_receiver: named response sequence"
+    },
+    {
+      "key": "posts_nonmember",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "is 404 for rooms the agent is not a member of",
+      "rust_test": "ws11_named_posts_nonmember",
+      "mutation": "member_denial",
+      "intended_assertion": "posts_nonmember: named response sequence"
+    },
+    {
+      "key": "posts_credentials",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "rejects session and bot-key requests",
+      "rust_test": "ws11_named_posts_credentials",
+      "mutation": "bearer_only",
+      "intended_assertion": "posts_credentials: named response sequence"
+    },
+    {
+      "key": "show_owned",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "show returns one owned thread",
+      "rust_test": "ws11_named_show_owned",
+      "mutation": "payload_thread",
+      "intended_assertion": "show_owned: named response sequence"
+    },
+    {
+      "key": "show_not_owner",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "show is 404 for threads the agent does not own",
+      "rust_test": "ws11_named_show_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "show_not_owner: named response sequence"
+    },
+    {
+      "key": "patch_not_owner",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch is 404 for threads the agent does not own",
+      "rust_test": "ws11_named_patch_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "patch_not_owner: named response sequence"
+    },
+    {
+      "key": "manage_other_room",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch is 403 when manage_threads covers another room",
+      "rust_test": "ws11_named_manage_other_room",
+      "mutation": "manage_denial",
+      "intended_assertion": "manage_other_room: named response sequence"
+    },
+    {
+      "key": "ignore_assignment",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch cannot reassign, convert, or stop tracking",
+      "rust_test": "ws11_named_ignore_assignment",
+      "mutation": "ignored_assignment",
+      "intended_assertion": "ignore_assignment: named response sequence"
+    },
+    {
+      "key": "tags_only",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch updates tags alone in array and string forms",
+      "rust_test": "ws11_named_tags_only",
+      "mutation": "tags_string",
+      "intended_assertion": "tags_only: named response sequence"
+    },
+    {
+      "key": "blank_status",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch cannot stop tracking with a blank status",
+      "rust_test": "ws11_named_blank_status",
+      "mutation": "status_validation",
+      "intended_assertion": "blank_status: named response sequence"
+    },
+    {
+      "key": "note_only",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch with only a note and no field is 422",
+      "rust_test": "ws11_named_note_only",
+      "mutation": "missing_field",
+      "intended_assertion": "note_only: named response sequence"
+    },
+    {
+      "key": "tags_no_manage",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch tags without manage_threads is 403",
+      "rust_test": "ws11_named_tags_no_manage",
+      "mutation": "manage_denial",
+      "intended_assertion": "tags_no_manage: named response sequence"
+    },
+    {
+      "key": "result_limit",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result rejects missing markdown and overlong results with 422",
+      "rust_test": "ws11_named_result_limit",
+      "mutation": "result_limit",
+      "intended_assertion": "result_limit: named response sequence"
+    },
+    {
+      "key": "result_clear",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result with blank markdown clears",
+      "rust_test": "ws11_named_result_clear",
+      "mutation": "result_blank",
+      "intended_assertion": "result_clear: named response sequence"
+    },
+    {
+      "key": "result_noop",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result with unchanged markdown writes nothing",
+      "rust_test": "ws11_named_result_noop",
+      "mutation": "result_noop",
+      "intended_assertion": "result_noop: committed state"
+    },
+    {
+      "key": "writes_credentials",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch and put result are Bearer-only",
+      "rust_test": "ws11_named_writes_credentials",
+      "mutation": "bearer_only",
+      "intended_assertion": "writes_credentials: named response sequence"
+    },
+    {
+      "key": "show_other_read_room",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "a read grant for another room does not unlock an owned thread",
+      "rust_test": "ws11_named_show_other_read_room",
+      "mutation": "read_access",
+      "intended_assertion": "show_other_read_room: named response sequence"
+    },
+    {
+      "key": "rest_not_owner",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "a thread the agent does not own is 404",
+      "rust_test": "ws11_named_rest_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "rest_not_owner: named response sequence"
+    },
+    {
+      "key": "rest_human_handoff",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "a human session is 403",
+      "rust_test": "ws11_named_rest_human_handoff",
+      "mutation": "bearer_only",
+      "intended_assertion": "rest_human_handoff: named response sequence"
+    }
+  ],
+  "mutations": [
+    {
+      "key": "payload_thread",
+      "behavior": "payload thread",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_payloads.rs",
+          "before": "\"title\":thread.name",
+          "after": "\"title\":if ws12_coverage_mutant(\"payload_thread\") { \"Wrong work title\".to_owned() } else { thread.name.clone() }",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "read_access",
+      "behavior": "read access",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_work.rs",
+          "before": "if !current_capability(conn, agent, \"read_messages\", thread.room_id)? {",
+          "after": "if !current_capability(conn, agent, \"read_messages\", thread.room_id)? && !ws12_coverage_mutant(\"read_access\") {",
+          "occurrences": 1
+        },
+        {
+          "file": "rust/crates/db/src/models/agent_access.rs",
+          "before": "    if requests.is_empty() {",
+          "after": "    if capability==\"read_messages\" && ws12_coverage_mutant(\"read_access\") { return Ok(requests.iter().map(|&key|(key,true)).collect()); }\n    if requests.is_empty() {",
+          "occurrences": 1
+        },
+        {
+          "file": "rust/crates/db/src/models/agent_access.rs",
+          "before": "    let Some((_, legacy)) = active_agent(conn, agent_id)? else {",
+          "after": "    if capability==\"read_messages\" && ws12_coverage_mutant(\"read_access\") { return Ok(true); }\n    let Some((_, legacy)) = active_agent(conn, agent_id)? else {",
+          "occurrences": 2
+        },
+        {
+          "file": "rust/crates/db/src/models/agent_access.rs",
+          "before": "    let mut allowed = std::collections::HashSet::new();",
+          "after": "    if capability==\"read_messages\" && ws12_coverage_mutant(\"read_access\") { return Ok(users.iter().flat_map(|&u|rooms.iter().map(move |&r|(u,r))).collect()); }\n    let mut allowed = std::collections::HashSet::new();",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "manage_denial",
+      "behavior": "manage denial",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_service.rs",
+          "before": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        Self {",
+          "after": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        let error: String = error.into();\n        let status = if (error.contains(\"manage_threads\") && !error.starts_with(\"Receiver\")) && ws12_coverage_mutant(\"manage_denial\") { 418 } else { status };\n        Self {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "member_denial",
+      "behavior": "member denial",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/agents/pending.rs",
+          "before": "return Ok(c.head(StatusCode::NOT_FOUND).content_type(\"text/html\"));",
+          "after": "return Ok(c.head(if ws12_coverage_mutant(\"member_denial\") { StatusCode::IM_A_TEAPOT } else {StatusCode::NOT_FOUND}).content_type(\"text/html\"));",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "receiver_denial",
+      "behavior": "receiver denial",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_service.rs",
+          "before": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        Self {",
+          "after": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        let error: String = error.into();\n        let status = if (error.starts_with(\"Receiver must be an active\")) && ws12_coverage_mutant(\"receiver_denial\") { 418 } else { status };\n        Self {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "tags_string",
+      "behavior": "tags string",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/agent_work.rs",
+          "before": "    let names: Vec<String> = match value {",
+          "after": "    if value.is_string() && ws12_coverage_mutant(\"tags_string\") { return vec![\"wrong\".into()]; }\n    let names: Vec<String> = match value {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "status_validation",
+      "behavior": "status validation",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/agent_work.rs",
+          "before": "&& !status\n                .as_deref()\n                .is_some_and(|s| WORK_STATUSES.contains(&s))",
+          "after": "&& !status\n                .as_deref()\n                .is_some_and(|s| WORK_STATUSES.contains(&s)) && !ws12_coverage_mutant(\"status_validation\")",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "missing_field",
+      "behavior": "missing field",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/agent_work.rs",
+          "before": "if changes.work_status.is_none() && changes.tags.is_none() && changes.run_url.is_none() {",
+          "after": "if changes.work_status.is_none() && changes.tags.is_none() && changes.run_url.is_none() && !ws12_coverage_mutant(\"missing_field\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "result_noop",
+      "behavior": "result noop",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/agent_work.rs",
+          "before": "if normalized == self.result_markdown {",
+          "after": "if normalized == self.result_markdown && !ws12_coverage_mutant(\"result_noop\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "result_limit",
+      "behavior": "result limit",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/agent_work.rs",
+          "before": ".is_some_and(|s| s.chars().count() > RESULT_LIMIT)",
+          "after": ".is_some_and(|s| s.chars().count() > RESULT_LIMIT) && !ws12_coverage_mutant(\"result_limit\")",
+          "occurrences": 1
+        },
+        {
+          "file": "rust/crates/db/src/models/channel_thread.rs",
+          "before": "&& result.chars().count() > RESULT_LIMIT",
+          "after": "&& result.chars().count() > RESULT_LIMIT && !ws12_coverage_mutant(\"result_limit\")",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "result_blank",
+      "behavior": "result blank",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/agent_work.rs",
+          "before": "let normalized = presence(markdown);",
+          "after": "let normalized = if markdown.as_str().is_some_and(|s|s.trim().is_empty()) && ws12_coverage_mutant(\"result_blank\") { Some(\"Wrong result\".into()) } else { presence(markdown) };",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "bearer_only",
+      "behavior": "bearer only",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/concerns/agent_api.rs",
+          "before": "        StatusCode::FORBIDDEN,",
+          "after": "        if ws12_coverage_mutant(\"bearer_only\") { StatusCode::IM_A_TEAPOT } else { StatusCode::FORBIDDEN },",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "ignored_assignment",
+      "behavior": "ignored assignment",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/agent_work.rs",
+          "before": "                changed.work_status = status;",
+          "after": "                changed.work_status = status;\n                if ws12_coverage_mutant(\"ignored_assignment\") { changed.work_owner_id = Some(149087659); }",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "named_work_not_found",
+      "behavior": "wrong denied-work status",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_service.rs",
+          "before": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        Self {",
+          "after": "    pub fn fail(error: impl Into<String>, status: u16) -> Self {\n        let error: String = error.into();\n        let status = if error==\"Work not found\" && ws12_coverage_mutant(\"named_work_not_found\") {418} else {status};\n        Self {",
+          "occurrences": 1
+        }
+      ]
+    }
+  ]
+}

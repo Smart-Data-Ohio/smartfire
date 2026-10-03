@@ -8,16 +8,28 @@
       "rails_line": 40,
       "rails_test": "handoff_work denies a thread the agent does not own",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The MCP handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus fails by an unwrapped RecordNotFound, not the named HTTP denial assertion."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "mcp_not_owner",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_mcp_not_owner",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
       "rails_line": 82,
       "rails_test": "handoff_work denies a kill-switched receiver",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The first failures concern a missing/outside receiver, before the kill-switched receiver branch. No credit for the distinct suspended-receiver assertion."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "mcp_suspended_receiver",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_mcp_suspended_receiver",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
@@ -32,16 +44,28 @@
       "rails_line": 241,
       "rails_test": "is 404 for rooms the agent is not a member of",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: Failures concern missing work and a nonmember work update, not board POST/GET through a nonmember room."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "posts_nonmember",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_posts_nonmember",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
       "rails_line": 272,
       "rails_test": "rejects session and bot-key requests",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "posts_credentials",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_posts_credentials",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/posts_controller_test.rb",
@@ -128,8 +152,14 @@
       "rails_line": 75,
       "rails_test": "show returns one owned thread",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: Both credited HTTP tests stop at a work-list title before reaching the owned-thread show response."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "show_owned",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_show_owned",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -152,8 +182,14 @@
       "rails_line": 173,
       "rails_test": "show is 404 for threads the agent does not own",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "show_not_owner",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_show_not_owner",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -168,8 +204,14 @@
       "rails_line": 216,
       "rails_test": "patch is 404 for threads the agent does not own",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The HTTP rejection is a foreign-owner request with empty arguments, exposing field validation. The valid-status DB write stops at the later owner guard as an unwrapped error, not the declared denial/state assertion."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "patch_not_owner",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_patch_not_owner",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -184,48 +226,84 @@
       "rails_line": 276,
       "rails_test": "patch is 403 when manage_threads covers another room",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The first denial is a missing/revoked manage grant; the tests stop before the distinct other-room manage grant branch."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "manage_other_room",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_manage_other_room",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 311,
       "rails_test": "patch cannot reassign, convert, or stop tracking",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "ignore_assignment",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_ignore_assignment",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 345,
       "rails_test": "patch updates tags alone in array and string forms",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The first failures are combined status/tags/run_url update and human-owner creation, not the tags-only update preserving status."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "tags_only",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_tags_only",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 413,
       "rails_test": "patch cannot stop tracking with a blank status",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: Only unknown-status validation fails; all HTTP tests pass. The missing/blank-status stop-tracking branch is not rejected by these credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "blank_status",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_blank_status",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 426,
       "rails_test": "patch with only a note and no field is 422",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: Only an empty-field service update fails; the note-only HTTP request is absent from the credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "note_only",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_note_only",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 438,
       "rails_test": "patch tags without manage_threads is 403",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The first forbidden update has empty arguments; a tags-only request lacking manage_threads is not reached."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "tags_no_manage",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_tags_no_manage",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -240,8 +318,14 @@
       "rails_line": 499,
       "rails_test": "put result rejects missing markdown and overlong results with 422",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "result_limit",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_result_limit",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
@@ -256,32 +340,56 @@
       "rails_line": 543,
       "rails_test": "put result with blank markdown clears",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The rejected blank result starts with NULL. The credited fixtures do not perform the original successful set followed by clearing an existing nonempty result."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "result_clear",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_result_clear",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 560,
       "rails_test": "put result with unchanged markdown writes nothing",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The first rejected no-op is NULL-to-NULL. The original successful nonempty PUT followed by an identical nonempty PUT is absent from the credited fixtures."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "result_noop",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_result_noop",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 595,
       "rails_test": "patch and put result are Bearer-only",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "writes_credentials",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_writes_credentials",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_controller_test.rb",
       "rails_line": 637,
       "rails_test": "a read grant for another room does not unlock an owned thread",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The first rejection is absent/revoked read access, before an other-room read grant. The show-specific other-room scope assertion lacks a rejecting control."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "show_other_read_room",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_show_other_read_room",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_delivery_test.rb",
@@ -384,16 +492,28 @@
       "rails_line": 92,
       "rails_test": "a thread the agent does not own is 404",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The REST handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus stops at an unwrapped owner error, not the named HTTP denial assertion."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "rest_not_owner",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_rest_not_owner",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_handoff_test.rb",
       "rails_line": 114,
       "rails_test": "a human session is 403",
       "owner": "WS11-API",
-      "status": "pending",
-      "reason": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "passed",
+      "reason": "Fresh pinned Rails response sequence and complete persisted work/history/ledger/handoff/audit/jobs; activated producer mutation rejected at the declared assertion.",
+      "key": "rest_human_handoff",
+      "rust_file": "rust/crates/campfire/src/controllers/agent_work_named_tests.rs",
+      "rust_test": "ws11_named_rest_human_handoff",
+      "vector": "rust/vectors/agent_work_named_http.json",
+      "producer_control": "rust/reference-tools/agents/next5-work-controls.json",
+      "receipt": "rust/plans/ws11api-next-5-controls.json"
     },
     {
       "rails_file": "test/controllers/agents/work_handoff_test.rb",

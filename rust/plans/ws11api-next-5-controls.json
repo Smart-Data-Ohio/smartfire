@@ -15,7 +15,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/active.log"
+      "log": "logs/active.log",
+      "log_sha256": "29ad372c70ca21f2e0d2b6bd3b1c202e49e164e740e0b5585e752b84f848ceea"
     },
     {
       "key": "legacy",
@@ -30,7 +31,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/legacy.log"
+      "log": "logs/legacy.log",
+      "log_sha256": "d089b7725eedd07d2ad47afcfe4d4817360da3ccff985ba459728d23b10184eb"
     },
     {
       "key": "suspended",
@@ -45,7 +47,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/suspended.log"
+      "log": "logs/suspended.log",
+      "log_sha256": "a6898c2524a2158ddccc5a9fddcd3661f13e76375736c0c5d9ca507f88d23e5e"
     },
     {
       "key": "nonmember",
@@ -60,7 +63,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/nonmember.log"
+      "log": "logs/nonmember.log",
+      "log_sha256": "aa8c976ddf5b9ec8cc003e1e1ff637922255e9e72e88c48e8c4246f9bb142f75"
     },
     {
       "key": "no_post",
@@ -75,7 +79,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/no_post.log"
+      "log": "logs/no_post.log",
+      "log_sha256": "b887e75ae001888b43c19f9eb5bd3bb0d1478b25cff4ea970f4dfd043e2057dd"
     },
     {
       "key": "outside_human",
@@ -90,7 +95,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/outside_human.log"
+      "log": "logs/outside_human.log",
+      "log_sha256": "1d2e7bb27620ab22123c85b19e8494bfdda28830712e60cffdedd7454013d974"
     },
     {
       "key": "plain_bot",
@@ -105,7 +111,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/plain_bot.log"
+      "log": "logs/plain_bot.log",
+      "log_sha256": "6428eaecdb6625cf47a6bd2624d47beb32ec08d0ee29dec19b9d37cc2e056fa6"
     },
     {
       "key": "unavailable",
@@ -120,7 +127,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.07s"
       ],
-      "log": "logs/unavailable.log"
+      "log": "logs/unavailable.log",
+      "log_sha256": "37d1c846800ee717be51108283342c59509daac0c19ef9775ade8e54e4e13f18"
     },
     {
       "key": "status_note",
@@ -135,7 +143,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/status_note.log"
+      "log": "logs/status_note.log",
+      "log_sha256": "63f056fc1ab5581b9a1a85db8c916e2bf6c4f9bd1130763f29287065406dcc2c"
     },
     {
       "key": "status_inbox",
@@ -150,7 +159,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/status_inbox.log"
+      "log": "logs/status_inbox.log",
+      "log_sha256": "73c5d26903a42649ff240e9eadfa0b8f1af0b230e2b7e100ad03b3541ec089d1"
     },
     {
       "key": "tags",
@@ -165,7 +175,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/tags.log"
+      "log": "logs/tags.log",
+      "log_sha256": "4b39838daace0c370267b48fb294cff8a4f3ed300c1d3c5b204bf1c004da867e"
     },
     {
       "key": "invalid_fields",
@@ -180,7 +191,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/invalid_fields.log"
+      "log": "logs/invalid_fields.log",
+      "log_sha256": "9fe6460b89e29267935a0146b65c49a779bfc905429f77d2b40aa203fe265674"
     },
     {
       "key": "result",
@@ -195,7 +207,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/result.log"
+      "log": "logs/result.log",
+      "log_sha256": "afcd9e76adac9bd57e6865f8b513232e7ac2d90f64851818a53d253dc8e45528"
     },
     {
       "key": "unowned_result",
@@ -210,7 +223,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/unowned_result.log"
+      "log": "logs/unowned_result.log",
+      "log_sha256": "742373e70bfa8079807e732eb35516818a4fbd62f84ee8c0c971f0569f0510b3"
     },
     {
       "key": "unowned_status",
@@ -225,7 +239,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/unowned_status.log"
+      "log": "logs/unowned_status.log",
+      "log_sha256": "b5205468a4326b763abcc715e507e18af5c1677a199a29d8dfadffca32d85173"
     },
     {
       "key": "invalid_status_note",
@@ -240,7 +255,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
       ],
-      "log": "logs/invalid_status_note.log"
+      "log": "logs/invalid_status_note.log",
+      "log_sha256": "930b54bc775551d8484cf6967ba9a1b6ebf5ec270bd043dd49fcdfb2da2393f8"
     }
   ],
   "recorder": [
@@ -255,7 +271,8 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1361 filtered out; finished in 0.11s"
       ],
-      "log": "logs/recorder_preflight.log"
+      "log": "logs/recorder_preflight.log",
+      "log_sha256": "ba59ea1aab67e4a2e2f556eb3f2e20350b57086f870ed0baf81f3247f2f24680"
     },
     {
       "key": "recorder_rows",
@@ -268,7 +285,330 @@
       "summaries": [
         "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1361 filtered out; finished in 0.10s"
       ],
-      "log": "logs/recorder_rows.log"
+      "log": "logs/recorder_rows.log",
+      "log_sha256": "e4c54b7d912bb6b66eee6aa10d194283e50fc28e3be11b430cc567ee6d24478c"
+    }
+  ],
+  "named_api": [
+    {
+      "key": "mcp_not_owner",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_test": "handoff_work denies a thread the agent does not own",
+      "rust_test": "ws11_named_mcp_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "mcp_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.72s"
+      ],
+      "log": "logs/mcp_not_owner.log",
+      "log_sha256": "86290d1f8faebbd53db3a27bc34cb3f78cbd18a6c29e33fa5e26989ef4bbf1ec"
+    },
+    {
+      "key": "mcp_suspended_receiver",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_test": "handoff_work denies a kill-switched receiver",
+      "rust_test": "ws11_named_mcp_suspended_receiver",
+      "mutation": "receiver_denial",
+      "intended_assertion": "mcp_suspended_receiver: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.73s"
+      ],
+      "log": "logs/mcp_suspended_receiver.log",
+      "log_sha256": "88aefe78e9bfe4a5573aee809d4548e379c6548bfa14dba2a4d60a1326acab31"
+    },
+    {
+      "key": "posts_nonmember",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "is 404 for rooms the agent is not a member of",
+      "rust_test": "ws11_named_posts_nonmember",
+      "mutation": "member_denial",
+      "intended_assertion": "posts_nonmember: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.74s"
+      ],
+      "log": "logs/posts_nonmember.log",
+      "log_sha256": "ff679a314dcd8630d014933bea265222f3e82982c29504c0220a260ae4eb2ebd"
+    },
+    {
+      "key": "posts_credentials",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_test": "rejects session and bot-key requests",
+      "rust_test": "ws11_named_posts_credentials",
+      "mutation": "bearer_only",
+      "intended_assertion": "posts_credentials: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.82s"
+      ],
+      "log": "logs/posts_credentials.log",
+      "log_sha256": "56080b1109229890a2a2deb119c9828fa96f515e4044d6ba7b71ae01d27d14a0"
+    },
+    {
+      "key": "show_owned",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "show returns one owned thread",
+      "rust_test": "ws11_named_show_owned",
+      "mutation": "payload_thread",
+      "intended_assertion": "show_owned: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.73s"
+      ],
+      "log": "logs/show_owned.log",
+      "log_sha256": "dd51bf41226a20f13ff9065792f3eca6cf6155aade4b632d697146a9ce8cf574"
+    },
+    {
+      "key": "show_not_owner",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "show is 404 for threads the agent does not own",
+      "rust_test": "ws11_named_show_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "show_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.76s"
+      ],
+      "log": "logs/show_not_owner.log",
+      "log_sha256": "a953f3894f24bc0cd4fed9a1d20ee49f53d0a1aa8fdceb21c039c2903488bf8b"
+    },
+    {
+      "key": "patch_not_owner",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch is 404 for threads the agent does not own",
+      "rust_test": "ws11_named_patch_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "patch_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.73s"
+      ],
+      "log": "logs/patch_not_owner.log",
+      "log_sha256": "4bd27e4600ee3dbd608a7ac2a386b064ad9f1f139216ffd4d79f14a801349b86"
+    },
+    {
+      "key": "manage_other_room",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch is 403 when manage_threads covers another room",
+      "rust_test": "ws11_named_manage_other_room",
+      "mutation": "manage_denial",
+      "intended_assertion": "manage_other_room: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/manage_other_room.log",
+      "log_sha256": "6cd235182f5c0ed6d2623f6c6a6ef132262f01e99372d0314b10551d791f41f5"
+    },
+    {
+      "key": "ignore_assignment",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch cannot reassign, convert, or stop tracking",
+      "rust_test": "ws11_named_ignore_assignment",
+      "mutation": "ignored_assignment",
+      "intended_assertion": "ignore_assignment: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/ignore_assignment.log",
+      "log_sha256": "0d7a198cdbe966db547d02039835a46da73bd0307041ff07a49f4e2848bd762f"
+    },
+    {
+      "key": "tags_only",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch updates tags alone in array and string forms",
+      "rust_test": "ws11_named_tags_only",
+      "mutation": "tags_string",
+      "intended_assertion": "tags_only: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.73s"
+      ],
+      "log": "logs/tags_only.log",
+      "log_sha256": "0e5337b887fcde423fc516fea40fc0ed3b4e211e5dfa3031de85e32458534bc5"
+    },
+    {
+      "key": "blank_status",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch cannot stop tracking with a blank status",
+      "rust_test": "ws11_named_blank_status",
+      "mutation": "status_validation",
+      "intended_assertion": "blank_status: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.70s"
+      ],
+      "log": "logs/blank_status.log",
+      "log_sha256": "c41955a1627594bf844bcb99792692a5936529b260e185810c2747900ffed988"
+    },
+    {
+      "key": "note_only",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch with only a note and no field is 422",
+      "rust_test": "ws11_named_note_only",
+      "mutation": "missing_field",
+      "intended_assertion": "note_only: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.72s"
+      ],
+      "log": "logs/note_only.log",
+      "log_sha256": "bf48d312c9ef0bae999635df59d62b8d9ee3d1605c9fa178794a0dbe3858e08f"
+    },
+    {
+      "key": "tags_no_manage",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch tags without manage_threads is 403",
+      "rust_test": "ws11_named_tags_no_manage",
+      "mutation": "manage_denial",
+      "intended_assertion": "tags_no_manage: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/tags_no_manage.log",
+      "log_sha256": "f413334f9ed8b21bb914edab04bc7964532f6259804976e6eba95836fb9481ba"
+    },
+    {
+      "key": "result_limit",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result rejects missing markdown and overlong results with 422",
+      "rust_test": "ws11_named_result_limit",
+      "mutation": "result_limit",
+      "intended_assertion": "result_limit: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.72s"
+      ],
+      "log": "logs/result_limit.log",
+      "log_sha256": "82d1d55fa528b15de979a3b4de4a8d2b8c342b462de3ac99d555cc7d3de4c7cd"
+    },
+    {
+      "key": "result_clear",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result with blank markdown clears",
+      "rust_test": "ws11_named_result_clear",
+      "mutation": "result_blank",
+      "intended_assertion": "result_clear: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/result_clear.log",
+      "log_sha256": "5c5676b4b829e4cd7c713e66ee1da4bdd6ba3c2f070b7a90777626aa9f1b9e22"
+    },
+    {
+      "key": "result_noop",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "put result with unchanged markdown writes nothing",
+      "rust_test": "ws11_named_result_noop",
+      "mutation": "result_noop",
+      "intended_assertion": "result_noop: committed state",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/result_noop.log",
+      "log_sha256": "05af5eb03b4bb75e752152f8c98a221654f9a6d2a255afd8eb5b5a661df3c497"
+    },
+    {
+      "key": "writes_credentials",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "patch and put result are Bearer-only",
+      "rust_test": "ws11_named_writes_credentials",
+      "mutation": "bearer_only",
+      "intended_assertion": "writes_credentials: named response sequence",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.85s"
+      ],
+      "log": "logs/writes_credentials.log",
+      "log_sha256": "8b9c6a8d043a40250006dd8f113a9166ae982a2ab196fc31945eed2d949c0f18"
+    },
+    {
+      "key": "show_other_read_room",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_test": "a read grant for another room does not unlock an owned thread",
+      "rust_test": "ws11_named_show_other_read_room",
+      "mutation": "read_access",
+      "intended_assertion": "show_other_read_room: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.70s"
+      ],
+      "log": "logs/show_other_read_room.log",
+      "log_sha256": "c14fb2a5cda128c34e96a6f712fe9b8958166f851b24c842741ab1113f531965"
+    },
+    {
+      "key": "rest_not_owner",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "a thread the agent does not own is 404",
+      "rust_test": "ws11_named_rest_not_owner",
+      "mutation": "named_work_not_found",
+      "intended_assertion": "rest_not_owner: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.71s"
+      ],
+      "log": "logs/rest_not_owner.log",
+      "log_sha256": "bc452744a12e86d05aa74b8a292b2926be6c79d0a6b0bd629604ed9bdb44056d"
+    },
+    {
+      "key": "rest_human_handoff",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_test": "a human session is 403",
+      "rust_test": "ws11_named_rest_human_handoff",
+      "mutation": "bearer_only",
+      "intended_assertion": "rest_human_handoff: named response sequence",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2742 filtered out; finished in 0.79s"
+      ],
+      "log": "logs/rest_human_handoff.log",
+      "log_sha256": "27103a57d7a02f9d152878498e9d43039187381c0ce30e1eb4262d7e7da455c0"
     }
   ]
 }

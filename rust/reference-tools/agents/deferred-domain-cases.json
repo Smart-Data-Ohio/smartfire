@@ -15,8 +15,8 @@
   "files": [],
   "broader_named_api_assertions": {
     "ledger": "rust/plans/ws11api-named-api-cases.json",
-    "passed": 0,
-    "pending": 51,
+    "passed": 20,
+    "pending": 31,
     "owner": "WS11-API; pending evidence is unblocked, not a missing service"
   }
 }
