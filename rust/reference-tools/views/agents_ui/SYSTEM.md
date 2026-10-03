@@ -1,7 +1,8 @@
 `system_behavior.py --binary /absolute/path/to/campfire` runs nine ported Rails
 system assertions on separate private copies of the committed `agents_ui`
 seed. Build that seed with the pinned image, build the normal Rust binary and
-run `npm ci --prefix rust/parity` first. Ports 52797–52799 belong to WS11-ui.
+the pinned Playwright Docker image supplies its committed browser dependencies.
+Ports 52797–52799 belong to WS11-ui.
 
 This runner compares behavior; it captures no screenshots and performs no
 pixel work. Rails uses the pin plus exactly the approved status-popup layout.
@@ -37,3 +38,13 @@ reminder dispatch, handling, re-arming the same reminder, and deleting its messa
 `check_inbox_lifecycle.py` proves the HTTP replay rejects deliberate faults in
 each of those writers. The global deleted-source 404 body remains WS9-owned; its
 status and the source-removal/access assertions still run.
+
+The behavior browser now uses `system_browser.sh`: the same pinned Playwright
+image and Unix-socket upstream forwarder as the capture harness, with a stable
+`--network none` namespace. The prior host-browser timeout was the work creation
+conversation-title assertion (`agent_work_assignment_test.rb:63`, replay line 54
+before the wrapper change). Its log contains `ERR_NETWORK_CHANGED` across local
+asset and fetch requests: host network changes abort in-flight Chromium requests.
+No Rails test or assertion deadline changed. `check_system_network.py` rejects
+the former host namespace and holds a POST while an owned Docker bridge appears
+and disappears, verifying the isolated browser receives unchanged response bytes.

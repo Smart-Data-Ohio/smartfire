@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run named Rails system behavior on a pinned private Rails instance and Rust.
-Build the binary and agents_ui seed first; npm ci --prefix rust/parity installs
-its committed Playwright dependency. No images are captured or compared.
+Build the binary and agents_ui seed first; the pinned Playwright Docker image
+supplies its committed browser dependencies. No images are captured or compared.
 """
 import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, tempfile, time, urllib.request
 root = pathlib.Path(__file__).resolve().parents[4]
@@ -67,7 +67,7 @@ try:
         result_codes=[]
         for name,port,db in [('Rails',52798,work/'seeds/.instances/52798/db/production.sqlite3'),('Rust',52799,candidate/'db/production.sqlite3')]:
             print(f'{name} system behavior:',flush=True)
-            result=subprocess.run(['node',str(root/'rust/reference-tools/views/agents_ui/system_cases.mjs'),f'http://127.0.0.1:{port}',str(labels_file),str(db),args.scenario],cwd=root)
+            result=subprocess.run(['bash',str(root/'rust/reference-tools/views/agents_ui/system_browser.sh'),f'http://127.0.0.1:{port}',str(labels_file),str(db),args.scenario],cwd=root)
             result_codes.append(result.returncode)
         raise SystemExit(1 if any(result_codes) else 0)
 finally:
