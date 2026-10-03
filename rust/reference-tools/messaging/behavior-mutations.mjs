@@ -370,7 +370,9 @@ export async function installMutation(page,caseName,probe,variant='default') {
     });
     (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmReleaseClicks||[]).catch(()=>[]));
   }
-  const cssSelector=asset==='messages-'&&replacement?.includes('{')?(replacement.startsWith('@media')?replacement.match(/@media[^\{]+\{\s*([^\{]+)\{/)[1].trim():replacement.split('{')[0].trim()):null;
+  const slowAnimation=variant==='slow-workspace-animation';
+  if(slowAnimation) probe.requiredAnimation={name:'ws8bm-slow-settle',duration:4000};
+  const cssSelector=slowAnimation?'.message:last-child':asset==='messages-'&&replacement?.includes('{')?(replacement.startsWith('@media')?replacement.match(/@media[^\{]+\{\s*([^\{]+)\{/)[1].trim():replacement.split('{')[0].trim()):null;
   const scriptedSelector=['transparent-cancelled-draft','transparent-saved-draft','transparent-newer-draft'].includes(variant)?editor:
     ['transparent-device-text','transparent-drive-text','transparent-phone-drive-text'].includes(variant)?'.attach-menu span[style]':
     ['missing-const','missing-def'].includes(variant)?'.missing-keyword-token':
@@ -388,7 +390,7 @@ export async function installMutation(page,caseName,probe,variant='default') {
   probe.requiresHiddenState ||= !!injectedStyleSelector&&/opacity:\s*0/.test(replacement)|| !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);
   if(stateSelector) (probe.observers??=[]).push(async()=>{
     if(page.isClosed()) return [];
-    return page.locator(stateSelector).evaluateAll((elements,selector)=>elements.map(element=>({
+    return page.locator(stateSelector).evaluateAll((elements,{selector,slowAnimation})=>elements.map(element=>({
       selector,messageId:element.closest('.message[data-message-id]')?.dataset.messageId,
       messageText:element.closest('.message[data-message-id]')?.querySelector('[data-reply-target="body"]')?.textContent.replace(/\s+/g,' ').trim(),
       opacity:getComputedStyle(element).opacity,
@@ -396,7 +398,8 @@ export async function installMutation(page,caseName,probe,variant='default') {
       fontSize:getComputedStyle(element).fontSize,background:getComputedStyle(element).backgroundColor,position:getComputedStyle(element).position,
       width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height,
       seleniumVisible:window.__ws8bmSeleniumVisible(element),
-    })),stateSelector).catch(()=>[]);
+      ...(slowAnimation?{animations:element.getAnimations().map(animation=>({name:animation.animationName,duration:animation.effect.getComputedTiming().duration,playState:animation.playState}))}:{}),
+    })),{selector:stateSelector,slowAnimation}).catch(()=>[]);
   });
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());

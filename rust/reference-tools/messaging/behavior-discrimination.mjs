@@ -249,5 +249,6 @@ export function rejectionEvidence(caseName,variant,probe,error) {
   if(probe.requiresReleaseClick&&!probe.observed?.some(state=>state.releaseClick&&state.brokenGuard&&state.menuVisible)) reasons.push('mutated release click not encountered');
   if(probe.requiredMessageText&&!probe.observed?.some(state=>state.messageText===probe.requiredMessageText&&(state.opacity==='0'||state.visibility==='hidden'||state.display==='none'))) reasons.push('intended message mutation state not encountered');
   if(probe.requiresHiddenState&&!probe.observed?.some(state=>state.opacity==='0'||state.visibility==='hidden'||state.display==='none')) reasons.push('hidden mutation state not encountered');
+  if(probe.requiredAnimation&&!probe.observed?.some(state=>state.animations?.some(animation=>animation.name===probe.requiredAnimation.name&&animation.duration===probe.requiredAnimation.duration&&animation.playState==='running'))) reasons.push('intended running animation not encountered');
   return {valid:reasons.length===0,reasons,expected,actual:frames,observed:probe.observed||[]};
 }
